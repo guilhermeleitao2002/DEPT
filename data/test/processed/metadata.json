@@ -1,0 +1,70 @@
+{
+  "input": "data/test/test.pcap",
+  "window_size": 10,
+  "stride": 10,
+  "num_windows": 45,
+  "sequence_shape": [
+    45,
+    10,
+    7
+  ],
+  "rf_stats_shape": [
+    45,
+    24
+  ],
+  "sequence_features": [
+    "IPAT",
+    "Packet_Size",
+    "Protocol",
+    "TCP_Flags",
+    "Payload_Length",
+    "Payload_Entropy",
+    "Direction"
+  ],
+  "rf_stat_names": [
+    "IPAT_mean",
+    "IPAT_std",
+    "IPAT_min",
+    "IPAT_max",
+    "Packet_Size_mean",
+    "Packet_Size_std",
+    "Packet_Size_min",
+    "Packet_Size_max",
+    "Payload_Length_mean",
+    "Payload_Length_std",
+    "Payload_Length_min",
+    "Payload_Length_max",
+    "Payload_Entropy_mean",
+    "Payload_Entropy_std",
+    "Payload_Entropy_min",
+    "Payload_Entropy_max",
+    "TCP_Flags_mean",
+    "TCP_Flags_std",
+    "TCP_Flags_min",
+    "TCP_Flags_max",
+    "Direction_mean",
+    "Direction_std",
+    "Direction_min",
+    "Direction_max"
+  ],
+  "normalization_stats": {
+    "IPAT": {
+      "mean": 0.17629984877017268,
+      "std": 0.34153914228582
+    },
+    "Packet_Size": {
+      "mean": 381.5947046843177,
+      "std": 365.94836355451696
+    },
+    "Payload_Length": {
+      "mean": 347.5947046843177,
+      "std": 365.94836355451696
+    },
+    "Payload_Entropy": {
+      "mean": 6.503410589121796,
+      "std": 1.297827062974259
+    }
+  },
+  "num_flows_total": 15,
+  "num_flows_used": 15
+}
