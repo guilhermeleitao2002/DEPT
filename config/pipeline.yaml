@@ -1,6 +1,8 @@
 # ===================================
 # ADEPT — Packet-to-Tensor Pipeline
 # ===================================
+# Uses nPrint bit-level encoding (Holland et al., CCS 2021) for rich
+# per-packet header representation, inspired by FlowPaint (SIGCOMM'26).
 
 # --------------------------
 # N-Packet Window parameters
@@ -9,23 +11,27 @@ window_size: 10            # N packets per flow window (N-Packet Snapshot)
 window_stride: 10          # non-overlapping windows (stride = window_size)
 
 # --------------------------
-# Per-packet features (raw sequence for TCN / Transformer)
+# nPrint identity masking
 # --------------------------
-# These are the per-packet header fields extracted and kept in the sequence tensor.
-# The order here defines the column order in the output tensor.
-sequence_features:
-  - IPAT               # Inter-Packet Arrival Time (within flow)
-  - Packet_Size         # Frame length in bytes
-  - Protocol            # IP protocol number (TCP=6, UDP=17, ...)
-  - TCP_Flags           # TCP flags as integer (0 if not TCP)
-  - Payload_Length      # IP payload length
-  - Payload_Entropy     # Shannon entropy of payload bytes
-  - Direction           # 1 = forward (src→dst), 0 = reverse (dst→src)
+# Following FlowPaint §3.3.2: zero out high-entropy identity fields
+# to prevent overfitting to flow identity (IPs, ports, IP ID).
+# These column prefixes are masked in the nPrint bit matrix.
+mask_prefixes:
+  - ipv4_src
+  - ipv4_dst
+  - ipv4_id
+  - tcp_sprt
+  - tcp_dprt
+  - udp_sport
+  - udp_dport
 
 # --------------------------
 # Aggregated statistics (for Random Forest)
 # --------------------------
-# Computed over each N-packet window. Each base feature generates 4 stats.
+# Computed from Scapy-derived metadata (not nPrint bits) over each
+# N-packet window. Each base feature generates len(rf_agg_functions) stats.
+# This preserves ensemble diversity: TCN sees bit-level features,
+# RF sees statistical aggregates.
 rf_agg_functions:
   - mean
   - std
@@ -43,15 +49,12 @@ rf_base_features:
 # --------------------------
 # Standardization
 # --------------------------
-# Path where mean/std JSON is saved/loaded (relative to output dir)
+# Only IPAT needs z-score normalization.
+# nPrint bits are already bounded {-1, 0, 1}; Direction is binary.
 mean_std_filename: mean_std.json
 
-# Columns to z-score standardize in the sequence tensor
 standardize_columns:
   - IPAT
-  - Packet_Size
-  - Payload_Length
-  - Payload_Entropy
 
 # --------------------------
 # I/O defaults

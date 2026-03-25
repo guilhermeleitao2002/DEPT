@@ -2,13 +2,19 @@
 Build the dual-output tensors for ADEPT's ensemble.
 
 For each N-packet window in a flow, produce:
-    1. Sequence tensor  [N, F]  — raw per-packet features for TCN & Transformer
+    1. Sequence tensor  [N, F]  — nPrint bit-level features + IPAT + Direction
+                                  for TCN & Purification Transformer
     2. Statistics vector [S]    — aggregated stats for Random Forest
 
 Both outputs are synchronized at the Nth packet boundary ("N-Packet Snapshot").
 
-Standardization follows the same pattern as TANTGen's generate_sequences.py:
-z-score normalization with mean/std saved to (or loaded from) a JSON file.
+The sequence tensor uses the full nPrint bit columns (1088) plus IPAT and
+Direction, giving F ≈ 1090. The RF statistics are computed from the
+Scapy-derived metadata columns (Packet_Size, Payload_Length, etc.) to
+preserve ensemble diversity — aggregating binary bits would be meaningless.
+
+Only IPAT is z-score standardized; nPrint bits are already bounded {-1, 0, 1}
+and Direction is binary.
 """
 
 import json
@@ -19,6 +25,8 @@ from typing import Dict, List, Optional, Tuple
 import numpy as np
 import pandas as pd
 
+from .packet_parser import NPRINT_COLUMNS
+
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Windowing (adapted from TANTGen utils.make_windows_features)
@@ -27,9 +35,8 @@ import pandas as pd
 def _make_windows(array: np.ndarray, window_size: int, stride: int):
     """Yield non-overlapping (or strided) windows from a 2-D array.
 
-    Incomplete trailing windows are dropped (unlike TANTGen which pads them).
-    For ADEPT we want every window to have exactly N packets — padding would
-    pollute the RF statistics with artificial zeros.
+    Incomplete trailing windows are dropped — every window must have
+    exactly N packets to avoid polluting RF statistics with padding.
     """
     n = len(array)
     for start in range(0, n - window_size + 1, stride):
@@ -54,9 +61,10 @@ def _load_or_compute_stats(
 
     stats = {}
     for col in columns:
+        if col not in df.columns:
+            continue
         mean = float(df[col].mean())
         std = float(df[col].std())
-        # Guard against zero std (constant column)
         if std == 0:
             std = 1.0
         stats[col] = {"mean": mean, "std": std}
@@ -93,38 +101,43 @@ _AGG_FUNCS = {
 
 
 def _compute_rf_stats(
-    window: np.ndarray,
-    feature_names: List[str],
+    window_meta: np.ndarray,
+    meta_feature_names: List[str],
     base_features: List[str],
     agg_functions: List[str],
 ) -> np.ndarray:
     """
     Compute aggregated statistics over one N-packet window.
 
-    Parameters
-    ----------
-    window : np.ndarray, shape [N, F]
-        Raw (standardized) sequence window.
-    feature_names : list[str]
-        Column names matching the F dimension.
-    base_features : list[str]
-        Subset of feature_names to aggregate for RF.
-    agg_functions : list[str]
-        Names of aggregation functions ("mean", "std", "min", "max").
-
-    Returns
-    -------
-    np.ndarray, shape [len(base_features) * len(agg_functions)]
+    Uses the Scapy-derived metadata columns (not nPrint bits).
     """
-    col_idx = {name: i for i, name in enumerate(feature_names)}
+    col_idx = {name: i for i, name in enumerate(meta_feature_names)}
     stats = []
     for feat in base_features:
         if feat not in col_idx:
             continue
-        col = window[:, col_idx[feat]]
+        col = window_meta[:, col_idx[feat]]
         for agg_name in agg_functions:
             stats.append(_AGG_FUNCS[agg_name](col))
     return np.array(stats, dtype=np.float32)
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Sequence feature detection
+# ──────────────────────────────────────────────────────────────────────────────
+
+def _get_sequence_columns(df: pd.DataFrame) -> List[str]:
+    """
+    Auto-detect the columns for the sequence tensor:
+    all nPrint bit columns present in the DataFrame + IPAT + Direction.
+    """
+    nprint_cols = [c for c in NPRINT_COLUMNS if c in df.columns]
+    extra = []
+    if "IPAT" in df.columns:
+        extra.append("IPAT")
+    if "Direction" in df.columns:
+        extra.append("Direction")
+    return nprint_cols + extra
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -135,7 +148,6 @@ def build_tensors(
     flows: OrderedDict,
     window_size: int = 10,
     stride: int = 10,
-    sequence_features: Optional[List[str]] = None,
     rf_base_features: Optional[List[str]] = None,
     rf_agg_functions: Optional[List[str]] = None,
     standardize_columns: Optional[List[str]] = None,
@@ -152,34 +164,26 @@ def build_tensors(
         N in the "N-Packet Snapshot".
     stride : int
         Window stride (typically == window_size for non-overlapping).
-    sequence_features : list[str]
-        Columns to include in the TCN/Transformer sequence tensor.
     rf_base_features : list[str]
-        Columns to aggregate for the RF input.
+        Metadata columns to aggregate for the RF input.
     rf_agg_functions : list[str]
         Aggregation function names.
     standardize_columns : list[str]
-        Columns to z-score normalize.
+        Columns to z-score normalize (typically just IPAT).
     mean_std_path : str
         Path to load/save normalization statistics.
 
     Returns
     -------
     dict with keys:
-        "sequence"   : np.ndarray [W, N, F]  — TCN / Transformer input
-        "rf_stats"   : np.ndarray [W, S]     — Random Forest input
-        "labels"     : np.ndarray [W]        — per-window label (if available)
-        "flow_ids"   : list[tuple]           — flow key for each window
-        "stats"      : dict                  — normalization statistics
-        "feature_names" : list[str]          — sequence feature column order
-        "rf_stat_names" : list[str]          — RF stat column names
+        "sequence"       : np.ndarray [W, N, F]  — TCN / Transformer input
+        "rf_stats"       : np.ndarray [W, S]     — Random Forest input
+        "flow_ids"       : list[tuple]           — flow key for each window
+        "stats"          : dict                  — normalization statistics
+        "feature_names"  : list[str]             — sequence feature column order
+        "rf_stat_names"  : list[str]             — RF stat column names
     """
     # Defaults
-    if sequence_features is None:
-        sequence_features = [
-            "IPAT", "Packet_Size", "Protocol", "TCP_Flags",
-            "Payload_Length", "Payload_Entropy", "Direction",
-        ]
     if rf_base_features is None:
         rf_base_features = [
             "IPAT", "Packet_Size", "Payload_Length",
@@ -188,53 +192,53 @@ def build_tensors(
     if rf_agg_functions is None:
         rf_agg_functions = ["mean", "std", "min", "max"]
     if standardize_columns is None:
-        standardize_columns = ["IPAT", "Packet_Size", "Payload_Length", "Payload_Entropy"]
+        standardize_columns = ["IPAT"]
 
-    # --- Step 1: Concatenate all flows to compute global statistics ----------
+    # --- Step 1: Compute global statistics for standardization ----------------
     all_packets = pd.concat(flows.values(), ignore_index=True)
     stats = _load_or_compute_stats(all_packets, standardize_columns, mean_std_path)
 
-    # --- Step 2: Per-flow windowing -------------------------------------------
-    seq_windows: List[np.ndarray] = []
-    rf_windows: List[np.ndarray] = []
-    window_flow_ids: List[Tuple] = []
-    window_labels: List[int] = []
+    # Detect sequence columns from actual DataFrame
+    sequence_features = _get_sequence_columns(all_packets)
 
-    rf_stat_names = [
-        f"{feat}_{agg}" for feat in rf_base_features
-        if feat in [c for c in sequence_features]
-        for agg in rf_agg_functions
-    ]
-    # Recompute properly — RF features might not all be in sequence_features
+    # RF metadata columns needed for aggregation
+    rf_meta_cols = [c for c in rf_base_features if c in all_packets.columns]
+
+    # Build RF stat names
     rf_stat_names = []
     for feat in rf_base_features:
         for agg in rf_agg_functions:
             rf_stat_names.append(f"{feat}_{agg}")
 
+    # --- Step 2: Per-flow windowing -------------------------------------------
+    seq_windows: List[np.ndarray] = []
+    rf_windows: List[np.ndarray] = []
+    window_flow_ids: List[Tuple] = []
+
     for flow_key, flow_df in flows.items():
         if len(flow_df) < window_size:
-            continue  # skip flows shorter than one window
+            continue
 
-        # Standardize
+        # Standardize (only IPAT typically)
         flow_std = _apply_standardization(flow_df, stats)
 
-        # Select sequence columns
-        available = [c for c in sequence_features if c in flow_std.columns]
-        seq_array = flow_std[available].values.astype(np.float32)
+        # Extract sequence columns (nPrint bits + IPAT + Direction)
+        available_seq = [c for c in sequence_features if c in flow_std.columns]
+        seq_array = flow_std[available_seq].values.astype(np.float32)
 
-        # Window the sequence
-        for window in _make_windows(seq_array, window_size, stride):
-            seq_windows.append(window)
-            rf_stat = _compute_rf_stats(window, available, rf_base_features, rf_agg_functions)
+        # Extract RF metadata columns
+        available_rf = [c for c in rf_meta_cols if c in flow_std.columns]
+        rf_array = flow_std[available_rf].values.astype(np.float32)
+
+        # Window both arrays in sync
+        seq_iter = list(_make_windows(seq_array, window_size, stride))
+        rf_iter = list(_make_windows(rf_array, window_size, stride))
+
+        for seq_win, rf_win in zip(seq_iter, rf_iter):
+            seq_windows.append(seq_win)
+            rf_stat = _compute_rf_stats(rf_win, available_rf, rf_base_features, rf_agg_functions)
             rf_windows.append(rf_stat)
             window_flow_ids.append(flow_key)
-
-            # Label: if the flow_df has a "Label" column, take majority vote
-            # (optional — may not exist in raw PCAPs)
-            if "Label" in flow_df.columns:
-                start = len(seq_windows) - 1
-                # Not meaningful here; labels handled by the pipeline script
-                window_labels.append(-1)
 
     # --- Step 3: Stack into arrays -------------------------------------------
     if not seq_windows:
@@ -242,7 +246,6 @@ def build_tensors(
         return {
             "sequence": np.empty((0, window_size, len(sequence_features)), dtype=np.float32),
             "rf_stats": np.empty((0, len(rf_stat_names)), dtype=np.float32),
-            "labels": np.empty(0, dtype=np.int64),
             "flow_ids": [],
             "stats": stats,
             "feature_names": sequence_features,
@@ -253,13 +256,14 @@ def build_tensors(
     rf_tensor = np.stack(rf_windows)            # [W, S]
 
     print(f"[+] Built {len(seq_windows)} windows:")
-    print(f"    Sequence tensor : {sequence_tensor.shape}  (W, N={window_size}, F={sequence_tensor.shape[2]})")
-    print(f"    RF stats tensor : {rf_tensor.shape}  (W, S={rf_tensor.shape[1]})")
+    print(f"    Sequence tensor : {sequence_tensor.shape}  "
+          f"(W, N={window_size}, F={sequence_tensor.shape[2]})")
+    print(f"    RF stats tensor : {rf_tensor.shape}  "
+          f"(W, S={rf_tensor.shape[1]})")
 
     return {
         "sequence": sequence_tensor,
         "rf_stats": rf_tensor,
-        "labels": np.array(window_labels, dtype=np.int64) if window_labels else np.empty(0, dtype=np.int64),
         "flow_ids": window_flow_ids,
         "stats": stats,
         "feature_names": sequence_features,

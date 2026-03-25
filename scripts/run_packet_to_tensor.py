@@ -1,41 +1,44 @@
 #!/usr/bin/env python3
 """
-ADEPT — Packet-to-Tensor Pipeline
-==================================
+ADEPT — Packet-to-Tensor Pipeline (nPrint Edition)
+====================================================
 
-End-to-end script that converts a raw PCAP (or pre-extracted CSV) into the
-two synchronized tensor outputs consumed by the ADEPT ensemble:
+End-to-end script that converts a raw PCAP into the two synchronized tensor
+outputs consumed by the ADEPT ensemble:
 
-    1. Sequence tensor  [W, N, F]  → TCN & Purification Transformer
-    2. RF statistics    [W, S]     → Random Forest
+    1. Sequence tensor  [W, N, F≈1090]  → TCN & Purification Transformer
+       (nPrint bit-level header encoding + IPAT + Direction)
+    2. RF statistics    [W, S=24]       → Random Forest
+       (aggregated from Scapy-derived metadata)
+
+Uses nPrint-compatible bit-level encoding (Holland et al., CCS 2021),
+with selective identity masking inspired by FlowPaint (SIGCOMM'26).
 
 Usage
 -----
-    # From PCAP:
     python scripts/run_packet_to_tensor.py \\
-        --input data/raw/Wednesday-workingHours.pcap \\
-        --output-dir data/processed/wednesday/
-
-    # From pre-extracted CSV (skip PCAP parsing):
-    python scripts/run_packet_to_tensor.py \\
-        --input data/features/wednesday_packets.csv \\
-        --output-dir data/processed/wednesday/ \\
-        --from-csv
+        --input data/CIC-IDS-2017/pcap/Monday-WorkingHours.pcap \\
+        --output-dir data/processed/monday/
 
     # With custom window size (e.g., N=20):
     python scripts/run_packet_to_tensor.py \\
-        --input data/raw/capture.pcap \\
-        --output-dir data/processed/capture/ \\
+        --input data/CIC-IDS-2017/pcap/Monday-WorkingHours.pcap \\
+        --output-dir data/processed/monday_n20/ \\
         --window-size 20
+
+    # Disable identity masking:
+    python scripts/run_packet_to_tensor.py \\
+        --input data/CIC-IDS-2017/pcap/Monday-WorkingHours.pcap \\
+        --output-dir data/processed/monday_unmasked/ \\
+        --no-mask
 
 Outputs
 -------
     <output-dir>/
-        sequence.npy       — [W, N, F] float32
-        rf_stats.npy       — [W, S]    float32
-        flow_ids.npy       — [W]       object (5-tuple per window)
+        sequence.npy       — [W, N, F≈1090] float32
+        rf_stats.npy       — [W, S=24]      float32
+        flow_ids.npy       — [W]            object (5-tuple per window)
         mean_std.json      — normalization statistics
-        packets.csv        — intermediate per-packet features (if from PCAP)
         metadata.json      — pipeline config & tensor shapes
 """
 
@@ -46,7 +49,6 @@ import sys
 import time
 
 import numpy as np
-import pandas as pd
 import yaml
 
 # Allow running from project root: `python scripts/run_packet_to_tensor.py`
@@ -64,19 +66,15 @@ def load_config(config_path: str) -> dict:
 
 def main():
     parser = argparse.ArgumentParser(
-        description="ADEPT Packet-to-Tensor pipeline"
+        description="ADEPT Packet-to-Tensor pipeline (nPrint encoding)"
     )
     parser.add_argument(
         "-i", "--input", required=True,
-        help="Input PCAP file or CSV (if --from-csv)"
+        help="Input PCAP file"
     )
     parser.add_argument(
         "-o", "--output-dir", required=True,
         help="Output directory for tensors and metadata"
-    )
-    parser.add_argument(
-        "--from-csv", action="store_true",
-        help="Input is a pre-extracted CSV (skip PCAP parsing)"
     )
     parser.add_argument(
         "-c", "--config",
@@ -91,16 +89,20 @@ def main():
         "--mean-std", default=None,
         help="Path to existing mean_std.json (for test sets — use training stats)"
     )
+    parser.add_argument(
+        "--no-mask", action="store_true",
+        help="Disable identity masking (keep IPs, ports, IP ID in nPrint bits)"
+    )
     args = parser.parse_args()
 
     # --- Load config ---------------------------------------------------------
     cfg = load_config(args.config)
     window_size = args.window_size or cfg["window_size"]
     stride = cfg.get("window_stride", window_size)
-    seq_features = cfg["sequence_features"]
     rf_base = cfg["rf_base_features"]
     rf_agg = cfg["rf_agg_functions"]
     std_cols = cfg["standardize_columns"]
+    mask_prefixes = [] if args.no_mask else cfg.get("mask_prefixes", [])
 
     os.makedirs(args.output_dir, exist_ok=True)
 
@@ -108,18 +110,10 @@ def main():
         args.output_dir, cfg["mean_std_filename"]
     )
 
-    # --- Step 1: Packet features ---------------------------------------------
+    # --- Step 1: nPrint extraction -------------------------------------------
     t0 = time.time()
 
-    if args.from_csv:
-        print(f"[1/3] Loading pre-extracted CSV: {args.input}")
-        df = pd.read_csv(args.input)
-    else:
-        print(f"[1/3] Extracting packet features from PCAP: {args.input}")
-        df = extract_packet_features(args.input)
-        csv_path = os.path.join(args.output_dir, "packets.csv")
-        df.to_csv(csv_path, index=False)
-        print(f"      Saved intermediate CSV: {csv_path}")
+    df = extract_packet_features(args.input, mask_prefixes=mask_prefixes)
 
     t1 = time.time()
     print(f"      {len(df)} packets in {t1 - t0:.1f}s")
@@ -142,7 +136,6 @@ def main():
         flows=flows,
         window_size=window_size,
         stride=stride,
-        sequence_features=seq_features,
         rf_base_features=rf_base,
         rf_agg_functions=rf_agg,
         standardize_columns=std_cols,
@@ -159,12 +152,16 @@ def main():
 
     metadata = {
         "input": args.input,
+        "encoding": "nprint",
+        "nprint_bits": 1088,
+        "identity_masking": not args.no_mask,
+        "mask_prefixes": mask_prefixes,
         "window_size": window_size,
         "stride": stride,
         "num_windows": int(result["sequence"].shape[0]),
         "sequence_shape": list(result["sequence"].shape),
         "rf_stats_shape": list(result["rf_stats"].shape),
-        "sequence_features": result["feature_names"],
+        "sequence_feature_count": len(result["feature_names"]),
         "rf_stat_names": result["rf_stat_names"],
         "normalization_stats": result["stats"],
         "num_flows_total": len(flows),
@@ -176,10 +173,11 @@ def main():
     # --- Summary -------------------------------------------------------------
     total = t3 - t0
     print(f"\n{'='*60}")
-    print(f" ADEPT Packet-to-Tensor — Done ({total:.1f}s)")
+    print(f" ADEPT Packet-to-Tensor (nPrint) — Done ({total:.1f}s)")
     print(f"{'='*60}")
     print(f" Sequence tensor : {result['sequence'].shape}  → TCN / Transformer")
     print(f" RF stats tensor : {result['rf_stats'].shape}  → Random Forest")
+    print(f" Identity masking: {'ON' if not args.no_mask else 'OFF'}")
     print(f" Output dir      : {args.output_dir}")
     print(f"{'='*60}")
 
