@@ -50,6 +50,13 @@ Converts raw PCAP captures (or datasets like CIC-IDS2018) into the two synchroni
 1. **Sequence tensor** `[W, N, F]` — per-packet nPrint bit vectors for the TCN and Purification Transformer
 2. **RF statistics** `[W, S]` — aggregated window statistics for the Random Forest
 
+| Dimension | Meaning | Value |
+|---|---|---|
+| `W` | Number of windows (samples) | varies with dataset |
+| `N` | Window size — packets per window | 10 (default) |
+| `F` | Features per packet | 1090 (1088 nPrint bits + IPAT + Direction) |
+| `S` | RF statistic vector length | 24 (6 features × 4 aggregations) |
+
 Both outputs are synchronized at the N-th packet boundary ("N-Packet Snapshot"): every window contains exactly N packets from the same flow.
 
 ### Packet encoding — nPrint
