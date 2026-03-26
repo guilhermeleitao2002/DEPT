@@ -47,27 +47,50 @@ ADEPT is a defense framework against adversarial attacks on Machine Learning-bas
 
 Converts raw PCAP captures (or datasets like CIC-IDS2018) into the two synchronized tensor inputs consumed by the ADEPT ensemble:
 
-1. **Sequence tensor** `[W, N, F]` — per-packet header features for the TCN and Purification Transformer
+1. **Sequence tensor** `[W, N, F]` — per-packet nPrint bit vectors for the TCN and Purification Transformer
 2. **RF statistics** `[W, S]` — aggregated window statistics for the Random Forest
 
 Both outputs are synchronized at the N-th packet boundary ("N-Packet Snapshot"): every window contains exactly N packets from the same flow.
+
+### Packet encoding — nPrint
+
+Packet headers are encoded using the [nPrint](https://nprint.github.io) bit-level representation (Holland et al., CCS 2021). Every bit of every header field is mapped to a tri-state value:
+
+| Value | Meaning |
+|---|---|
+| `1` | Bit is set |
+| `0` | Bit is unset |
+| `-1` | Protocol layer absent (e.g. no TCP header in a UDP packet) |
+
+This produces a **fixed-length 1088-bit vector per packet**, regardless of which protocols are present:
+
+| Layer | Bits |
+|---|---|
+| IPv4 | 480 (60 bytes max, incl. options) |
+| TCP | 480 (60 bytes max, incl. options) |
+| UDP | 64 (8 bytes fixed) |
+| ICMP | 64 (8 bytes fixed) |
+
+High-entropy identity fields (source/destination IP, IP ID, source/destination port) are **zeroed out** before training — this prevents the model from overfitting to specific addresses and forces it to learn behavioral patterns instead.
 
 ### Processing stages
 
 ```
 PCAP file
   │
-  ├─ [1] packet_parser    Extract per-packet features (Scapy)
-  │       → Timestamp, Packet_Size, Protocol, Ports, TCP_Flags,
-  │         Payload_Length, Payload_Entropy
+  ├─ [1] packet_parser    Encode each packet as a 1088-bit nPrint vector (Scapy)
+  │       → 1088 header bits (IPv4 + TCP/UDP/ICMP)
+  │       → Identity masking: zero out IPs, ports, IP ID
+  │       → Metadata: Timestamp, Packet_Size, Protocol, TCP_Flags,
+  │                   Payload_Length, Payload_Entropy
   │
   ├─ [2] flow_grouper     Group packets by canonical 5-tuple
   │       → Per-flow IPAT (Inter-Packet Arrival Time)
   │       → Direction (forward / reverse)
   │
   └─ [3] tensor_builder   Window into N-packet snapshots
-          → Sequence tensor [W, N, 7]   (z-score standardized)
-          → RF stats tensor [W, 24]     (mean/std/min/max of 6 features)
+          → Sequence tensor [W, N, 1090]   (1088 nPrint bits + IPAT + Direction)
+          → RF stats tensor [W, 24]        (mean/std/min/max of 6 metadata features)
 ```
 
 ### Key design decisions
@@ -79,17 +102,13 @@ PCAP file
 | **Drop incomplete windows** (no padding) | Padding with zeros would pollute RF aggregated statistics |
 | **Separate RF and sequence outputs** | RF uses statistical summaries; TCN/Transformer uses raw sequences — different input representations for ensemble diversity |
 
-### Sequence features (F=7)
+### Sequence features (F=1090)
 
 | # | Feature | Description |
 |---|---|---|
-| 0 | `IPAT` | Inter-Packet Arrival Time within the flow |
-| 1 | `Packet_Size` | Frame length (bytes) |
-| 2 | `Protocol` | IP protocol number (TCP=6, UDP=17, ...) |
-| 3 | `TCP_Flags` | TCP flags as integer (0 if not TCP) |
-| 4 | `Payload_Length` | IP payload length (bytes) |
-| 5 | `Payload_Entropy` | Shannon entropy of payload bytes |
-| 6 | `Direction` | 1 = forward (flow initiator), 0 = reverse |
+| 0–1087 | nPrint bits | Tri-state {-1, 0, 1} encoding of all IPv4/TCP/UDP/ICMP header bits |
+| 1088 | `IPAT` | Inter-Packet Arrival Time within the flow (z-score normalized) |
+| 1089 | `Direction` | 1 = forward (flow initiator), 0 = reverse |
 
 ### RF statistics (S=24)
 
@@ -103,15 +122,6 @@ For each of the 6 base features (IPAT, Packet_Size, Payload_Length, Payload_Entr
 python scripts/run_packet_to_tensor.py \
     -i data/raw/capture.pcap \
     -o data/processed/capture/
-```
-
-### From a pre-extracted CSV
-
-```bash
-python scripts/run_packet_to_tensor.py \
-    -i data/features/packets.csv \
-    -o data/processed/output/ \
-    --from-csv
 ```
 
 ### Custom window size (N=20)
@@ -140,7 +150,7 @@ python scripts/run_packet_to_tensor.py \
 | `rf_stats.npy` | RF statistics `[W, S]` — float32 |
 | `flow_ids.npy` | Flow 5-tuple per window (pickled) |
 | `mean_std.json` | Normalization statistics (reuse for test sets) |
-| `packets.csv` | Intermediate per-packet features (from PCAP only) |
+| `packets.csv` | Intermediate per-packet DataFrame (1088 nPrint bits + metadata columns) |
 | `metadata.json` | Pipeline config, tensor shapes, feature names |
 
 ## Configuration
