@@ -190,4 +190,4 @@ ADEPT/
 
 ## Acknowledgements
 
-The packet parsing logic is adapted from [TANTGen](https://github.com/inesPisswormo/TANTGen) (Inês Pissarra, IST/INESC-ID), a Transformer-based adversarial network traffic generator that ADEPT is designed to defend against.
+The packet parsing logic is adapted from [TANTGen](https://github.com/inespissarra/Transformer-based_Adversarial_Network_Traffic_Generator) (Inês Pissarra, IST/INESC-ID), a Transformer-based adversarial network traffic generator that ADEPT is designed to defend against.
