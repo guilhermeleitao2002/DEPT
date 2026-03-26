@@ -151,14 +151,14 @@ python scripts/run_packet_to_tensor.py \
 
 ### Output files
 
-| File | Description |
-|---|---|
-| `sequence.npy` | Sequence tensor `[W, N, F]` — float32 |
-| `rf_stats.npy` | RF statistics `[W, S]` — float32 |
-| `flow_ids.npy` | Flow 5-tuple per window (pickled) |
-| `mean_std.json` | Normalization statistics (reuse for test sets) |
-| `packets.csv` | Intermediate per-packet DataFrame (1088 nPrint bits + metadata columns) |
-| `metadata.json` | Pipeline config, tensor shapes, feature names |
+| File | Downstream consumer | Description |
+|---|---|---|
+| `sequence.npy` | TCN, Purification Transformer | Sequence tensor `[W, N, F]` (float32). Each window is a raw per-packet sequence — the TCN reads it for classification, the Purification Transformer reads it to denoise adversarial perturbations. |
+| `rf_stats.npy` | Random Forest | RF statistics `[W, S]` (float32). Each window summarized as mean/std/min/max of 6 metadata features — intentionally a different representation from `sequence.npy` for ensemble diversity. |
+| `flow_ids.npy` | Evaluation, RL Agent | Flow 5-tuple per window. Maps each window back to its originating flow for per-flow metrics, RL reward correlation, and debugging. |
+| `mean_std.json` | Inference pipeline | Z-score normalization statistics (IPAT mean/std). Must be passed via `--mean-std` when processing test sets or live traffic to ensure consistent scaling. |
+| `packets.csv` | — | Intermediate per-packet DataFrame (1088 nPrint bits + metadata columns). Useful for inspection/debugging. |
+| `metadata.json` | — | Full pipeline provenance: input file, encoding config, masking, tensor shapes, flow counts. For reproducibility. |
 
 ## Configuration
 
