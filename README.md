@@ -113,7 +113,7 @@ PCAP file
 
 | # | Feature | Description |
 |---|---|---|
-| 0–1087 | nPrint bits | Tri-state {-1, 0, 1} encoding of all IPv4/TCP/UDP/ICMP header bits |
+| 0-1087 | nPrint bits | Tri-state {-1, 0, 1} encoding of all IPv4/TCP/UDP/ICMP header bits |
 | 1088 | `IPAT` | Inter-Packet Arrival Time within the flow (z-score normalized) |
 | 1089 | `Direction` | 1 = forward (flow initiator), 0 = reverse |
 
