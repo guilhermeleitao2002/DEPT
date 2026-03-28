@@ -123,6 +123,8 @@ For each of the 6 base features (IPAT, Packet_Size, Payload_Length, Payload_Entr
 
 ## Usage
 
+Run commands from the `ADEPT/` directory.
+
 ### From a PCAP file
 
 ```bash
@@ -147,6 +149,71 @@ python scripts/run_packet_to_tensor.py \
     -i data/raw/test.pcap \
     -o data/processed/test/ \
     --mean-std data/processed/train/mean_std.json
+```
+
+### Batch process the thesis attack set
+
+`scripts/process_all_attacks.py` runs the packet-to-tensor pipeline across the predefined attack PCAPs under `data/Kitsune/pcap/` and `data/CIC-IDS-2017/pcap/`, writing outputs to `data/tensors/`.
+
+Install Python dependencies first:
+
+```bash
+pip install -r requirements.txt
+```
+
+If you want to process any CIC-IDS2017 attack, you also need `editcap` from the Wireshark CLI tools because the script time-filters those PCAPs before tensorization:
+
+```bash
+sudo apt install wireshark-common
+```
+
+Process all predefined attacks (the Monday benign baseline is not included unless requested):
+
+```bash
+python scripts/process_all_attacks.py
+```
+
+Preview what would run without processing anything:
+
+```bash
+python scripts/process_all_attacks.py --dry-run
+```
+
+Process only one attack:
+
+```bash
+python scripts/process_all_attacks.py --only syn_dos
+```
+
+Re-process an attack even if `data/tensors/<attack>/metadata.json` already exists:
+
+```bash
+python scripts/process_all_attacks.py --only mirai --force
+```
+
+Override the window size from `config/pipeline.yaml`:
+
+```bash
+python scripts/process_all_attacks.py -N 20
+```
+
+Include the Monday benign baseline:
+
+```bash
+python scripts/process_all_attacks.py --include-benign
+```
+
+Available `--only` keys:
+
+```text
+mirai
+syn_dos
+fuzzing
+ssdp_flood
+ddos
+dos_slow
+portscan
+monday_benign
 ```
 
 ### Output files
