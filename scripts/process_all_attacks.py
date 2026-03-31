@@ -16,7 +16,7 @@ Datasets and rationale (see plan for full justification):
 
   Tier 2 — CIC-IDS2017 (cross-dataset generalization):
     5. DDoS           — Distributed DoS (Friday 19:30-21:05)
-    6. DoS            — Low-and-slow + volumetric (Wednesday 09:20-12:00)
+    6. DoS            — Low-and-slow + volumetric (Wednesday 13:40-15:30 UTC)
     7. Port Scan      — Reconnaissance (Friday 17:00-19:30)
 
   Benign baseline:
@@ -152,13 +152,14 @@ ATTACKS = [
         dataset="cic-ids2017",
         pcap_path=CIC_PCAP / "Wednesday-workingHours.pcap",
         output_dir=TENSOR_DIR / "dos_slow",
-        # Covers all 4 DoS sub-attacks:
-        #   Slowloris     09:47-10:10
-        #   SlowHTTPTest  10:14-10:35
-        #   Hulk          10:43-11:00
-        #   GoldenEye     11:10-11:23
-        time_start="2017-07-05 09:20:00",
-        time_end="2017-07-05 12:00:00",
+        # Covers all 4 DoS sub-attacks (times are UTC; CIC-IDS2017 uses EDT=UTC-4):
+        #   Slowloris     09:47-10:10 EDT = 13:47-14:10 UTC
+        #   SlowHTTPTest  10:14-10:35 EDT = 14:14-14:35 UTC
+        #   Hulk          10:43-11:00 EDT = 14:43-15:00 UTC
+        #   GoldenEye     11:10-11:23 EDT = 15:10-15:23 UTC
+        # Window includes ~7 min of benign before first attack.
+        time_start="2017-07-05 13:40:00",
+        time_end="2017-07-05 15:30:00",
     ),
     Attack(
         key="portscan",
