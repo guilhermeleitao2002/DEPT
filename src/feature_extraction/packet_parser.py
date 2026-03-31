@@ -264,16 +264,13 @@ def apply_masking(
 def extract_packet_features(
     pcap_path: str,
     mask_prefixes: Optional[List[str]] = None,
-) -> pd.DataFrame:
+) -> tuple:
     """
-    Read a PCAP and return a DataFrame with nPrint bit-level encoding
-    plus metadata columns for downstream processing.
+    Read a PCAP and return nPrint bit-level features as a compact numpy
+    array plus a lightweight metadata DataFrame.
 
-    Each row is one packet. Columns include:
-        - 1088 nPrint bit columns (ipv4_ver_0, ipv4_ver_1, ..., icmp_roh_31)
-        - Metadata: Timestamp, Source_IP, Destination_IP, Source_Port,
-          Destination_Port, Protocol, Packet_Size, Payload_Length,
-          Payload_Entropy, TCP_Flags
+    Keeping nPrint bits out of pandas avoids the ~10x memory overhead that
+    caused OOM on large pcaps (e.g., 2.7M-packet SYN DoS at 499 MB).
 
     Parameters
     ----------
@@ -285,52 +282,71 @@ def extract_packet_features(
 
     Returns
     -------
-    pd.DataFrame
-        Combined nPrint + metadata DataFrame, one row per packet.
+    (nprint_bits, meta_df) : tuple[np.ndarray, pd.DataFrame]
+        nprint_bits : int8 array of shape (P, 1088)
+        meta_df     : DataFrame with columns Timestamp, Source_IP, …, TCP_Flags
     """
     print(f"[1/3] Extracting nPrint bit-level features from: {pcap_path}")
     reader = PcapReader(pcap_path)
 
-    all_bits = []
+    # Accumulate in chunks to avoid massive Python-list memory overhead.
+    # Python int lists cost ~28 bytes/value; converting every CHUNK_SIZE
+    # packets to np.int8 (1 byte/value) keeps peak memory manageable.
+    CHUNK_SIZE = 50_000
+    bit_chunks = []
     all_meta = []
+    chunk_bits = []
 
     for pkt in reader:
         bits, meta = _encode_packet(pkt)
-        all_bits.append(bits)
+        chunk_bits.append(bits)
         all_meta.append(meta)
 
+        if len(chunk_bits) >= CHUNK_SIZE:
+            bit_chunks.append(np.array(chunk_bits, dtype=np.int8))
+            chunk_bits = []
+
+    if chunk_bits:
+        bit_chunks.append(np.array(chunk_bits, dtype=np.int8))
+        chunk_bits = []
+
     reader.close()
-    n_packets = len(all_bits)
+    n_packets = sum(c.shape[0] for c in bit_chunks)
     print(f"      {n_packets} packets extracted")
 
-    # Build nPrint DataFrame
-    nprint_array = np.array(all_bits, dtype=np.int8)
-    nprint_df = pd.DataFrame(nprint_array, columns=NPRINT_COLUMNS)
+    if n_packets == 0:
+        raise ValueError(
+            f"No packets found in {pcap_path}. "
+            "If this is a time-filtered PCAP, the time window may be incorrect."
+        )
 
-    # Build metadata DataFrame
+    # Build compact nPrint array (stays as numpy — never enters pandas)
+    nprint_bits = np.vstack(bit_chunks) if len(bit_chunks) > 1 else bit_chunks[0]
+    del bit_chunks
+
+    # Build lightweight metadata DataFrame (~10 columns only)
     meta_df = pd.DataFrame(all_meta)
+    del all_meta
 
-    # Apply selective masking
+    # Apply selective masking directly on the numpy array
     if mask_prefixes is None:
         mask_prefixes = DEFAULT_MASK_PREFIXES
     if mask_prefixes:
         print(f"      Masking {len(mask_prefixes)} field prefixes: {mask_prefixes}")
-        nprint_df = apply_masking(nprint_df, mask_prefixes)
+        cols_to_mask = []
+        for i, col in enumerate(NPRINT_COLUMNS):
+            for prefix in mask_prefixes:
+                if col.startswith(prefix + "_") and col[len(prefix) + 1:].isdigit():
+                    cols_to_mask.append(i)
+                    break
+        if cols_to_mask:
+            nprint_bits[:, cols_to_mask] = 0
+        print(f"      {len(cols_to_mask)} columns masked to zero")
 
-    masked_count = sum(
-        1 for c in nprint_df.columns
-        if (nprint_df[c] == 0).all() and any(
-            c.startswith(p + "_") for p in (mask_prefixes or [])
-        )
-    )
-    print(f"      {masked_count} columns masked to zero")
+    print(f"      Final shape: ({n_packets}, {nprint_bits.shape[1]}) "
+          f"({TOTAL_BITS} nPrint bits + {len(meta_df.columns)} metadata columns)")
 
-    # Combine: metadata columns first, then nPrint bit columns
-    df = pd.concat([meta_df, nprint_df], axis=1)
-    print(f"      Final shape: {df.shape} ({len(NPRINT_COLUMNS)} nPrint bits + "
-          f"{len(meta_df.columns)} metadata columns)")
-
-    return df
+    return nprint_bits, meta_df
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -351,6 +367,9 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     mask = [] if args.no_mask else None  # None = use defaults
-    df = extract_packet_features(args.input, mask_prefixes=mask)
+    nprint_bits, meta_df = extract_packet_features(args.input, mask_prefixes=mask)
+    # Recombine for CSV output (CLI-only; pipeline keeps them separate)
+    nprint_df = pd.DataFrame(nprint_bits, columns=NPRINT_COLUMNS)
+    df = pd.concat([meta_df, nprint_df], axis=1)
     df.to_csv(args.output, index=False)
     print(f"[+] Saved to {args.output}")

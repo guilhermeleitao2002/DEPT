@@ -51,29 +51,33 @@ def _compute_canonical_keys(df: pd.DataFrame) -> pd.Series:
     return pd.Series(keys, index=df.index)
 
 
-def group_by_flow(df: pd.DataFrame) -> Dict[Tuple, pd.DataFrame]:
+def group_by_flow(
+    meta_df: pd.DataFrame,
+) -> tuple:
     """
-    Group a packet DataFrame by 5-tuple flow.
+    Group packets by 5-tuple flow using metadata only.
 
-    For each flow the following columns are added:
-        - IPAT      : inter-packet arrival time *within the flow*
-        - Direction : 1 if packet matches the first-seen (src→dst), else 0
+    Returns lightweight index arrays instead of per-flow DataFrames
+    to avoid duplicating the full (potentially 1088-column) data.
 
     Parameters
     ----------
-    df : pd.DataFrame
-        Output of packet_parser.extract_packet_features(), must contain at
-        least: Timestamp, Source_IP, Destination_IP, Source_Port,
-        Destination_Port, Protocol.
+    meta_df : pd.DataFrame
+        Metadata from packet_parser (Timestamp, Source_IP, …, TCP_Flags).
+        Must **not** contain nPrint bit columns (those stay in numpy).
 
     Returns
     -------
-    flows : OrderedDict[tuple, pd.DataFrame]
-        Mapping from canonical 5-tuple → DataFrame of packets (sorted by
-        Timestamp), with IPAT and Direction columns added.
+    (meta_df, flow_indices, sort_order) : tuple
+        meta_df       : sorted by Timestamp, with IPAT and Direction added
+        flow_indices  : OrderedDict[tuple, np.ndarray] — flow key → row
+                        indices into the sorted arrays
+        sort_order    : np.ndarray — permutation that was applied to sort
+                        by Timestamp (caller must apply to nprint_bits too)
     """
-    # Ensure packets are sorted globally by timestamp
-    df = df.sort_values("Timestamp").reset_index(drop=True)
+    # Stable sort so packets with identical timestamps keep pcap order
+    sort_order = meta_df["Timestamp"].values.argsort(kind="mergesort")
+    df = meta_df.iloc[sort_order].reset_index(drop=True)
 
     # Compute canonical flow keys (vectorized on 5-tuple columns only)
     flow_keys = _compute_canonical_keys(df)
@@ -106,15 +110,20 @@ def group_by_flow(df: pd.DataFrame) -> Dict[Tuple, pd.DataFrame]:
             init_ip, init_port = initiator[fk]
             directions[i] = 1 if (src_ips[i], src_ports[i]) == (init_ip, init_port) else 0
 
-    df = df.copy()
     df["IPAT"] = ipats
     df["Direction"] = directions
-    df["_flow_key"] = flow_keys
 
-    # Split into per-flow DataFrames
-    flows = OrderedDict()
-    for fk, group in df.groupby("_flow_key", sort=False):
-        flows[fk] = group.drop(columns=["_flow_key"]).reset_index(drop=True)
+    # Build flow → index mapping (no per-flow DataFrame copies)
+    flow_key_arr = flow_keys.values  # numpy array of tuples
+    flow_indices = OrderedDict()
+    # Use a dict of lists for fast appending, then convert to arrays
+    _tmp: Dict[Tuple, list] = {}
+    for i, fk in enumerate(flow_key_arr):
+        if fk not in _tmp:
+            _tmp[fk] = []
+        _tmp[fk].append(i)
+    for fk, idx_list in _tmp.items():
+        flow_indices[fk] = np.array(idx_list, dtype=np.int64)
 
-    print(f"[+] Grouped {len(df)} packets into {len(flows)} flows")
-    return flows
+    print(f"[+] Grouped {len(df)} packets into {len(flow_indices)} flows")
+    return df, flow_indices, sort_order

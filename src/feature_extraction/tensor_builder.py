@@ -15,6 +15,19 @@ preserve ensemble diversity — aggregating binary bits would be meaningless.
 
 Only IPAT is z-score standardized; nPrint bits are already bounded {-1, 0, 1}
 and Direction is binary.
+
+Memory strategy
+---------------
+Large pcaps (2–4 M packets) produce per-flow float32 arrays that exceed
+available RAM when accumulated in Python lists before stacking. To avoid
+this, build_tensors:
+
+    1. Pre-counts the total number of windows so output arrays can be
+       pre-allocated exactly once.
+    2. Writes windows directly into memory-mapped .npy files on disk,
+       so the output never fully resides in RAM.
+    3. Converts nPrint bits to float32 *per window* (10 packets at a time)
+       rather than per flow, capping the working-set overhead at ~43 KB/window.
 """
 
 import json
@@ -26,21 +39,6 @@ import numpy as np
 import pandas as pd
 
 from .packet_parser import NPRINT_COLUMNS
-
-
-# ──────────────────────────────────────────────────────────────────────────────
-# Windowing (adapted from TANTGen utils.make_windows_features)
-# ──────────────────────────────────────────────────────────────────────────────
-
-def _make_windows(array: np.ndarray, window_size: int, stride: int):
-    """Yield non-overlapping (or strided) windows from a 2-D array.
-
-    Incomplete trailing windows are dropped — every window must have
-    exactly N packets to avoid polluting RF statistics with padding.
-    """
-    n = len(array)
-    for start in range(0, n - window_size + 1, stride):
-        yield array[start : start + window_size]
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -74,18 +72,6 @@ def _load_or_compute_stats(
         json.dump(stats, f, indent=2)
     print(f"[+] Saved mean/std to {mean_std_path}")
     return stats
-
-
-def _apply_standardization(
-    df: pd.DataFrame,
-    stats: Dict[str, Dict[str, float]],
-) -> pd.DataFrame:
-    """Apply z-score normalization in-place using pre-computed stats."""
-    df = df.copy()
-    for col, s in stats.items():
-        if col in df.columns:
-            df[col] = (df[col] - s["mean"]) / s["std"]
-    return df
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -122,22 +108,18 @@ def _compute_rf_stats(
     return np.array(stats, dtype=np.float32)
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# Sequence feature detection
-# ──────────────────────────────────────────────────────────────────────────────
-
-def _get_sequence_columns(df: pd.DataFrame) -> List[str]:
-    """
-    Auto-detect the columns for the sequence tensor:
-    all nPrint bit columns present in the DataFrame + IPAT + Direction.
-    """
-    nprint_cols = [c for c in NPRINT_COLUMNS if c in df.columns]
-    extra = []
-    if "IPAT" in df.columns:
-        extra.append("IPAT")
-    if "Direction" in df.columns:
-        extra.append("Direction")
-    return nprint_cols + extra
+def _count_windows(
+    flow_indices: OrderedDict,
+    window_size: int,
+    stride: int,
+) -> int:
+    """Count total windows across all qualifying flows."""
+    total = 0
+    for indices in flow_indices.values():
+        n = len(indices)
+        if n >= window_size:
+            total += (n - window_size) // stride + 1
+    return total
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -145,7 +127,10 @@ def _get_sequence_columns(df: pd.DataFrame) -> List[str]:
 # ──────────────────────────────────────────────────────────────────────────────
 
 def build_tensors(
-    flows: OrderedDict,
+    nprint_bits: np.ndarray,
+    meta_df: pd.DataFrame,
+    flow_indices: OrderedDict,
+    output_dir: str,
     window_size: int = 10,
     stride: int = 10,
     rf_base_features: Optional[List[str]] = None,
@@ -154,12 +139,21 @@ def build_tensors(
     mean_std_path: str = "mean_std.json",
 ) -> Dict:
     """
-    Main entry-point: convert per-flow DataFrames into ADEPT tensors.
+    Main entry-point: convert per-flow data into ADEPT tensors.
+
+    Writes sequence.npy and rf_stats.npy as memory-mapped files directly
+    to output_dir, avoiding the need to hold all windows in RAM at once.
 
     Parameters
     ----------
-    flows : OrderedDict[tuple, pd.DataFrame]
-        Output of flow_grouper.group_by_flow().
+    nprint_bits : np.ndarray, shape (P, 1088), dtype int8
+        Compact nPrint bit matrix (sorted same as meta_df).
+    meta_df : pd.DataFrame
+        Metadata with IPAT and Direction columns (sorted by Timestamp).
+    flow_indices : OrderedDict[tuple, np.ndarray]
+        Flow key → array of row indices into nprint_bits / meta_df.
+    output_dir : str
+        Directory to write sequence.npy and rf_stats.npy.
     window_size : int
         N in the "N-Packet Snapshot".
     stride : int
@@ -176,12 +170,13 @@ def build_tensors(
     Returns
     -------
     dict with keys:
-        "sequence"       : np.ndarray [W, N, F]  — TCN / Transformer input
-        "rf_stats"       : np.ndarray [W, S]     — Random Forest input
-        "flow_ids"       : list[tuple]           — flow key for each window
-        "stats"          : dict                  — normalization statistics
-        "feature_names"  : list[str]             — sequence feature column order
-        "rf_stat_names"  : list[str]             — RF stat column names
+        "sequence_path"  : str            — path to sequence.npy
+        "rf_stats_path"  : str            — path to rf_stats.npy
+        "flow_ids"       : list[tuple]    — flow key for each window
+        "stats"          : dict           — normalization statistics
+        "feature_names"  : list[str]      — sequence feature column order
+        "rf_stat_names"  : list[str]      — RF stat column names
+        "num_windows"    : int
     """
     # Defaults
     if rf_base_features is None:
@@ -194,78 +189,102 @@ def build_tensors(
     if standardize_columns is None:
         standardize_columns = ["IPAT"]
 
-    # --- Step 1: Compute global statistics for standardization ----------------
-    all_packets = pd.concat(flows.values(), ignore_index=True)
-    stats = _load_or_compute_stats(all_packets, standardize_columns, mean_std_path)
+    # --- Step 1: Global statistics for standardization -----------------------
+    stats = _load_or_compute_stats(meta_df, standardize_columns, mean_std_path)
 
-    # Detect sequence columns from actual DataFrame
-    sequence_features = _get_sequence_columns(all_packets)
+    # Sequence features: all nPrint columns + IPAT + Direction
+    sequence_features = list(NPRINT_COLUMNS) + ["IPAT", "Direction"]
+    n_seq_features = len(sequence_features)   # 1090
 
-    # RF metadata columns needed for aggregation
-    rf_meta_cols = [c for c in rf_base_features if c in all_packets.columns]
+    # RF metadata columns
+    rf_meta_cols = [c for c in rf_base_features if c in meta_df.columns]
+    rf_stat_names = [
+        f"{feat}_{agg}"
+        for feat in rf_base_features
+        for agg in rf_agg_functions
+    ]
+    n_rf_stats = len(rf_stat_names)
 
-    # Build RF stat names
-    rf_stat_names = []
-    for feat in rf_base_features:
-        for agg in rf_agg_functions:
-            rf_stat_names.append(f"{feat}_{agg}")
+    # Pre-extract metadata as numpy arrays for fast indexing
+    rf_meta_values = meta_df[rf_meta_cols].values.astype(np.float32)
+    ipat_values = meta_df["IPAT"].values.astype(np.float64)
+    direction_values = meta_df["Direction"].values.astype(np.float32)
+    ipat_mean = stats.get("IPAT", {}).get("mean", 0.0)
+    ipat_std = stats.get("IPAT", {}).get("std", 1.0)
 
-    # --- Step 2: Per-flow windowing -------------------------------------------
-    seq_windows: List[np.ndarray] = []
-    rf_windows: List[np.ndarray] = []
-    window_flow_ids: List[Tuple] = []
+    # --- Step 2: Pre-count windows and open memmaps --------------------------
+    n_windows = _count_windows(flow_indices, window_size, stride)
 
-    for flow_key, flow_df in flows.items():
-        if len(flow_df) < window_size:
-            continue
-
-        # Standardize (only IPAT typically)
-        flow_std = _apply_standardization(flow_df, stats)
-
-        # Extract sequence columns (nPrint bits + IPAT + Direction)
-        available_seq = [c for c in sequence_features if c in flow_std.columns]
-        seq_array = flow_std[available_seq].values.astype(np.float32)
-
-        # Extract RF metadata columns
-        available_rf = [c for c in rf_meta_cols if c in flow_std.columns]
-        rf_array = flow_std[available_rf].values.astype(np.float32)
-
-        # Window both arrays in sync
-        seq_iter = list(_make_windows(seq_array, window_size, stride))
-        rf_iter = list(_make_windows(rf_array, window_size, stride))
-
-        for seq_win, rf_win in zip(seq_iter, rf_iter):
-            seq_windows.append(seq_win)
-            rf_stat = _compute_rf_stats(rf_win, available_rf, rf_base_features, rf_agg_functions)
-            rf_windows.append(rf_stat)
-            window_flow_ids.append(flow_key)
-
-    # --- Step 3: Stack into arrays -------------------------------------------
-    if not seq_windows:
+    if n_windows == 0:
         print("[!] No windows produced (all flows shorter than window_size)")
         return {
-            "sequence": np.empty((0, window_size, len(sequence_features)), dtype=np.float32),
-            "rf_stats": np.empty((0, len(rf_stat_names)), dtype=np.float32),
+            "sequence_path": None,
+            "rf_stats_path": None,
             "flow_ids": [],
             "stats": stats,
             "feature_names": sequence_features,
             "rf_stat_names": rf_stat_names,
+            "num_windows": 0,
         }
 
-    sequence_tensor = np.stack(seq_windows)     # [W, N, F]
-    rf_tensor = np.stack(rf_windows)            # [W, S]
+    os.makedirs(output_dir, exist_ok=True)
+    seq_path = os.path.join(output_dir, "sequence.npy")
+    rf_path = os.path.join(output_dir, "rf_stats.npy")
 
-    print(f"[+] Built {len(seq_windows)} windows:")
-    print(f"    Sequence tensor : {sequence_tensor.shape}  "
-          f"(W, N={window_size}, F={sequence_tensor.shape[2]})")
-    print(f"    RF stats tensor : {rf_tensor.shape}  "
-          f"(W, S={rf_tensor.shape[1]})")
+    # Memory-mapped output: windows are written directly to disk, not
+    # accumulated in RAM. Peak working set = one window (~43 KB at N=10).
+    seq_mmap = np.lib.format.open_memmap(
+        seq_path, mode="w+", dtype=np.float32,
+        shape=(n_windows, window_size, n_seq_features),
+    )
+    rf_mmap = np.lib.format.open_memmap(
+        rf_path, mode="w+", dtype=np.float32,
+        shape=(n_windows, n_rf_stats),
+    )
+
+    # --- Step 3: Per-flow, per-window fill -----------------------------------
+    window_flow_ids: List[Tuple] = []
+    w = 0
+
+    for flow_key, indices in flow_indices.items():
+        n_pkts = len(indices)
+        if n_pkts < window_size:
+            continue
+
+        for start in range(0, n_pkts - window_size + 1, stride):
+            end = start + window_size
+            win_idx = indices[start:end]
+
+            # nPrint bits: convert only this window to float32 (~43 KB at N=10)
+            seq_mmap[w, :, :1088] = nprint_bits[win_idx].astype(np.float32)
+            seq_mmap[w, :, 1088] = (
+                (ipat_values[win_idx] - ipat_mean) / ipat_std
+            ).astype(np.float32)
+            seq_mmap[w, :, 1089] = direction_values[win_idx]
+
+            rf_mmap[w] = _compute_rf_stats(
+                rf_meta_values[win_idx], rf_meta_cols,
+                rf_base_features, rf_agg_functions,
+            )
+            window_flow_ids.append(flow_key)
+            w += 1
+
+    # Flush memmaps to disk
+    seq_mmap.flush()
+    rf_mmap.flush()
+
+    print(f"[+] Built {n_windows} windows:")
+    print(f"    Sequence tensor : {seq_mmap.shape}  "
+          f"(W, N={window_size}, F={n_seq_features})")
+    print(f"    RF stats tensor : {rf_mmap.shape}  "
+          f"(W, S={n_rf_stats})")
 
     return {
-        "sequence": sequence_tensor,
-        "rf_stats": rf_tensor,
+        "sequence_path": seq_path,
+        "rf_stats_path": rf_path,
         "flow_ids": window_flow_ids,
         "stats": stats,
         "feature_names": sequence_features,
         "rf_stat_names": rf_stat_names,
+        "num_windows": n_windows,
     }

@@ -113,19 +113,25 @@ def main():
     # --- Step 1: nPrint extraction -------------------------------------------
     t0 = time.time()
 
-    df = extract_packet_features(args.input, mask_prefixes=mask_prefixes)
+    nprint_bits, meta_df = extract_packet_features(
+        args.input, mask_prefixes=mask_prefixes
+    )
 
     t1 = time.time()
-    print(f"      {len(df)} packets in {t1 - t0:.1f}s")
+    print(f"      {len(meta_df)} packets in {t1 - t0:.1f}s")
 
     # --- Step 2: Flow grouping -----------------------------------------------
     print(f"[2/3] Grouping packets by 5-tuple flow...")
-    flows = group_by_flow(df)
+    meta_df, flow_indices, sort_order = group_by_flow(meta_df)
+    # Apply the same timestamp sort to the nPrint array
+    nprint_bits = nprint_bits[sort_order]
+    del sort_order
+
     t2 = time.time()
-    print(f"      {len(flows)} flows in {t2 - t1:.1f}s")
+    print(f"      {len(flow_indices)} flows in {t2 - t1:.1f}s")
 
     # Print flow size distribution
-    sizes = [len(f) for f in flows.values()]
+    sizes = [len(idx) for idx in flow_indices.values()]
     print(f"      Flow sizes: min={min(sizes)}, median={np.median(sizes):.0f}, "
           f"max={max(sizes)}, >=N({window_size}): "
           f"{sum(1 for s in sizes if s >= window_size)}/{len(sizes)}")
@@ -133,7 +139,10 @@ def main():
     # --- Step 3: Build tensors -----------------------------------------------
     print(f"[3/3] Building tensors (N={window_size}, stride={stride})...")
     result = build_tensors(
-        flows=flows,
+        nprint_bits=nprint_bits,
+        meta_df=meta_df,
+        flow_indices=flow_indices,
+        output_dir=args.output_dir,
         window_size=window_size,
         stride=stride,
         rf_base_features=rf_base,
@@ -141,15 +150,18 @@ def main():
         standardize_columns=std_cols,
         mean_std_path=mean_std_path,
     )
+    del nprint_bits, meta_df
     t3 = time.time()
     print(f"      Tensor build in {t3 - t2:.1f}s")
 
-    # --- Save outputs --------------------------------------------------------
-    np.save(os.path.join(args.output_dir, "sequence.npy"), result["sequence"])
-    np.save(os.path.join(args.output_dir, "rf_stats.npy"), result["rf_stats"])
+    # sequence.npy and rf_stats.npy are already on disk (memory-mapped).
+    # Only flow_ids and metadata.json still need to be written.
+    n_windows = result["num_windows"]
     np.save(os.path.join(args.output_dir, "flow_ids.npy"),
             np.array(result["flow_ids"], dtype=object), allow_pickle=True)
 
+    seq_shape = (n_windows, window_size, len(result["feature_names"]))
+    rf_shape = (n_windows, len(result["rf_stat_names"]))
     metadata = {
         "input": args.input,
         "encoding": "nprint",
@@ -158,13 +170,13 @@ def main():
         "mask_prefixes": mask_prefixes,
         "window_size": window_size,
         "stride": stride,
-        "num_windows": int(result["sequence"].shape[0]),
-        "sequence_shape": list(result["sequence"].shape),
-        "rf_stats_shape": list(result["rf_stats"].shape),
+        "num_windows": n_windows,
+        "sequence_shape": list(seq_shape),
+        "rf_stats_shape": list(rf_shape),
         "sequence_feature_count": len(result["feature_names"]),
         "rf_stat_names": result["rf_stat_names"],
         "normalization_stats": result["stats"],
-        "num_flows_total": len(flows),
+        "num_flows_total": len(flow_indices),
         "num_flows_used": len(set(result["flow_ids"])),
     }
     with open(os.path.join(args.output_dir, "metadata.json"), "w") as f:
@@ -175,8 +187,8 @@ def main():
     print(f"\n{'='*60}")
     print(f" ADEPT Packet-to-Tensor (nPrint) — Done ({total:.1f}s)")
     print(f"{'='*60}")
-    print(f" Sequence tensor : {result['sequence'].shape}  → TCN / Transformer")
-    print(f" RF stats tensor : {result['rf_stats'].shape}  → Random Forest")
+    print(f" Sequence tensor : {seq_shape}  → TCN / Transformer")
+    print(f" RF stats tensor : {rf_shape}  → Random Forest")
     print(f" Identity masking: {'ON' if not args.no_mask else 'OFF'}")
     print(f" Output dir      : {args.output_dir}")
     print(f"{'='*60}")
