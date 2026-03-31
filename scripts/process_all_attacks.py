@@ -58,6 +58,22 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 # ---------------------------------------------------------------------------
+# Terminal colours (ANSI — disabled when stdout is not a tty)
+# ---------------------------------------------------------------------------
+_USE_COLOR = sys.stdout.isatty()
+
+def _c(code: str, text: str) -> str:
+    return f"\033[{code}m{text}\033[0m" if _USE_COLOR else text
+
+def bold(t):    return _c("1", t)
+def dim(t):     return _c("2", t)
+def green(t):   return _c("32", t)
+def yellow(t):  return _c("33", t)
+def red(t):     return _c("31", t)
+def cyan(t):    return _c("36", t)
+def magenta(t): return _c("35", t)
+
+# ---------------------------------------------------------------------------
 # Project root = ADEPT/
 # ---------------------------------------------------------------------------
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -179,8 +195,8 @@ def find_editcap() -> str:
     """Return path to editcap or raise."""
     path = shutil.which("editcap")
     if path is None:
-        print("ERROR: editcap not found. Install Wireshark CLI tools:")
-        print("       sudo apt install wireshark-common")
+        print(f"{red(bold('ERROR:'))} editcap not found. Install Wireshark CLI tools:")
+        print(f"       {bold('sudo apt install wireshark-common')}")
         sys.exit(1)
     return path
 
@@ -189,11 +205,13 @@ def time_filter_pcap(editcap: str, src: Path, dst: Path,
                      start: str, end: str) -> None:
     """Use editcap to extract a time window from a PCAP."""
     cmd = [editcap, "-A", start, "-B", end, str(src), str(dst)]
-    print(f"  editcap: {start} → {end}")
-    print(f"  src: {src.name} → dst: {dst.name}")
+    print(f"  {dim('editcap:')} {start} → {end}")
+    print(f"  {dim('src:')} {src.name} → {dim('dst:')} {dst.name}")
     subprocess.run(cmd, check=True)
     size_mb = dst.stat().st_size / (1024 * 1024)
-    print(f"  Filtered PCAP: {size_mb:.1f} MB")
+    color = yellow if size_mb < 1 else dim
+    print(f"  {dim('Filtered PCAP:')} {color(f'{size_mb:.1f} MB')}"
+          + (f"  {yellow('⚠  empty — check time window')}" if size_mb < 1 else ""))
 
 
 def run_pipeline(pcap: Path, output_dir: Path, window_size: int | None,
@@ -225,26 +243,42 @@ def load_metadata(output_dir: Path) -> dict | None:
     return None
 
 
+def _status_colored(status: str) -> str:
+    if status == "OK":
+        return green(bold(f"{'OK':<12}"))
+    if status == "skipped":
+        return yellow(f"{'skipped':<12}")
+    if status == "MISSING":
+        return red(bold(f"{'MISSING':<12}"))
+    return red(bold(f"{status:<12}"))
+
+
 def print_summary(results: list[tuple[str, str, dict | None]]) -> None:
     """Print a summary table of all processed attacks."""
-    print(f"\n{'=' * 72}")
-    print(f" ADEPT Batch Processing — Summary")
-    print(f"{'=' * 72}")
-    print(f" {'Attack':<35} {'Status':<12} {'Windows':>10} {'Flows':>12}")
+    W = 72
+    print(f"\n{bold('=' * W)}")
+    print(f" {bold('ADEPT Batch Processing — Summary')}")
+    print(f"{bold('=' * W)}")
+    h_attack  = cyan(f"{'Attack':<35}")
+    h_status  = cyan(f"{'Status':<12}")
+    h_windows = cyan(f"{'Windows':>10}")
+    h_flows   = cyan(f"{'Flows':>12}")
+    print(f" {h_attack} {h_status} {h_windows} {h_flows}")
     print(f" {'-' * 35} {'-' * 12} {'-' * 10} {'-' * 12}")
 
     for name, status, meta in results:
         if meta:
-            windows = f"{meta['num_windows']:,}"
+            windows = green(f"{meta['num_windows']:>10,}")
             flows = f"{meta['num_flows_used']:,}/{meta['num_flows_total']:,}"
         else:
-            windows = "—"
-            flows = "—"
-        print(f" {name:<35} {status:<12} {windows:>10} {flows:>12}")
+            windows = dim(f"{'—':>10}")
+            flows = dim(f"{'—':>12}")
+        status_str = _status_colored(status)
+        print(f" {name:<35} {status_str} {windows} {flows:>12}")
 
-    print(f"{'=' * 72}")
-    print(f" Output directory: {TENSOR_DIR}")
-    print(f"{'=' * 72}\n")
+    print(f"{bold('=' * W)}")
+    print(f" Output directory: {cyan(str(TENSOR_DIR))}")
+    print(f"{bold('=' * W)}\n")
 
 
 # ---------------------------------------------------------------------------
@@ -302,10 +336,10 @@ def main():
         print("Nothing to process. Check --only keys or add --include-benign.")
         sys.exit(0)
 
-    print(f"\nADEPT Batch Processing — {len(selected)} attack(s) selected\n")
+    print(f"\n{bold('ADEPT Batch Processing')} — {cyan(str(len(selected)))} attack(s) selected\n")
     for i, a in enumerate(selected, 1):
-        tag = " [time-filtered]" if a.time_start else ""
-        print(f"  {i}. {a.name} ({a.dataset}{tag})")
+        tag = dim(" [time-filtered]") if a.time_start else ""
+        print(f"  {dim(str(i) + '.')} {a.name} {dim('(' + a.dataset + ')')}{tag}")
     print()
 
     if args.dry_run:
@@ -333,21 +367,21 @@ def main():
     total_start = time.time()
 
     for i, attack in enumerate(selected, 1):
-        print(f"\n{'─' * 72}")
-        print(f" [{i}/{len(selected)}] {attack.name}")
-        print(f"{'─' * 72}")
+        print(f"\n{dim('─' * 72)}")
+        print(f" {dim('[' + str(i) + '/' + str(len(selected)) + ']')} {bold(attack.name)}")
+        print(f"{dim('─' * 72)}")
 
         # Skip if already processed
         if is_already_processed(attack.output_dir) and not args.force:
             meta = load_metadata(attack.output_dir)
-            print(f"  Already processed ({meta['num_windows']:,} windows). "
-                  f"Use --force to re-process.")
+            print(f"  {yellow('Already processed')} ({meta['num_windows']:,} windows). "
+                  f"Use {bold('--force')} to re-process.")
             results.append((attack.name, "skipped", meta))
             continue
 
         # Verify source PCAP exists
         if not attack.pcap_path.exists():
-            print(f"  ERROR: PCAP not found: {attack.pcap_path}")
+            print(f"  {red(bold('ERROR:'))} PCAP not found: {attack.pcap_path}")
             results.append((attack.name, "MISSING", None))
             continue
 
@@ -361,7 +395,7 @@ def main():
                 filtered_dir.mkdir(parents=True, exist_ok=True)
                 filtered_pcap = filtered_dir / f"{attack.key}_filtered.pcap"
 
-                print(f"  Step 0: Time-filtering PCAP...")
+                print(f"  {dim('Step 0:')} Time-filtering PCAP...")
                 time_filter_pcap(
                     editcap, attack.pcap_path, filtered_pcap,
                     attack.time_start, attack.time_end,
@@ -369,7 +403,7 @@ def main():
                 pcap_to_process = filtered_pcap
 
             # Run the pipeline
-            print(f"  Running packet-to-tensor pipeline...")
+            print(f"  {dim('Running packet-to-tensor pipeline...')}")
             run_pipeline(
                 pcap=pcap_to_process,
                 output_dir=attack.output_dir,
@@ -379,12 +413,15 @@ def main():
 
             meta = load_metadata(attack.output_dir)
             elapsed = time.time() - t0
-            print(f"  Completed in {elapsed:.1f}s")
+            print(f"  {green('✓')} Completed in {elapsed:.1f}s")
             results.append((attack.name, "OK", meta))
 
         except subprocess.CalledProcessError as e:
             elapsed = time.time() - t0
-            print(f"  FAILED after {elapsed:.1f}s (exit code {e.returncode})")
+            code = e.returncode
+            hint = " (OOM — out of memory)" if code == -9 else ""
+            print(f"  {red(bold('✗ FAILED'))} after {elapsed:.1f}s "
+                  f"(exit code {red(str(code))}{hint})")
             results.append((attack.name, "FAILED", None))
 
         finally:
@@ -393,14 +430,14 @@ def main():
                 filtered_pcap = TENSOR_DIR / ".filtered" / f"{attack.key}_filtered.pcap"
                 if filtered_pcap.exists():
                     filtered_pcap.unlink()
-                    print(f"  Cleaned up filtered PCAP")
+                    print(f"  {dim('Cleaned up filtered PCAP')}")
 
     total_elapsed = time.time() - total_start
 
     # Summary
     print_summary(results)
-    print(f"Total time: {total_elapsed:.1f}s "
-          f"({total_elapsed / 60:.1f} min)\n")
+    print(f"{dim('Total time:')} {total_elapsed:.1f}s "
+          f"{dim('(' + f'{total_elapsed / 60:.1f} min' + ')')}\n")
 
 
 if __name__ == "__main__":
