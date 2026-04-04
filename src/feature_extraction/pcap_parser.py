@@ -24,7 +24,7 @@ from typing import List, Optional
 
 import numpy as np
 import pandas as pd
-from scapy.all import TCP, UDP, IP, IPv6, ICMP, PcapReader
+from scapy.all import TCP, UDP, IP, ICMP, PcapReader
 
 
 # ──────────────────────────────────────────────────────────────────────────────

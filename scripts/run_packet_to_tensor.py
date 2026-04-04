@@ -54,7 +54,7 @@ import yaml
 # Allow running from project root: `python scripts/run_packet_to_tensor.py`
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from src.feature_extraction.packet_parser import extract_packet_features
+from ADEPT.src.feature_extraction.pcap_parser import extract_packet_features
 from src.feature_extraction.flow_grouper import group_by_flow
 from src.feature_extraction.tensor_builder import build_tensors
 
