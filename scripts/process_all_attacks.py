@@ -361,7 +361,7 @@ def main():
             cached_info = ""
             if a.time_start:
                 cached_pcap = TENSOR_DIR / ".filtered" / f"{a.key}_filtered.pcap"
-                if cached_pcap.exists():
+                if cached_pcap.exists() and cached_pcap.stat().st_size > 0:
                     size_mb = cached_pcap.stat().st_size / (1024 * 1024)
                     cached_info = f"  {dim(f'(filtered PCAP cached: {size_mb:.1f} MB)')}"
             print(f"  [{status}] {bold(a.name)}")
@@ -414,7 +414,7 @@ def main():
         try:
             # Time-filter CIC-IDS2017 PCAPs (skip if a cached copy already exists)
             if attack.time_start:
-                if filtered_pcap.exists():
+                if filtered_pcap.exists() and filtered_pcap.stat().st_size > 0:
                     size_mb = filtered_pcap.stat().st_size / (1024 * 1024)
                     print(f"  {dim('Step 0:')} Using cached filtered PCAP "
                           f"{dim(f'({size_mb:.1f} MB)')}")
