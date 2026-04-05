@@ -312,6 +312,11 @@ def main():
         "--include-benign", action="store_true",
         help="Also process the Monday benign baseline",
     )
+    parser.add_argument(
+        "--keep-filtered", action="store_true",
+        help="Keep time-filtered PCAPs in data/tensors/.filtered/ after processing "
+             "(by default they are deleted to save disk space)",
+    )
     args = parser.parse_args()
 
     # Validate --only keys
@@ -347,14 +352,23 @@ def main():
         print("Dry run — nothing will be processed.\n")
         for a in selected:
             exists = is_already_processed(a.output_dir)
-            status = "EXISTS (skip)" if exists and not args.force else "WILL PROCESS"
-            if exists and args.force:
-                status = "EXISTS (force re-process)"
-            print(f"  [{status}] {a.name}")
+            if exists and not args.force:
+                status = yellow("EXISTS — skip")
+            elif exists and args.force:
+                status = magenta("EXISTS — force re-process")
+            else:
+                status = green("WILL PROCESS")
+            cached_info = ""
+            if a.time_start:
+                cached_pcap = TENSOR_DIR / ".filtered" / f"{a.key}_filtered.pcap"
+                if cached_pcap.exists():
+                    size_mb = cached_pcap.stat().st_size / (1024 * 1024)
+                    cached_info = f"  {dim(f'(filtered PCAP cached: {size_mb:.1f} MB)')}"
+            print(f"  [{status}] {bold(a.name)}")
             print(f"    PCAP:   {a.pcap_path}")
             print(f"    Output: {a.output_dir}")
             if a.time_start:
-                print(f"    Filter: {a.time_start} → {a.time_end}")
+                print(f"    Filter: {a.time_start} → {a.time_end}{cached_info}")
             print()
         sys.exit(0)
 
@@ -369,7 +383,8 @@ def main():
 
     for i, attack in enumerate(selected, 1):
         print(f"\n{dim('─' * 72)}")
-        print(f" {dim('[' + str(i) + '/' + str(len(selected)) + ']')} {bold(attack.name)}")
+        print(f" {bold(cyan(f'[ {i} / {len(selected)} ]'))}  {bold(attack.name)}  "
+              f"{dim('(' + attack.dataset + ')')}")
         print(f"{dim('─' * 72)}")
 
         # Skip if already processed
@@ -389,18 +404,26 @@ def main():
         t0 = time.time()
         pcap_to_process = attack.pcap_path
 
-        try:
-            # Time-filter CIC-IDS2017 PCAPs
-            if attack.time_start:
-                filtered_dir = TENSOR_DIR / ".filtered"
-                filtered_dir.mkdir(parents=True, exist_ok=True)
-                filtered_pcap = filtered_dir / f"{attack.key}_filtered.pcap"
+        # Pre-compute filtered PCAP path (needed by both try and finally)
+        filtered_pcap = None
+        if attack.time_start:
+            filtered_dir = TENSOR_DIR / ".filtered"
+            filtered_dir.mkdir(parents=True, exist_ok=True)
+            filtered_pcap = filtered_dir / f"{attack.key}_filtered.pcap"
 
-                print(f"  {dim('Step 0:')} Time-filtering PCAP...")
-                time_filter_pcap(
-                    editcap, attack.pcap_path, filtered_pcap,
-                    attack.time_start, attack.time_end,
-                )
+        try:
+            # Time-filter CIC-IDS2017 PCAPs (skip if a cached copy already exists)
+            if attack.time_start:
+                if filtered_pcap.exists():
+                    size_mb = filtered_pcap.stat().st_size / (1024 * 1024)
+                    print(f"  {dim('Step 0:')} Using cached filtered PCAP "
+                          f"{dim(f'({size_mb:.1f} MB)')}")
+                else:
+                    print(f"  {dim('Step 0:')} Time-filtering PCAP...")
+                    time_filter_pcap(
+                        editcap, attack.pcap_path, filtered_pcap,
+                        attack.time_start, attack.time_end,
+                    )
                 pcap_to_process = filtered_pcap
 
             # Run the pipeline
@@ -426,12 +449,12 @@ def main():
             results.append((attack.name, "FAILED", None))
 
         finally:
-            # Clean up filtered PCAP to save disk space
-            if attack.time_start:
-                filtered_pcap = TENSOR_DIR / ".filtered" / f"{attack.key}_filtered.pcap"
-                if filtered_pcap.exists():
-                    filtered_pcap.unlink()
-                    print(f"  {dim('Cleaned up filtered PCAP')}")
+            # Clean up filtered PCAP unless --keep-filtered was set
+            if (filtered_pcap is not None
+                    and filtered_pcap.exists()
+                    and not args.keep_filtered):
+                filtered_pcap.unlink()
+                print(f"  {dim('Cleaned up filtered PCAP')}")
 
     total_elapsed = time.time() - total_start
 
