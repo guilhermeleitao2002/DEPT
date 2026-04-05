@@ -339,6 +339,27 @@ monday_benign
 | `packets.csv` | — | Intermediate per-packet DataFrame (1088 nPrint bits + metadata columns). Useful for inspection/debugging. |
 | `metadata.json` | — | Full pipeline provenance: input file, encoding config, masking, tensor shapes, flow counts. For reproducibility. |
 
+## Processed dataset statistics
+
+Results from running `process_all_attacks.py` on a desktop Linux machine (WSL2). Window size N=10, non-overlapping stride, identity masking ON.
+
+| Attack | Dataset | Packets | Flows (total / usable) | Windows | Parse time | Total time |
+|---|---|---:|---:|---:|---:|---:|
+| Mirai Botnet | Kitsune | 764,137 | 32,921 / 164 | 69,340 | 2m 38s | 2m 53s |
+| SYN DoS | Kitsune | 2,771,276 | 753 / 33 | 276,871 | 11m 23s | 12m 23s |
+| Fuzzing | Kitsune | 2,244,139 | 1,803 / 19 | 224,226 | 10m 01s | 10m 54s |
+| SSDP Flood | Kitsune | 4,077,266 | 65,738 / 65,470 | 378,331 | 16m 51s | 18m 32s |
+| DDoS | CIC-IDS2017 | 2,151,810 | 86,272 / 60,941 | 181,651 | 10m 57s | 11m 52s |
+| DoS Slow | CIC-IDS2017 | 4,405,006 | 75,513 / 40,436 | 407,178 | 21m 42s | 23m 24s |
+| Port Scan | CIC-IDS2017 | 2,026,245 | 230,156 / 30,668 | 139,679 | 10m 29s | 11m 10s |
+| **Total** | | **18,440,879** | | **1,677,276** | | **~91m** |
+
+**Usable flows** = flows with ≥ N=10 packets. The low usable ratio for Mirai (164/32,921) and SYN DoS (33/753) reflects the highly skewed flow size distributions in those captures — a small number of flows contain virtually all packets.
+
+**CIC-IDS2017 time windows** are extracted with `editcap` before processing. The filtered PCAPs are 979 MB (Port Scan), 1,670 MB (DDoS), and 3,583 MB (DoS Slow). Reuse them across runs with `--keep-filtered`.
+
+**Parsing throughput**: ~3,300–4,900 packets/s (Scapy `PcapReader`, single-threaded). The bottleneck is packet parsing; flow grouping and tensor building are fast by comparison (seconds to ~1 min).
+
 ## Configuration
 
 All pipeline parameters are in `config/pipeline.yaml`: window size, stride, feature lists, aggregation functions, and standardization columns.
@@ -349,7 +370,7 @@ All pipeline parameters are in `config/pipeline.yaml`: window size, stride, feat
 pip install -r requirements.txt
 ```
 
-Dependencies: `numpy`, `pandas`, `scapy`, `pyyaml`.
+Dependencies: `numpy`, `pandas`, `scapy`, `pyyaml`, `tqdm`.
 
 ## Project structure
 
