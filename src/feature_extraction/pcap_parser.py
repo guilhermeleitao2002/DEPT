@@ -26,6 +26,11 @@ import numpy as np
 import pandas as pd
 from scapy.all import TCP, UDP, IP, ICMP, PcapReader
 
+try:
+    from tqdm import tqdm as _tqdm
+except ImportError:
+    _tqdm = None
+
 
 # ──────────────────────────────────────────────────────────────────────────────
 # nPrint header layout (matches nprint C++ source exactly)
@@ -286,7 +291,6 @@ def extract_packet_features(
         nprint_bits : int8 array of shape (P, 1088)
         meta_df     : DataFrame with columns Timestamp, Source_IP, …, TCP_Flags
     """
-    print(f"[1/3] Extracting nPrint bit-level features from: {pcap_path}")
     reader = PcapReader(pcap_path)
 
     # Accumulate in chunks to avoid massive Python-list memory overhead.
@@ -297,7 +301,12 @@ def extract_packet_features(
     all_meta = []
     chunk_bits = []
 
-    for pkt in reader:
+    pbar = (
+        _tqdm(reader, desc="      Parsing packets", unit=" pkt",
+              unit_scale=True, dynamic_ncols=True)
+        if _tqdm is not None else reader
+    )
+    for pkt in pbar:
         bits, meta = _encode_packet(pkt)
         chunk_bits.append(bits)
         all_meta.append(meta)
@@ -306,13 +315,15 @@ def extract_packet_features(
             bit_chunks.append(np.array(chunk_bits, dtype=np.int8))
             chunk_bits = []
 
+    if _tqdm is not None:
+        pbar.close()
+
     if chunk_bits:
         bit_chunks.append(np.array(chunk_bits, dtype=np.int8))
         chunk_bits = []
 
     reader.close()
     n_packets = sum(c.shape[0] for c in bit_chunks)
-    print(f"      {n_packets} packets extracted")
 
     if n_packets == 0:
         raise ValueError(

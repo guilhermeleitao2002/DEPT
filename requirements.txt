@@ -2,3 +2,4 @@ numpy>=1.26
 pandas
 scapy
 pyyaml
+tqdm

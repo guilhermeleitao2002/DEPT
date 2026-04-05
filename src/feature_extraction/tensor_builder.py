@@ -40,6 +40,11 @@ import pandas as pd
 
 from .pcap_parser import NPRINT_COLUMNS
 
+try:
+    from tqdm import tqdm as _tqdm
+except ImportError:
+    _tqdm = None
+
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Standardization
@@ -246,7 +251,16 @@ def build_tensors(
     window_flow_ids: List[Tuple] = []
     w = 0
 
-    for flow_key, indices in flow_indices.items():
+    flow_iter = flow_indices.items()
+    if _tqdm is not None:
+        pbar = _tqdm(
+            flow_iter, total=len(flow_indices),
+            desc="      Building windows", unit=" flow", dynamic_ncols=True,
+        )
+    else:
+        pbar = flow_iter
+
+    for flow_key, indices in pbar:
         n_pkts = len(indices)
         if n_pkts < window_size:
             continue
@@ -268,6 +282,12 @@ def build_tensors(
             )
             window_flow_ids.append(flow_key)
             w += 1
+
+        if _tqdm is not None:
+            pbar.set_postfix(windows=w)
+
+    if _tqdm is not None:
+        pbar.close()
 
     # Flush memmaps to disk
     seq_mmap.flush()

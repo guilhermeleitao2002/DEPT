@@ -59,6 +59,26 @@ from src.feature_extraction.flow_grouper import group_by_flow
 from src.feature_extraction.tensor_builder import build_tensors
 
 
+# ---------------------------------------------------------------------------
+# Terminal colours (ANSI — disabled when stdout is not a tty)
+# ---------------------------------------------------------------------------
+_USE_COLOR = sys.stdout.isatty()
+
+def _c(code: str, text: str) -> str:
+    return f"\033[{code}m{text}\033[0m" if _USE_COLOR else text
+
+def bold(t):    return _c("1", t)
+def dim(t):     return _c("2", t)
+def green(t):   return _c("32", t)
+def yellow(t):  return _c("33", t)
+def cyan(t):    return _c("36", t)
+
+
+def _step(n: int, total: int, msg: str) -> None:
+    """Print a coloured step header."""
+    print(f"\n{dim(f'[{n}/{total}]')} {bold(msg)}")
+
+
 def load_config(config_path: str) -> dict:
     with open(config_path) as f:
         return yaml.safe_load(f)
@@ -110,34 +130,39 @@ def main():
         args.output_dir, cfg["mean_std_filename"]
     )
 
+    fname = os.path.basename(args.input)
+
     # --- Step 1: nPrint extraction -------------------------------------------
     t0 = time.time()
+    _step(1, 3, f"Extracting nPrint features  {dim(fname)}")
 
     nprint_bits, meta_df = extract_packet_features(
         args.input, mask_prefixes=mask_prefixes
     )
 
     t1 = time.time()
-    print(f"      {len(meta_df)} packets in {t1 - t0:.1f}s")
+    print(f"      {green('✓')} {len(meta_df):,} packets  {dim(f'({t1 - t0:.1f}s)')}")
 
     # --- Step 2: Flow grouping -----------------------------------------------
-    print(f"[2/3] Grouping packets by 5-tuple flow...")
+    _step(2, 3, "Grouping by 5-tuple flow")
     meta_df, flow_indices, sort_order = group_by_flow(meta_df)
     # Apply the same timestamp sort to the nPrint array
     nprint_bits = nprint_bits[sort_order]
     del sort_order
 
     t2 = time.time()
-    print(f"      {len(flow_indices)} flows in {t2 - t1:.1f}s")
+    print(f"      {green('✓')} {len(flow_indices):,} flows  {dim(f'({t2 - t1:.1f}s)')}")
 
     # Print flow size distribution
     sizes = [len(idx) for idx in flow_indices.values()]
-    print(f"      Flow sizes: min={min(sizes)}, median={np.median(sizes):.0f}, "
-          f"max={max(sizes)}, >=N({window_size}): "
-          f"{sum(1 for s in sizes if s >= window_size)}/{len(sizes)}")
+    usable = sum(1 for s in sizes if s >= window_size)
+    print(f"      Flow sizes: min={min(sizes)}, "
+          f"median={np.median(sizes):.0f}, "
+          f"max={max(sizes)} — "
+          f"{cyan(str(usable))}/{len(sizes)} usable (≥N={window_size})")
 
     # --- Step 3: Build tensors -----------------------------------------------
-    print(f"[3/3] Building tensors (N={window_size}, stride={stride})...")
+    _step(3, 3, f"Building tensors  {dim(f'(N={window_size}, stride={stride})')}")
     result = build_tensors(
         nprint_bits=nprint_bits,
         meta_df=meta_df,
@@ -152,7 +177,7 @@ def main():
     )
     del nprint_bits, meta_df
     t3 = time.time()
-    print(f"      Tensor build in {t3 - t2:.1f}s")
+    print(f"      {green('✓')} {result['num_windows']:,} windows  {dim(f'({t3 - t2:.1f}s)')}")
 
     # sequence.npy and rf_stats.npy are already on disk (memory-mapped).
     # Only flow_ids and metadata.json still need to be written.
@@ -184,14 +209,16 @@ def main():
 
     # --- Summary -------------------------------------------------------------
     total = t3 - t0
-    print(f"\n{'='*60}")
-    print(f" ADEPT Packet-to-Tensor (nPrint) — Done ({total:.1f}s)")
-    print(f"{'='*60}")
-    print(f" Sequence tensor : {seq_shape}  → TCN / Transformer")
-    print(f" RF stats tensor : {rf_shape}  → Random Forest")
-    print(f" Identity masking: {'ON' if not args.no_mask else 'OFF'}")
-    print(f" Output dir      : {args.output_dir}")
-    print(f"{'='*60}")
+    W = 62
+    masking_str = green("ON") if not args.no_mask else yellow("OFF")
+    print(f"\n{bold('═' * W)}")
+    print(f" {bold('ADEPT Packet-to-Tensor')}  {dim(f'Done in {total:.1f}s')}")
+    print(f"{'─' * W}")
+    print(f" {cyan('Sequence tensor')}  {str(seq_shape):<28} {dim('TCN / Transformer')}")
+    print(f" {cyan('RF stats tensor')}  {str(rf_shape):<28} {dim('Random Forest')}")
+    print(f" {cyan('Identity masking')} {masking_str}")
+    print(f" {cyan('Output')}           {args.output_dir}")
+    print(f"{bold('═' * W)}\n")
 
 
 if __name__ == "__main__":
