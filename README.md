@@ -121,6 +121,112 @@ PCAP file
 
 For each of the 6 base features (IPAT, Packet_Size, Payload_Length, Payload_Entropy, TCP_Flags, Direction), four aggregations are computed over the N-packet window: **mean, std, min, max**.
 
+## Module Reference
+
+### `src/feature_extraction/pcap_parser.py` — PCAP → nPrint bits + metadata
+
+Reads a PCAP with Scapy and encodes each packet as a 1088-bit nPrint vector plus a lightweight metadata row. Kept separate from pandas to avoid the ~10× memory overhead of storing 1088 columns in a DataFrame.
+
+| Function | Inputs | Outputs | Notes |
+|---|---|---|---|
+| `extract_packet_features(pcap_path, mask_prefixes)` | PCAP path; list of field prefixes to zero | `(nprint_bits, meta_df)` — `int8 (P, 1088)` + `DataFrame (P, 10)` | Main entry point. Chunks 50k packets at a time to keep peak RAM low. tqdm progress bar shown during parsing. |
+| `_encode_packet(pkt)` | Scapy packet | `(list[int 1088], dict)` | Encodes one packet; detects layers, extracts raw bytes, calls `_bytes_to_bits()`. |
+| `_bytes_to_bits(raw_bytes, max_bytes, fill=-1)` | Raw bytes or None; target size; fill value | `list[int]` of `max_bytes × 8` values `{-1, 0, 1}` | MSB-first expansion; missing layer → fill with `-1`; unused option bytes → `0`. |
+| `_shannon_entropy(data)` | `bytes` | `float` ∈ [0, 8] | H = −Σ(p·log₂p). Used for `Payload_Entropy` metadata column. |
+| `apply_masking(df, mask_prefixes)` | nPrint DataFrame; prefix list | Masked DataFrame | DataFrame-level API (deprecated — pipeline uses in-place numpy masking). |
+
+**`meta_df` columns**: `Timestamp, Source_IP, Destination_IP, Source_Port, Destination_Port, Protocol, Packet_Size, Payload_Length, Payload_Entropy, TCP_Flags`
+
+**Identity masking**: columns matching a prefix (e.g., `ipv4_src_0` … `ipv4_src_31`) are zeroed in-place on the numpy array. Controlled by `mask_prefixes` in `config/pipeline.yaml`.
+
+---
+
+### `src/feature_extraction/flow_grouper.py` — 5-tuple grouping + IPAT + Direction
+
+Groups packets into bidirectional flows and annotates each packet with per-flow IPAT and Direction. IPAT is per-flow (not global) because each flow window is processed independently by the ensemble.
+
+| Function | Inputs | Outputs | Notes |
+|---|---|---|---|
+| `group_by_flow(meta_df)` | `meta_df` (P, 10) from `pcap_parser` | `(meta_df_updated, flow_indices, sort_order)` | Main entry point. |
+| `_compute_canonical_keys(df)` | `meta_df` | `pd.Series` of 5-tuples | Fully vectorized via `.where()`; no per-row Python loops. |
+
+**Canonical 5-tuple**: `(min_ip, max_ip, min_port, max_port, protocol)` — order-independent, so forward and reverse packets map to the same flow.
+
+**`group_by_flow` return values**:
+- `meta_df` — updated with `IPAT (float64, seconds)` and `Direction (int8: 1=fwd, 0=rev)`, sorted by Timestamp (stable mergesort)
+- `flow_indices` — `OrderedDict[5-tuple → np.ndarray[int64]]`: each flow's sorted row indices
+- `sort_order` — `np.ndarray[int64]`: the permutation applied; **caller must apply this to `nprint_bits`** (`nprint_bits = nprint_bits[sort_order]`) to keep the arrays in sync
+
+---
+
+### `src/feature_extraction/tensor_builder.py` — windowing → sequence.npy + rf_stats.npy
+
+Slides a non-overlapping N-packet window over each flow and writes the two output tensors directly to memory-mapped `.npy` files, avoiding OOM on large datasets.
+
+| Function | Inputs | Outputs | Notes |
+|---|---|---|---|
+| `build_tensors(nprint_bits, meta_df, flow_indices, output_dir, ...)` | `int8 (P, 1088)`, `DataFrame`, `OrderedDict`, config params | `dict` with paths + metadata | Main entry point. tqdm progress bar over flows. |
+| `_load_or_compute_stats(df, columns, mean_std_path)` | DataFrame; column list; JSON path | `{"IPAT": {"mean": float, "std": float}}` | Loads from JSON if it exists, otherwise computes and saves. |
+| `_compute_rf_stats(window_meta, feature_names, base_features, agg_functions)` | `float32 (N, M)` window; name lists | `float32 (S,)` | Applies mean/std/min/max per base feature over the N-packet window. |
+| `_count_windows(flow_indices, window_size, stride)` | flow map; N; stride | `int` | Pre-counts total windows to pre-allocate memmaps. Formula: Σ `(n − N) // stride + 1` for each flow with `n ≥ N`. |
+
+**`build_tensors` return dict keys**: `sequence_path`, `rf_stats_path`, `flow_ids`, `stats`, `feature_names` (1090 names), `rf_stat_names` (24 names), `num_windows`
+
+**Memory strategy**: pre-count → allocate `np.lib.format.open_memmap` → write one window at a time (~43 KB working set at N=10).
+
+---
+
+### `scripts/run_packet_to_tensor.py` — single-PCAP CLI
+
+Orchestrates the three modules for a single PCAP file.
+
+```
+[1/3] extract_packet_features()  →  nprint_bits (P,1088) int8  +  meta_df (P,10)
+[2/3] group_by_flow()            →  meta_df+IPAT+Direction, flow_indices, sort_order
+      nprint_bits = nprint_bits[sort_order]          ← critical sync step
+[3/3] build_tensors()            →  sequence.npy, rf_stats.npy, flow_ids.npy
+      write metadata.json
+```
+
+**CLI flags**: `-i/--input`, `-o/--output-dir`, `-c/--config`, `-N/--window-size`, `--mean-std` (pass training stats to a test set), `--no-mask`
+
+**Output files**:
+
+| File | Shape | Consumer |
+|---|---|---|
+| `sequence.npy` | `(W, N, 1090)` float32 | TCN, Transformer |
+| `rf_stats.npy` | `(W, 24)` float32 | Random Forest |
+| `flow_ids.npy` | `(W,)` object | Evaluation, RL Agent |
+| `mean_std.json` | — | Normalization stats; pass via `--mean-std` at test time |
+| `metadata.json` | — | Full pipeline provenance |
+
+---
+
+### `scripts/process_all_attacks.py` — batch processor for all 7 attacks
+
+Automates batch processing across the predefined attack set. For CIC-IDS2017 attacks, uses `editcap` to extract the attack time window before processing.
+
+**Attack registry** (pass keys to `--only`):
+
+| Key | Name | Dataset | Time window (UTC) |
+|---|---|---|---|
+| `mirai` | Mirai Botnet | Kitsune | — |
+| `syn_dos` | SYN DoS | Kitsune | — |
+| `fuzzing` | Fuzzing | Kitsune | — |
+| `ssdp_flood` | SSDP Flood | Kitsune | — |
+| `ddos` | DDoS | CIC-IDS2017 | 2017-07-07 19:30–21:05 |
+| `dos_slow` | DoS Slow (Slowloris + Hulk + …) | CIC-IDS2017 | 2017-07-05 13:40–15:30 |
+| `portscan` | Port Scan | CIC-IDS2017 | 2017-07-07 17:00–19:30 |
+| `monday_benign` | Monday Benign | CIC-IDS2017 | 2017-07-03 09:00–11:00 |
+
+**CLI flags**: `--only KEY [KEY...]`, `--force`, `--dry-run`, `-N/--window-size`, `--include-benign`, `--keep-filtered`
+
+**Per-attack flow**:
+1. Skip if `metadata.json` exists (unless `--force`)
+2. If CIC-IDS2017: check for a cached filtered PCAP in `data/tensors/.filtered/`; run `editcap` only if not cached
+3. Run `run_packet_to_tensor.py` as a subprocess
+4. Delete the filtered PCAP (unless `--keep-filtered`)
+
 ## Usage
 
 Run commands from the `ADEPT/` directory.
@@ -203,6 +309,12 @@ Include the Monday benign baseline:
 python scripts/process_all_attacks.py --include-benign
 ```
 
+Keep the time-filtered CIC-IDS2017 PCAPs after processing (re-runs reuse them automatically):
+
+```bash
+python scripts/process_all_attacks.py --keep-filtered
+```
+
 Available `--only` keys:
 
 ```text
@@ -246,10 +358,11 @@ ADEPT/
 ├── config/
 │   └── pipeline.yaml                  # Pipeline parameters
 ├── scripts/
-│   └── run_packet_to_tensor.py        # CLI entry-point
+│   ├── run_packet_to_tensor.py        # CLI entry-point (single PCAP)
+│   └── process_all_attacks.py         # Batch processor for 7 attacks + benign
 ├── src/
 │   └── feature_extraction/
-│       ├── packet_parser.py           # PCAP → per-packet DataFrame
+│       ├── pcap_parser.py             # PCAP → nPrint bits + metadata
 │       ├── flow_grouper.py            # 5-tuple grouping + IPAT + Direction
 │       └── tensor_builder.py          # Windowing + standardization + dual output
 └── requirements.txt
