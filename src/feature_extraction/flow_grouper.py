@@ -63,8 +63,8 @@ def group_by_flow(
     Parameters
     ----------
     meta_df : pd.DataFrame
-        Metadata from packet_parser (Timestamp, Source_IP, …, TCP_Flags).
-        Must **not** contain nPrint bit columns (those stay in numpy).
+        Metadata from pcap_parser (Timestamp, Source_IP, …, TCP_Flags).
+        Must **not** contain nPrint bit columns (those stay in numpy to avoid using up too much memory).
 
     Returns
     -------

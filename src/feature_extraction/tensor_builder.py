@@ -9,17 +9,17 @@ For each N-packet window in a flow, produce:
 Both outputs are synchronized at the Nth packet boundary ("N-Packet Snapshot").
 
 The sequence tensor uses the full nPrint bit columns (1088) plus IPAT and
-Direction, giving F ≈ 1090. The RF statistics are computed from the
+Direction, giving F = 1090. The RF statistics are computed from the
 Scapy-derived metadata columns (Packet_Size, Payload_Length, etc.) to
-preserve ensemble diversity — aggregating binary bits would be meaningless.
+preserve ensemble diversity.
 
 Only IPAT is z-score standardized; nPrint bits are already bounded {-1, 0, 1}
 and Direction is binary.
 
 Memory strategy
 ---------------
-Large pcaps (2–4 M packets) produce per-flow float32 arrays that exceed
-available RAM when accumulated in Python lists before stacking. To avoid
+Large pcaps (2-4 M packets) produce per-flow float32 arrays that exceed
+available RAM (32GB) when accumulated in Python lists before stacking. To avoid
 this, build_tensors:
 
     1. Pre-counts the total number of windows so output arrays can be
