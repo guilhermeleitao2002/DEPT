@@ -10,9 +10,16 @@ Two dataset-specific alignment problems:
   kitsune   Labels are per-packet in PCAP order; the pipeline reorders packets
             by timestamp in group_by_flow(). A lightweight PCAP re-read
             (5-tuple + timestamp only, no nPrint encoding — ~5-10x faster)
-            reconstructs the same sort order. Labels are then applied to sorted
-            positions and majority-voted per canonical flow, then joined with
-            flow_ids.npy.
+            reconstructs the same sort order and flow grouping.
+
+            Labels are applied per-window: for each N-packet window (using
+            the same window_size and stride as the pipeline, read from
+            metadata.json), the window is labeled attack if ANY of its N
+            packets carries an attack label. Per-flow majority vote is NOT
+            used because Kitsune flows often span the benign→attack transition
+            (e.g., ARP MitM puts all ARP traffic in one flow; Video Injection
+            runs the camera stream throughout), so a flow-level vote assigns
+            the wrong label to every window in those flows.
 
   cic       Labels are per-flow in CICFlowMeter TrafficLabelling CSVs, keyed by
             unidirectional 5-tuple (Flow ID column). The script canonicalises
@@ -39,9 +46,10 @@ Usage
 """
 
 import argparse
+import json
 import os
 import sys
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 from pathlib import Path
 
 import numpy as np
@@ -90,11 +98,51 @@ def _read_pcap_headers(pcap_path: Path) -> pd.DataFrame:
     ])
 
 
-def label_kitsune(tensor_dir: Path, labels_csv: Path, pcap_path: Path) -> pd.DataFrame:
-    # Per-packet labels in PCAP order (CSV: index col + "x" col, values 0/1)
-    labels_pcap = pd.read_csv(labels_csv, index_col=0).iloc[:, 0].to_numpy(dtype=np.int8)
+def _read_kitsune_labels(labels_csv: Path) -> np.ndarray:
+    """
+    Read per-packet label values from a Kitsune labels CSV.
 
-    # Lightweight PCAP re-read to reconstruct the timestamp sort order
+    Handles two formats found in the dataset:
+      - Two-column with header: col 0 = row-index, col 1 = label  (e.g. SYN_DoS_labels.csv)
+        File starts: `"","x"` then rows `"1",0  "2",0  ...`
+      - One-column, no header: bare 0/1 values only               (e.g. mirai_labels.csv)
+    """
+    raw = pd.read_csv(labels_csv, header=None, low_memory=False)
+    if raw.shape[1] == 1:
+        # Single-column file: values are in column 0
+        return raw.iloc[:, 0].to_numpy(dtype=np.int8)
+    else:
+        # Two-column file: row 0 is the header ("","x"), data starts at row 1
+        return raw.iloc[1:, 1].to_numpy(dtype=np.int8)
+
+
+def label_kitsune(tensor_dir: Path, labels_csv: Path, pcap_path: Path) -> pd.DataFrame:
+    """
+    Attach per-window labels for Kitsune attacks.
+
+    Labels are per-packet in PCAP order. We reconstruct the exact flow
+    grouping and windowing the pipeline used, then label each window based
+    on whether ANY of its N packets is an attack packet (any-attack rule).
+
+    Per-flow majority vote is intentionally NOT used: Kitsune flows often
+    span the benign→attack boundary (e.g. ARP MitM aggregates all ARP into
+    one flow; Video Injection streams throughout the capture), so majority
+    vote assigns the wrong label to large swaths of windows.
+    """
+    # --- Read pipeline config from metadata.json ----------------------------
+    meta_path = tensor_dir / "metadata.json"
+    if not meta_path.exists():
+        raise FileNotFoundError(f"metadata.json not found in {tensor_dir}. "
+                                "Run the pipeline first.")
+    with open(meta_path) as f:
+        meta = json.load(f)
+    window_size = meta["window_size"]
+    stride = meta["stride"]
+
+    # --- Load per-packet labels (PCAP order) --------------------------------
+    labels_pcap = _read_kitsune_labels(labels_csv)
+
+    # --- Lightweight PCAP re-read to reconstruct timestamp sort order -------
     meta_df = _read_pcap_headers(pcap_path)
     if len(meta_df) != len(labels_pcap):
         raise ValueError(
@@ -103,22 +151,64 @@ def label_kitsune(tensor_dir: Path, labels_csv: Path, pcap_path: Path) -> pd.Dat
     # Reconstruct sort_order — identical to group_by_flow()'s argsort
     sort_order = meta_df["Timestamp"].values.argsort(kind="mergesort")
     meta_sorted = meta_df.iloc[sort_order].reset_index(drop=True)
-    labels_sorted = labels_pcap[sort_order]  # labels now aligned to sorted packet positions
+    labels_sorted = labels_pcap[sort_order]   # labels aligned to timestamp-sorted positions
 
-    # Canonical flow key per sorted packet (same logic as the pipeline)
+    # --- Reconstruct flow grouping (same logic as flow_grouper) -------------
     flow_keys = _compute_canonical_keys(meta_sorted)
+    flow_indices: dict = OrderedDict()
+    for i, fk in enumerate(flow_keys):
+        if fk not in flow_indices:
+            flow_indices[fk] = []
+        flow_indices[fk].append(i)
 
-    # Majority-vote label per canonical flow (all packets in one flow should agree)
+    # --- Per-window labeling ------------------------------------------------
+    # flow_ids.npy contains the flow key for each window in pipeline order.
+    flow_ids = np.load(tensor_dir / "flow_ids.npy", allow_pickle=True)
     attack_name = tensor_dir.name
-    votes: dict = defaultdict(list)
-    for fk, lbl in zip(flow_keys, labels_sorted):
-        votes[fk].append(int(lbl))
-    flow_label = {
-        fk: (int(sum(v) > len(v) / 2), attack_name if sum(v) > len(v) / 2 else "benign")
-        for fk, v in votes.items()
-    }
 
-    return _join_flow_ids(tensor_dir, flow_label)
+    # Build a map: flow_key → list of per-window labels (in window order)
+    flow_window_labels: dict = {}
+    for fk, idx_list in flow_indices.items():
+        idx_arr = np.array(idx_list, dtype=np.int64)
+        n_pkts = len(idx_arr)
+        if n_pkts < window_size:
+            continue
+        win_labels = []
+        for start in range(0, n_pkts - window_size + 1, stride):
+            win_pkt_labels = labels_sorted[idx_arr[start:start + window_size]]
+            # Any-attack rule: if at least one packet in the window is attack → attack
+            is_attack = int(win_pkt_labels.any())
+            win_labels.append(is_attack)
+        flow_window_labels[fk] = win_labels
+
+    # Align with flow_ids.npy (which was written in the same flow/window order)
+    rows = []
+    # Track how many windows we've consumed per flow key
+    flow_window_cursor: dict = defaultdict(int)
+    n_unknown = 0
+    for w in range(len(flow_ids)):
+        fk = tuple(flow_ids[w])
+        if fk in flow_window_labels:
+            cursor = flow_window_cursor[fk]
+            win_labels_list = flow_window_labels[fk]
+            if cursor < len(win_labels_list):
+                lbl = win_labels_list[cursor]
+                flow_window_cursor[fk] += 1
+                label_str = attack_name if lbl == 1 else "benign"
+                rows.append({"window_idx": w, "label": lbl, "label_str": label_str})
+            else:
+                # Cursor overrun — shouldn't happen if pipeline and re-read agree
+                rows.append({"window_idx": w, "label": -1, "label_str": "unknown"})
+                n_unknown += 1
+        else:
+            rows.append({"window_idx": w, "label": -1, "label_str": "unknown"})
+            n_unknown += 1
+
+    if n_unknown:
+        pct = 100 * n_unknown / len(flow_ids)
+        print(f"  Warning: {n_unknown:,} windows ({pct:.1f}%) unmatched — "
+              "flow key absent from label source")
+    return pd.DataFrame(rows)
 
 
 # ---------------------------------------------------------------------------
@@ -144,7 +234,7 @@ def _canonicalize_cic_flow_id(flow_id: str) -> tuple:
 
 
 def label_cic(tensor_dir: Path, labels_csv: Path) -> pd.DataFrame:
-    cic_df = pd.read_csv(labels_csv, skipinitialspace=True)
+    cic_df = pd.read_csv(labels_csv, skipinitialspace=True, encoding="latin-1", low_memory=False)
     cic_df.columns = cic_df.columns.str.strip()
     flow_id_col = cic_df["Flow ID"].astype(str).str.strip()
     label_col = cic_df["Label"].astype(str).str.strip()
