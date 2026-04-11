@@ -202,9 +202,9 @@ Orchestrates the three modules for a single PCAP file.
 
 ---
 
-### `scripts/process_all_attacks.py` — batch processor for all 7 attacks
+### `scripts/process_all_attacks.py` — batch processor for all attacks
 
-Automates batch processing across the predefined attack set. For CIC-IDS2017 attacks, uses `editcap` to extract the attack time window before processing.
+Automates batch processing across all available attack PCAPs. For CIC-IDS2017 attacks, uses `editcap` to extract the attack time window before processing.
 
 **Attack registry** (pass keys to `--only`):
 
@@ -214,9 +214,18 @@ Automates batch processing across the predefined attack set. For CIC-IDS2017 att
 | `syn_dos` | SYN DoS | Kitsune | — |
 | `fuzzing` | Fuzzing | Kitsune | — |
 | `ssdp_flood` | SSDP Flood | Kitsune | — |
+| `arp_mitm` | ARP MitM | Kitsune | — |
+| `active_wiretap` | Active Wiretap | Kitsune | — |
+| `os_scan` | OS Scan | Kitsune | — |
+| `ssl_renegotiation` | SSL Renegotiation | Kitsune | — |
+| `video_injection` | Video Injection | Kitsune | — |
 | `ddos` | DDoS | CIC-IDS2017 | 2017-07-07 19:30–21:05 |
 | `dos_slow` | DoS Slow (Slowloris + Hulk + …) | CIC-IDS2017 | 2017-07-05 13:40–15:30 |
 | `portscan` | Port Scan | CIC-IDS2017 | 2017-07-07 17:00–19:30 |
+| `brute_force_ftp` | Brute Force FTP | CIC-IDS2017 | 2017-07-04 13:15–14:25 |
+| `brute_force_ssh` | Brute Force SSH | CIC-IDS2017 | 2017-07-04 18:00–19:05 |
+| `web_attacks` | Web Attacks (Brute Force + XSS + SQLi) | CIC-IDS2017 | 2017-07-06 13:15–14:45 |
+| `infiltration` | Infiltration | CIC-IDS2017 | 2017-07-06 18:15–18:40 |
 | `monday_benign` | Monday Benign | CIC-IDS2017 | 2017-07-03 09:00–11:00 |
 
 **CLI flags**: `--only KEY [KEY...]`, `--force`, `--dry-run`, `-N/--window-size`, `--include-benign`, `--keep-filtered`
@@ -259,7 +268,7 @@ python scripts/run_packet_to_tensor.py \
 
 ### Batch process the thesis attack set
 
-`scripts/process_all_attacks.py` runs the packet-to-tensor pipeline across the predefined attack PCAPs under `data/Kitsune/pcap/` and `data/CIC-IDS-2017/pcap/`, writing outputs to `data/tensors/`.
+`scripts/process_all_attacks.py` runs the packet-to-tensor pipeline across all available attack PCAPs under `data/Kitsune/pcap/` and `data/CIC-IDS-2017/pcap/`, writing outputs to `data/tensors/`.
 
 Install Python dependencies first:
 
@@ -322,9 +331,18 @@ mirai
 syn_dos
 fuzzing
 ssdp_flood
+arp_mitm
+active_wiretap
+os_scan
+ssl_renegotiation
+video_injection
 ddos
 dos_slow
 portscan
+brute_force_ftp
+brute_force_ssh
+web_attacks
+infiltration
 monday_benign
 ```
 

@@ -1,39 +1,48 @@
 #!/usr/bin/env python3
 """
-ADEPT — Batch Processing for Selected Attack Datasets
-======================================================
+ADEPT — Batch Processing for All Attack Datasets
+=================================================
 
-Automates the Packet-to-Tensor pipeline for all 7 attacks selected for
-ADEPT evaluation, plus the Monday benign baseline.
+Automates the Packet-to-Tensor pipeline for all available attack PCAPs,
+plus the Monday benign baseline.
 
-Datasets and rationale (see plan for full justification):
+Datasets:
 
-  Tier 1 — Kitsune (TANTGen adversarial results available):
-    1. Mirai          — Botnet C&C / IoT DDoS          [already processed]
-    2. SYN DoS        — Volumetric DoS (TCP)
-    3. Fuzzing        — Stealthy protocol exploitation
-    4. SSDP Flood     — Volumetric amplification (UDP)
+  Kitsune:
+     1. Mirai             — Botnet C&C / IoT DDoS
+     2. SYN DoS           — Volumetric DoS (TCP)
+     3. Fuzzing           — Stealthy protocol exploitation
+     4. SSDP Flood        — Volumetric amplification (UDP)
+     5. ARP MitM          — Layer-2 ARP poisoning / MitM
+     6. Active Wiretap    — Passive tap (Linux-bridge based)
+     7. OS Scan           — OS fingerprinting / reconnaissance
+     8. SSL Renegotiation — TLS renegotiation abuse
+     9. Video Injection   — Adversarial video stream injection
 
-  Tier 2 — CIC-IDS2017 (cross-dataset generalization):
-    5. DDoS           — Distributed DoS (Friday 19:30-21:05)
-    6. DoS            — Low-and-slow + volumetric (Wednesday 13:40-15:30 UTC)
-    7. Port Scan      — Reconnaissance (Friday 17:00-19:30)
+  CIC-IDS2017:
+    10. DDoS              — Distributed DoS (Friday 19:30-21:05 UTC)
+    11. DoS Slow          — Slowloris+SlowHTTPTest+Hulk+GoldenEye (Wednesday 13:40-15:30 UTC)
+    12. Port Scan         — Reconnaissance (Friday 17:00-19:30 UTC)
+    13. Brute Force FTP   — FTP-Patator credential stuffing (Tuesday 13:15-14:25 UTC)
+    14. Brute Force SSH   — SSH-Patator credential stuffing (Tuesday 18:00-19:05 UTC)
+    15. Web Attacks       — HTTP Brute Force + XSS + SQL Injection (Thursday 13:15-14:45 UTC)
+    16. Infiltration      — Malware download + C&C beaconing (Thursday 18:15-18:40 UTC)
 
   Benign baseline:
-    8. Monday benign   — Enterprise benign manifold (sampled)
+    17. Monday benign     — Enterprise benign manifold (sampled, CIC-IDS2017)
 
 CIC-IDS2017 PCAPs are time-filtered with editcap before processing to
 reduce size and isolate attack windows.
 
 Usage
 -----
-    # Process all attacks (skips Mirai by default since it's already done):
+    # Process all attacks (skips already-processed ones):
     python scripts/process_all_attacks.py
 
     # Process a specific attack:
     python scripts/process_all_attacks.py --only syn_dos
 
-    # Re-process Mirai (force overwrite):
+    # Re-process an attack even if output already exists:
     python scripts/process_all_attacks.py --only mirai --force
 
     # Dry run — show what would be processed without running:
@@ -106,7 +115,7 @@ class Attack:
 
 
 ATTACKS = [
-    # --- Tier 1: Kitsune ---------------------------------------------------
+    # --- Kitsune -----------------------------------------------------------
     Attack(
         key="mirai",
         name="Mirai Botnet",
@@ -135,7 +144,42 @@ ATTACKS = [
         pcap_path=KITSUNE_PCAP / "SSDP_Flood_pcap.pcap",
         output_dir=TENSOR_DIR / "ssdp_flood",
     ),
-    # --- Tier 2: CIC-IDS2017 -----------------------------------------------
+    Attack(
+        key="arp_mitm",
+        name="ARP MitM",
+        dataset="kitsune",
+        pcap_path=KITSUNE_PCAP / "ARP_MitM_pcap.pcapng",
+        output_dir=TENSOR_DIR / "arp_mitm",
+    ),
+    Attack(
+        key="active_wiretap",
+        name="Active Wiretap",
+        dataset="kitsune",
+        pcap_path=KITSUNE_PCAP / "Active_Wiretap_pcap.pcapng",
+        output_dir=TENSOR_DIR / "active_wiretap",
+    ),
+    Attack(
+        key="os_scan",
+        name="OS Scan",
+        dataset="kitsune",
+        pcap_path=KITSUNE_PCAP / "OS_Scan_pcap.pcapng",
+        output_dir=TENSOR_DIR / "os_scan",
+    ),
+    Attack(
+        key="ssl_renegotiation",
+        name="SSL Renegotiation",
+        dataset="kitsune",
+        pcap_path=KITSUNE_PCAP / "SSL_Renegotiation_pcap.pcap",
+        output_dir=TENSOR_DIR / "ssl_renegotiation",
+    ),
+    Attack(
+        key="video_injection",
+        name="Video Injection",
+        dataset="kitsune",
+        pcap_path=KITSUNE_PCAP / "Video_Injection_pcap.pcapng",
+        output_dir=TENSOR_DIR / "video_injection",
+    ),
+    # --- CIC-IDS2017 -------------------------------------------------------
     # Time windows from CIC-IDS2017 documentation and TANTGen run scripts.
     Attack(
         key="ddos",
@@ -169,6 +213,50 @@ ATTACKS = [
         output_dir=TENSOR_DIR / "portscan",
         time_start="2017-07-07 17:00:00",
         time_end="2017-07-07 19:30:00",
+    ),
+    Attack(
+        key="brute_force_ftp",
+        name="Brute Force FTP (CIC-IDS2017 Tuesday)",
+        dataset="cic-ids2017",
+        pcap_path=CIC_PCAP / "Tuesday-WorkingHours.pcap",
+        output_dir=TENSOR_DIR / "brute_force_ftp",
+        # FTP-Patator: 09:20-10:20 EDT = 13:20-14:20 UTC
+        time_start="2017-07-04 13:15:00",
+        time_end="2017-07-04 14:25:00",
+    ),
+    Attack(
+        key="brute_force_ssh",
+        name="Brute Force SSH (CIC-IDS2017 Tuesday)",
+        dataset="cic-ids2017",
+        pcap_path=CIC_PCAP / "Tuesday-WorkingHours.pcap",
+        output_dir=TENSOR_DIR / "brute_force_ssh",
+        # SSH-Patator: 14:05-15:00 EDT = 18:05-19:00 UTC
+        time_start="2017-07-04 18:00:00",
+        time_end="2017-07-04 19:05:00",
+    ),
+    Attack(
+        key="web_attacks",
+        name="Web Attacks (CIC-IDS2017 Thursday)",
+        dataset="cic-ids2017",
+        pcap_path=CIC_PCAP / "Thursday-WorkingHours.pcap",
+        output_dir=TENSOR_DIR / "web_attacks",
+        # Brute Force HTTP: 09:20-10:00 EDT = 13:20-14:00 UTC
+        # XSS:             10:15-10:35 EDT = 14:15-14:35 UTC
+        # SQL Injection:   10:40-10:42 EDT = 14:40-14:42 UTC
+        # Single window covers all three sub-attacks.
+        time_start="2017-07-06 13:15:00",
+        time_end="2017-07-06 14:45:00",
+    ),
+    Attack(
+        key="infiltration",
+        name="Infiltration (CIC-IDS2017 Thursday)",
+        dataset="cic-ids2017",
+        pcap_path=CIC_PCAP / "Thursday-WorkingHours.pcap",
+        output_dir=TENSOR_DIR / "infiltration",
+        # Malware download: 14:19-14:21 EDT = 18:19-18:21 UTC
+        # C&C beaconing:   14:33-14:35 EDT = 18:33-18:35 UTC
+        time_start="2017-07-06 18:15:00",
+        time_end="2017-07-06 18:40:00",
     ),
     # --- Benign baseline ---------------------------------------------------
     Attack(
