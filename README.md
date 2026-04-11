@@ -367,14 +367,25 @@ Results from running `process_all_attacks.py` on a desktop Linux machine (WSL2).
 | SYN DoS | Kitsune | 2,771,276 | 753 / 33 | 276,871 | 11m 23s | 12m 23s |
 | Fuzzing | Kitsune | 2,244,139 | 1,803 / 19 | 224,226 | 10m 01s | 10m 54s |
 | SSDP Flood | Kitsune | 4,077,266 | 65,738 / 65,470 | 378,331 | 16m 51s | 18m 32s |
+| ARP MitM | Kitsune | 2,504,267 | 109 / 30 | 250,394 | 11m 27s | 12m 27s |
+| Active Wiretap | Kitsune | 2,278,689 | 89 / 65 | 227,834 | 10m 21s | 11m 14s |
+| OS Scan | Kitsune | 1,697,851 | 65,588 / 7 | 156,664 | 7m 47s | 8m 25s |
+| SSL Renegotiation | Kitsune | 2,207,571 | 779 / 79 | 220,333 | 9m 03s | 9m 54s |
+| Video Injection | Kitsune | 2,472,401 | 60 / 24 | 247,222 | 11m 16s | 12m 16s |
 | DDoS | CIC-IDS2017 | 2,151,810 | 86,272 / 60,941 | 181,651 | 10m 57s | 11m 52s |
 | DoS Slow | CIC-IDS2017 | 4,405,006 | 75,513 / 40,436 | 407,178 | 21m 42s | 23m 24s |
 | Port Scan | CIC-IDS2017 | 2,026,245 | 230,156 / 30,668 | 139,679 | 10m 29s | 11m 10s |
-| **Total** | | **18,440,879** | | **1,677,276** | | **~91m** |
+| Brute Force FTP | CIC-IDS2017 | — | — | — | OOM | — |
+| Brute Force SSH | CIC-IDS2017 | 1,151,286 | 42,280 / 19,627 | 96,573 | 6m 11s | 6m 36s |
+| Web Attacks | CIC-IDS2017 | 2,811,263 | 46,845 / 19,148 | 260,533 | 15m 33s | 16m 38s |
+| Infiltration | CIC-IDS2017 | 418,560 | 15,755 / 4,942 | 35,744 | 2m 14s | 2m 23s |
+| **Total** | | **33,981,767** | | **3,172,573** | | **~171m** |
 
-**Usable flows** = flows with ≥ N=10 packets. The low usable ratio for Mirai (164/32,921) and SYN DoS (33/753) reflects the highly skewed flow size distributions in those captures — a small number of flows contain virtually all packets.
+**Usable flows** = flows with ≥ N=10 packets. The low usable ratio for Mirai (164/32,921), SYN DoS (33/753), OS Scan (7/65,588), and Video Injection (24/60) reflects the highly skewed flow size distributions in those captures — a small number of flows contain virtually all packets.
 
-**Parsing throughput**: ~3,300–4,900 packets/s (Scapy `PcapReader`). The bottleneck is packet parsing; flow grouping and tensor building are fast by comparison (seconds to ~1 min).
+**Brute Force FTP** (CIC-IDS2017 Tuesday 13:15–14:25 UTC) OOM'd during nPrint parsing (6.53M packets, 7.5 GB filtered PCAP) on the local desktop. Needs to be re-run on the DPSS server with its larger RAM.
+
+**Parsing throughput**: ~3,000–4,900 packets/s (Scapy `PcapReader`). The bottleneck is packet parsing; flow grouping and tensor building are fast by comparison (seconds to ~1 min).
 
 ## Configuration
 
