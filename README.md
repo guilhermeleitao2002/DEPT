@@ -198,7 +198,29 @@ Orchestrates the three modules for a single PCAP file.
 | `rf_stats.npy` | `(W, 24)` float32 | Random Forest |
 | `flow_ids.npy` | `(W,)` object | Evaluation, RL Agent |
 | `mean_std.json` | — | Normalization stats; pass via `--mean-std` at test time |
+| `window_labels.csv` | Training, Evaluation | Per-window ground-truth labels (`label` 0/1, `label_str`). Produced by `attach_labels.py`. |
 | `metadata.json` | — | Full pipeline information |
+
+---
+
+### `scripts/attach_labels.py` — window label attachment
+
+Produces `window_labels.csv` inside a tensor directory by joining ground-truth label files with `flow_ids.npy`. Handles two alignment problems:
+
+- **Kitsune** — labels are per-packet in PCAP order. The pipeline reorders packets by timestamp inside `flow_grouper`; this script does a lightweight PCAP re-read (5-tuple + timestamp only, no nPrint encoding — ~5–10× faster) to reconstruct the same sort order, majority-votes a label per canonical flow, then joins with `flow_ids.npy`.
+- **CIC-IDS2017** — labels are per-flow in CICFlowMeter TrafficLabelling CSVs, keyed by a unidirectional 5-tuple (`Flow ID` column). The script canonicalises those 5-tuples using the same bidirectional key logic as `flow_grouper._compute_canonical_keys`, then joins directly with `flow_ids.npy`. No PCAP re-read needed.
+
+**Output** — `<tensor-dir>/window_labels.csv`:
+
+| Column | Description |
+|---|---|
+| `window_idx` | Row index into `sequence.npy` / `rf_stats.npy` |
+| `label` | `1` = attack, `0` = benign, `-1` = unmatched flow |
+| `label_str` | Original label string (e.g. `"DDoS"`, `"BENIGN"`, `"mirai"`) |
+
+**CLI flags**: `-d/--dataset {kitsune,cic}`, `-t/--tensor-dir`, `-l/--labels-csv`, `-i/--pcap` (required for kitsune), `--force`
+
+`process_all_attacks.py` calls this automatically after each successful pipeline run, and also retroactively for any tensor directory where `window_labels.csv` is missing.
 
 ---
 
@@ -408,7 +430,8 @@ ADEPT/
 ├── data/                              # Raw PCAPs and CSVs, and output tensors
 ├── scripts/
 │   ├── run_packet_to_tensor.py        # CLI entry-point (single PCAP)
-│   └── process_all_attacks.py         # Batch processor for 7 attacks + benign
+│   ├── attach_labels.py               # Window label attachment (Kitsune + CIC)
+│   └── process_all_attacks.py         # Batch processor for all attacks + benign
 ├── src/
 │   └── feature_extraction/
 │       ├── pcap_parser.py             # PCAP → nPrint bits + metadata

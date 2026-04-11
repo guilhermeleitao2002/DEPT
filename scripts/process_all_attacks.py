@@ -88,12 +88,15 @@ def magenta(t): return _c("35", t)
 SCRIPT_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = SCRIPT_DIR.parent
 PIPELINE_SCRIPT = SCRIPT_DIR / "run_packet_to_tensor.py"
+LABEL_SCRIPT = SCRIPT_DIR / "attach_labels.py"
 PIPELINE_CONFIG = PROJECT_ROOT / "config" / "pipeline.yaml"
 
 # Data directories
 DATA_DIR = PROJECT_ROOT / "data"
 KITSUNE_PCAP = DATA_DIR / "Kitsune" / "pcap"
+KITSUNE_CSV = DATA_DIR / "Kitsune" / "csv"
 CIC_PCAP = DATA_DIR / "CIC-IDS-2017" / "pcap"
+CIC_CSV = DATA_DIR / "CIC-IDS-2017" / "csv" / "TrafficLabelling"
 TENSOR_DIR = DATA_DIR / "tensors"
 
 
@@ -108,6 +111,7 @@ class Attack:
     dataset: str                    # "kitsune" or "cic-ids2017"
     pcap_path: Path                 # Path to raw PCAP
     output_dir: Path                # Tensor output directory
+    labels_csv: Path | None = None  # Ground-truth label CSV (None = no labels)
     # CIC-IDS2017 time-filtering (editcap -A / -B)
     time_start: str = ""            # e.g. "2017-07-05 09:20:00"
     time_end: str = ""              # e.g. "2017-07-05 12:00:00"
@@ -122,6 +126,7 @@ ATTACKS = [
         dataset="kitsune",
         pcap_path=KITSUNE_PCAP / "Mirai_pcap.pcap",
         output_dir=TENSOR_DIR / "mirai",
+        labels_csv=KITSUNE_CSV / "mirai_labels.csv",
     ),
     Attack(
         key="syn_dos",
@@ -129,6 +134,7 @@ ATTACKS = [
         dataset="kitsune",
         pcap_path=KITSUNE_PCAP / "SYN_DoS_pcap.pcap",
         output_dir=TENSOR_DIR / "syn_dos",
+        labels_csv=KITSUNE_CSV / "SYN_DoS_labels.csv",
     ),
     Attack(
         key="fuzzing",
@@ -136,6 +142,7 @@ ATTACKS = [
         dataset="kitsune",
         pcap_path=KITSUNE_PCAP / "Fuzzing_pcap.pcapng",
         output_dir=TENSOR_DIR / "fuzzing",
+        labels_csv=KITSUNE_CSV / "Fuzzing_labels.csv",
     ),
     Attack(
         key="ssdp_flood",
@@ -143,6 +150,7 @@ ATTACKS = [
         dataset="kitsune",
         pcap_path=KITSUNE_PCAP / "SSDP_Flood_pcap.pcap",
         output_dir=TENSOR_DIR / "ssdp_flood",
+        labels_csv=KITSUNE_CSV / "SSDP_Flood_labels.csv",
     ),
     Attack(
         key="arp_mitm",
@@ -150,6 +158,7 @@ ATTACKS = [
         dataset="kitsune",
         pcap_path=KITSUNE_PCAP / "ARP_MitM_pcap.pcapng",
         output_dir=TENSOR_DIR / "arp_mitm",
+        labels_csv=KITSUNE_CSV / "ARP_MitM_labels.csv",
     ),
     Attack(
         key="active_wiretap",
@@ -157,6 +166,7 @@ ATTACKS = [
         dataset="kitsune",
         pcap_path=KITSUNE_PCAP / "Active_Wiretap_pcap.pcapng",
         output_dir=TENSOR_DIR / "active_wiretap",
+        labels_csv=KITSUNE_CSV / "Active_Wiretap_labels.csv",
     ),
     Attack(
         key="os_scan",
@@ -164,6 +174,7 @@ ATTACKS = [
         dataset="kitsune",
         pcap_path=KITSUNE_PCAP / "OS_Scan_pcap.pcapng",
         output_dir=TENSOR_DIR / "os_scan",
+        labels_csv=KITSUNE_CSV / "OS_Scan_labels.csv",
     ),
     Attack(
         key="ssl_renegotiation",
@@ -171,6 +182,7 @@ ATTACKS = [
         dataset="kitsune",
         pcap_path=KITSUNE_PCAP / "SSL_Renegotiation_pcap.pcap",
         output_dir=TENSOR_DIR / "ssl_renegotiation",
+        labels_csv=KITSUNE_CSV / "SSL_Renegotiation_labels.csv",
     ),
     Attack(
         key="video_injection",
@@ -178,6 +190,7 @@ ATTACKS = [
         dataset="kitsune",
         pcap_path=KITSUNE_PCAP / "Video_Injection_pcap.pcapng",
         output_dir=TENSOR_DIR / "video_injection",
+        labels_csv=KITSUNE_CSV / "Video_Injection_labels.csv",
     ),
     # --- CIC-IDS2017 -------------------------------------------------------
     # Time windows from CIC-IDS2017 documentation and TANTGen run scripts.
@@ -187,6 +200,7 @@ ATTACKS = [
         dataset="cic-ids2017",
         pcap_path=CIC_PCAP / "Friday-WorkingHours.pcap",
         output_dir=TENSOR_DIR / "ddos",
+        labels_csv=CIC_CSV / "Friday-WorkingHours-Afternoon-DDos.pcap_ISCX.csv",
         time_start="2017-07-07 19:30:00",
         time_end="2017-07-07 21:05:00",
     ),
@@ -196,6 +210,7 @@ ATTACKS = [
         dataset="cic-ids2017",
         pcap_path=CIC_PCAP / "Wednesday-workingHours.pcap",
         output_dir=TENSOR_DIR / "dos_slow",
+        labels_csv=CIC_CSV / "Wednesday-workingHours.pcap_ISCX.csv",
         # Covers all 4 DoS sub-attacks (times are UTC; CIC-IDS2017 uses EDT=UTC-4):
         #   Slowloris     09:47-10:10 EDT = 13:47-14:10 UTC
         #   SlowHTTPTest  10:14-10:35 EDT = 14:14-14:35 UTC
@@ -211,6 +226,7 @@ ATTACKS = [
         dataset="cic-ids2017",
         pcap_path=CIC_PCAP / "Friday-WorkingHours.pcap",
         output_dir=TENSOR_DIR / "portscan",
+        labels_csv=CIC_CSV / "Friday-WorkingHours-Afternoon-PortScan.pcap_ISCX.csv",
         time_start="2017-07-07 17:00:00",
         time_end="2017-07-07 19:30:00",
     ),
@@ -220,6 +236,7 @@ ATTACKS = [
         dataset="cic-ids2017",
         pcap_path=CIC_PCAP / "Tuesday-WorkingHours.pcap",
         output_dir=TENSOR_DIR / "brute_force_ftp",
+        labels_csv=CIC_CSV / "Tuesday-WorkingHours.pcap_ISCX.csv",
         # FTP-Patator: 09:20-10:20 EDT = 13:20-14:20 UTC
         time_start="2017-07-04 13:15:00",
         time_end="2017-07-04 14:25:00",
@@ -230,6 +247,7 @@ ATTACKS = [
         dataset="cic-ids2017",
         pcap_path=CIC_PCAP / "Tuesday-WorkingHours.pcap",
         output_dir=TENSOR_DIR / "brute_force_ssh",
+        labels_csv=CIC_CSV / "Tuesday-WorkingHours.pcap_ISCX.csv",
         # SSH-Patator: 14:05-15:00 EDT = 18:05-19:00 UTC
         time_start="2017-07-04 18:00:00",
         time_end="2017-07-04 19:05:00",
@@ -240,6 +258,7 @@ ATTACKS = [
         dataset="cic-ids2017",
         pcap_path=CIC_PCAP / "Thursday-WorkingHours.pcap",
         output_dir=TENSOR_DIR / "web_attacks",
+        labels_csv=CIC_CSV / "Thursday-WorkingHours-Morning-WebAttacks.pcap_ISCX.csv",
         # Brute Force HTTP: 09:20-10:00 EDT = 13:20-14:00 UTC
         # XSS:             10:15-10:35 EDT = 14:15-14:35 UTC
         # SQL Injection:   10:40-10:42 EDT = 14:40-14:42 UTC
@@ -253,6 +272,7 @@ ATTACKS = [
         dataset="cic-ids2017",
         pcap_path=CIC_PCAP / "Thursday-WorkingHours.pcap",
         output_dir=TENSOR_DIR / "infiltration",
+        labels_csv=CIC_CSV / "Thursday-WorkingHours-Afternoon-Infilteration.pcap_ISCX.csv",
         # Malware download: 14:19-14:21 EDT = 18:19-18:21 UTC
         # C&C beaconing:   14:33-14:35 EDT = 18:33-18:35 UTC
         time_start="2017-07-06 18:15:00",
@@ -265,6 +285,7 @@ ATTACKS = [
         dataset="cic-ids2017",
         pcap_path=CIC_PCAP / "Monday-WorkingHours.pcap",
         output_dir=TENSOR_DIR / "monday_benign",
+        labels_csv=CIC_CSV / "Monday-WorkingHours.pcap_ISCX.csv",
         # Monday traffic runs roughly 09:00-17:00. Sample a 2-hour window
         # to keep tensor output manageable (~10K flows target).
         time_start="2017-07-03 09:00:00",
@@ -316,6 +337,26 @@ def run_pipeline(pcap: Path, output_dir: Path, window_size: int | None,
         cmd += ["-N", str(window_size)]
     cmd += extra_args
     return subprocess.run(cmd, check=True)
+
+
+def run_label_attach(attack: Attack) -> bool:
+    """Run attach_labels.py for an attack. Returns True on success."""
+    if attack.labels_csv is None:
+        return True
+    if not attack.labels_csv.exists():
+        print(f"  {yellow('⚠  labels CSV not found, skipping label attachment:')} "
+              f"{attack.labels_csv.name}")
+        return False
+    cmd = [
+        sys.executable, str(LABEL_SCRIPT),
+        "-d", "kitsune" if attack.dataset == "kitsune" else "cic",
+        "-t", str(attack.output_dir),
+        "-l", str(attack.labels_csv),
+    ]
+    if attack.dataset == "kitsune":
+        cmd += ["-i", str(attack.pcap_path)]
+    result = subprocess.run(cmd)
+    return result.returncode == 0
 
 
 def is_already_processed(output_dir: Path) -> bool:
@@ -480,6 +521,10 @@ def main():
             meta = load_metadata(attack.output_dir)
             print(f"  {yellow('Already processed')} ({meta['num_windows']:,} windows). "
                   f"Use {bold('--force')} to re-process.")
+            # Still attach labels if window_labels.csv is missing
+            if not (attack.output_dir / "window_labels.csv").exists():
+                print(f"  {dim('window_labels.csv missing — attaching labels...')}")
+                run_label_attach(attack)
             results.append((attack.name, "skipped", meta))
             continue
 
@@ -527,6 +572,10 @@ def main():
             elapsed = time.time() - t0
             print(f"  {green('✓')} Completed in {elapsed:.1f}s")
             results.append((attack.name, "OK", meta))
+
+            # Attach labels immediately after a successful pipeline run
+            print(f"  {dim('Attaching labels...')}")
+            run_label_attach(attack)
 
         except subprocess.CalledProcessError as e:
             elapsed = time.time() - t0
