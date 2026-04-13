@@ -1,4 +1,4 @@
-~/Master Thesis/ADEPT (main) » python3 scripts/process_all_attacks.py --keep-filtered --force
+~/Master Thesis/ADEPT (main*) » python3 scripts/process_all_attacks.py --keep-filtered                                                                          gleitao@leitaoDesktop
 
 ADEPT Batch Processing — 16 attack(s) selected
 
@@ -26,27 +26,27 @@ ADEPT Batch Processing — 16 attack(s) selected
   Running packet-to-tensor pipeline...
 
 [1/3] Extracting nPrint features  Mirai_pcap.pcap
-      Parsing packets: 764k pkt [02:36, 4.89k pkt/s]
+      Parsing packets: 764k pkt [02:29, 5.11k pkt/s] 
       Masking 7 field prefixes: ['ipv4_src', 'ipv4_dst', 'ipv4_id', 'tcp_sprt', 'tcp_dprt', 'udp_sport', 'udp_dport']
       144 columns masked to zero
       Final shape: (764137, 1088) (1088 nPrint bits + 10 metadata columns)
-      ✓ 764,137 packets  (158.2s)
+      ✓ 764,137 packets  (151.8s)
 
 [2/3] Grouping by 5-tuple flow
 [+] Grouped 764137 packets into 32921 flows
-      ✓ 32,921 flows  (3.2s)
+      ✓ 32,921 flows  (3.5s)
       Flow sizes: min=1, median=1, max=566425 — 164/32921 usable (≥N=10)
 
 [3/3] Building tensors  (N=10, stride=10)
-[i] Loading mean/std from /home/gleitao/Master Thesis/ADEPT/data/tensors/mirai/mean_std.json
-      Building windows: 100%|████████████████████████████████████████████████████████████████████████████████████████████████████████| 32921/32921 [00:10<00:00, 3088.21 flow/s, windows=69340]
+[+] Saved mean/std to /home/gleitao/Master Thesis/ADEPT/data/tensors/mirai/mean_std.json
+      Building windows: 100%|███████████████████████████████████████████████████████████████████████████████████████████████| 32921/32921 [00:12<00:00, 2585.80 flow/s, windows=69340]
 [+] Built 69340 windows:
     Sequence tensor : (69340, 10, 1090)  (W, N=10, F=1090)
     RF stats tensor : (69340, 24)  (W, S=24)
-      ✓ 69,340 windows  (11.5s)
+      ✓ 69,340 windows  (14.0s)
 
 ══════════════════════════════════════════════════════════════
- ADEPT Packet-to-Tensor  Done in 172.9s
+ ADEPT Packet-to-Tensor  Done in 169.3s
 ──────────────────────────────────────────────────────────────
  Sequence tensor  (69340, 10, 1090)            TCN / Transformer
  RF stats tensor  (69340, 24)                  Random Forest
@@ -54,7 +54,11 @@ ADEPT Batch Processing — 16 attack(s) selected
  Output           /home/gleitao/Master Thesis/ADEPT/data/tensors/mirai
 ══════════════════════════════════════════════════════════════
 
-  ✓ Completed in 173.9s
+  ✓ Completed in 170.4s
+  Attaching labels...
+  PCAP headers: 764k pkt [01:43, 7.37k pkt/s] 
+  Labelled 69,340 windows — attack: 61,602, benign: 7,738
+  Output: /home/gleitao/Master Thesis/ADEPT/data/tensors/mirai/window_labels.csv
 
 ────────────────────────────────────────────────────────────────────────
  [ 2 / 16 ]  SYN DoS  (kitsune)
@@ -62,27 +66,27 @@ ADEPT Batch Processing — 16 attack(s) selected
   Running packet-to-tensor pipeline...
 
 [1/3] Extracting nPrint features  SYN_DoS_pcap.pcap
-      Parsing packets: 2.77M pkt [11:13, 4.11k pkt/s]
+      Parsing packets: 2.77M pkt [11:07, 4.15k pkt/s]
       Masking 7 field prefixes: ['ipv4_src', 'ipv4_dst', 'ipv4_id', 'tcp_sprt', 'tcp_dprt', 'udp_sport', 'udp_dport']
       144 columns masked to zero
       Final shape: (2771276, 1088) (1088 nPrint bits + 10 metadata columns)
-      ✓ 2,771,276 packets  (682.9s)
+      ✓ 2,771,276 packets  (675.5s)
 
 [2/3] Grouping by 5-tuple flow
 [+] Grouped 2771276 packets into 753 flows
-      ✓ 753 flows  (13.2s)
+      ✓ 753 flows  (14.5s)
       Flow sizes: min=1, median=3, max=817905 — 33/753 usable (≥N=10)
 
 [3/3] Building tensors  (N=10, stride=10)
-[i] Loading mean/std from /home/gleitao/Master Thesis/ADEPT/data/tensors/syn_dos/mean_std.json
-      Building windows: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 753/753 [00:46<00:00, 16.18 flow/s, windows=276871]
+[+] Saved mean/std to /home/gleitao/Master Thesis/ADEPT/data/tensors/syn_dos/mean_std.json
+      Building windows: 100%|████████████████████████████████████████████████████████████████████████████████████████████████████| 753/753 [00:50<00:00, 14.97 flow/s, windows=276871]
 [+] Built 276871 windows:
     Sequence tensor : (276871, 10, 1090)  (W, N=10, F=1090)
     RF stats tensor : (276871, 24)  (W, S=24)
-      ✓ 276,871 windows  (46.9s)
+      ✓ 276,871 windows  (52.3s)
 
 ══════════════════════════════════════════════════════════════
- ADEPT Packet-to-Tensor  Done in 743.0s
+ ADEPT Packet-to-Tensor  Done in 742.3s
 ──────────────────────────────────────────────────────────────
  Sequence tensor  (276871, 10, 1090)           TCN / Transformer
  RF stats tensor  (276871, 24)                 Random Forest
@@ -90,7 +94,12 @@ ADEPT Batch Processing — 16 attack(s) selected
  Output           /home/gleitao/Master Thesis/ADEPT/data/tensors/syn_dos
 ══════════════════════════════════════════════════════════════
 
-  ✓ Completed in 743.9s
+  ✓ Completed in 743.1s
+  Attaching labels...
+  PCAP headers: 2.77M pkt [06:24, 7.21k pkt/s]
+  Warning: 10 windows (0.0%) unmatched — flow key absent from label source
+  Labelled 276,871 windows — attack: 733, benign: 276,128, unknown: 10
+  Output: /home/gleitao/Master Thesis/ADEPT/data/tensors/syn_dos/window_labels.csv
 
 ────────────────────────────────────────────────────────────────────────
  [ 3 / 16 ]  Fuzzing  (kitsune)
@@ -98,27 +107,27 @@ ADEPT Batch Processing — 16 attack(s) selected
   Running packet-to-tensor pipeline...
 
 [1/3] Extracting nPrint features  Fuzzing_pcap.pcapng
-      Parsing packets: 2.24M pkt [09:54, 3.78k pkt/s]
+      Parsing packets: 2.24M pkt [10:09, 3.68k pkt/s]
       Masking 7 field prefixes: ['ipv4_src', 'ipv4_dst', 'ipv4_id', 'tcp_sprt', 'tcp_dprt', 'udp_sport', 'udp_dport']
       144 columns masked to zero
       Final shape: (2244139, 1088) (1088 nPrint bits + 10 metadata columns)
-      ✓ 2,244,139 packets  (601.1s)
+      ✓ 2,244,139 packets  (617.9s)
 
 [2/3] Grouping by 5-tuple flow
 [+] Grouped 2244139 packets into 1803 flows
-      ✓ 1,803 flows  (10.9s)
+      ✓ 1,803 flows  (11.5s)
       Flow sizes: min=1, median=1, max=539312 — 19/1803 usable (≥N=10)
 
 [3/3] Building tensors  (N=10, stride=10)
-[i] Loading mean/std from /home/gleitao/Master Thesis/ADEPT/data/tensors/fuzzing/mean_std.json
-      Building windows: 100%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 1803/1803 [00:41<00:00, 43.95 flow/s, windows=224226]
+[+] Saved mean/std to /home/gleitao/Master Thesis/ADEPT/data/tensors/fuzzing/mean_std.json
+      Building windows: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████| 1803/1803 [00:40<00:00, 44.23 flow/s, windows=224226]
 [+] Built 224226 windows:
     Sequence tensor : (224226, 10, 1090)  (W, N=10, F=1090)
     RF stats tensor : (224226, 24)  (W, S=24)
-      ✓ 224,226 windows  (41.6s)
+      ✓ 224,226 windows  (42.4s)
 
 ══════════════════════════════════════════════════════════════
- ADEPT Packet-to-Tensor  Done in 653.6s
+ ADEPT Packet-to-Tensor  Done in 671.7s
 ──────────────────────────────────────────────────────────────
  Sequence tensor  (224226, 10, 1090)           TCN / Transformer
  RF stats tensor  (224226, 24)                 Random Forest
@@ -126,7 +135,11 @@ ADEPT Batch Processing — 16 attack(s) selected
  Output           /home/gleitao/Master Thesis/ADEPT/data/tensors/fuzzing
 ══════════════════════════════════════════════════════════════
 
-  ✓ Completed in 654.5s
+  ✓ Completed in 672.6s
+  Attaching labels...
+  PCAP headers: 2.24M pkt [05:56, 6.29k pkt/s]
+  Labelled 224,226 windows — attack: 43,132, benign: 181,094
+  Output: /home/gleitao/Master Thesis/ADEPT/data/tensors/fuzzing/window_labels.csv
 
 ────────────────────────────────────────────────────────────────────────
  [ 4 / 16 ]  SSDP Flood  (kitsune)
@@ -134,27 +147,27 @@ ADEPT Batch Processing — 16 attack(s) selected
   Running packet-to-tensor pipeline...
 
 [1/3] Extracting nPrint features  SSDP_Flood_pcap.pcap
-      Parsing packets: 4.08M pkt [16:38, 4.08k pkt/s]
+      Parsing packets: 4.08M pkt [16:49, 4.04k pkt/s]
       Masking 7 field prefixes: ['ipv4_src', 'ipv4_dst', 'ipv4_id', 'tcp_sprt', 'tcp_dprt', 'udp_sport', 'udp_dport']
       144 columns masked to zero
       Final shape: (4077266, 1088) (1088 nPrint bits + 10 metadata columns)
-      ✓ 4,077,266 packets  (1011.0s)
+      ✓ 4,077,266 packets  (1024.7s)
 
 [2/3] Grouping by 5-tuple flow
 [+] Grouped 4077266 packets into 65738 flows
-      ✓ 65,738 flows  (24.8s)
+      ✓ 65,738 flows  (23.9s)
       Flow sizes: min=1, median=22, max=652009 — 65470/65738 usable (≥N=10)
 
 [3/3] Building tensors  (N=10, stride=10)
-[i] Loading mean/std from /home/gleitao/Master Thesis/ADEPT/data/tensors/ssdp_flood/mean_std.json
-      Building windows: 100%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████| 65738/65738 [01:15<00:00, 875.79 flow/s, windows=378331]
+[+] Saved mean/std to /home/gleitao/Master Thesis/ADEPT/data/tensors/ssdp_flood/mean_std.json
+      Building windows: 100%|███████████████████████████████████████████████████████████████████████████████████████████████| 65738/65738 [01:19<00:00, 826.78 flow/s, windows=378331]
 [+] Built 378331 windows:
     Sequence tensor : (378331, 10, 1090)  (W, N=10, F=1090)
     RF stats tensor : (378331, 24)  (W, S=24)
-      ✓ 378,331 windows  (75.9s)
+      ✓ 378,331 windows  (80.6s)
 
 ══════════════════════════════════════════════════════════════
- ADEPT Packet-to-Tensor  Done in 1111.7s
+ ADEPT Packet-to-Tensor  Done in 1129.2s
 ──────────────────────────────────────────────────────────────
  Sequence tensor  (378331, 10, 1090)           TCN / Transformer
  RF stats tensor  (378331, 24)                 Random Forest
@@ -162,7 +175,12 @@ ADEPT Batch Processing — 16 attack(s) selected
  Output           /home/gleitao/Master Thesis/ADEPT/data/tensors/ssdp_flood
 ══════════════════════════════════════════════════════════════
 
-  ✓ Completed in 1112.6s
+  ✓ Completed in 1130.1s
+  Attaching labels...
+  PCAP headers: 4.08M pkt [09:51, 6.89k pkt/s]
+  Warning: 11 windows (0.0%) unmatched — flow key absent from label source
+  Labelled 378,331 windows — attack: 114,730, benign: 263,590, unknown: 11
+  Output: /home/gleitao/Master Thesis/ADEPT/data/tensors/ssdp_flood/window_labels.csv
 
 ────────────────────────────────────────────────────────────────────────
  [ 5 / 16 ]  ARP MitM  (kitsune)
@@ -170,27 +188,27 @@ ADEPT Batch Processing — 16 attack(s) selected
   Running packet-to-tensor pipeline...
 
 [1/3] Extracting nPrint features  ARP_MitM_pcap.pcapng
-      Parsing packets: 2.50M pkt [11:19, 3.69k pkt/s]
+      Parsing packets: 2.50M pkt [11:07, 3.75k pkt/s]
       Masking 7 field prefixes: ['ipv4_src', 'ipv4_dst', 'ipv4_id', 'tcp_sprt', 'tcp_dprt', 'udp_sport', 'udp_dport']
       144 columns masked to zero
       Final shape: (2504267, 1088) (1088 nPrint bits + 10 metadata columns)
-      ✓ 2,504,267 packets  (686.5s)
+      ✓ 2,504,267 packets  (675.0s)
 
 [2/3] Grouping by 5-tuple flow
 [+] Grouped 2504267 packets into 109 flows
-      ✓ 109 flows  (11.7s)
+^[2^[1      ✓ 109 flows  (13.6s)
       Flow sizes: min=1, median=3, max=376586 — 30/109 usable (≥N=10)
 
 [3/3] Building tensors  (N=10, stride=10)
 [+] Saved mean/std to /home/gleitao/Master Thesis/ADEPT/data/tensors/arp_mitm/mean_std.json
-      Building windows: 100%|██████████████████████████| 109/109 [00:47<00:00,  2.28 flow/s, windows=250394]
+      Building windows: 100%|████████████████████████████████████████████████████████████████████████████████████████████████████| 109/109 [00:44<00:00,  2.43 flow/s, windows=250394]
 [+] Built 250394 windows:
     Sequence tensor : (250394, 10, 1090)  (W, N=10, F=1090)
     RF stats tensor : (250394, 24)  (W, S=24)
-      ✓ 250,394 windows  (48.5s)
+      ✓ 250,394 windows  (46.1s)
 
 ══════════════════════════════════════════════════════════════
- ADEPT Packet-to-Tensor  Done in 746.7s
+ ADEPT Packet-to-Tensor  Done in 734.7s
 ──────────────────────────────────────────────────────────────
  Sequence tensor  (250394, 10, 1090)           TCN / Transformer
  RF stats tensor  (250394, 24)                 Random Forest
@@ -198,7 +216,12 @@ ADEPT Batch Processing — 16 attack(s) selected
  Output           /home/gleitao/Master Thesis/ADEPT/data/tensors/arp_mitm
 ══════════════════════════════════════════════════════════════
 
-  ✓ Completed in 747.9s
+  ✓ Completed in 735.5s
+  Attaching labels...
+  PCAP headers: 2.50M pkt [06:34, 6.34k pkt/s]
+  Warning: 1 windows (0.0%) unmatched — flow key absent from label source
+  Labelled 250,394 windows — attack: 120,203, benign: 130,190, unknown: 1
+  Output: /home/gleitao/Master Thesis/ADEPT/data/tensors/arp_mitm/window_labels.csv
 
 ────────────────────────────────────────────────────────────────────────
  [ 6 / 16 ]  Active Wiretap  (kitsune)
@@ -206,27 +229,27 @@ ADEPT Batch Processing — 16 attack(s) selected
   Running packet-to-tensor pipeline...
 
 [1/3] Extracting nPrint features  Active_Wiretap_pcap.pcapng
-      Parsing packets: 2.28M pkt [10:14, 3.71k pkt/s]
+      Parsing packets: 2.28M pkt [10:02, 3.78k pkt/s]
       Masking 7 field prefixes: ['ipv4_src', 'ipv4_dst', 'ipv4_id', 'tcp_sprt', 'tcp_dprt', 'udp_sport', 'udp_dport']
       144 columns masked to zero
       Final shape: (2278689, 1088) (1088 nPrint bits + 10 metadata columns)
-      ✓ 2,278,689 packets  (620.7s)
+      ✓ 2,278,689 packets  (611.4s)
 
 [2/3] Grouping by 5-tuple flow
 [+] Grouped 2278689 packets into 89 flows
-      ✓ 89 flows  (13.9s)
+      ✓ 89 flows  (11.2s)
       Flow sizes: min=2, median=52, max=248969 — 65/89 usable (≥N=10)
 
 [3/3] Building tensors  (N=10, stride=10)
 [+] Saved mean/std to /home/gleitao/Master Thesis/ADEPT/data/tensors/active_wiretap/mean_std.json
-      Building windows: 100%|████████████████████████████| 89/89 [00:39<00:00,  2.28 flow/s, windows=227834]
+      Building windows: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████| 89/89 [00:38<00:00,  2.28 flow/s, windows=227834]
 [+] Built 227834 windows:
     Sequence tensor : (227834, 10, 1090)  (W, N=10, F=1090)
     RF stats tensor : (227834, 24)  (W, S=24)
-      ✓ 227,834 windows  (39.5s)
+      ✓ 227,834 windows  (39.8s)
 
 ══════════════════════════════════════════════════════════════
- ADEPT Packet-to-Tensor  Done in 674.1s
+ ADEPT Packet-to-Tensor  Done in 662.4s
 ──────────────────────────────────────────────────────────────
  Sequence tensor  (227834, 10, 1090)           TCN / Transformer
  RF stats tensor  (227834, 24)                 Random Forest
@@ -234,7 +257,11 @@ ADEPT Batch Processing — 16 attack(s) selected
  Output           /home/gleitao/Master Thesis/ADEPT/data/tensors/active_wiretap
 ══════════════════════════════════════════════════════════════
 
-  ✓ Completed in 675.1s
+  ✓ Completed in 663.2s
+  Attaching labels...
+  PCAP headers: 2.28M pkt [05:55, 6.41k pkt/s]
+  Labelled 227,834 windows — attack: 97,701, benign: 130,133
+  Output: /home/gleitao/Master Thesis/ADEPT/data/tensors/active_wiretap/window_labels.csv
 
 ────────────────────────────────────────────────────────────────────────
  [ 7 / 16 ]  OS Scan  (kitsune)
@@ -242,27 +269,27 @@ ADEPT Batch Processing — 16 attack(s) selected
   Running packet-to-tensor pipeline...
 
 [1/3] Extracting nPrint features  OS_Scan_pcap.pcapng
-      Parsing packets: 1.70M pkt [07:41, 3.68k pkt/s]
+      Parsing packets: 1.70M pkt [07:13, 3.91k pkt/s]
       Masking 7 field prefixes: ['ipv4_src', 'ipv4_dst', 'ipv4_id', 'tcp_sprt', 'tcp_dprt', 'udp_sport', 'udp_dport']
       144 columns masked to zero
       Final shape: (1697851, 1088) (1088 nPrint bits + 10 metadata columns)
-      ✓ 1,697,851 packets  (466.6s)
+      ✓ 1,697,851 packets  (439.5s)
 
 [2/3] Grouping by 5-tuple flow
 [+] Grouped 1697851 packets into 65588 flows
-      ✓ 65,588 flows  (8.1s)
+      ✓ 65,588 flows  (9.6s)
       Flow sizes: min=1, median=2, max=956952 — 7/65588 usable (≥N=10)
 
 [3/3] Building tensors  (N=10, stride=10)
 [+] Saved mean/std to /home/gleitao/Master Thesis/ADEPT/data/tensors/os_scan/mean_std.json
-      Building windows: 100%|████████████████████| 65588/65588 [00:29<00:00, 2257.16 flow/s, windows=156664]
+      Building windows: 100%|██████████████████████████████████████████████████████████████████████████████████████████████| 65588/65588 [00:25<00:00, 2528.46 flow/s, windows=156664]
 [+] Built 156664 windows:
     Sequence tensor : (156664, 10, 1090)  (W, N=10, F=1090)
     RF stats tensor : (156664, 24)  (W, S=24)
-      ✓ 156,664 windows  (29.8s)
+      ✓ 156,664 windows  (26.8s)
 
 ══════════════════════════════════════════════════════════════
- ADEPT Packet-to-Tensor  Done in 504.5s
+ ADEPT Packet-to-Tensor  Done in 475.9s
 ──────────────────────────────────────────────────────────────
  Sequence tensor  (156664, 10, 1090)           TCN / Transformer
  RF stats tensor  (156664, 24)                 Random Forest
@@ -270,7 +297,11 @@ ADEPT Batch Processing — 16 attack(s) selected
  Output           /home/gleitao/Master Thesis/ADEPT/data/tensors/os_scan
 ══════════════════════════════════════════════════════════════
 
-  ✓ Completed in 505.5s
+  ✓ Completed in 476.7s
+  Attaching labels...
+  PCAP headers: 1.70M pkt [04:06, 6.87k pkt/s]
+  Labelled 156,664 windows — attack: 6, benign: 156,658
+  Output: /home/gleitao/Master Thesis/ADEPT/data/tensors/os_scan/window_labels.csv
 
 ────────────────────────────────────────────────────────────────────────
  [ 8 / 16 ]  SSL Renegotiation  (kitsune)
@@ -278,27 +309,27 @@ ADEPT Batch Processing — 16 attack(s) selected
   Running packet-to-tensor pipeline...
 
 [1/3] Extracting nPrint features  SSL_Renegotiation_pcap.pcap
-      Parsing packets: 2.21M pkt [08:53, 4.14k pkt/s]
+      Parsing packets: 2.21M pkt [08:31, 4.32k pkt/s]
       Masking 7 field prefixes: ['ipv4_src', 'ipv4_dst', 'ipv4_id', 'tcp_sprt', 'tcp_dprt', 'udp_sport', 'udp_dport']
       144 columns masked to zero
       Final shape: (2207571, 1088) (1088 nPrint bits + 10 metadata columns)
-      ✓ 2,207,571 packets  (543.3s)
+      ✓ 2,207,571 packets  (517.6s)
 
 [2/3] Grouping by 5-tuple flow
 [+] Grouped 2207571 packets into 779 flows
-      ✓ 779 flows  (10.8s)
+      ✓ 779 flows  (11.5s)
       Flow sizes: min=1, median=7, max=436538 — 79/779 usable (≥N=10)
 
 [3/3] Building tensors  (N=10, stride=10)
 [+] Saved mean/std to /home/gleitao/Master Thesis/ADEPT/data/tensors/ssl_renegotiation/mean_std.json
-      Building windows: 100%|██████████████████████████| 779/779 [00:39<00:00, 19.67 flow/s, windows=220333]
+      Building windows: 100%|████████████████████████████████████████████████████████████████████████████████████████████████████| 779/779 [00:35<00:00, 21.65 flow/s, windows=220333]
 [+] Built 220333 windows:
     Sequence tensor : (220333, 10, 1090)  (W, N=10, F=1090)
     RF stats tensor : (220333, 24)  (W, S=24)
-      ✓ 220,333 windows  (40.1s)
+      ✓ 220,333 windows  (37.4s)
 
 ══════════════════════════════════════════════════════════════
- ADEPT Packet-to-Tensor  Done in 594.2s
+ ADEPT Packet-to-Tensor  Done in 566.5s
 ──────────────────────────────────────────────────────────────
  Sequence tensor  (220333, 10, 1090)           TCN / Transformer
  RF stats tensor  (220333, 24)                 Random Forest
@@ -306,7 +337,12 @@ ADEPT Batch Processing — 16 attack(s) selected
  Output           /home/gleitao/Master Thesis/ADEPT/data/tensors/ssl_renegotiation
 ══════════════════════════════════════════════════════════════
 
-  ✓ Completed in 595.0s
+  ✓ Completed in 567.3s
+  Attaching labels...
+  PCAP headers: 2.21M pkt [04:47, 7.67k pkt/s]
+  Warning: 1 windows (0.0%) unmatched — flow key absent from label source
+  Labelled 220,333 windows — attack: 12,912, benign: 207,420, unknown: 1
+  Output: /home/gleitao/Master Thesis/ADEPT/data/tensors/ssl_renegotiation/window_labels.csv
 
 ────────────────────────────────────────────────────────────────────────
  [ 9 / 16 ]  Video Injection  (kitsune)
@@ -314,27 +350,27 @@ ADEPT Batch Processing — 16 attack(s) selected
   Running packet-to-tensor pipeline...
 
 [1/3] Extracting nPrint features  Video_Injection_pcap.pcapng
-      Parsing packets: 2.47M pkt [11:08, 3.70k pkt/s]
+      Parsing packets: 2.47M pkt [10:28, 3.93k pkt/s]
       Masking 7 field prefixes: ['ipv4_src', 'ipv4_dst', 'ipv4_id', 'tcp_sprt', 'tcp_dprt', 'udp_sport', 'udp_dport']
       144 columns masked to zero
       Final shape: (2472401, 1088) (1088 nPrint bits + 10 metadata columns)
-      ✓ 2,472,401 packets  (675.6s)
+      ✓ 2,472,401 packets  (637.9s)
 
 [2/3] Grouping by 5-tuple flow
 [+] Grouped 2472401 packets into 60 flows
-      ✓ 60 flows  (14.8s)
+      ✓ 60 flows  (11.6s)
       Flow sizes: min=2, median=2, max=413047 — 24/60 usable (≥N=10)
 
 [3/3] Building tensors  (N=10, stride=10)
 [+] Saved mean/std to /home/gleitao/Master Thesis/ADEPT/data/tensors/video_injection/mean_std.json
-      Building windows: 100%|████████████████████████████| 60/60 [00:44<00:00,  1.34 flow/s, windows=247222]
+      Building windows: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████| 60/60 [00:40<00:00,  1.50 flow/s, windows=247222]
 [+] Built 247222 windows:
     Sequence tensor : (247222, 10, 1090)  (W, N=10, F=1090)
     RF stats tensor : (247222, 24)  (W, S=24)
-      ✓ 247,222 windows  (45.4s)
+      ✓ 247,222 windows  (41.0s)
 
 ══════════════════════════════════════════════════════════════
- ADEPT Packet-to-Tensor  Done in 735.9s
+ ADEPT Packet-to-Tensor  Done in 690.5s
 ──────────────────────────────────────────────────────────────
  Sequence tensor  (247222, 10, 1090)           TCN / Transformer
  RF stats tensor  (247222, 24)                 Random Forest
@@ -342,36 +378,43 @@ ADEPT Batch Processing — 16 attack(s) selected
  Output           /home/gleitao/Master Thesis/ADEPT/data/tensors/video_injection
 ══════════════════════════════════════════════════════════════
 
-  ✓ Completed in 736.8s
+  ✓ Completed in 691.3s
+  Attaching labels...
+  PCAP headers: 2.47M pkt [06:13, 6.61k pkt/s]
+  Labelled 247,222 windows — attack: 10,249, benign: 236,973
+  Output: /home/gleitao/Master Thesis/ADEPT/data/tensors/video_injection/window_labels.csv
 
 ────────────────────────────────────────────────────────────────────────
  [ 10 / 16 ]  DDoS (CIC-IDS2017 Friday)  (cic-ids2017)
 ────────────────────────────────────────────────────────────────────────
-  Step 0: Using cached filtered PCAP (1670.5 MB)
+  Step 0: Time-filtering PCAP...
+  editcap: 2017-07-07 19:30:00 → 2017-07-07 21:05:00
+  src: Friday-WorkingHours.pcap → dst: ddos_filtered.pcap
+  Filtered PCAP: 1670.5 MB
   Running packet-to-tensor pipeline...
 
 [1/3] Extracting nPrint features  ddos_filtered.pcap
-      Parsing packets: 2.15M pkt [10:51, 3.30k pkt/s]
+      Parsing packets: 2.15M pkt [10:57, 3.27k pkt/s]
       Masking 7 field prefixes: ['ipv4_src', 'ipv4_dst', 'ipv4_id', 'tcp_sprt', 'tcp_dprt', 'udp_sport', 'udp_dport']
       144 columns masked to zero
       Final shape: (2151810, 1088) (1088 nPrint bits + 10 metadata columns)
-      ✓ 2,151,810 packets  (656.9s)
+      ✓ 2,151,810 packets  (665.4s)
 
 [2/3] Grouping by 5-tuple flow
 [+] Grouped 2151810 packets into 86272 flows
-      ✓ 86,272 flows  (10.8s)
+      ✓ 86,272 flows  (11.0s)
       Flow sizes: min=2, median=13, max=10133 — 60941/86272 usable (≥N=10)
 
 [3/3] Building tensors  (N=10, stride=10)
-[i] Loading mean/std from /home/gleitao/Master Thesis/ADEPT/data/tensors/ddos/mean_std.json
-      Building windows: 100%|████████████████████████████████████████████████████████████████████████████████████████████████████████████| 86272/86272 [00:44<00:00, 1958.97 flow/s, windows=181651]
+[+] Saved mean/std to /home/gleitao/Master Thesis/ADEPT/data/tensors/ddos/mean_std.json
+      Building windows: 100%|██████████████████████████████████████████████████████████████████████████████████████████████| 86272/86272 [00:40<00:00, 2148.56 flow/s, windows=181651]
 [+] Built 181651 windows:
     Sequence tensor : (181651, 10, 1090)  (W, N=10, F=1090)
     RF stats tensor : (181651, 24)  (W, S=24)
-      ✓ 181,651 windows  (44.4s)
+      ✓ 181,651 windows  (40.9s)
 
 ══════════════════════════════════════════════════════════════
- ADEPT Packet-to-Tensor  Done in 712.2s
+ ADEPT Packet-to-Tensor  Done in 717.2s
 ──────────────────────────────────────────────────────────────
  Sequence tensor  (181651, 10, 1090)           TCN / Transformer
  RF stats tensor  (181651, 24)                 Random Forest
@@ -379,7 +422,11 @@ ADEPT Batch Processing — 16 attack(s) selected
  Output           /home/gleitao/Master Thesis/ADEPT/data/tensors/ddos
 ══════════════════════════════════════════════════════════════
 
-  ✓ Completed in 713.1s
+  ✓ Completed in 725.7s
+  Attaching labels...
+  Warning: 1,528 windows (0.8%) unmatched — flow key absent from label source
+  Labelled 181,651 windows — attack: 78,510, benign: 101,613, unknown: 1,528
+  Output: /home/gleitao/Master Thesis/ADEPT/data/tensors/ddos/window_labels.csv
 
 ────────────────────────────────────────────────────────────────────────
  [ 11 / 16 ]  DoS Slowloris+SlowHTTPTest+Hulk+GoldenEye (CIC-IDS2017 Wednesday)  (cic-ids2017)
@@ -391,27 +438,27 @@ ADEPT Batch Processing — 16 attack(s) selected
   Running packet-to-tensor pipeline...
 
 [1/3] Extracting nPrint features  dos_slow_filtered.pcap
-      Parsing packets: 4.41M pkt [21:26, 3.42k pkt/s]
+      Parsing packets: 4.41M pkt [21:25, 3.43k pkt/s]
       Masking 7 field prefixes: ['ipv4_src', 'ipv4_dst', 'ipv4_id', 'tcp_sprt', 'tcp_dprt', 'udp_sport', 'udp_dport']
       144 columns masked to zero
       Final shape: (4405006, 1088) (1088 nPrint bits + 10 metadata columns)
-      ✓ 4,405,006 packets  (1301.5s)
+      ✓ 4,405,006 packets  (1303.4s)
 
 [2/3] Grouping by 5-tuple flow
 [+] Grouped 4405006 packets into 75513 flows
-      ✓ 75,513 flows  (20.6s)
+      ✓ 75,513 flows  (24.1s)
       Flow sizes: min=1, median=12, max=320704 — 40436/75513 usable (≥N=10)
 
 [3/3] Building tensors  (N=10, stride=10)
-[i] Loading mean/std from /home/gleitao/Master Thesis/ADEPT/data/tensors/dos_slow/mean_std.json
-      Building windows: 100%|███████████████████████████████████| 75513/75513 [01:21<00:00, 928.31 flow/s, windows=407178]
+[+] Saved mean/std to /home/gleitao/Master Thesis/ADEPT/data/tensors/dos_slow/mean_std.json
+      Building windows: 100%|███████████████████████████████████████████████████████████████████████████████████████████████| 75513/75513 [01:18<00:00, 961.94 flow/s, windows=407178]
 [+] Built 407178 windows:
     Sequence tensor : (407178, 10, 1090)  (W, N=10, F=1090)
     RF stats tensor : (407178, 24)  (W, S=24)
-      ✓ 407,178 windows  (82.1s)
+      ✓ 407,178 windows  (79.6s)
 
 ══════════════════════════════════════════════════════════════
- ADEPT Packet-to-Tensor  Done in 1404.2s
+ ADEPT Packet-to-Tensor  Done in 1407.1s
 ──────────────────────────────────────────────────────────────
  Sequence tensor  (407178, 10, 1090)           TCN / Transformer
  RF stats tensor  (407178, 24)                 Random Forest
@@ -419,7 +466,11 @@ ADEPT Batch Processing — 16 attack(s) selected
  Output           /home/gleitao/Master Thesis/ADEPT/data/tensors/dos_slow
 ══════════════════════════════════════════════════════════════
 
-  ✓ Completed in 1420.8s
+  ✓ Completed in 1422.5s
+  Attaching labels...
+  Warning: 1,778 windows (0.4%) unmatched — flow key absent from label source
+  Labelled 407,178 windows — attack: 232,833, benign: 172,567, unknown: 1,778
+  Output: /home/gleitao/Master Thesis/ADEPT/data/tensors/dos_slow/window_labels.csv
 
 ────────────────────────────────────────────────────────────────────────
  [ 12 / 16 ]  Port Scan (CIC-IDS2017 Friday)  (cic-ids2017)
@@ -431,27 +482,27 @@ ADEPT Batch Processing — 16 attack(s) selected
   Running packet-to-tensor pipeline...
 
 [1/3] Extracting nPrint features  portscan_filtered.pcap
-      Parsing packets: 2.03M pkt [10:22, 3.25k pkt/s]
+      Parsing packets: 2.03M pkt [10:03, 3.36k pkt/s]
       Masking 7 field prefixes: ['ipv4_src', 'ipv4_dst', 'ipv4_id', 'tcp_sprt', 'tcp_dprt', 'udp_sport', 'udp_dport']
       144 columns masked to zero
       Final shape: (2026245, 1088) (1088 nPrint bits + 10 metadata columns)
-      ✓ 2,026,245 packets  (628.6s)
+      ✓ 2,026,245 packets  (610.9s)
 
 [2/3] Grouping by 5-tuple flow
 [+] Grouped 2026245 packets into 230156 flows
-      ✓ 230,156 flows  (11.0s)
+      ✓ 230,156 flows  (11.3s)
       Flow sizes: min=1, median=2, max=15960 — 30668/230156 usable (≥N=10)
 
 [3/3] Building tensors  (N=10, stride=10)
-[i] Loading mean/std from /home/gleitao/Master Thesis/ADEPT/data/tensors/portscan/mean_std.json
-      Building windows: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████| 230156/230156 [00:30<00:00, 7668.43 flow/s, windows=139679]
+[+] Saved mean/std to /home/gleitao/Master Thesis/ADEPT/data/tensors/portscan/mean_std.json
+      Building windows: 100%|████████████████████████████████████████████████████████████████████████████████████████████| 230156/230156 [00:28<00:00, 7940.72 flow/s, windows=139679]
 [+] Built 139679 windows:
     Sequence tensor : (139679, 10, 1090)  (W, N=10, F=1090)
     RF stats tensor : (139679, 24)  (W, S=24)
-      ✓ 139,679 windows  (30.7s)
+      ✓ 139,679 windows  (30.1s)
 
 ══════════════════════════════════════════════════════════════
- ADEPT Packet-to-Tensor  Done in 670.3s
+ ADEPT Packet-to-Tensor  Done in 652.3s
 ──────────────────────────────────────────────────────────────
  Sequence tensor  (139679, 10, 1090)           TCN / Transformer
  RF stats tensor  (139679, 24)                 Random Forest
@@ -459,7 +510,11 @@ ADEPT Batch Processing — 16 attack(s) selected
  Output           /home/gleitao/Master Thesis/ADEPT/data/tensors/portscan
 ══════════════════════════════════════════════════════════════
 
-  ✓ Completed in 677.9s
+  ✓ Completed in 660.6s
+  Attaching labels...
+  Warning: 2,388 windows (1.7%) unmatched — flow key absent from label source
+  Labelled 139,679 windows — attack: 90, benign: 137,201, unknown: 2,388
+  Output: /home/gleitao/Master Thesis/ADEPT/data/tensors/portscan/window_labels.csv
 
 ────────────────────────────────────────────────────────────────────────
  [ 13 / 16 ]  Brute Force FTP (CIC-IDS2017 Tuesday)  (cic-ids2017)
@@ -471,8 +526,8 @@ ADEPT Batch Processing — 16 attack(s) selected
   Running packet-to-tensor pipeline...
 
 [1/3] Extracting nPrint features  brute_force_ftp_filtered.pcap
-      Parsing packets: 6.53M pkt [36:09, 3.01k pkt/s]
-  ✗ FAILED after 2197.6s (exit code -9 (OOM — out of memory))
+      Parsing packets: 6.53M pkt [34:19, 3.17k pkt/s]
+  ✗ FAILED after 2083.7s (exit code -9 (OOM — out of memory))
 
 ────────────────────────────────────────────────────────────────────────
  [ 14 / 16 ]  Brute Force SSH (CIC-IDS2017 Tuesday)  (cic-ids2017)
@@ -484,27 +539,27 @@ ADEPT Batch Processing — 16 attack(s) selected
   Running packet-to-tensor pipeline...
 
 [1/3] Extracting nPrint features  brute_force_ssh_filtered.pcap
-      Parsing packets: 1.15M pkt [06:05, 3.15k pkt/s]
+      Parsing packets: 1.15M pkt [05:47, 3.31k pkt/s]
       Masking 7 field prefixes: ['ipv4_src', 'ipv4_dst', 'ipv4_id', 'tcp_sprt', 'tcp_dprt', 'udp_sport', 'udp_dport']
       144 columns masked to zero
       Final shape: (1151286, 1088) (1088 nPrint bits + 10 metadata columns)
-      ✓ 1,151,286 packets  (371.0s)
+      ✓ 1,151,286 packets  (351.3s)
 
 [2/3] Grouping by 5-tuple flow
 [+] Grouped 1151286 packets into 42280 flows
-      ✓ 42,280 flows  (6.0s)
+      ✓ 42,280 flows  (5.7s)
       Flow sizes: min=1, median=8, max=29960 — 19627/42280 usable (≥N=10)
 
 [3/3] Building tensors  (N=10, stride=10)
 [+] Saved mean/std to /home/gleitao/Master Thesis/ADEPT/data/tensors/brute_force_ssh/mean_std.json
-      Building windows: 100%|█████████████████████| 42280/42280 [00:19<00:00, 2225.20 flow/s, windows=96573]
+      Building windows: 100%|███████████████████████████████████████████████████████████████████████████████████████████████| 42280/42280 [00:20<00:00, 2058.10 flow/s, windows=96573]
 [+] Built 96573 windows:
     Sequence tensor : (96573, 10, 1090)  (W, N=10, F=1090)
     RF stats tensor : (96573, 24)  (W, S=24)
-      ✓ 96,573 windows  (19.4s)
+      ✓ 96,573 windows  (21.0s)
 
 ══════════════════════════════════════════════════════════════
- ADEPT Packet-to-Tensor  Done in 396.4s
+ ADEPT Packet-to-Tensor  Done in 378.0s
 ──────────────────────────────────────────────────────────────
  Sequence tensor  (96573, 10, 1090)            TCN / Transformer
  RF stats tensor  (96573, 24)                  Random Forest
@@ -512,7 +567,11 @@ ADEPT Batch Processing — 16 attack(s) selected
  Output           /home/gleitao/Master Thesis/ADEPT/data/tensors/brute_force_ssh
 ══════════════════════════════════════════════════════════════
 
-  ✓ Completed in 406.2s
+  ✓ Completed in 388.9s
+  Attaching labels...
+  Warning: 1,185 windows (1.2%) unmatched — flow key absent from label source
+  Labelled 96,573 windows — attack: 13,452, benign: 81,936, unknown: 1,185
+  Output: /home/gleitao/Master Thesis/ADEPT/data/tensors/brute_force_ssh/window_labels.csv
 
 ────────────────────────────────────────────────────────────────────────
  [ 15 / 16 ]  Web Attacks (CIC-IDS2017 Thursday)  (cic-ids2017)
@@ -524,27 +583,27 @@ ADEPT Batch Processing — 16 attack(s) selected
   Running packet-to-tensor pipeline...
 
 [1/3] Extracting nPrint features  web_attacks_filtered.pcap
-      Parsing packets: 2.81M pkt [15:24, 3.04k pkt/s]
+      Parsing packets: 2.81M pkt [14:40, 3.19k pkt/s]
       Masking 7 field prefixes: ['ipv4_src', 'ipv4_dst', 'ipv4_id', 'tcp_sprt', 'tcp_dprt', 'udp_sport', 'udp_dport']
       144 columns masked to zero
       Final shape: (2811263, 1088) (1088 nPrint bits + 10 metadata columns)
-      ✓ 2,811,263 packets  (932.6s)
+      ✓ 2,811,263 packets  (889.0s)
 
 [2/3] Grouping by 5-tuple flow
 [+] Grouped 2811263 packets into 46845 flows
-      ✓ 46,845 flows  (17.7s)
+      ✓ 46,845 flows  (14.8s)
       Flow sizes: min=1, median=6, max=1308555 — 19148/46845 usable (≥N=10)
 
 [3/3] Building tensors  (N=10, stride=10)
 [+] Saved mean/std to /home/gleitao/Master Thesis/ADEPT/data/tensors/web_attacks/mean_std.json
-      Building windows: 100%|█████████████████████| 46845/46845 [00:47<00:00, 995.22 flow/s, windows=260533]
+      Building windows: 100%|██████████████████████████████████████████████████████████████████████████████████████████████| 46845/46845 [00:46<00:00, 1006.74 flow/s, windows=260533]
 [+] Built 260533 windows:
     Sequence tensor : (260533, 10, 1090)  (W, N=10, F=1090)
     RF stats tensor : (260533, 24)  (W, S=24)
-      ✓ 260,533 windows  (47.7s)
+      ✓ 260,533 windows  (47.5s)
 
 ══════════════════════════════════════════════════════════════
- ADEPT Packet-to-Tensor  Done in 998.0s
+ ADEPT Packet-to-Tensor  Done in 951.3s
 ──────────────────────────────────────────────────────────────
  Sequence tensor  (260533, 10, 1090)           TCN / Transformer
  RF stats tensor  (260533, 24)                 Random Forest
@@ -552,7 +611,11 @@ ADEPT Batch Processing — 16 attack(s) selected
  Output           /home/gleitao/Master Thesis/ADEPT/data/tensors/web_attacks
 ══════════════════════════════════════════════════════════════
 
-  ✓ Completed in 1010.8s
+  ✓ Completed in 962.4s
+  Attaching labels...
+  Warning: 1,434 windows (0.6%) unmatched — flow key absent from label source
+  Labelled 260,533 windows — attack: 2,688, benign: 256,411, unknown: 1,434
+  Output: /home/gleitao/Master Thesis/ADEPT/data/tensors/web_attacks/window_labels.csv
 
 ────────────────────────────────────────────────────────────────────────
  [ 16 / 16 ]  Infiltration (CIC-IDS2017 Thursday)  (cic-ids2017)
@@ -564,27 +627,27 @@ ADEPT Batch Processing — 16 attack(s) selected
   Running packet-to-tensor pipeline...
 
 [1/3] Extracting nPrint features  infiltration_filtered.pcap
-      Parsing packets: 419k pkt [02:12, 3.15k pkt/s]
+      Parsing packets: 419k pkt [02:04, 3.35k pkt/s] 
       Masking 7 field prefixes: ['ipv4_src', 'ipv4_dst', 'ipv4_id', 'tcp_sprt', 'tcp_dprt', 'udp_sport', 'udp_dport']
       144 columns masked to zero
       Final shape: (418560, 1088) (1088 nPrint bits + 10 metadata columns)
-      ✓ 418,560 packets  (134.2s)
+      ✓ 418,560 packets  (126.3s)
 
 [2/3] Grouping by 5-tuple flow
 [+] Grouped 418560 packets into 15755 flows
-      ✓ 15,755 flows  (2.0s)
+      ✓ 15,755 flows  (2.1s)
       Flow sizes: min=1, median=4, max=36567 — 4942/15755 usable (≥N=10)
 
 [3/3] Building tensors  (N=10, stride=10)
 [+] Saved mean/std to /home/gleitao/Master Thesis/ADEPT/data/tensors/infiltration/mean_std.json
-      Building windows: 100%|█████████████████████| 15755/15755 [00:06<00:00, 2549.72 flow/s, windows=35744]
+      Building windows: 100%|███████████████████████████████████████████████████████████████████████████████████████████████| 15755/15755 [00:07<00:00, 2225.95 flow/s, windows=35744]
 [+] Built 35744 windows:
     Sequence tensor : (35744, 10, 1090)  (W, N=10, F=1090)
     RF stats tensor : (35744, 24)  (W, S=24)
-      ✓ 35,744 windows  (6.8s)
+      ✓ 35,744 windows  (8.0s)
 
 ══════════════════════════════════════════════════════════════
- ADEPT Packet-to-Tensor  Done in 143.0s
+ ADEPT Packet-to-Tensor  Done in 136.4s
 ──────────────────────────────────────────────────────────────
  Sequence tensor  (35744, 10, 1090)            TCN / Transformer
  RF stats tensor  (35744, 24)                  Random Forest
@@ -592,7 +655,11 @@ ADEPT Batch Processing — 16 attack(s) selected
  Output           /home/gleitao/Master Thesis/ADEPT/data/tensors/infiltration
 ══════════════════════════════════════════════════════════════
 
-  ✓ Completed in 150.0s
+  ✓ Completed in 144.1s
+  Attaching labels...
+  Warning: 526 windows (1.5%) unmatched — flow key absent from label source
+  Labelled 35,744 windows — attack: 5,723, benign: 29,495, unknown: 526
+  Output: /home/gleitao/Master Thesis/ADEPT/data/tensors/infiltration/window_labels.csv
 
 ========================================================================
  ADEPT Batch Processing — Summary
@@ -619,4 +686,4 @@ ADEPT Batch Processing — 16 attack(s) selected
  Output directory: /home/gleitao/Master Thesis/ADEPT/data/tensors
 ========================================================================
 
-Total time: 12522.5s (208.7 min)
+Total time: 15414.3s (256.9 min)
