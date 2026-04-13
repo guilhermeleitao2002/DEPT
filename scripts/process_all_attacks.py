@@ -248,7 +248,7 @@ ATTACKS = [
         pcap_path=CIC_PCAP / "Tuesday-WorkingHours.pcap",
         output_dir=TENSOR_DIR / "brute_force_ssh",
         labels_csv=CIC_CSV / "Tuesday-WorkingHours.pcap_ISCX.csv",
-        # SSH-Patator: 14:05-15:00 EDT = 18:05-19:00 UTC
+        # SSH-Patator: 14:00-15:00 EDT = 18:00-19:00 UTC
         time_start="2017-07-04 18:00:00",
         time_end="2017-07-04 19:05:00",
     ),
@@ -273,10 +273,11 @@ ATTACKS = [
         pcap_path=CIC_PCAP / "Thursday-WorkingHours.pcap",
         output_dir=TENSOR_DIR / "infiltration",
         labels_csv=CIC_CSV / "Thursday-WorkingHours-Afternoon-Infilteration.pcap_ISCX.csv",
-        # Malware download: 14:19-14:21 EDT = 18:19-18:21 UTC
-        # C&C beaconing:   14:33-14:35 EDT = 18:33-18:35 UTC
+        # MetaExploit Vista: 14:19-14:21, 14:33-14:35 EDT = 18:19-18:21, 18:33-18:35 UTC
+        # Cool disk MAC:    14:53-15:00 EDT = 18:53-19:00 UTC
+        # Dropbox + Portscan (Vista): 15:04-15:45 EDT = 19:04-19:45 UTC
         time_start="2017-07-06 18:15:00",
-        time_end="2017-07-06 18:40:00",
+        time_end="2017-07-06 19:50:00",
     ),
     # --- Benign baseline ---------------------------------------------------
     Attack(
