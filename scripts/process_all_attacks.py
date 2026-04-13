@@ -45,6 +45,9 @@ Usage
     # Re-process an attack even if output already exists:
     python scripts/process_all_attacks.py --only mirai --force
 
+    # Process all attacks except some:
+    python scripts/process_all_attacks.py --exclude mirai syn_dos
+
     # Dry run — show what would be processed without running:
     python scripts/process_all_attacks.py --dry-run
 
@@ -422,9 +425,14 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=f"Available attack keys: {', '.join(ATTACK_KEYS)}",
     )
-    parser.add_argument(
+    only_exclude = parser.add_mutually_exclusive_group()
+    only_exclude.add_argument(
         "--only", nargs="+", metavar="KEY",
         help=f"Process only these attacks (choices: {', '.join(ATTACK_KEYS)})",
+    )
+    only_exclude.add_argument(
+        "--exclude", nargs="+", metavar="KEY",
+        help=f"Exclude these attacks from processing (choices: {', '.join(ATTACK_KEYS)})",
     )
     parser.add_argument(
         "--force", action="store_true",
@@ -449,22 +457,30 @@ def main():
     )
     args = parser.parse_args()
 
-    # Validate --only keys
+    # Validate --only / --exclude keys
     if args.only:
         for key in args.only:
             if key not in ATTACK_KEYS:
                 parser.error(f"Unknown attack key: '{key}'. "
                              f"Choose from: {', '.join(ATTACK_KEYS)}")
+    if args.exclude:
+        for key in args.exclude:
+            if key not in ATTACK_KEYS:
+                parser.error(f"Unknown attack key: '{key}'. "
+                             f"Choose from: {', '.join(ATTACK_KEYS)}")
 
     # Build list of attacks to process
+    excluded = set(args.exclude) if args.exclude else set()
     selected = []
     for attack in ATTACKS:
         # Skip benign unless explicitly requested
         if attack.key in BENIGN_KEYS and not args.include_benign:
             if not (args.only and attack.key in args.only):
                 continue
-        # Filter by --only
+        # Filter by --only / --exclude
         if args.only and attack.key not in args.only:
+            continue
+        if attack.key in excluded:
             continue
         selected.append(attack)
 
