@@ -527,92 +527,102 @@ def main():
     results: list[tuple[str, str, dict | None]] = []
     total_start = time.time()
 
-    for i, attack in enumerate(selected, 1):
-        print(f"\n{dim('─' * 72)}")
-        print(f" {bold(cyan(f'[ {i} / {len(selected)} ]'))}  {bold(attack.name)}  "
-              f"{dim('(' + attack.dataset + ')')}")
-        print(f"{dim('─' * 72)}")
+    try:
+        for i, attack in enumerate(selected, 1):
+            print(f"\n{dim('─' * 72)}")
+            print(f" {bold(cyan(f'[ {i} / {len(selected)} ]'))}  {bold(attack.name)}  "
+                  f"{dim('(' + attack.dataset + ')')}")
+            print(f"{dim('─' * 72)}")
 
-        # Skip if already processed
-        if is_already_processed(attack.output_dir) and not args.force:
-            meta = load_metadata(attack.output_dir)
-            print(f"  {yellow('Already processed')} ({meta['num_windows']:,} windows). "
-                  f"Use {bold('--force')} to re-process.")
-            # Still attach labels if window_labels.csv is missing
-            if not (attack.output_dir / "window_labels.csv").exists():
-                print(f"  {dim('window_labels.csv missing — attaching labels...')}")
-                run_label_attach(attack)
-            results.append((attack.name, "skipped", meta))
-            continue
+            # Skip if already processed
+            if is_already_processed(attack.output_dir) and not args.force:
+                meta = load_metadata(attack.output_dir)
+                print(f"  {yellow('Already processed')} ({meta['num_windows']:,} windows). "
+                      f"Use {bold('--force')} to re-process.")
+                # Still attach labels if window_labels.csv is missing
+                if not (attack.output_dir / "window_labels.csv").exists():
+                    print(f"  {dim('window_labels.csv missing — attaching labels...')}")
+                    run_label_attach(attack)
+                results.append((attack.name, "skipped", meta))
+                continue
 
-        # Verify source PCAP exists
-        if not attack.pcap_path.exists():
-            print(f"  {red(bold('ERROR:'))} PCAP not found: {attack.pcap_path}")
-            results.append((attack.name, "MISSING", None))
-            continue
+            # Verify source PCAP exists
+            if not attack.pcap_path.exists():
+                print(f"  {red(bold('ERROR:'))} PCAP not found: {attack.pcap_path}")
+                results.append((attack.name, "MISSING", None))
+                continue
 
-        t0 = time.time()
-        pcap_to_process = attack.pcap_path
+            t0 = time.time()
+            pcap_to_process = attack.pcap_path
 
-        # Pre-compute filtered PCAP path (needed by both try and finally)
-        filtered_pcap = None
-        if attack.time_start:
-            filtered_dir = TENSOR_DIR / ".filtered"
-            filtered_dir.mkdir(parents=True, exist_ok=True)
-            filtered_pcap = filtered_dir / f"{attack.key}_filtered.pcap"
-
-        try:
-            # Time-filter CIC-IDS2017 PCAPs (skip if a cached copy already exists)
+            # Pre-compute filtered PCAP path (needed by both try and finally)
+            filtered_pcap = None
             if attack.time_start:
-                if filtered_pcap.exists() and filtered_pcap.stat().st_size > 0:
-                    size_mb = filtered_pcap.stat().st_size / (1024 * 1024)
-                    print(f"  {dim('Step 0:')} Using cached filtered PCAP "
-                          f"{dim(f'({size_mb:.1f} MB)')}")
-                else:
-                    print(f"  {dim('Step 0:')} Time-filtering PCAP...")
-                    time_filter_pcap(
-                        editcap, attack.pcap_path, filtered_pcap,
-                        attack.time_start, attack.time_end,
-                    )
-                pcap_to_process = filtered_pcap
+                filtered_dir = TENSOR_DIR / ".filtered"
+                filtered_dir.mkdir(parents=True, exist_ok=True)
+                filtered_pcap = filtered_dir / f"{attack.key}_filtered.pcap"
 
-            # Run the pipeline
-            print(f"  {dim('Running packet-to-tensor pipeline...')}")
-            run_pipeline(
-                pcap=pcap_to_process,
-                output_dir=attack.output_dir,
-                window_size=args.window_size,
-                extra_args=attack.extra_args,
-            )
+            try:
+                # Time-filter CIC-IDS2017 PCAPs (skip if a cached copy already exists)
+                if attack.time_start:
+                    if filtered_pcap.exists() and filtered_pcap.stat().st_size > 0:
+                        size_mb = filtered_pcap.stat().st_size / (1024 * 1024)
+                        print(f"  {dim('Step 0:')} Using cached filtered PCAP "
+                              f"{dim(f'({size_mb:.1f} MB)')}")
+                    else:
+                        print(f"  {dim('Step 0:')} Time-filtering PCAP...")
+                        time_filter_pcap(
+                            editcap, attack.pcap_path, filtered_pcap,
+                            attack.time_start, attack.time_end,
+                        )
+                    pcap_to_process = filtered_pcap
 
-            meta = load_metadata(attack.output_dir)
-            elapsed = time.time() - t0
-            print(f"  {green('✓')} Completed in {elapsed:.1f}s")
-            results.append((attack.name, "OK", meta))
+                # Run the pipeline
+                print(f"  {dim('Running packet-to-tensor pipeline...')}")
+                run_pipeline(
+                    pcap=pcap_to_process,
+                    output_dir=attack.output_dir,
+                    window_size=args.window_size,
+                    extra_args=attack.extra_args,
+                )
 
-            # Attach labels immediately after a successful pipeline run
-            print(f"  {dim('Attaching labels...')}")
-            run_label_attach(attack)
+                meta = load_metadata(attack.output_dir)
+                elapsed = time.time() - t0
+                print(f"  {green('✓')} Completed in {elapsed:.1f}s")
+                results.append((attack.name, "OK", meta))
 
-        except subprocess.CalledProcessError as e:
-            elapsed = time.time() - t0
-            code = e.returncode
-            hint = " (OOM — out of memory)" if code == -9 else ""
-            print(f"  {red(bold('✗ FAILED'))} after {elapsed:.1f}s "
-                  f"(exit code {red(str(code))}{hint})")
-            results.append((attack.name, "FAILED", None))
+                # Attach labels immediately after a successful pipeline run
+                print(f"  {dim('Attaching labels...')}")
+                run_label_attach(attack)
 
-        finally:
-            # Clean up filtered PCAP unless --keep-filtered was set
-            if (filtered_pcap is not None
-                    and filtered_pcap.exists()
-                    and not args.keep_filtered):
-                filtered_pcap.unlink()
-                print(f"  {dim('Cleaned up filtered PCAP')}")
+            except KeyboardInterrupt:
+                elapsed = time.time() - t0
+                print(f"\n  {yellow(bold('⚠ Interrupted'))} after {elapsed:.1f}s")
+                results.append((attack.name, "aborted", None))
+                raise  # propagate to outer handler
+
+            except subprocess.CalledProcessError as e:
+                elapsed = time.time() - t0
+                code = e.returncode
+                hint = " (OOM — out of memory)" if code == -9 else ""
+                print(f"  {red(bold('✗ FAILED'))} after {elapsed:.1f}s "
+                      f"(exit code {red(str(code))}{hint})")
+                results.append((attack.name, "FAILED", None))
+
+            finally:
+                # Clean up filtered PCAP unless --keep-filtered was set
+                if (filtered_pcap is not None
+                        and filtered_pcap.exists()
+                        and not args.keep_filtered):
+                    filtered_pcap.unlink()
+                    print(f"  {dim('Cleaned up filtered PCAP')}")
+
+    except KeyboardInterrupt:
+        print(f"\n{yellow(bold('Interrupted — stopping early.'))}\n")
 
     total_elapsed = time.time() - total_start
 
-    # Summary
+    # Summary (partial if interrupted)
     print_summary(results)
     print(f"{dim('Total time:')} {total_elapsed:.1f}s "
           f"{dim('(' + f'{total_elapsed / 60:.1f} min' + ')')}\n")
