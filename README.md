@@ -423,9 +423,7 @@ Derived from the 15 successful runs above (33.98 M packets, 3.17 M windows total
 
 Stage 1 (Scapy nPrint encoding) is the **sole bottleneck**: it accounts for >92% of all wall time and is 50× slower than flow grouping and 14× slower than tensor building. Stages 2 and 3 together add less than 25 µs per packet.
 
-### End-to-end classification latency (online mode, N=10)
-
-A classification is emitted as soon as the N-th packet of a flow is encoded:
+### End-to-end tensor latency ("online mode", N=10)
 
 | Component | Latency |
 |---|---:|
@@ -442,7 +440,7 @@ A classification is emitted as soon as the N-th packet of a flow is encoded:
 | 1 Gbps (small pkts) | ~1 M | ~274× |
 | 10 Gbps | ~10 M | ~2,740× |
 
-The current pipeline runs comfortably for **offline post-hoc analysis** and **research datasets**. For real-time deployment the Scapy parser must be replaced:
+The current pipeline runs comfortably for **offline post-hoc analysis** and **research datasets**. For real-time deployment the Scapy parser must/should be replaced:
 
 - **Drop Scapy**: use DPDK, AF_XDP, or a C/Rust extension for kernel-bypass header parsing; target >500 k pkt/s per core.
 - **Parallelise per-flow**: flows are independent — shard the nPrint encoding across CPU cores (each core owns a subset of flow keys).
