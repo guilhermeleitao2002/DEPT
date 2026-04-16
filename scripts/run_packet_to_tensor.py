@@ -113,6 +113,10 @@ def main():
         "--no-mask", action="store_true",
         help="Disable identity masking (keep IPs, ports, IP ID in nPrint bits)"
     )
+    parser.add_argument(
+        "--workers", type=int, default=None,
+        help="Parallel encoding workers (default: all CPU cores)"
+    )
     args = parser.parse_args()
 
     # --- Load config ---------------------------------------------------------
@@ -137,7 +141,7 @@ def main():
     _step(1, 3, f"Extracting nPrint features  {dim(fname)}")
 
     nprint_bits, meta_df = extract_packet_features(
-        args.input, mask_prefixes=mask_prefixes
+        args.input, mask_prefixes=mask_prefixes, workers=args.workers
     )
 
     t1 = time.time()
