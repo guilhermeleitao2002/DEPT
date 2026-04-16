@@ -1,6 +1,7 @@
 {
   "input": "/home/gleitao/Master Thesis/ADEPT/data/Kitsune/pcap/Active_Wiretap_pcap.pcapng",
   "encoding": "nprint",
+  "pipeline_mode": "batch",
   "nprint_bits": 1088,
   "identity_masking": true,
   "mask_prefixes": [

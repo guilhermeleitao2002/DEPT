@@ -1,6 +1,7 @@
 {
   "input": "/home/gleitao/Master Thesis/ADEPT/data/Kitsune/pcap/SSL_Renegotiation_pcap.pcap",
   "encoding": "nprint",
+  "pipeline_mode": "batch",
   "nprint_bits": 1088,
   "identity_masking": true,
   "mask_prefixes": [

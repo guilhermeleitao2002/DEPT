@@ -1,6 +1,7 @@
 {
   "input": "/home/gleitao/Master Thesis/ADEPT/data/tensors/.filtered/dos_slow_filtered.pcap",
   "encoding": "nprint",
+  "pipeline_mode": "batch",
   "nprint_bits": 1088,
   "identity_masking": true,
   "mask_prefixes": [
