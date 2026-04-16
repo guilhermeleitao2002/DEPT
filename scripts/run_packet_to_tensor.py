@@ -57,6 +57,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from src.feature_extraction.pcap_parser import extract_packet_features
 from src.feature_extraction.flow_grouper import group_by_flow
 from src.feature_extraction.tensor_builder import build_tensors
+from src.feature_extraction.incremental_pipeline import build_tensors_incremental
 
 
 # ---------------------------------------------------------------------------
@@ -117,6 +118,14 @@ def main():
         "--workers", type=int, default=None,
         help="Parallel encoding workers (default: all CPU cores)"
     )
+    parser.add_argument(
+        "--online", action="store_true",
+        help=(
+            "Incremental (online) mode: no global timestamp sort. "
+            "Emits each window the moment N packets arrive for a flow. "
+            "Lower peak RAM than batch mode; uses two lightweight PCAP passes."
+        )
+    )
     args = parser.parse_args()
 
     # --- Load config ---------------------------------------------------------
@@ -135,78 +144,99 @@ def main():
     )
 
     fname = os.path.basename(args.input)
-
-    # --- Step 1: nPrint extraction -------------------------------------------
     t0 = time.time()
-    _step(1, 3, f"Extracting nPrint features  {dim(fname)}")
 
-    nprint_bits, meta_df = extract_packet_features(
-        args.input, mask_prefixes=mask_prefixes, workers=args.workers
-    )
+    # ── Pipeline branch: batch (default) or online (incremental) ─────────────
 
-    t1 = time.time()
-    print(f"      {green('✓')} {len(meta_df):,} packets  {dim(f'({t1 - t0:.1f}s)')}")
+    if not args.online:
+        # ── Batch: 3-stage pipeline ───────────────────────────────────────
+        _step(1, 3, f"Extracting nPrint features  {dim(fname)}")
+        nprint_bits, meta_df = extract_packet_features(
+            args.input, mask_prefixes=mask_prefixes, workers=args.workers
+        )
+        t1 = time.time()
+        print(f"      {green('✓')} {len(meta_df):,} packets  {dim(f'({t1 - t0:.1f}s)')}")
 
-    # --- Step 2: Flow grouping -----------------------------------------------
-    _step(2, 3, "Grouping by 5-tuple flow")
-    meta_df, flow_indices, sort_order = group_by_flow(meta_df)
-    # Apply the same timestamp sort to the nPrint array
-    nprint_bits = nprint_bits[sort_order]
-    del sort_order
+        _step(2, 3, "Grouping by 5-tuple flow")
+        meta_df, flow_indices, sort_order = group_by_flow(meta_df)
+        nprint_bits = nprint_bits[sort_order]
+        del sort_order
+        t2 = time.time()
+        print(f"      {green('✓')} {len(flow_indices):,} flows  {dim(f'({t2 - t1:.1f}s)')}")
 
-    t2 = time.time()
-    print(f"      {green('✓')} {len(flow_indices):,} flows  {dim(f'({t2 - t1:.1f}s)')}")
+        sizes = [len(idx) for idx in flow_indices.values()]
+        usable = sum(1 for s in sizes if s >= window_size)
+        print(f"      Flow sizes: min={min(sizes)}, "
+              f"median={np.median(sizes):.0f}, "
+              f"max={max(sizes)} — "
+              f"{cyan(str(usable))}/{len(sizes)} usable (≥N={window_size})")
 
-    # Print flow size distribution
-    sizes = [len(idx) for idx in flow_indices.values()]
-    usable = sum(1 for s in sizes if s >= window_size)
-    print(f"      Flow sizes: min={min(sizes)}, "
-          f"median={np.median(sizes):.0f}, "
-          f"max={max(sizes)} — "
-          f"{cyan(str(usable))}/{len(sizes)} usable (≥N={window_size})")
+        _step(3, 3, f"Building tensors  {dim(f'(N={window_size}, stride={stride})')}")
+        result = build_tensors(
+            nprint_bits=nprint_bits,
+            meta_df=meta_df,
+            flow_indices=flow_indices,
+            output_dir=args.output_dir,
+            window_size=window_size,
+            stride=stride,
+            rf_base_features=rf_base,
+            rf_agg_functions=rf_agg,
+            standardize_columns=std_cols,
+            mean_std_path=mean_std_path,
+        )
+        del nprint_bits, meta_df
+        t3 = time.time()
+        print(f"      {green('✓')} {result['num_windows']:,} windows  {dim(f'({t3 - t2:.1f}s)')}")
 
-    # --- Step 3: Build tensors -----------------------------------------------
-    _step(3, 3, f"Building tensors  {dim(f'(N={window_size}, stride={stride})')}")
-    result = build_tensors(
-        nprint_bits=nprint_bits,
-        meta_df=meta_df,
-        flow_indices=flow_indices,
-        output_dir=args.output_dir,
-        window_size=window_size,
-        stride=stride,
-        rf_base_features=rf_base,
-        rf_agg_functions=rf_agg,
-        standardize_columns=std_cols,
-        mean_std_path=mean_std_path,
-    )
-    del nprint_bits, meta_df
-    t3 = time.time()
-    print(f"      {green('✓')} {result['num_windows']:,} windows  {dim(f'({t3 - t2:.1f}s)')}")
+        num_flows_total = len(flow_indices)
+        num_flows_used  = len(set(result["flow_ids"]))
 
-    # sequence.npy and rf_stats.npy are already on disk (memory-mapped).
-    # Only flow_ids and metadata.json still need to be written.
+    else:
+        # ── Online: incremental 2-pass pipeline ───────────────────────────
+        _step(1, 2, f"Prescan  {dim(fname)}")
+        _step(2, 2, f"Encoding + building tensors  "
+                    f"{dim(f'(N={window_size}, stride={stride})')}")
+        result = build_tensors_incremental(
+            pcap_path=args.input,
+            output_dir=args.output_dir,
+            window_size=window_size,
+            stride=stride,
+            rf_base_features=rf_base,
+            rf_agg_functions=rf_agg,
+            mean_std_path=mean_std_path,
+            mask_prefixes=mask_prefixes,
+        )
+        t3 = time.time()
+        print(f"      {green('✓')} {result['num_windows']:,} windows  "
+              f"{dim(f'({t3 - t0:.1f}s)')}")
+
+        num_flows_total = result.get("num_flows_total", len(set(result["flow_ids"])))
+        num_flows_used  = len(set(result["flow_ids"]))
+
+    # ── Common: write flow_ids.npy and metadata.json ──────────────────────────
     n_windows = result["num_windows"]
     np.save(os.path.join(args.output_dir, "flow_ids.npy"),
             np.array(result["flow_ids"], dtype=object), allow_pickle=True)
 
     seq_shape = (n_windows, window_size, len(result["feature_names"]))
-    rf_shape = (n_windows, len(result["rf_stat_names"]))
-    metadata = {
-        "input": args.input,
-        "encoding": "nprint",
-        "nprint_bits": 1088,
-        "identity_masking": not args.no_mask,
-        "mask_prefixes": mask_prefixes,
-        "window_size": window_size,
-        "stride": stride,
-        "num_windows": n_windows,
-        "sequence_shape": list(seq_shape),
-        "rf_stats_shape": list(rf_shape),
-        "sequence_feature_count": len(result["feature_names"]),
-        "rf_stat_names": result["rf_stat_names"],
-        "normalization_stats": result["stats"],
-        "num_flows_total": len(flow_indices),
-        "num_flows_used": len(set(result["flow_ids"])),
+    rf_shape  = (n_windows, len(result["rf_stat_names"]))
+    metadata  = {
+        "input":                    args.input,
+        "encoding":                 "nprint",
+        "pipeline_mode":            "online" if args.online else "batch",
+        "nprint_bits":              1088,
+        "identity_masking":         not args.no_mask,
+        "mask_prefixes":            mask_prefixes,
+        "window_size":              window_size,
+        "stride":                   stride,
+        "num_windows":              n_windows,
+        "sequence_shape":           list(seq_shape),
+        "rf_stats_shape":           list(rf_shape),
+        "sequence_feature_count":   len(result["feature_names"]),
+        "rf_stat_names":            result["rf_stat_names"],
+        "normalization_stats":      result["stats"],
+        "num_flows_total":          num_flows_total,
+        "num_flows_used":           num_flows_used,
     }
     with open(os.path.join(args.output_dir, "metadata.json"), "w") as f:
         json.dump(metadata, f, indent=2)
