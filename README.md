@@ -409,6 +409,47 @@ Results from running `process_all_attacks.py` on a desktop Linux machine (WSL2).
 
 **Parsing throughput**: ~3,000–4,900 packets/s (Scapy `PcapReader`). The bottleneck is packet parsing; flow grouping and tensor building are fast by comparison (seconds to ~1 min).
 
+## Production performance analysis
+
+Derived from the 15 successful runs above (33.98 M packets, 3.17 M windows total).
+
+### Per-stage throughput
+
+| Stage | Throughput | Per-packet latency | Wall-time share |
+|---|---:|---:|---:|
+| [1/3] nPrint parsing (Scapy) | **3,655 pkt/s** | **274 µs** | **92.2 %** |
+| [2/3] Flow grouping | 188,893 pkt/s | 5.3 µs | 1.8 % |
+| [3/3] Tensor building | 52,223 pkt-equiv/s (5,222 windows/s) | 19 µs (191 µs/window) | 6.0 % |
+
+Stage 1 (Scapy nPrint encoding) is the **sole bottleneck**: it accounts for >92% of all wall time and is 50× slower than flow grouping and 14× slower than tensor building. Stages 2 and 3 together add less than 25 µs per packet.
+
+### End-to-end classification latency (online mode, N=10)
+
+A classification is emitted as soon as the N-th packet of a flow is encoded:
+
+| Component | Latency |
+|---|---:|
+| Parse 10 packets (Scapy) | 2.74 ms |
+| Flow grouping + IPAT (10 pkts) | 0.05 ms |
+| Build 1 tensor window | 0.19 ms |
+| **Total** | **~3 ms** |
+
+### Production gap
+
+| Link rate | Required pkt/s | Gap vs. current Scapy pipeline |
+|---|---:|---:|
+| 100 Mbps (small pkts) | ~100 k | ~27× |
+| 1 Gbps (small pkts) | ~1 M | ~274× |
+| 10 Gbps | ~10 M | ~2,740× |
+
+The current pipeline runs comfortably for **offline post-hoc analysis** and **research datasets**. For real-time deployment the Scapy parser must be replaced:
+
+- **Drop Scapy**: use DPDK, AF_XDP, or a C/Rust extension for kernel-bypass header parsing; target >500 k pkt/s per core.
+- **Parallelise per-flow**: flows are independent — shard the nPrint encoding across CPU cores (each core owns a subset of flow keys).
+- **Incremental IPAT**: per-flow state is already local; an online pipeline can emit a window the moment the N-th packet arrives without any global sort pass.
+
+Stages 2 and 3 are already fast enough for 1 Gbps line rates; only Stage 1 requires re-implementation.
+
 ## Configuration
 
 All pipeline parameters are in `config/pipeline.yaml`: window size, stride, feature lists, aggregation functions, and standardization columns.
