@@ -1,0 +1,50 @@
+# ===================================
+# ADEPT — Random Forest base learner
+# ===================================
+# Binary classifier (benign vs attack) over the 24-dim aggregated window
+# statistics produced by the Packet-to-Tensor pipeline.
+
+tensors_dir: data/tensors
+output_dir: data/models/rf
+
+# Attacks selected per project_dataset_selection.md (2026-03-27).
+attacks:
+  - mirai
+  - syn_dos
+  - fuzzing
+  - ssdp_flood
+  - ddos
+  - portscan
+  - dos_slow
+
+# Split
+split:
+  train_frac: 0.70
+  val_frac: 0.15
+  test_frac: 0.15
+  seed: 42
+
+# Benign capping: per-attack benign windows ≤ benign_cap_ratio × attack windows
+# (prevents high-benign datasets from dominating the global benign pool).
+benign_cap_ratio: 3.0
+
+# Drop windows whose label_str is 'unknown' (case-insensitive).
+drop_unknown: true
+
+# Random Forest defaults (grid search overrides n_estimators / max_depth / min_samples_leaf).
+rf_defaults:
+  n_estimators: 300
+  max_depth: null
+  min_samples_leaf: 2
+  max_features: sqrt
+  n_jobs: -1
+  class_weight: balanced_subsample
+  random_state: 42
+
+# Small validation grid. Set enabled: false to skip and use rf_defaults only.
+grid_search:
+  enabled: true
+  scoring: macro_f1
+  n_estimators: [200, 400]
+  max_depth: [null, 20, 40]
+  min_samples_leaf: [1, 2, 5]
