@@ -1,0 +1,299 @@
+{
+  "overall": {
+    "n": 198644,
+    "n_benign": 119203,
+    "n_attack": 79441,
+    "accuracy": 0.896025049837901,
+    "precision_attack": 0.8521402642834038,
+    "recall_attack": 0.8953688901197114,
+    "f1_attack": 0.8732198978589668,
+    "precision_benign": 0.927830307450531,
+    "recall_benign": 0.8964623373572813,
+    "f1_benign": 0.911876642659658,
+    "macro_f1": 0.8925482702593124,
+    "roc_auc": 0.973478144745312,
+    "pr_auc": 0.9615796644644696
+  },
+  "per_attack": {
+    "ddos": {
+      "vs_all_benign": {
+        "n": 131187,
+        "n_benign": 119203,
+        "n_attack": 11984,
+        "accuracy": 0.8982597361019004,
+        "precision_attack": 0.4707774109171991,
+        "recall_attack": 0.9161381842456608,
+        "f1_attack": 0.6219515649341453,
+        "precision_benign": 0.9906828843194334,
+        "recall_benign": 0.8964623373572813,
+        "f1_benign": 0.9412205100652224,
+        "macro_f1": 0.7815860374996839,
+        "roc_auc": 0.9683337444649487,
+        "pr_auc": 0.6841808342615796
+      },
+      "vs_same_src_benign": {
+        "n": 26813,
+        "n_benign": 14829,
+        "n_attack": 11984,
+        "accuracy": 0.8529071718942304,
+        "precision_attack": 0.7888346026727978,
+        "recall_attack": 0.9161381842456608,
+        "f1_attack": 0.8477337657323759,
+        "precision_benign": 0.922062815044591,
+        "recall_benign": 0.8018072695394161,
+        "f1_benign": 0.8577405857740585,
+        "macro_f1": 0.8527371757532172,
+        "roc_auc": 0.9193780926100042,
+        "pr_auc": 0.8696520891409595
+      }
+    },
+    "dos_slow": {
+      "vs_all_benign": {
+        "n": 154092,
+        "n_benign": 119203,
+        "n_attack": 34889,
+        "accuracy": 0.9198855229343509,
+        "precision_attack": 0.738671974252562,
+        "recall_attack": 0.9999140130126974,
+        "f1_attack": 0.8496657208616973,
+        "precision_benign": 0.9999719269351699,
+        "recall_benign": 0.8964623373572813,
+        "f1_benign": 0.9453922952045191,
+        "macro_f1": 0.8975290080331082,
+        "roc_auc": 0.9971350787431881,
+        "pr_auc": 0.9827682013797597
+      },
+      "vs_same_src_benign": {
+        "n": 96911,
+        "n_benign": 62022,
+        "n_attack": 34889,
+        "accuracy": 0.9929832526751349,
+        "precision_attack": 0.9809633607963333,
+        "recall_attack": 0.9999140130126974,
+        "f1_attack": 0.9903480383807415,
+        "precision_benign": 0.9999510986503227,
+        "recall_benign": 0.989084518396698,
+        "f1_benign": 0.9944881251519818,
+        "macro_f1": 0.9924180817663617,
+        "roc_auc": 0.9951111471857238,
+        "pr_auc": 0.983898788237097
+      }
+    },
+    "fuzzing": {
+      "vs_all_benign": {
+        "n": 133335,
+        "n_benign": 119203,
+        "n_attack": 14132,
+        "accuracy": 0.8548318146023175,
+        "precision_attack": 0.365775950668037,
+        "recall_attack": 0.5036795924143788,
+        "f1_attack": 0.42379137889973806,
+        "precision_benign": 0.9384061470911087,
+        "recall_benign": 0.8964623373572813,
+        "f1_benign": 0.9169548391525584,
+        "macro_f1": 0.6703731090261482,
+        "roc_auc": 0.8898215196002262,
+        "pr_auc": 0.332212100126386
+      },
+      "vs_same_src_benign": {
+        "n": 33856,
+        "n_benign": 19724,
+        "n_attack": 14132,
+        "accuracy": 0.5436850189035917,
+        "precision_attack": 0.457660901433807,
+        "recall_attack": 0.5036795924143788,
+        "f1_attack": 0.47956880579417216,
+        "precision_benign": 0.6167841337485658,
+        "recall_benign": 0.5723484080308254,
+        "f1_benign": 0.5937360296631341,
+        "macro_f1": 0.5366524177286531,
+        "roc_auc": 0.5470114634029999,
+        "pr_auc": 0.46970484132221013
+      }
+    },
+    "mirai": {
+      "vs_all_benign": {
+        "n": 120418,
+        "n_benign": 119203,
+        "n_attack": 1215,
+        "accuracy": 0.895098739391121,
+        "precision_attack": 0.06972186628476672,
+        "recall_attack": 0.7613168724279835,
+        "f1_attack": 0.1277447866316807,
+        "precision_benign": 0.9972935390243675,
+        "recall_benign": 0.8964623373572813,
+        "f1_benign": 0.9441936082419573,
+        "macro_f1": 0.535969197436819,
+        "roc_auc": 0.9421896402543795,
+        "pr_auc": 0.36609789480609567
+      },
+      "vs_same_src_benign": {
+        "n": 2687,
+        "n_benign": 1472,
+        "n_attack": 1215,
+        "accuracy": 0.7889839970227019,
+        "precision_attack": 0.7695507487520798,
+        "recall_attack": 0.7613168724279835,
+        "f1_attack": 0.7654116673562267,
+        "precision_benign": 0.8047138047138047,
+        "recall_benign": 0.8118206521739131,
+        "f1_benign": 0.808251606357795,
+        "macro_f1": 0.7868316368570109,
+        "roc_auc": 0.881137334496332,
+        "pr_auc": 0.8737689515809084
+      }
+    },
+    "portscan": {
+      "vs_all_benign": {
+        "n": 119217,
+        "n_benign": 119203,
+        "n_attack": 14,
+        "accuracy": 0.8964744960869675,
+        "precision_attack": 0.0011330527678860473,
+        "recall_attack": 1.0,
+        "f1_attack": 0.0022635408245755863,
+        "precision_benign": 1.0,
+        "recall_benign": 0.8964623373572813,
+        "f1_benign": 0.9454048411069431,
+        "macro_f1": 0.47383419096575935,
+        "roc_auc": 0.9914186004427022,
+        "pr_auc": 0.06093356637294743
+      },
+      "vs_same_src_benign": {
+        "n": 54,
+        "n_benign": 40,
+        "n_attack": 14,
+        "accuracy": 0.9444444444444444,
+        "precision_attack": 0.8235294117647058,
+        "recall_attack": 1.0,
+        "f1_attack": 0.9032258064516129,
+        "precision_benign": 1.0,
+        "recall_benign": 0.925,
+        "f1_benign": 0.961038961038961,
+        "macro_f1": 0.932132383745287,
+        "roc_auc": 0.9946428571428572,
+        "pr_auc": 0.9873949579831933
+      }
+    },
+    "ssdp_flood": {
+      "vs_all_benign": {
+        "n": 136410,
+        "n_benign": 119203,
+        "n_attack": 17207,
+        "accuracy": 0.9095227622608313,
+        "precision_attack": 0.5823208907238824,
+        "recall_attack": 1.0,
+        "f1_attack": 0.7360338780049619,
+        "precision_benign": 1.0,
+        "recall_benign": 0.8964623373572813,
+        "f1_benign": 0.9454048411069431,
+        "macro_f1": 0.8407193595559526,
+        "roc_auc": 0.9999954641987354,
+        "pr_auc": 0.9999395180698329
+      },
+      "vs_same_src_benign": {
+        "n": 38319,
+        "n_benign": 21112,
+        "n_attack": 17207,
+        "accuracy": 0.9997129361413398,
+        "precision_attack": 0.9993611336972935,
+        "recall_attack": 1.0,
+        "f1_attack": 0.999680464778504,
+        "precision_benign": 1.0,
+        "recall_benign": 0.9994789693065556,
+        "f1_benign": 0.9997394167673466,
+        "macro_f1": 0.9997099407729253,
+        "roc_auc": 1.0,
+        "pr_auc": 1.0
+      }
+    },
+    "syn_dos": {
+      "vs_all_benign": {
+        "n": 119203,
+        "n_benign": 119203,
+        "n_attack": 0,
+        "accuracy": 0.8964623373572813,
+        "precision_attack": 0.0,
+        "recall_attack": 0.0,
+        "f1_attack": 0.0,
+        "precision_benign": 1.0,
+        "recall_benign": 0.8964623373572813,
+        "f1_benign": 0.9454048411069431,
+        "macro_f1": 0.47270242055347156,
+        "roc_auc": null,
+        "pr_auc": null
+      },
+      "vs_same_src_benign": {
+        "n": 4,
+        "n_benign": 4,
+        "n_attack": 0,
+        "accuracy": 1.0,
+        "precision_attack": 0.0,
+        "recall_attack": 0.0,
+        "f1_attack": 0.0,
+        "precision_benign": 1.0,
+        "recall_benign": 1.0,
+        "f1_benign": 1.0,
+        "macro_f1": 1.0,
+        "roc_auc": null,
+        "pr_auc": null
+      }
+    }
+  },
+  "per_label_str": {
+    "BENIGN": {
+      "n": 76891,
+      "y_true_majority": 0,
+      "predicted_attack_rate": 0.04706662678336866,
+      "mean_attack_prob": 0.04355429852018625
+    },
+    "DDoS": {
+      "n": 11984,
+      "y_true_majority": 1,
+      "predicted_attack_rate": 0.9161381842456608,
+      "mean_attack_prob": 0.7643406981272207
+    },
+    "DoS GoldenEye": {
+      "n": 18974,
+      "y_true_majority": 1,
+      "predicted_attack_rate": 0.9998945926004006,
+      "mean_attack_prob": 0.9783334832363335
+    },
+    "DoS Hulk": {
+      "n": 15915,
+      "y_true_majority": 1,
+      "predicted_attack_rate": 0.9999371661954132,
+      "mean_attack_prob": 0.9772507974828707
+    },
+    "PortScan": {
+      "n": 14,
+      "y_true_majority": 1,
+      "predicted_attack_rate": 1.0,
+      "mean_attack_prob": 0.951549570211886
+    },
+    "benign": {
+      "n": 42312,
+      "y_true_majority": 0,
+      "predicted_attack_rate": 0.20615900926451125,
+      "mean_attack_prob": 0.23285910187385384
+    },
+    "fuzzing": {
+      "n": 14132,
+      "y_true_majority": 1,
+      "predicted_attack_rate": 0.5036795924143788,
+      "mean_attack_prob": 0.4759169332604916
+    },
+    "mirai": {
+      "n": 1215,
+      "y_true_majority": 1,
+      "predicted_attack_rate": 0.7613168724279835,
+      "mean_attack_prob": 0.6949740041662192
+    },
+    "ssdp_flood": {
+      "n": 17207,
+      "y_true_majority": 1,
+      "predicted_attack_rate": 1.0,
+      "mean_attack_prob": 0.9999973847852617
+    }
+  }
+}

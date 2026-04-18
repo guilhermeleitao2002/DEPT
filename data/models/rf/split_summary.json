@@ -1,0 +1,44 @@
+{
+  "train": {
+    "n_windows": 830165,
+    "n_benign": 513106,
+    "n_attack": 317059,
+    "per_attack": {
+      "ddos": 126196,
+      "dos_slow": 252795,
+      "fuzzing": 136787,
+      "mirai": 7321,
+      "portscan": 245,
+      "ssdp_flood": 280615,
+      "syn_dos": 26206
+    }
+  },
+  "val": {
+    "n_windows": 235447,
+    "n_benign": 100317,
+    "n_attack": 135130,
+    "per_attack": {
+      "ddos": 27114,
+      "dos_slow": 55694,
+      "fuzzing": 33857,
+      "mirai": 59332,
+      "portscan": 64,
+      "ssdp_flood": 59386,
+      "syn_dos": 0
+    }
+  },
+  "test": {
+    "n_windows": 198644,
+    "n_benign": 119203,
+    "n_attack": 79441,
+    "per_attack": {
+      "ddos": 26813,
+      "dos_slow": 96911,
+      "fuzzing": 33856,
+      "mirai": 2687,
+      "portscan": 54,
+      "ssdp_flood": 38319,
+      "syn_dos": 4
+    }
+  }
+}
