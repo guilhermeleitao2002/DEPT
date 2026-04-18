@@ -32,14 +32,14 @@ Output columns: window_idx, label (0/1, -1=unknown), label_str.
 Usage
 -----
     # Kitsune (PCAP required to reconstruct timestamp sort order):
-    python scripts/attach_labels.py \\
+    python scripts/packet_to_tensor/attach_labels.py \\
         --dataset kitsune \\
         --tensor-dir data/tensors/mirai/ \\
         --labels-csv data/Kitsune/csv/mirai_labels.csv \\
         --pcap data/Kitsune/pcap/Mirai_pcap.pcap
 
     # CIC-IDS2017 (flow-level join, no PCAP needed):
-    python scripts/attach_labels.py \\
+    python scripts/packet_to_tensor/attach_labels.py \\
         --dataset cic \\
         --tensor-dir data/tensors/ddos/ \\
         --labels-csv "data/CIC-IDS-2017/csv/TrafficLabelling/Friday-WorkingHours-Afternoon-DDos.pcap_ISCX.csv"
@@ -55,7 +55,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 from src.feature_extraction.flow_grouper import _compute_canonical_keys
 
 try:

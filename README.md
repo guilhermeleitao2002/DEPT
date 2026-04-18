@@ -10,7 +10,7 @@ ADEPT is a defense framework against adversarial attacks on Machine Learning-bas
                         Raw PCAP / Dataset
                               │
                     ┌─────────┴─────────┐
-                    │  Packet-to-Tensor  │  ← this repo (current stage)
+                    │  Packet-to-Tensor  │  ── Phase 1 ✅
                     │     Pipeline       │
                     └────┬─────────┬─────┘
                          │         │
@@ -20,7 +20,7 @@ ADEPT is a defense framework against adversarial attacks on Machine Learning-bas
               │                               │
               ▼                               ▼
      ┌────────────────┐              ┌────────────────┐
-     │      TCN       │              │  Random Forest  │
+     │      TCN       │              │  Random Forest  │ ── Phase 2 ✅
      │ (temporal base │              │ (statistical    │
      │    learner)    │              │  base learner)  │
      └───────┬────────┘              └───────┬────────┘
@@ -29,23 +29,83 @@ ADEPT is a defense framework against adversarial attacks on Machine Learning-bas
                          ▼
               ┌──────────────────┐
               │  Meta-Learner    │
-              │ (Mini-Transformer│
+              │ (Mini-Transformer│            ── Phase 4 ⏳
               │  + self-attn)    │
               └────────┬─────────┘
                        ▼
               ┌──────────────────┐
               │   Purification   │
-              │   Transformer    │
+              │   Transformer    │            ── Phase 5 ⏳
               │ (Decoder-only    │
               │  Seq2Seq)        │
               └──────────────────┘
 ```
 
-**Current status**: only the Packet-to-Tensor pipeline (top box) is implemented.
+## Implementation phases
 
-## Packet-to-Tensor Pipeline
+| # | Phase | Status | Entry point | Config |
+|---|---|---|---|---|
+| 1 | Packet-to-Tensor pipeline | ✅ done | `scripts/packet_to_tensor/` | `config/pipeline.yaml` |
+| 2 | Random Forest base learner | ✅ done | `scripts/rf/` | `config/rf.yaml` |
+| 3 | TCN base learner | ⏳ planned | — | — |
+| 4 | Mini-Transformer meta-learner | ⏳ planned | — | — |
+| 5 | Purification Transformer | ⏳ planned | — | — |
+| 6 | RL Adaptation Agent | ⏳ planned | — | — |
 
-Converts raw PCAP captures (or datasets like CIC-IDS2018) into the two synchronized tensor inputs consumed by the ADEPT ensemble:
+## Repository layout
+
+```
+ADEPT/
+├── config/
+│   ├── pipeline.yaml                  # Phase 1 — Packet-to-Tensor parameters
+│   └── rf.yaml                        # Phase 2 — Random Forest
+├── data/                              # Raw PCAPs/CSVs + produced tensors & models
+│   ├── Kitsune/
+│   ├── CIC-IDS-2017/
+│   ├── tensors/                       # Phase 1 output (one subdir per attack)
+│   └── models/                        # Phase 2+ output
+│       └── rf/
+├── scripts/
+│   ├── packet_to_tensor/              # Phase 1 CLIs
+│   │   ├── run_packet_to_tensor.py    #   Single-PCAP pipeline
+│   │   ├── attach_labels.py           #   Window label attachment
+│   │   └── process_all_attacks.py     #   Batch runner for all attacks
+│   └── rf/                            # Phase 2 CLI
+│       └── run_rf.py                  #   Train + evaluate Random Forest
+├── src/
+│   ├── feature_extraction/            # Phase 1 internals
+│   │   ├── pcap_parser.py
+│   │   ├── flow_grouper.py
+│   │   ├── tensor_builder.py
+│   │   └── incremental_pipeline.py
+│   └── models/                        # Phase 2+ internals
+│       └── rf/
+│           ├── dataset.py
+│           ├── train.py
+│           └── evaluate.py
+├── requirements.txt
+└── README.md
+```
+
+## Requirements
+
+```bash
+pip install -r requirements.txt
+```
+
+Dependencies: `numpy`, `pandas`, `scapy`, `pyyaml`, `tqdm`, `scikit-learn`, `joblib`, `matplotlib`.
+
+For CIC-IDS2017 time-filtering in Phase 1, `editcap` from Wireshark CLI tools is required:
+
+```bash
+sudo apt install wireshark-common
+```
+
+---
+
+# Phase 1 — Packet-to-Tensor Pipeline
+
+Converts raw PCAP captures (or datasets like CIC-IDS2017) into the two synchronized tensor inputs consumed by the ADEPT ensemble:
 
 1. **Sequence tensor** `[W, N, F]` — per-packet nPrint bit vectors for the TCN and Purification Transformer
 2. **RF statistics** `[W, S]` — aggregated window statistics for the Random Forest
@@ -59,7 +119,7 @@ Converts raw PCAP captures (or datasets like CIC-IDS2018) into the two synchroni
 
 Both outputs are synchronized at the N-th packet boundary ("N-Packet Snapshot"): every window contains exactly N packets from the same flow.
 
-### Packet encoding — nPrint
+## Packet encoding — nPrint
 
 Packet headers are encoded using the [nPrint](https://nprint.github.io) bit-level representation (Holland et al., CCS 2021). Every bit of every header field is mapped to a tri-state value:
 
@@ -80,7 +140,7 @@ This produces a **fixed-length 1088-bit vector per packet**, regardless of which
 
 High-entropy identity fields (source/destination IP, IP ID, source/destination port) are **zeroed out** before training — this prevents the model from overfitting to specific addresses and forces it to learn behavioral patterns instead.
 
-### Processing stages
+## Processing stages
 
 ```
 PCAP file
@@ -100,7 +160,7 @@ PCAP file
           → RF stats tensor [W, 24]        (mean/std/min/max of 6 metadata features)
 ```
 
-### Key design decisions
+## Key design decisions
 
 | Decision | Rationale |
 |---|---|
@@ -109,7 +169,7 @@ PCAP file
 | **Drop incomplete windows** (no padding) | Padding with zeros would pollute RF aggregated statistics |
 | **Separate RF and sequence outputs** | RF uses statistical summaries; TCN/Transformer uses raw sequences — different input representations for ensemble diversity |
 
-### Sequence features (F=1090)
+## Sequence features (F=1090)
 
 | # | Feature | Description |
 |---|---|---|
@@ -117,7 +177,7 @@ PCAP file
 | 1088 | `IPAT` | Inter-Packet Arrival Time within the flow (z-score normalized) |
 | 1089 | `Direction` | 1 = forward (flow initiator), 0 = reverse |
 
-### RF statistics (S=24)
+## RF statistics (S=24)
 
 For each of the 6 base features (IPAT, Packet_Size, Payload_Length, Payload_Entropy, TCP_Flags, Direction), four aggregations are computed over the N-packet window: **mean, std, min, max**.
 
@@ -176,7 +236,7 @@ Slides a non-overlapping N-packet window over each flow and writes the two outpu
 
 ---
 
-### `scripts/run_packet_to_tensor.py` — single-PCAP CLI
+### `scripts/packet_to_tensor/run_packet_to_tensor.py` — single-PCAP CLI
 
 Orchestrates the three modules for a single PCAP file.
 
@@ -203,7 +263,7 @@ Orchestrates the three modules for a single PCAP file.
 
 ---
 
-### `scripts/attach_labels.py` — window label attachment
+### `scripts/packet_to_tensor/attach_labels.py` — window label attachment
 
 Produces `window_labels.csv` inside a tensor directory by joining ground-truth label files with `flow_ids.npy`. Handles two alignment problems:
 
@@ -224,7 +284,7 @@ Produces `window_labels.csv` inside a tensor directory by joining ground-truth l
 
 ---
 
-### `scripts/process_all_attacks.py` — batch processor for all attacks
+### `scripts/packet_to_tensor/process_all_attacks.py` — batch processor for all attacks
 
 Automates batch processing across all available attack PCAPs. For CIC-IDS2017 attacks, uses `editcap` to extract the attack time window before processing.
 
@@ -260,12 +320,12 @@ Automates batch processing across all available attack PCAPs. For CIC-IDS2017 at
 
 ## Usage
 
-Run commands from the `ADEPT/` directory.
+Run all commands from the `ADEPT/` directory.
 
-### From a PCAP file
+### From a single PCAP
 
 ```bash
-python scripts/run_packet_to_tensor.py \
+python scripts/packet_to_tensor/run_packet_to_tensor.py \
     -i data/Kitsune/pcap/Mirai_pcap.pcap \
     -o data/tensors/mirai/
 ```
@@ -273,7 +333,7 @@ python scripts/run_packet_to_tensor.py \
 ### Custom window size (N=20)
 
 ```bash
-python scripts/run_packet_to_tensor.py \
+python scripts/packet_to_tensor/run_packet_to_tensor.py \
     -i data/Kitsune/pcap/Mirai_pcap.pcap \
     -o data/tensors/mirai/ \
     -N 20
@@ -282,7 +342,7 @@ python scripts/run_packet_to_tensor.py \
 ### Apply training statistics to a test set
 
 ```bash
-python scripts/run_packet_to_tensor.py \
+python scripts/packet_to_tensor/run_packet_to_tensor.py \
     -i data/Kitsune/pcap/Mirai_pcap.pcap \
     -o data/tensors/mirai/ \
     --mean-std data/tensors/mirai/mean_std.json
@@ -290,60 +350,48 @@ python scripts/run_packet_to_tensor.py \
 
 ### Batch process the thesis attack set
 
-`scripts/process_all_attacks.py` runs the packet-to-tensor pipeline across all available attack PCAPs under `data/Kitsune/pcap/` and `data/CIC-IDS-2017/pcap/`, writing outputs to `data/tensors/`.
-
-Install Python dependencies first:
-
-```bash
-pip install -r requirements.txt
-```
-
-If you want to process any CIC-IDS2017 attack, you also need `editcap` from the Wireshark CLI tools because the script time-filters those PCAPs before tensorization, in order to ignore benign traffic by default:
-
-```bash
-sudo apt install wireshark-common
-```
+`scripts/packet_to_tensor/process_all_attacks.py` runs the packet-to-tensor pipeline across all available attack PCAPs under `data/Kitsune/pcap/` and `data/CIC-IDS-2017/pcap/`, writing outputs to `data/tensors/`.
 
 Process all predefined attacks (the Monday benign baseline is not included unless requested):
 
 ```bash
-python3 scripts/process_all_attacks.py
+python scripts/packet_to_tensor/process_all_attacks.py
 ```
 
 Preview what would run without processing anything:
 
 ```bash
-python3 scripts/process_all_attacks.py --dry-run
+python scripts/packet_to_tensor/process_all_attacks.py --dry-run
 ```
 
 Process only one attack:
 
 ```bash
-python3 scripts/process_all_attacks.py --only syn_dos
+python scripts/packet_to_tensor/process_all_attacks.py --only syn_dos
 ```
 
 Re-process an attack even if `data/tensors/<attack>/metadata.json` already exists:
 
 ```bash
-python3 scripts/process_all_attacks.py --only mirai --force
+python scripts/packet_to_tensor/process_all_attacks.py --only mirai --force
 ```
 
 Override the window size from `config/pipeline.yaml`:
 
 ```bash
-python3 scripts/process_all_attacks.py -N 20
+python scripts/packet_to_tensor/process_all_attacks.py -N 20
 ```
 
 Include the Monday benign baseline:
 
 ```bash
-python3 scripts/process_all_attacks.py --include-benign
+python scripts/packet_to_tensor/process_all_attacks.py --include-benign
 ```
 
 Keep the time-filtered CIC-IDS2017 PCAPs after processing (re-runs reuse them automatically):
 
 ```bash
-python3 scripts/process_all_attacks.py --keep-filtered
+python scripts/packet_to_tensor/process_all_attacks.py --keep-filtered
 ```
 
 Available `--only` keys:
@@ -450,31 +498,109 @@ Stages 2 and 3 are already fast enough for 1 Gbps line rates; only Stage 1 requi
 
 ## Configuration
 
-All pipeline parameters are in `config/pipeline.yaml`: window size, stride, feature lists, aggregation functions, and standardization columns.
+All Phase 1 parameters are in `config/pipeline.yaml`: window size, stride, feature lists, aggregation functions, and standardization columns.
 
-## Requirements
+---
+
+# Phase 2 — Random Forest Base Learner
+
+Binary classifier (benign vs. attack) trained on the 24-dim `rf_stats.npy` aggregates produced by Phase 1. Serves as the statistical half of the ADEPT ensemble — deliberately paired with the TCN (Phase 3), which consumes the raw sequence tensor, to maximise representational diversity.
+
+## Design
+
+| Aspect | Choice | Rationale |
+|---|---|---|
+| **Input** | `rf_stats.npy` — `[W, 24]` float32 | Uses only the aggregated per-window statistics, never the raw packet sequence — keeps RF and TCN representations disjoint |
+| **Labels** | `window_labels.csv` | `0` = benign, `1` = attack; rows with `label_str == "unknown"` are dropped |
+| **Split** | **Flow-level, not window-level** | Windows from the same 5-tuple flow stay in the same split — prevents leakage via flow-internal correlation |
+| **Stratification** | Per-`(attack, dominant_label)` stratum | Keeps each attack's benign/attack ratio balanced across train/val/test |
+| **Benign capping** | ≤ `benign_cap_ratio` × attack windows per attack | Prevents high-benign datasets (e.g. SSDP Flood's 65k usable flows) from dominating the global benign pool |
+| **Hyperparameters** | Small grid (val macro-F1) | `n_estimators`, `max_depth`, `min_samples_leaf` — grid overrides feed into `rf_defaults` |
+| **Final fit** | `train + val`, evaluate on `test` | No data is wasted before the held-out evaluation |
+
+## Module reference
+
+### `src/models/rf/dataset.py` — load, merge, split
+
+| Function | Purpose |
+|---|---|
+| `load_attack(tensors_dir, attack)` | Read `rf_stats.npy`, `flow_ids.npy`, `window_labels.csv`, `metadata.json` for one attack; drop `unknown` rows |
+| `cap_benign(y, flow_ids, ratio, rng)` | Drop whole benign flows (not individual windows) until benign windows ≤ ratio × attack windows |
+| `assemble(tensors_dir, attacks, benign_cap_ratio, seed)` | Merge all attack folders into one `RFDataset` (X, y, flow_ids, attacks, label_str) |
+| `flow_level_split(dataset, train/val/test_frac, seed)` | Stratified split of flows (not windows) per `(attack, majority_label)`; asserts no flow leakage across splits |
+| `split_summary(dataset, split)` | Per-split counts: total, benign, attack, per-attack |
+
+### `src/models/rf/train.py` — grid search + final fit
+
+| Function | Purpose |
+|---|---|
+| `grid_search(dataset, split, defaults, grid_cfg)` | Fit each (n_estimators × max_depth × min_samples_leaf) on train, score macro-F1 on val |
+| `fit_final(dataset, split, defaults, best_params)` | Fit on train + val using the best params; produce the deployable classifier |
+| `train(config, tensors_root, output_dir)` | Full pipeline: assemble → split → grid search → final fit → persist artifacts |
+
+### `src/models/rf/evaluate.py` — held-out evaluation
+
+Runs the fitted `rf.joblib` on the test split and produces both machine-readable metrics (`metrics.json`) and inspection plots (confusion matrix, ROC, PR, feature importance).
+
+Per-attack metrics are reported in two flavours to disambiguate deployment signal from same-source signal:
+
+- **`vs_all_benign`** — this attack's windows + **all benign windows in the test set**. Reflects realistic deployment mix.
+- **`vs_same_src_benign`** — this attack's windows + only benign windows from the same source dataset. Removes cross-dataset confounds.
+
+## CLI — `scripts/rf/run_rf.py`
+
+Orchestrates `train` and/or `evaluate` from `config/rf.yaml`, with colour-coded progress and summary output.
+
+**Flags**:
+
+| Flag | Default | Purpose |
+|---|---|---|
+| `--config` | `config/rf.yaml` | Path to RF config |
+| `--mode` | `both` | `train` / `eval` / `both` |
+| `--log-level` | `WARNING` | Python logging level; set `INFO` for the library's own log messages |
+| `--json` | off | Print final `overall` metrics as JSON (useful for shell piping) |
+
+## Usage
 
 ```bash
-pip install -r requirements.txt
+# Train and evaluate with the default config
+python scripts/rf/run_rf.py
+
+# Train only (skip eval):
+python scripts/rf/run_rf.py --mode train
+
+# Evaluate a previously-trained artifact without retraining:
+python scripts/rf/run_rf.py --mode eval
+
+# Use a custom config:
+python scripts/rf/run_rf.py --config config/rf_experiment.yaml
 ```
 
-Dependencies: `numpy`, `pandas`, `scapy`, `pyyaml`, `tqdm`.
+## Configuration — `config/rf.yaml`
 
-## Project structure
+| Key | Purpose |
+|---|---|
+| `tensors_dir` | Root of Phase-1 output (expects subdirs matching `attacks`) |
+| `output_dir` | Where RF artifacts (model, plots, metrics) are written |
+| `attacks` | List of attack subdir names to include in training |
+| `benign_cap_ratio` | Per-attack cap on benign windows as a multiple of attack windows |
+| `split` | `train_frac` / `val_frac` / `test_frac` / `seed` |
+| `rf_defaults` | sklearn `RandomForestClassifier` kwargs applied to every fit |
+| `grid_search.enabled` | Toggle grid search on/off |
+| `grid_search.{n_estimators, max_depth, min_samples_leaf}` | Candidate values — Cartesian product, scored by val macro-F1 |
 
-```
-ADEPT/
-├── config/
-│   └── pipeline.yaml                  # Pipeline parameters
-├── data/                              # Raw PCAPs and CSVs, and output tensors
-├── scripts/
-│   ├── run_packet_to_tensor.py        # CLI entry-point (single PCAP)
-│   ├── attach_labels.py               # Window label attachment (Kitsune + CIC)
-│   └── process_all_attacks.py         # Batch processor for all attacks + benign
-├── src/
-│   └── feature_extraction/
-│       ├── pcap_parser.py             # PCAP → nPrint bits + metadata
-│       ├── flow_grouper.py            # 5-tuple grouping + IPAT + Direction
-│       └── tensor_builder.py          # Windowing + standardization + dual output
-└── requirements.txt
-```
+## Output files (`data/models/rf/`)
+
+| File | Description |
+|---|---|
+| `rf.joblib` | Fitted `RandomForestClassifier` (for downstream inference / ensembling) |
+| `dataset.npz` | Merged `(X, y, attacks, label_str)` — lets `evaluate` run without re-assembling |
+| `split.npz` | `train_idx`, `val_idx`, `test_idx` into `dataset.npz` |
+| `feature_names.json` | Ordered list of 24 RF stat names |
+| `split_summary.json` | Per-split window counts (benign/attack, per-attack) |
+| `training_info.json` | Grid-search results, best params, effective config |
+| `metrics.json` | Overall + per-attack + per-label_str metrics |
+| `confusion_matrix.png` | Binary CM on the test split |
+| `roc_curve.png` | ROC (when both classes present in test) |
+| `pr_curve.png` | Precision-recall (when both classes present in test) |
+| `feature_importance.png` | Gini importances over the 24 RF features |

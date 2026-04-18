@@ -37,25 +37,25 @@ reduce size and isolate attack windows.
 Usage
 -----
     # Process all attacks (skips already-processed ones):
-    python scripts/process_all_attacks.py
+    python scripts/packet_to_tensor/process_all_attacks.py
 
     # Process a specific attack:
-    python scripts/process_all_attacks.py --only syn_dos
+    python scripts/packet_to_tensor/process_all_attacks.py --only syn_dos
 
     # Re-process an attack even if output already exists:
-    python scripts/process_all_attacks.py --only mirai --force
+    python scripts/packet_to_tensor/process_all_attacks.py --only mirai --force
 
     # Process all attacks except some:
-    python scripts/process_all_attacks.py --exclude mirai syn_dos
+    python scripts/packet_to_tensor/process_all_attacks.py --exclude mirai syn_dos
 
     # Dry run — show what would be processed without running:
-    python scripts/process_all_attacks.py --dry-run
+    python scripts/packet_to_tensor/process_all_attacks.py --dry-run
 
     # Custom window size:
-    python scripts/process_all_attacks.py --window-size 20
+    python scripts/packet_to_tensor/process_all_attacks.py --window-size 20
 
     # Process with benign baseline:
-    python scripts/process_all_attacks.py --include-benign
+    python scripts/packet_to_tensor/process_all_attacks.py --include-benign
 """
 
 import argparse
@@ -89,7 +89,7 @@ def magenta(t): return _c("35", t)
 # Project root = ADEPT/
 # ---------------------------------------------------------------------------
 SCRIPT_DIR = Path(__file__).resolve().parent
-PROJECT_ROOT = SCRIPT_DIR.parent
+PROJECT_ROOT = SCRIPT_DIR.parents[1]
 PIPELINE_SCRIPT = SCRIPT_DIR / "run_packet_to_tensor.py"
 LABEL_SCRIPT = SCRIPT_DIR / "attach_labels.py"
 PIPELINE_CONFIG = PROJECT_ROOT / "config" / "pipeline.yaml"

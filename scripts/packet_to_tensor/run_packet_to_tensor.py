@@ -16,18 +16,18 @@ with selective identity masking inspired by FlowPaint (SIGCOMM'26).
 
 Usage
 -----
-    python scripts/run_packet_to_tensor.py \\
+    python scripts/packet_to_tensor/run_packet_to_tensor.py \\
         --input data/CIC-IDS-2017/pcap/Monday-WorkingHours.pcap \\
         --output-dir data/processed/monday/
 
     # With custom window size (e.g., N=20):
-    python scripts/run_packet_to_tensor.py \\
+    python scripts/packet_to_tensor/run_packet_to_tensor.py \\
         --input data/CIC-IDS-2017/pcap/Monday-WorkingHours.pcap \\
         --output-dir data/processed/monday_n20/ \\
         --window-size 20
 
     # Disable identity masking:
-    python scripts/run_packet_to_tensor.py \\
+    python scripts/packet_to_tensor/run_packet_to_tensor.py \\
         --input data/CIC-IDS-2017/pcap/Monday-WorkingHours.pcap \\
         --output-dir data/processed/monday_unmasked/ \\
         --no-mask
@@ -51,8 +51,8 @@ import time
 import numpy as np
 import yaml
 
-# Allow running from project root: `python scripts/run_packet_to_tensor.py`
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+# Allow running from project root: `python scripts/packet_to_tensor/run_packet_to_tensor.py`
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
 from src.feature_extraction.pcap_parser import extract_packet_features
 from src.feature_extraction.flow_grouper import group_by_flow
@@ -99,7 +99,7 @@ def main():
     )
     parser.add_argument(
         "-c", "--config",
-        default=os.path.join(os.path.dirname(__file__), "..", "config", "pipeline.yaml"),
+        default=os.path.join(os.path.dirname(__file__), "..", "..", "config", "pipeline.yaml"),
         help="Pipeline config YAML (default: config/pipeline.yaml)"
     )
     parser.add_argument(
