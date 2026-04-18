@@ -7,15 +7,24 @@
 tensors_dir: data/tensors
 output_dir: data/models/rf
 
-# Attacks selected per project_dataset_selection.md (2026-03-27).
+# All 16 attacks currently in data/tensors/.
 attacks:
-  - mirai
-  - syn_dos
-  - fuzzing
-  - ssdp_flood
+  - active_wiretap
+  - arp_mitm
+  - brute_force_ftp
+  - brute_force_ssh
   - ddos
-  - portscan
   - dos_slow
+  - fuzzing
+  - infiltration
+  - mirai
+  - os_scan
+  - portscan
+  - ssdp_flood
+  - ssl_renegotiation
+  - syn_dos
+  - video_injection
+  - web_attacks
 
 # Split
 split:
