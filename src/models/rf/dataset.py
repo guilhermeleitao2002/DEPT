@@ -141,7 +141,15 @@ def flow_level_split(
     test_frac: float,
     seed: int,
 ) -> Split:
-    """Split flows (not windows) within each (attack, label) stratum. Windows of a flow stay together."""
+    """Split flows (atomic) within each (attack, majority-label) stratum.
+
+    Flows vary in window count by orders of magnitude (e.g. a long DoS flow can
+    carry 10^5 windows; a scan flow carries 1–2). Splitting flow *counts*
+    proportionally therefore does not preserve *window* proportions. We instead
+    bin-pack flows largest-first into the split with the greatest remaining
+    window-count deficit, so each split lands near its target window fraction
+    while flows remain atomic (no leakage).
+    """
     assert abs(train_frac + val_frac + test_frac - 1.0) < 1e-6
     rng = np.random.default_rng(seed)
 
@@ -153,30 +161,35 @@ def flow_level_split(
     # A single flow can contain both benign and attack windows (CIC label transitions mid-flow).
     # Assign each scoped_flow one stratum via its majority label, so flows remain atomic.
     flow_df = pd.DataFrame({"flow": scoped_flow, "attack": dataset.attacks, "y": dataset.y})
-    flow_majority = (
+    flow_agg = (
         flow_df.groupby("flow")
-        .agg(attack=("attack", "first"), y_mean=("y", "mean"))
+        .agg(attack=("attack", "first"), y_mean=("y", "mean"), n=("y", "size"))
         .reset_index()
     )
-    flow_majority["y_dom"] = (flow_majority["y_mean"] >= 0.5).astype(int)
-    flow_majority["stratum"] = (
-        flow_majority["attack"].astype(str) + "|" + flow_majority["y_dom"].astype(str)
+    flow_agg["y_dom"] = (flow_agg["y_mean"] >= 0.5).astype(int)
+    flow_agg["stratum"] = (
+        flow_agg["attack"].astype(str) + "|" + flow_agg["y_dom"].astype(str)
     )
-    flow_to_split: dict[str, str] = {}
 
-    for key in sorted(flow_majority["stratum"].unique()):
-        flows_in_stratum = flow_majority.loc[flow_majority["stratum"] == key, "flow"].values
-        flows_in_stratum = np.array(flows_in_stratum, dtype=object)
-        rng.shuffle(flows_in_stratum)
-        n = len(flows_in_stratum)
-        n_tr = int(round(n * train_frac))
-        n_va = int(round(n * val_frac))
-        for f in flows_in_stratum[:n_tr]:
-            flow_to_split[f] = "train"
-        for f in flows_in_stratum[n_tr : n_tr + n_va]:
-            flow_to_split[f] = "val"
-        for f in flows_in_stratum[n_tr + n_va :]:
-            flow_to_split[f] = "test"
+    flow_to_split: dict[str, str] = {}
+    fracs = {"train": train_frac, "val": val_frac, "test": test_frac}
+
+    for key in sorted(flow_agg["stratum"].unique()):
+        stratum = flow_agg.loc[flow_agg["stratum"] == key, ["flow", "n"]].reset_index(drop=True)
+        # Randomize equal-sized flows so the seed still matters, then sort largest-first (stable).
+        perm = rng.permutation(len(stratum))
+        stratum = stratum.iloc[perm].reset_index(drop=True)
+        stratum = stratum.sort_values("n", ascending=False, kind="stable").reset_index(drop=True)
+
+        total = int(stratum["n"].sum())
+        targets = {s: total * f for s, f in fracs.items()}
+        current = {"train": 0, "val": 0, "test": 0}
+        for _, row in stratum.iterrows():
+            flow, n = row["flow"], int(row["n"])
+            # Assign to the split furthest below its window-count target.
+            pick = max(current.keys(), key=lambda s: targets[s] - current[s])
+            flow_to_split[flow] = pick
+            current[pick] += n
 
     train_idx: list[int] = []
     val_idx: list[int] = []
