@@ -68,22 +68,53 @@ def evaluate(output_dir: Path) -> dict:
 
     metrics: dict = {"overall": _classification_block(y_te, y_pred, y_prob)}
 
-    # Per source_attack: combine this attack's windows with *all* benign windows in the test set
-    # so recall/precision reflect a realistic deployment mix, not a degenerate 100% attack subset.
+    # Per source_attack. We report three slices so the reader can see both the
+    # raw numbers and a fair precision:
+    #   * vs_all_benign     — this attack's positives + every benign window in test.
+    #                         Realistic prevalence, but precision is dominated by
+    #                         total benign FP count — tiny attacks are penalized
+    #                         structurally even with perfect recall.
+    #   * vs_balanced_benign — this attack's positives + a subsample of benign
+    #                         of size min(K × n_attack, all_benign). Makes
+    #                         precision comparable across attacks of different
+    #                         sizes; use this as the primary per-attack metric.
+    #   * vs_same_src_benign — benign from the same source dataset only.
+    # A low_support flag is set when n_attack is below MIN_SUPPORT so the
+    # printer can mark noisy rows without dropping them from the JSON.
+    MIN_SUPPORT = 50
+    BALANCE_K = 10
+    rng = np.random.default_rng(42)
+    benign_all_idx = np.where(y_te == 0)[0]
+
     per_attack = {}
     for attack in sorted(set(attacks_te.tolist())):
         attack_mask = attacks_te == attack
-        # all benign in test + this attack's positives
+        n_atk = int(attack_mask.sum())
         sel = attack_mask | (y_te == 0)
-        # But keep only benign coming from the same dataset to measure "per-attack" fairly:
         sel_same_src = attack_mask | ((y_te == 0) & (attacks_te == attack))
+
+        # Balanced benign: subsample benign to K × n_atk (capped at total benign).
+        target_bn = min(BALANCE_K * n_atk, len(benign_all_idx))
+        if n_atk > 0 and target_bn > 0:
+            bn_pick = rng.choice(benign_all_idx, size=target_bn, replace=False)
+            bal_mask = np.zeros_like(attack_mask)
+            bal_mask[np.where(attack_mask)[0]] = True
+            bal_mask[bn_pick] = True
+        else:
+            bal_mask = attack_mask
+
         per_attack[attack] = {
+            "low_support": n_atk < MIN_SUPPORT,
             "vs_all_benign": _classification_block(y_te[sel], y_pred[sel], y_prob[sel]),
+            "vs_balanced_benign": _classification_block(
+                y_te[bal_mask], y_pred[bal_mask], y_prob[bal_mask]
+            ),
             "vs_same_src_benign": _classification_block(
                 y_te[sel_same_src], y_pred[sel_same_src], y_prob[sel_same_src]
             ),
         }
     metrics["per_attack"] = per_attack
+    metrics["per_attack_config"] = {"min_support": MIN_SUPPORT, "balance_k": BALANCE_K}
 
     # Per label_str breakdown (raw attack name).
     per_label: dict[str, dict] = {}
