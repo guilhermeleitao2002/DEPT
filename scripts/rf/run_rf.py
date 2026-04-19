@@ -207,21 +207,34 @@ def _print_overall_metrics(overall: dict) -> None:
 def _print_per_attack_metrics(per_attack: dict) -> None:
     if not per_attack:
         return
+    print(f" {dim('precision/recall/f1 computed against a balanced benign subsample (K×n_atk); roc_auc/pr_auc use all benign.')}")
     print()
     hdr = (f" {'attack':<20} {'precision':>10} {'recall':>10} "
            f"{'f1':>10} {'roc_auc':>10} {'pr_auc':>10} {'n_atk':>8}")
     print(cyan(hdr))
     print(f" {'-' * 20} {'-' * 10} {'-' * 10} {'-' * 10} "
           f"{'-' * 10} {'-' * 10} {'-' * 8}")
+    low_support_attacks: list[str] = []
     for atk in sorted(per_attack.keys()):
-        blk = per_attack[atk].get("vs_all_benign", {})
-        print(f" {atk:<20} "
-              f"{_colour_metric(blk.get('precision_attack')):>10} "
-              f"{_colour_metric(blk.get('recall_attack')):>10} "
-              f"{_colour_metric(blk.get('f1_attack')):>10} "
-              f"{_colour_metric(blk.get('roc_auc')):>10} "
-              f"{_colour_metric(blk.get('pr_auc')):>10} "
-              f"{blk.get('n_attack', 0):>8,}")
+        entry = per_attack[atk]
+        bal = entry.get("vs_balanced_benign", {})
+        all_bn = entry.get("vs_all_benign", {})
+        low = entry.get("low_support", False)
+        raw_label = f"{atk} *" if low else atk
+        padded = f"{raw_label:<20}"
+        if low:
+            # Only dim the trailing " *" so width stays visually 20.
+            padded = padded.replace(" *", dim(" *"), 1)
+            low_support_attacks.append(atk)
+        print(f" {padded} "
+              f"{_colour_metric(bal.get('precision_attack')):>10} "
+              f"{_colour_metric(bal.get('recall_attack')):>10} "
+              f"{_colour_metric(bal.get('f1_attack')):>10} "
+              f"{_colour_metric(all_bn.get('roc_auc')):>10} "
+              f"{_colour_metric(all_bn.get('pr_auc')):>10} "
+              f"{all_bn.get('n_attack', 0):>8,}")
+    if low_support_attacks:
+        print(f"\n {dim('*  low support (n_atk < 50) — metrics are unreliable, treat as noise.')}")
 
 
 def _print_artifacts(output_dir: Path) -> None:
