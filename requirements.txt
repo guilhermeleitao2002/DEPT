@@ -3,3 +3,5 @@ pandas
 scapy
 pyyaml
 tqdm
+matplotlib
+joblib
