@@ -36,6 +36,13 @@ supports (mirai, syn_dos, fuzzing, ssdp_flood, ddos, dos_slow, portscan),
 matching the evaluation set used when ADEPT drives TANTGen as its
 adversarial packet generator.
 
+The --adversarial flag replaces the registry with entries built dynamically
+from data/adversarial/<attack>/<attack>_adversarial_<mode>.pcap (3 modes:
+both / iat / size). Each adversarial PCAP is malicious by construction, so
+window_labels.csv is synthesized directly (all windows labeled 1) instead
+of being produced by attach_labels.py. Output goes to
+data/tensors/adversarial/<attack>_adv_<mode>/.
+
 CIC-IDS2017 PCAPs are time-filtered with editcap before processing to
 reduce size and isolate attack windows.
 
@@ -64,6 +71,9 @@ Usage
 
     # Restrict to the 7 attacks supported by TANTGen:
     python scripts/packet_to_tensor/process_all_attacks.py --tantgen
+
+    # Process TANTGen-generated adversarial PCAPs under data/adversarial/:
+    python scripts/packet_to_tensor/process_all_attacks.py --adversarial
 """
 
 import argparse
@@ -109,6 +119,8 @@ KITSUNE_CSV = DATA_DIR / "Kitsune" / "csv"
 CIC_PCAP = DATA_DIR / "CIC-IDS-2017" / "pcap"
 CIC_CSV = DATA_DIR / "CIC-IDS-2017" / "csv" / "TrafficLabelling"
 TENSOR_DIR = DATA_DIR / "tensors"
+ADVERSARIAL_DIR = DATA_DIR / "adversarial"
+ADVERSARIAL_MODES = ("both", "iat", "size")
 
 
 # ---------------------------------------------------------------------------
@@ -119,7 +131,7 @@ class Attack:
     """Defines one attack to process."""
     key: str                        # Short identifier (used with --only)
     name: str                       # Human-readable name
-    dataset: str                    # "kitsune" or "cic-ids2017"
+    dataset: str                    # "kitsune", "cic-ids2017", or "adversarial"
     pcap_path: Path                 # Path to raw PCAP
     output_dir: Path                # Tensor output directory
     labels_csv: Path | None = None  # Ground-truth label CSV (None = no labels)
@@ -127,6 +139,10 @@ class Attack:
     time_start: str = ""            # e.g. "2017-07-05 09:20:00"
     time_end: str = ""              # e.g. "2017-07-05 12:00:00"
     extra_args: list = field(default_factory=list)
+    # Adversarial PCAPs contain only malicious packets, so no per-packet
+    # labels CSV is needed — set this to the label_str value and
+    # window_labels.csv is synthesized directly from metadata.json.
+    all_attack_label: str | None = None
 
 
 ATTACKS = [
@@ -316,6 +332,39 @@ TANTGEN_KEYS = {
 }
 
 
+def build_adversarial_attacks() -> list[Attack]:
+    """Discover TANTGen-generated adversarial PCAPs under data/adversarial/.
+
+    Expected layout (written by scripts/adversarial_generation/generate_adversarials.py):
+        data/adversarial/<attack>/<attack>_adversarial_<mode>.pcap
+    where <mode> ∈ {both, iat, size}. Produces one Attack per (attack, mode)
+    pair, with output under data/tensors/adversarial/<attack>_adv_<mode>/.
+    """
+    attacks: list[Attack] = []
+    if not ADVERSARIAL_DIR.exists():
+        return attacks
+    for attack_dir in sorted(ADVERSARIAL_DIR.iterdir()):
+        if not attack_dir.is_dir():
+            continue
+        atk = attack_dir.name
+        for mode in ADVERSARIAL_MODES:
+            pcap = attack_dir / f"{atk}_adversarial_{mode}.pcap"
+            if not pcap.exists() or pcap.stat().st_size == 0:
+                continue
+            key = f"{atk}_adv_{mode}"
+            pretty = atk.replace("_", " ").title()
+            attacks.append(Attack(
+                key=key,
+                name=f"{pretty} (adversarial / {mode})",
+                dataset="adversarial",
+                pcap_path=pcap,
+                output_dir=TENSOR_DIR / "adversarial" / key,
+                labels_csv=None,
+                all_attack_label=key,
+            ))
+    return attacks
+
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -357,8 +406,31 @@ def run_pipeline(pcap: Path, output_dir: Path, window_size: int | None,
     return subprocess.run(cmd, check=True)
 
 
+def synthesize_all_attack_labels(output_dir: Path, label_str: str) -> bool:
+    """Write window_labels.csv with every window labeled attack.
+
+    Used for adversarial PCAPs where every packet is malicious by
+    construction — no external ground-truth CSV is needed.
+    """
+    meta = load_metadata(output_dir)
+    if meta is None:
+        print(f"  {yellow('⚠  metadata.json missing, cannot synthesize labels')}")
+        return False
+    n = int(meta["num_windows"])
+    out = output_dir / "window_labels.csv"
+    with open(out, "w") as f:
+        f.write("window_idx,label,label_str\n")
+        for i in range(n):
+            f.write(f"{i},1,{label_str}\n")
+    print(f"  {dim('Synthesized labels:')} {n:,} windows → all attack "
+          f"({dim('label_str=' + label_str)})")
+    return True
+
+
 def run_label_attach(attack: Attack) -> bool:
     """Run attach_labels.py for an attack. Returns True on success."""
+    if attack.all_attack_label is not None:
+        return synthesize_all_attack_labels(attack.output_dir, attack.all_attack_label)
     if attack.labels_csv is None:
         return True
     if not attack.labels_csv.exists():
@@ -453,6 +525,13 @@ def main():
         help=f"Restrict to the 7 attacks supported by TANTGen "
              f"({', '.join(sorted(TANTGEN_KEYS))}).",
     )
+    only_exclude.add_argument(
+        "--adversarial", action="store_true",
+        help="Process TANTGen-generated adversarial PCAPs under "
+             "data/adversarial/<attack>/<attack>_adversarial_<mode>.pcap "
+             "instead of the standard attack registry. Output lands in "
+             "data/tensors/adversarial/<attack>_adv_<mode>/.",
+    )
     parser.add_argument(
         "--force", action="store_true",
         help="Re-process attacks even if output already exists",
@@ -476,34 +555,46 @@ def main():
     )
     args = parser.parse_args()
 
-    # Validate --only / --exclude keys
-    if args.only:
-        for key in args.only:
-            if key not in ATTACK_KEYS:
-                parser.error(f"Unknown attack key: '{key}'. "
-                             f"Choose from: {', '.join(ATTACK_KEYS)}")
-    if args.exclude:
-        for key in args.exclude:
-            if key not in ATTACK_KEYS:
-                parser.error(f"Unknown attack key: '{key}'. "
-                             f"Choose from: {', '.join(ATTACK_KEYS)}")
+    # --adversarial swaps out the standard registry for one built from
+    # data/adversarial/. All other selection logic (benign, --only, etc.)
+    # does not apply in that mode.
+    if args.adversarial:
+        adversarial_attacks = build_adversarial_attacks()
+        if not adversarial_attacks:
+            print(f"{red(bold('ERROR:'))} no adversarial PCAPs found under "
+                  f"{ADVERSARIAL_DIR}. Run "
+                  f"scripts/adversarial_generation/generate_adversarials.py first.")
+            sys.exit(1)
+        selected = adversarial_attacks
+    else:
+        # Validate --only / --exclude keys
+        if args.only:
+            for key in args.only:
+                if key not in ATTACK_KEYS:
+                    parser.error(f"Unknown attack key: '{key}'. "
+                                 f"Choose from: {', '.join(ATTACK_KEYS)}")
+        if args.exclude:
+            for key in args.exclude:
+                if key not in ATTACK_KEYS:
+                    parser.error(f"Unknown attack key: '{key}'. "
+                                 f"Choose from: {', '.join(ATTACK_KEYS)}")
 
-    # Build list of attacks to process
-    excluded = set(args.exclude) if args.exclude else set()
-    # --tantgen acts like a preset --only restricted to the TANTGen subset.
-    only_set = set(args.only) if args.only else (TANTGEN_KEYS if args.tantgen else None)
-    selected = []
-    for attack in ATTACKS:
-        # Skip benign unless explicitly requested
-        if attack.key in BENIGN_KEYS and not args.include_benign:
-            if not (only_set and attack.key in only_set):
+        # Build list of attacks to process
+        excluded = set(args.exclude) if args.exclude else set()
+        # --tantgen acts like a preset --only restricted to the TANTGen subset.
+        only_set = set(args.only) if args.only else (TANTGEN_KEYS if args.tantgen else None)
+        selected = []
+        for attack in ATTACKS:
+            # Skip benign unless explicitly requested
+            if attack.key in BENIGN_KEYS and not args.include_benign:
+                if not (only_set and attack.key in only_set):
+                    continue
+            # Filter by --only / --tantgen / --exclude
+            if only_set is not None and attack.key not in only_set:
                 continue
-        # Filter by --only / --tantgen / --exclude
-        if only_set is not None and attack.key not in only_set:
-            continue
-        if attack.key in excluded:
-            continue
-        selected.append(attack)
+            if attack.key in excluded:
+                continue
+            selected.append(attack)
 
     if not selected:
         print("Nothing to process. Check --only keys or add --include-benign.")

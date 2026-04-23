@@ -316,6 +316,16 @@ TANTGen (`mirai`, `syn_dos`, `fuzzing`, `ssdp_flood`, `ddos`, `dos_slow`,
 adversarial packet generator. It is mutually exclusive with `--only` and
 `--exclude`.
 
+The `--adversarial` flag replaces the registry with entries built from the
+TANTGen-generated adversarial PCAPs under
+`data/adversarial/<attack>/<attack>_adversarial_<mode>.pcap` (modes:
+`both`, `iat`, `size`). Each adversarial PCAP contains only malicious
+packets, so `window_labels.csv` is synthesized directly (all windows
+`label=1`, `label_str=<attack>_adv_<mode>`) instead of running
+`attach_labels.py`. Output goes to
+`data/tensors/adversarial/<attack>_adv_<mode>/`. Mutually exclusive with
+`--only`, `--exclude`, and `--tantgen`.
+
 **CLI flags**: `--only KEY [KEY...]`, `--force`, `--dry-run`, `-N/--window-size`, `--include-benign`, `--keep-filtered`
 
 **Per-attack flow**:
@@ -404,6 +414,13 @@ Process only the 7 attacks TANTGen supports:
 
 ```bash
 python scripts/packet_to_tensor/process_all_attacks.py --tantgen
+```
+
+Process the TANTGen-generated adversarial PCAPs in `data/adversarial/`
+(21 runs: 7 attacks × 3 perturbation modes):
+
+```bash
+python scripts/packet_to_tensor/process_all_attacks.py --adversarial
 ```
 
 Available `--only` keys:
