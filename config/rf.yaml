@@ -26,7 +26,6 @@ benign_sources:
   - fuzzing
   - infiltration
   - mirai
-  - monday_benign
   - os_scan
   - portscan
   - ssdp_flood
