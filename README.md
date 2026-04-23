@@ -258,29 +258,34 @@ Orchestrates the three modules for a single PCAP file.
 | `rf_stats.npy` | `(W, 24)` float32 | Random Forest |
 | `flow_ids.npy` | `(W,)` object | Evaluation, RL Agent |
 | `mean_std.json` | — | Normalization stats; pass via `--mean-std` at test time |
-| `window_labels.csv` | Training, Evaluation | Per-window ground-truth labels (`label` 0/1, `label_str`). Produced by `attach_labels.py`. |
+| `window_labels.csv` | Training, Evaluation | Per-window labels under ADEPT's dataset-driven convention — `0/benign` for every Kitsune/CIC-IDS2017 window, `1/adversarial` for every TANTGen-generated adversarial window. Produced by `attach_labels.py`. |
 | `metadata.json` | — | Full pipeline information |
 
 ---
 
 ### `scripts/packet_to_tensor/attach_labels.py` — window label attachment
 
-Produces `window_labels.csv` inside a tensor directory by joining ground-truth label files with `flow_ids.npy`. Handles two alignment problems:
+Produces `window_labels.csv` inside a tensor directory under ADEPT's dataset-driven label convention. Because ADEPT defends against TANTGen-style perturbations — not the raw-dataset attacks the upstream NIDS already catches — the binary label is determined entirely by the source dataset:
 
-- **Kitsune** — labels are per-packet in PCAP order. The pipeline reorders packets by timestamp inside `flow_grouper`; this script does a lightweight PCAP re-read (5-tuple + timestamp only, no nPrint encoding — ~5–10× faster) to reconstruct the same sort order, majority-votes a label per canonical flow, then joins with `flow_ids.npy`.
-- **CIC-IDS2017** — labels are per-flow in CICFlowMeter TrafficLabelling CSVs, keyed by a unidirectional 5-tuple (`Flow ID` column). The script canonicalises those 5-tuples using the same bidirectional key logic as `flow_grouper._compute_canonical_keys`, then joins directly with `flow_ids.npy`. No PCAP re-read needed.
+| Dataset | `label` | `label_str` |
+|---|---|---|
+| `kitsune` | `0` | `benign` |
+| `cic` | `0` | `benign` |
+| `adversarial` | `1` | `adversarial` |
+
+No ground-truth CSV or PCAP re-read is needed; `num_windows` is read straight from `metadata.json` produced by the pipeline.
 
 **Output** — `<tensor-dir>/window_labels.csv`:
 
 | Column | Description |
 |---|---|
 | `window_idx` | Row index into `sequence.npy` / `rf_stats.npy` |
-| `label` | `1` = attack, `0` = benign, `-1` = unmatched flow |
-| `label_str` | Original label string (e.g. `"DDoS"`, `"BENIGN"`, `"mirai"`) |
+| `label` | `0` = benign (Kitsune / CIC), `1` = adversarial (TANTGen) |
+| `label_str` | `"benign"` or `"adversarial"` |
 
-**CLI flags**: `-d/--dataset {kitsune,cic}`, `-t/--tensor-dir`, `-l/--labels-csv`, `-i/--pcap` (required for kitsune), `--force`
+**CLI flags**: `-d/--dataset {kitsune,cic,adversarial}`, `-t/--tensor-dir`, `--force`
 
-`process_all_attacks.py` calls this automatically after each successful pipeline run, and also retroactively for any tensor directory where `window_labels.csv` is missing.
+`process_all_attacks.py` calls the same logic in-process after each successful pipeline run (and retroactively for any tensor directory where `window_labels.csv` is missing).
 
 ---
 
@@ -319,12 +324,11 @@ adversarial packet generator. It is mutually exclusive with `--only` and
 The `--adversarial` flag replaces the registry with entries built from the
 TANTGen-generated adversarial PCAPs under
 `data/adversarial/<attack>/<attack>_adversarial_<mode>.pcap` (modes:
-`both`, `iat`, `size`). Each adversarial PCAP contains only malicious
-packets, so `window_labels.csv` is synthesized directly (all windows
-`label=1`, `label_str=<attack>_adv_<mode>`) instead of running
-`attach_labels.py`. Output goes to
-`data/tensors/adversarial/<attack>_adv_<mode>/`. Mutually exclusive with
-`--only`, `--exclude`, and `--tantgen`.
+`both`, `iat`, `size`). Output goes to
+`data/tensors/adversarial/<attack>_adv_<mode>/` and `window_labels.csv`
+is written with every window marked `label=1, label_str="adversarial"`
+(the adversarial half of ADEPT's dataset-driven label convention).
+Mutually exclusive with `--only`, `--exclude`, and `--tantgen`.
 
 **CLI flags**: `--only KEY [KEY...]`, `--force`, `--dry-run`, `-N/--window-size`, `--include-benign`, `--keep-filtered`
 
@@ -540,7 +544,7 @@ Binary classifier (benign vs. attack) trained on the 24-dim `rf_stats.npy` aggre
 | Aspect | Choice | Rationale |
 |---|---|---|
 | **Input** | `rf_stats.npy` — `[W, 24]` float32 | Uses only the aggregated per-window statistics, never the raw packet sequence — keeps RF and TCN representations disjoint |
-| **Labels** | `window_labels.csv` | `0` = benign, `1` = attack; rows with `label_str == "unknown"` are dropped |
+| **Labels** | `window_labels.csv` | `0` = benign (Kitsune / CIC-IDS2017), `1` = adversarial (TANTGen). Under ADEPT's dataset-driven convention every window has a definite label, so no `unknown` rows are ever produced. |
 | **Split** | **Flow-level, not window-level** | Windows from the same 5-tuple flow stay in the same split — prevents leakage via flow-internal correlation |
 | **Stratification** | Per-`(attack, dominant_label)` stratum | Keeps each attack's benign/attack ratio balanced across train/val/test |
 | **Benign capping** | ≤ `benign_cap_ratio` × attack windows per attack | Prevents high-benign datasets (e.g. SSDP Flood's 65k usable flows) from dominating the global benign pool |
