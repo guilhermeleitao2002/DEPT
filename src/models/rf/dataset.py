@@ -1,4 +1,17 @@
-"""Load, merge, and flow-level split rf_stats tensors across attacks."""
+"""Load, merge, and flow-level split rf_stats tensors under ADEPT's
+benign-vs-adversarial label convention.
+
+Benign pool: Kitsune + CIC-IDS2017 folders listed in rf.yaml's
+`benign_sources`. Every window in these folders has label_str="benign".
+
+Adversarial pool: auto-discovered subfolders of `adversarial_dir` (one per
+TANTGen variant, e.g. `mirai_adv_both`). Every window has
+label_str="adversarial".
+
+The split is stratified by source folder — a flow belongs atomically to
+one source and therefore to one class, so the label-transition handling
+from the previous per-attack setup is no longer needed.
+"""
 from __future__ import annotations
 
 import json
@@ -10,16 +23,17 @@ import pandas as pd
 
 
 BENIGN_LABEL_STR = "benign"
+ADVERSARIAL_LABEL_STR = "adversarial"
 UNKNOWN_LABEL_STR = "unknown"
 
 
 @dataclass
 class RFDataset:
     X: np.ndarray               # [N, F] float32
-    y: np.ndarray               # [N]    int8   (0 benign, 1 attack)
+    y: np.ndarray               # [N]    int8   (0 benign, 1 adversarial)
     flow_ids: np.ndarray        # [N]    str    (stringified 5-tuple)
-    attacks: np.ndarray         # [N]    str    (source attack folder)
-    label_str: np.ndarray       # [N]    str    (raw label_str)
+    sources: np.ndarray         # [N]    str    (source folder name)
+    label_str: np.ndarray       # [N]    str    ("benign" or "adversarial")
     feature_names: list[str] = field(default_factory=list)
 
 
@@ -36,7 +50,7 @@ def _flow_id_to_str(fid_row: np.ndarray) -> str:
 
 
 def _normalize_label(raw: str) -> tuple[int, bool]:
-    """Return (label, keep). label is 0 benign / 1 attack; keep=False for unknown."""
+    """Return (label, keep). 0 benign / 1 adversarial; keep=False for unknown."""
     s = str(raw).strip().lower()
     if s == UNKNOWN_LABEL_STR or s == "" or s == "nan":
         return 0, False
@@ -45,9 +59,10 @@ def _normalize_label(raw: str) -> tuple[int, bool]:
     return 1, True
 
 
-def load_attack(tensors_dir: Path, attack: str) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, list[str]]:
-    """Return (X, y, flow_ids, label_str, feature_names) for a single attack folder, with 'unknown' dropped."""
-    folder = tensors_dir / attack
+def load_source(folder: Path, source_name: str) -> tuple[
+    np.ndarray, np.ndarray, np.ndarray, np.ndarray, list[str]
+]:
+    """Load one source folder. Returns (X, y, flow_ids, label_str, feature_names)."""
     X = np.load(folder / "rf_stats.npy").astype(np.float32, copy=False)
     flow_ids_raw = np.load(folder / "flow_ids.npy", allow_pickle=True)
     labels_df = pd.read_csv(folder / "window_labels.csv")
@@ -55,9 +70,10 @@ def load_attack(tensors_dir: Path, attack: str) -> tuple[np.ndarray, np.ndarray,
     feature_names = list(meta.get("rf_stat_names", [f"f{i}" for i in range(X.shape[1])]))
 
     if len(labels_df) != X.shape[0]:
-        raise ValueError(f"{attack}: rows mismatch ({len(labels_df)} labels vs {X.shape[0]} stats)")
+        raise ValueError(
+            f"{source_name}: rows mismatch ({len(labels_df)} labels vs {X.shape[0]} stats)")
     if len(flow_ids_raw) != X.shape[0]:
-        raise ValueError(f"{attack}: flow_ids rows mismatch")
+        raise ValueError(f"{source_name}: flow_ids rows mismatch")
 
     y_parts, keep_mask = [], []
     for raw in labels_df["label_str"].values:
@@ -70,26 +86,48 @@ def load_attack(tensors_dir: Path, attack: str) -> tuple[np.ndarray, np.ndarray,
     X = X[keep]
     y = y[keep]
     label_str = labels_df["label_str"].values[keep].astype(str)
-    flow_ids = np.array([_flow_id_to_str(flow_ids_raw[i]) for i in np.where(keep)[0]], dtype=object)
+    flow_ids = np.array(
+        [_flow_id_to_str(flow_ids_raw[i]) for i in np.where(keep)[0]], dtype=object)
     return X, y, flow_ids, label_str, feature_names
 
 
-def cap_benign(y: np.ndarray, flow_ids: np.ndarray, ratio: float, rng: np.random.Generator) -> np.ndarray:
-    """Cap benign *windows* at ratio × attack windows, but drop whole flows (not individual windows)."""
-    n_attack = int((y == 1).sum())
-    if n_attack == 0:
+def discover_adversarial_sources(adversarial_dir: Path) -> list[str]:
+    """Return all subdir names of adversarial_dir/ that contain metadata.json."""
+    if not adversarial_dir.exists():
+        return []
+    return sorted(
+        d.name for d in adversarial_dir.iterdir()
+        if d.is_dir() and (d / "metadata.json").exists()
+    )
+
+
+def cap_benign(
+    y: np.ndarray,
+    scoped_flow_ids: np.ndarray,
+    ratio: float,
+    rng: np.random.Generator,
+) -> np.ndarray:
+    """Globally cap benign windows at ratio × adversarial windows, flow-atomic.
+
+    scoped_flow_ids are expected to already encode the source (e.g.
+    "mirai|1.2.3.4|...") so benign flows from different folders don't
+    collide.
+    """
+    n_pos = int((y == 1).sum())
+    if n_pos == 0:
         return np.ones(len(y), dtype=bool)
-    cap = int(ratio * n_attack)
+    cap = int(ratio * n_pos)
     benign_mask = y == 0
     n_benign = int(benign_mask.sum())
     if n_benign <= cap:
         return np.ones(len(y), dtype=bool)
 
-    benign_flows = np.unique(flow_ids[benign_mask])
+    benign_flows = np.unique(scoped_flow_ids[benign_mask])
     rng.shuffle(benign_flows)
+    flow_to_count = pd.Series(scoped_flow_ids[benign_mask]).value_counts().to_dict()
+
     keep_flows: set[str] = set()
     kept = 0
-    flow_to_count = pd.Series(flow_ids[benign_mask]).value_counts().to_dict()
     for f in benign_flows:
         if kept >= cap:
             break
@@ -97,39 +135,70 @@ def cap_benign(y: np.ndarray, flow_ids: np.ndarray, ratio: float, rng: np.random
         kept += flow_to_count.get(f, 0)
 
     mask = np.ones(len(y), dtype=bool)
-    benign_drop = benign_mask & ~np.isin(flow_ids, list(keep_flows))
+    benign_drop = benign_mask & ~np.isin(scoped_flow_ids, list(keep_flows))
     mask[benign_drop] = False
     return mask
 
 
 def assemble(
     tensors_dir: Path,
-    attacks: list[str],
+    benign_sources: list[str],
+    adversarial_dir: Path,
     benign_cap_ratio: float,
     seed: int,
 ) -> RFDataset:
+    """Merge benign sources + auto-discovered adversarial sources."""
     rng = np.random.default_rng(seed)
-    Xs, ys, fids, atks, lstrs = [], [], [], [], []
+    Xs, ys, fids, srcs, lstrs = [], [], [], [], []
     feature_names: list[str] | None = None
 
-    for attack in attacks:
-        X, y, flow_ids, label_str, fnames = load_attack(tensors_dir, attack)
+    # Benign pool (Kitsune + CIC folders).
+    for src in benign_sources:
+        folder = tensors_dir / src
+        if not folder.exists():
+            raise FileNotFoundError(f"benign source not found: {folder}")
+        X, y, flow_ids, label_str, fnames = load_source(folder, src)
         feature_names = feature_names or fnames
-        mask = cap_benign(y, flow_ids, benign_cap_ratio, rng)
-        Xs.append(X[mask])
-        ys.append(y[mask])
-        fids.append(flow_ids[mask])
-        lstrs.append(label_str[mask])
-        atks.append(np.full(int(mask.sum()), attack, dtype=object))
+        Xs.append(X)
+        ys.append(y)
+        fids.append(flow_ids)
+        lstrs.append(label_str)
+        srcs.append(np.full(len(y), src, dtype=object))
+
+    # Adversarial pool (auto-discovered TANTGen outputs).
+    adv_names = discover_adversarial_sources(adversarial_dir)
+    if not adv_names:
+        raise FileNotFoundError(
+            f"no adversarial sources under {adversarial_dir}. "
+            f"Run scripts/packet_to_tensor/process_all_attacks.py --adversarial first.")
+    for src in adv_names:
+        folder = adversarial_dir / src
+        X, y, flow_ids, label_str, fnames = load_source(folder, src)
+        feature_names = feature_names or fnames
+        Xs.append(X)
+        ys.append(y)
+        fids.append(flow_ids)
+        lstrs.append(label_str)
+        srcs.append(np.full(len(y), src, dtype=object))
 
     X = np.concatenate(Xs, axis=0)
-    X = np.nan_to_num(X, nan=0.0, posinf=0.0, neginf=0.0)
+    y = np.concatenate(ys, axis=0)
+    flow_ids = np.concatenate(fids, axis=0)
+    sources = np.concatenate(srcs, axis=0)
+    label_str = np.concatenate(lstrs, axis=0)
+
+    # Scope flow id by source so benign flows from different folders don't merge.
+    scoped_flow = np.array(
+        [f"{s}|{f}" for s, f in zip(sources, flow_ids)], dtype=object)
+    keep = cap_benign(y, scoped_flow, benign_cap_ratio, rng)
+
+    X = np.nan_to_num(X[keep], nan=0.0, posinf=0.0, neginf=0.0)
     return RFDataset(
         X=X,
-        y=np.concatenate(ys, axis=0),
-        flow_ids=np.concatenate(fids, axis=0),
-        attacks=np.concatenate(atks, axis=0),
-        label_str=np.concatenate(lstrs, axis=0),
+        y=y[keep],
+        flow_ids=flow_ids[keep],
+        sources=sources[keep],
+        label_str=label_str[keep],
         feature_names=feature_names or [],
     )
 
@@ -141,42 +210,32 @@ def flow_level_split(
     test_frac: float,
     seed: int,
 ) -> Split:
-    """Split flows (atomic) within each (attack, majority-label) stratum.
+    """Stratified, flow-atomic split.
 
-    Flows vary in window count by orders of magnitude (e.g. a long DoS flow can
-    carry 10^5 windows; a scan flow carries 1–2). Splitting flow *counts*
-    proportionally therefore does not preserve *window* proportions. We instead
-    bin-pack flows largest-first into the split with the greatest remaining
-    window-count deficit, so each split lands near its target window fraction
-    while flows remain atomic (no leakage).
+    Each source contributes a single class (benign xor adversarial) under
+    ADEPT's label convention, so the stratum is just the source folder —
+    no label-transition handling is required. Flows are bin-packed
+    largest-first into the split with the greatest window-count deficit
+    so every split lands near its target window fraction.
     """
     assert abs(train_frac + val_frac + test_frac - 1.0) < 1e-6
     rng = np.random.default_rng(seed)
 
-    # Scope flow id by attack so the same 5-tuple reused by two attacks doesn't merge.
     scoped_flow = np.array(
-        [f"{a}|{f}" for a, f in zip(dataset.attacks, dataset.flow_ids)], dtype=object
-    )
+        [f"{s}|{f}" for s, f in zip(dataset.sources, dataset.flow_ids)], dtype=object)
 
-    # A single flow can contain both benign and attack windows (CIC label transitions mid-flow).
-    # Assign each scoped_flow one stratum via its majority label, so flows remain atomic.
-    flow_df = pd.DataFrame({"flow": scoped_flow, "attack": dataset.attacks, "y": dataset.y})
+    flow_df = pd.DataFrame({"flow": scoped_flow, "source": dataset.sources})
     flow_agg = (
         flow_df.groupby("flow")
-        .agg(attack=("attack", "first"), y_mean=("y", "mean"), n=("y", "size"))
+        .agg(source=("source", "first"), n=("flow", "size"))
         .reset_index()
-    )
-    flow_agg["y_dom"] = (flow_agg["y_mean"] >= 0.5).astype(int)
-    flow_agg["stratum"] = (
-        flow_agg["attack"].astype(str) + "|" + flow_agg["y_dom"].astype(str)
     )
 
     flow_to_split: dict[str, str] = {}
     fracs = {"train": train_frac, "val": val_frac, "test": test_frac}
 
-    for key in sorted(flow_agg["stratum"].unique()):
-        stratum = flow_agg.loc[flow_agg["stratum"] == key, ["flow", "n"]].reset_index(drop=True)
-        # Randomize equal-sized flows so the seed still matters, then sort largest-first (stable).
+    for key in sorted(flow_agg["source"].unique()):
+        stratum = flow_agg.loc[flow_agg["source"] == key, ["flow", "n"]].reset_index(drop=True)
         perm = rng.permutation(len(stratum))
         stratum = stratum.iloc[perm].reset_index(drop=True)
         stratum = stratum.sort_values("n", ascending=False, kind="stable").reset_index(drop=True)
@@ -186,7 +245,6 @@ def flow_level_split(
         current = {"train": 0, "val": 0, "test": 0}
         for _, row in stratum.iterrows():
             flow, n = row["flow"], int(row["n"])
-            # Assign to the split furthest below its window-count target.
             pick = max(current.keys(), key=lambda s: targets[s] - current[s])
             flow_to_split[flow] = pick
             current[pick] += n
@@ -209,7 +267,6 @@ def flow_level_split(
         test_idx=np.array(sorted(test_idx), dtype=np.int64),
     )
 
-    # Leakage assertion: no scoped_flow appears in more than one split.
     tr_f = set(scoped_flow[split.train_idx].tolist())
     va_f = set(scoped_flow[split.val_idx].tolist())
     te_f = set(scoped_flow[split.test_idx].tolist())
@@ -225,10 +282,10 @@ def split_summary(dataset: RFDataset, split: Split) -> dict:
         return {
             "n_windows": int(len(idx)),
             "n_benign": int((y == 0).sum()),
-            "n_attack": int((y == 1).sum()),
-            "per_attack": {
-                a: int((dataset.attacks[idx] == a).sum())
-                for a in sorted(set(dataset.attacks.tolist()))
+            "n_adversarial": int((y == 1).sum()),
+            "per_source": {
+                s: int((dataset.sources[idx] == s).sum())
+                for s in sorted(set(dataset.sources.tolist()))
             },
         }
 

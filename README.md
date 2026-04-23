@@ -537,17 +537,21 @@ All Phase 1 parameters are in `config/pipeline.yaml`: window size, stride, featu
 
 # Phase 2 — Random Forest Base Learner
 
-Binary classifier (benign vs. attack) trained on the 24-dim `rf_stats.npy` aggregates produced by Phase 1. Serves as the statistical half of the ADEPT ensemble — deliberately paired with the TCN (Phase 3), which consumes the raw sequence tensor, to maximise representational diversity.
+Binary classifier (benign vs. adversarial) trained on the 24-dim `rf_stats.npy` aggregates produced by Phase 1. Serves as the statistical half of the ADEPT ensemble — deliberately paired with the TCN (Phase 3), which consumes the raw sequence tensor, to maximise representational diversity.
+
+Under ADEPT's dataset-driven label convention the RF learns to distinguish the **benign manifold** (every window from the Kitsune + CIC-IDS2017 tensor folders listed in `benign_sources`) from **adversarial perturbations** (every window from the TANTGen-generated subfolders auto-discovered under `adversarial_dir`). The raw-dataset attacks count as benign here because the upstream NIDS is expected to handle them — ADEPT's job is specifically to catch the novel threat.
 
 ## Design
 
 | Aspect | Choice | Rationale |
 |---|---|---|
 | **Input** | `rf_stats.npy` — `[W, 24]` float32 | Uses only the aggregated per-window statistics, never the raw packet sequence — keeps RF and TCN representations disjoint |
-| **Labels** | `window_labels.csv` | `0` = benign (Kitsune / CIC-IDS2017), `1` = adversarial (TANTGen). Under ADEPT's dataset-driven convention every window has a definite label, so no `unknown` rows are ever produced. |
+| **Labels** | `window_labels.csv` | `0` = benign (Kitsune / CIC-IDS2017 folder), `1` = adversarial (TANTGen folder). Dataset-driven, so every window has a definite label and no `unknown` rows are produced |
+| **Benign pool** | `benign_sources` in rf.yaml | All Kitsune + CIC-IDS2017 tensor folders (raw-dataset attacks + Monday benign) — every one of their windows is a negative sample |
+| **Adversarial pool** | auto-discovered under `adversarial_dir` | Every subdirectory with a `metadata.json` is loaded as an adversarial source (one per TANTGen variant, e.g. `mirai_adv_both`) |
 | **Split** | **Flow-level, not window-level** | Windows from the same 5-tuple flow stay in the same split — prevents leakage via flow-internal correlation |
-| **Stratification** | Per-`(attack, dominant_label)` stratum | Keeps each attack's benign/attack ratio balanced across train/val/test |
-| **Benign capping** | ≤ `benign_cap_ratio` × attack windows per attack | Prevents high-benign datasets (e.g. SSDP Flood's 65k usable flows) from dominating the global benign pool |
+| **Stratification** | Per-source folder | Every source contributes a single class, so stratifying by source automatically stratifies by class while keeping each source's window fraction near its target in every split |
+| **Benign capping** | Total benign windows ≤ `benign_cap_ratio` × adversarial windows | Applied globally (flow-atomic, across all benign sources) so the much larger raw-dataset pool doesn't dominate training |
 | **Hyperparameters** | Small grid (val macro-F1) | `n_estimators`, `max_depth`, `min_samples_leaf` — grid overrides feed into `rf_defaults` |
 | **Final fit** | `train + val`, evaluate on `test` | No data is wasted before the held-out evaluation |
 
@@ -557,11 +561,12 @@ Binary classifier (benign vs. attack) trained on the 24-dim `rf_stats.npy` aggre
 
 | Function | Purpose |
 |---|---|
-| `load_attack(tensors_dir, attack)` | Read `rf_stats.npy`, `flow_ids.npy`, `window_labels.csv`, `metadata.json` for one attack; drop `unknown` rows |
-| `cap_benign(y, flow_ids, ratio, rng)` | Drop whole benign flows (not individual windows) until benign windows ≤ ratio × attack windows |
-| `assemble(tensors_dir, attacks, benign_cap_ratio, seed)` | Merge all attack folders into one `RFDataset` (X, y, flow_ids, attacks, label_str) |
-| `flow_level_split(dataset, train/val/test_frac, seed)` | Stratified split of flows (not windows) per `(attack, majority_label)`; asserts no flow leakage across splits |
-| `split_summary(dataset, split)` | Per-split counts: total, benign, attack, per-attack |
+| `load_source(folder, source_name)` | Read `rf_stats.npy`, `flow_ids.npy`, `window_labels.csv`, `metadata.json` for one source folder; drop `unknown` rows |
+| `discover_adversarial_sources(adversarial_dir)` | Return every subdirectory name under `adversarial_dir` that contains a `metadata.json` |
+| `cap_benign(y, scoped_flow_ids, ratio, rng)` | Drop whole benign flows (not individual windows) until total benign windows ≤ ratio × adversarial windows |
+| `assemble(tensors_dir, benign_sources, adversarial_dir, benign_cap_ratio, seed)` | Load every benign source + every auto-discovered adversarial source into one `RFDataset` (X, y, flow_ids, sources, label_str), then apply global benign capping |
+| `flow_level_split(dataset, train/val/test_frac, seed)` | Stratified, flow-atomic split by source; asserts no flow leakage across splits |
+| `split_summary(dataset, split)` | Per-split counts: total, benign, adversarial, per-source |
 
 ### `src/models/rf/train.py` — grid search + final fit
 
@@ -575,10 +580,11 @@ Binary classifier (benign vs. attack) trained on the 24-dim `rf_stats.npy` aggre
 
 Runs the fitted `rf.joblib` on the test split and produces both machine-readable metrics (`metrics.json`) and inspection plots (confusion matrix, ROC, PR, feature importance).
 
-Per-attack metrics are reported in two flavours to disambiguate deployment signal from same-source signal:
+Per-adversarial-source metrics are reported in three flavours so the reader can disambiguate deployment signal from structural size penalties and from cross-capture confounds:
 
-- **`vs_all_benign`** — this attack's windows + **all benign windows in the test set**. Reflects realistic deployment mix.
-- **`vs_same_src_benign`** — this attack's windows + only benign windows from the same source dataset. Removes cross-dataset confounds.
+- **`vs_all_benign`** — this variant's windows + **all benign windows in the test set**. Reflects realistic prevalence, but precision is dominated by the total benign FP count.
+- **`vs_balanced_benign`** — this variant's windows + a `K × n_adv` benign subsample (capped at total benign). Makes precision comparable across variants of different sizes.
+- **`vs_same_base_benign`** — this variant's windows + only benign from the same base-attack capture (e.g. `mirai_adv_both` → benign windows from the `mirai/` folder). Removes cross-capture confounds.
 
 ## CLI — `scripts/rf/run_rf.py`
 
@@ -609,14 +615,29 @@ python scripts/rf/run_rf.py --mode eval
 python scripts/rf/run_rf.py --config config/rf_experiment.yaml
 ```
 
+Before training, the benign + adversarial tensor folders must exist. Typical flow:
+
+```bash
+# 1. Build benign tensors (16 raw-dataset folders + Monday benign)
+python scripts/packet_to_tensor/process_all_attacks.py --include-benign
+
+# 2. Generate and tensorise adversarial PCAPs
+python scripts/adversarial_generation/generate_adversarials.py
+python scripts/packet_to_tensor/process_all_attacks.py --adversarial
+
+# 3. Train + evaluate the RF
+python scripts/rf/run_rf.py
+```
+
 ## Configuration — `config/rf.yaml`
 
 | Key | Purpose |
 |---|---|
-| `tensors_dir` | Root of Phase-1 output (expects subdirs matching `attacks`) |
+| `tensors_dir` | Root of Phase-1 output (expects subdirs matching `benign_sources`) |
+| `adversarial_dir` | Root of the adversarial tensor tree; every subdir with `metadata.json` is auto-discovered as a positive source |
 | `output_dir` | Where RF artifacts (model, plots, metrics) are written |
-| `attacks` | List of attack subdir names to include in training |
-| `benign_cap_ratio` | Per-attack cap on benign windows as a multiple of attack windows |
+| `benign_sources` | List of tensor subdir names (Kitsune + CIC-IDS2017) treated as benign |
+| `benign_cap_ratio` | Global cap on benign windows as a multiple of adversarial windows |
 | `split` | `train_frac` / `val_frac` / `test_frac` / `seed` |
 | `rf_defaults` | sklearn `RandomForestClassifier` kwargs applied to every fit |
 | `grid_search.enabled` | Toggle grid search on/off |
@@ -627,13 +648,13 @@ python scripts/rf/run_rf.py --config config/rf_experiment.yaml
 | File | Description |
 |---|---|
 | `rf.joblib` | Fitted `RandomForestClassifier` (for downstream inference / ensembling) |
-| `dataset.npz` | Merged `(X, y, attacks, label_str)` — lets `evaluate` run without re-assembling |
+| `dataset.npz` | Merged `(X, y, sources, label_str)` — lets `evaluate` run without re-assembling |
 | `split.npz` | `train_idx`, `val_idx`, `test_idx` into `dataset.npz` |
 | `feature_names.json` | Ordered list of 24 RF stat names |
-| `split_summary.json` | Per-split window counts (benign/attack, per-attack) |
+| `split_summary.json` | Per-split window counts (benign / adversarial, per-source) |
 | `training_info.json` | Grid-search results, best params, effective config |
-| `metrics.json` | Overall + per-attack + per-label_str metrics |
-| `confusion_matrix.png` | Binary CM on the test split |
+| `metrics.json` | Overall + per-adversarial-source + per-label_str metrics |
+| `confusion_matrix.png` | Binary CM on the test split (benign vs adversarial) |
 | `roc_curve.png` | ROC (when both classes present in test) |
 | `pr_curve.png` | Precision-recall (when both classes present in test) |
 | `feature_importance.png` | Gini importances over the 24 RF features |

@@ -80,9 +80,11 @@ def fit_final(
 
 def train(config: dict, tensors_root: Path, output_dir: Path) -> dict:
     output_dir.mkdir(parents=True, exist_ok=True)
+
     dataset = assemble(
         tensors_dir=tensors_root,
-        attacks=config["attacks"],
+        benign_sources=config["benign_sources"],
+        adversarial_dir=Path(config["adversarial_dir"]),
         benign_cap_ratio=float(config["benign_cap_ratio"]),
         seed=int(config["split"]["seed"]),
     )
@@ -122,7 +124,7 @@ def train(config: dict, tensors_root: Path, output_dir: Path) -> dict:
         output_dir / "dataset.npz",
         X=dataset.X,
         y=dataset.y,
-        attacks=dataset.attacks.astype(str),
+        sources=dataset.sources.astype(str),
         label_str=dataset.label_str.astype(str),
     )
     (output_dir / "feature_names.json").write_text(json.dumps(dataset.feature_names))

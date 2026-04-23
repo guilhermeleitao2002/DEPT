@@ -5,7 +5,10 @@ ADEPT — Random Forest Base Learner (train + eval)
 
 Trains the statistical base learner on the 24-dim window aggregates produced
 by the Packet-to-Tensor pipeline and evaluates it on a held-out, flow-level
-test split.
+test split. Under ADEPT's benign-vs-adversarial label convention, the
+benign pool is every window from the Kitsune + CIC-IDS2017 folders listed
+as `benign_sources` in rf.yaml, and the adversarial pool is every TANTGen-
+generated subfolder auto-discovered under `adversarial_dir`.
 
 Usage
 -----
@@ -25,12 +28,12 @@ Outputs (under <output_dir> from rf.yaml)
 -----------------------------------------
     rf.joblib              — fitted sklearn RandomForestClassifier
     split.npz              — train/val/test row indices into dataset.npz
-    dataset.npz            — merged X, y, attacks, label_str for reproducibility
+    dataset.npz            — merged X, y, sources, label_str for reproducibility
     feature_names.json     — ordered RF stat names (24)
-    split_summary.json     — per-split window counts (benign / attack / per-attack)
+    split_summary.json     — per-split window counts (benign / adversarial / per-source)
     training_info.json     — grid search results, best params, effective config
-    metrics.json           — overall, per-attack, per-label_str metrics
-    confusion_matrix.png   — binary CM (test)
+    metrics.json           — overall, per-adversarial-source, per-label_str metrics
+    confusion_matrix.png   — binary CM (test, benign vs adversarial)
     roc_curve.png          — ROC (test, when both classes present)
     pr_curve.png           — PR  (test, when both classes present)
     feature_importance.png — Gini importances over the 24 RF features
@@ -119,16 +122,25 @@ def _colour_metric(v, good: float = 0.9, ok: float = 0.75) -> str:
 def _print_config_banner(config_path: Path, config: dict,
                           tensors_root: Path, output_dir: Path,
                           mode: str) -> None:
-    attacks = config.get("attacks", [])
+    benign_sources = config.get("benign_sources", [])
+    adv_dir = Path(config.get("adversarial_dir", "data/tensors/adversarial"))
+    adv_count = 0
+    if adv_dir.exists():
+        adv_count = sum(
+            1 for d in adv_dir.iterdir()
+            if d.is_dir() and (d / "metadata.json").exists()
+        )
     gs = (config.get("grid_search") or {})
     grid_on = gs.get("enabled", False)
     _section(f"ADEPT — Random Forest  {dim('(' + mode + ')')}")
     print(f" {cyan('Config')}        {config_path}")
     print(f" {cyan('Tensors dir')}   {tensors_root}")
+    print(f" {cyan('Adversarial')}   {adv_dir}  "
+          f"{dim(f'({adv_count} source(s) discovered)')}")
     print(f" {cyan('Output dir')}    {output_dir}")
-    print(f" {cyan('Attacks')}       {len(attacks)}  "
-          f"{dim('(' + ', '.join(attacks) + ')')}")
-    print(f" {cyan('Benign cap')}    {config.get('benign_cap_ratio')}× attack windows")
+    print(f" {cyan('Benign pool')}   {len(benign_sources)} source(s)  "
+          f"{dim('(' + ', '.join(benign_sources) + ')')}")
+    print(f" {cyan('Benign cap')}    {config.get('benign_cap_ratio')}× adversarial windows")
     split = config.get("split", {})
     print(f" {cyan('Split')}         "
           f"train={split.get('train_frac')}  "
@@ -140,16 +152,17 @@ def _print_config_banner(config_path: Path, config: dict,
 
 
 def _print_split_summary(summary: dict) -> None:
-    hdr = f" {'Split':<8} {'Windows':>12} {'Benign':>12} {'Attack':>12} {'Attack %':>10}"
+    hdr = (f" {'Split':<8} {'Windows':>12} {'Benign':>12} "
+           f"{'Adversarial':>13} {'Adv %':>8}")
     print(cyan(hdr))
-    print(f" {'-' * 8} {'-' * 12} {'-' * 12} {'-' * 12} {'-' * 10}")
+    print(f" {'-' * 8} {'-' * 12} {'-' * 12} {'-' * 13} {'-' * 8}")
     for name in ("train", "val", "test"):
         s = summary[name]
         n = s["n_windows"]
         n_b = s["n_benign"]
-        n_a = s["n_attack"]
+        n_a = s["n_adversarial"]
         pct = (100.0 * n_a / n) if n else 0.0
-        print(f" {name:<8} {n:>12,} {n_b:>12,} {n_a:>12,} {pct:>9.1f}%")
+        print(f" {name:<8} {n:>12,} {n_b:>12,} {n_a:>13,} {pct:>7.1f}%")
 
 
 def _print_grid_results(training_info_path: Path) -> None:
@@ -191,50 +204,51 @@ def _print_overall_metrics(overall: dict) -> None:
     print(row("ROC AUC", overall.get("roc_auc")))
     print(row("PR AUC", overall.get("pr_auc")))
     print()
-    hdr = f" {'class':<8} {'precision':>10} {'recall':>10} {'f1':>10} {'support':>10}"
+    hdr = (f" {'class':<12} {'precision':>10} {'recall':>10} {'f1':>10} "
+           f"{'support':>10}")
     print(cyan(hdr))
-    print(f" {'-' * 8} {'-' * 10} {'-' * 10} {'-' * 10} {'-' * 10}")
-    print(f" {'benign':<8} {_colour_metric(overall.get('precision_benign')):>10} "
+    print(f" {'-' * 12} {'-' * 10} {'-' * 10} {'-' * 10} {'-' * 10}")
+    print(f" {'benign':<12} {_colour_metric(overall.get('precision_benign')):>10} "
           f"{_colour_metric(overall.get('recall_benign')):>10} "
           f"{_colour_metric(overall.get('f1_benign')):>10} "
           f"{overall.get('n_benign', 0):>10,}")
-    print(f" {'attack':<8} {_colour_metric(overall.get('precision_attack')):>10} "
-          f"{_colour_metric(overall.get('recall_attack')):>10} "
-          f"{_colour_metric(overall.get('f1_attack')):>10} "
-          f"{overall.get('n_attack', 0):>10,}")
+    print(f" {'adversarial':<12} "
+          f"{_colour_metric(overall.get('precision_adversarial')):>10} "
+          f"{_colour_metric(overall.get('recall_adversarial')):>10} "
+          f"{_colour_metric(overall.get('f1_adversarial')):>10} "
+          f"{overall.get('n_adversarial', 0):>10,}")
 
 
-def _print_per_attack_metrics(per_attack: dict) -> None:
-    if not per_attack:
+def _print_per_source_metrics(per_source: dict) -> None:
+    if not per_source:
         return
-    print(f" {dim('precision/recall/f1 computed against a balanced benign subsample (K×n_atk); roc_auc/pr_auc use all benign.')}")
+    print(f" {dim('precision/recall/f1 computed against a balanced benign subsample (K×n_adv); roc_auc/pr_auc use all benign.')}")
     print()
-    hdr = (f" {'attack':<20} {'precision':>10} {'recall':>10} "
-           f"{'f1':>10} {'roc_auc':>10} {'pr_auc':>10} {'n_atk':>8}")
+    hdr = (f" {'adversarial source':<24} {'precision':>10} {'recall':>10} "
+           f"{'f1':>10} {'roc_auc':>10} {'pr_auc':>10} {'n_adv':>8}")
     print(cyan(hdr))
-    print(f" {'-' * 20} {'-' * 10} {'-' * 10} {'-' * 10} "
+    print(f" {'-' * 24} {'-' * 10} {'-' * 10} {'-' * 10} "
           f"{'-' * 10} {'-' * 10} {'-' * 8}")
-    low_support_attacks: list[str] = []
-    for atk in sorted(per_attack.keys()):
-        entry = per_attack[atk]
+    low_support: list[str] = []
+    for src in sorted(per_source.keys()):
+        entry = per_source[src]
         bal = entry.get("vs_balanced_benign", {})
         all_bn = entry.get("vs_all_benign", {})
         low = entry.get("low_support", False)
-        raw_label = f"{atk} *" if low else atk
-        padded = f"{raw_label:<20}"
+        raw_label = f"{src} *" if low else src
+        padded = f"{raw_label:<24}"
         if low:
-            # Only dim the trailing " *" so width stays visually 20.
             padded = padded.replace(" *", dim(" *"), 1)
-            low_support_attacks.append(atk)
+            low_support.append(src)
         print(f" {padded} "
-              f"{_colour_metric(bal.get('precision_attack')):>10} "
-              f"{_colour_metric(bal.get('recall_attack')):>10} "
-              f"{_colour_metric(bal.get('f1_attack')):>10} "
+              f"{_colour_metric(bal.get('precision_adversarial')):>10} "
+              f"{_colour_metric(bal.get('recall_adversarial')):>10} "
+              f"{_colour_metric(bal.get('f1_adversarial')):>10} "
               f"{_colour_metric(all_bn.get('roc_auc')):>10} "
               f"{_colour_metric(all_bn.get('pr_auc')):>10} "
-              f"{all_bn.get('n_attack', 0):>8,}")
-    if low_support_attacks:
-        print(f"\n {dim('*  low support (n_atk < 50) — metrics are unreliable, treat as noise.')}")
+              f"{all_bn.get('n_adversarial', 0):>8,}")
+    if low_support:
+        print(f"\n {dim('*  low support (n_adv < 50) — metrics are unreliable, treat as noise.')}")
 
 
 def _print_artifacts(output_dir: Path) -> None:
@@ -245,7 +259,7 @@ def _print_artifacts(output_dir: Path) -> None:
         ("feature_names.json",     "RF stat names (24)"),
         ("split_summary.json",     "split counts"),
         ("training_info.json",     "grid search + best params"),
-        ("metrics.json",           "full metrics (overall/per-attack)"),
+        ("metrics.json",           "full metrics (overall/per-adversarial-source)"),
         ("confusion_matrix.png",   "binary confusion matrix"),
         ("roc_curve.png",          "ROC curve"),
         ("pr_curve.png",           "precision-recall curve"),
@@ -291,6 +305,11 @@ def main() -> int:
     config = yaml.safe_load(config_path.read_text())
     tensors_root = _resolve(config["tensors_dir"], REPO_ROOT)
     output_dir = _resolve(config["output_dir"], REPO_ROOT)
+    adversarial_dir = _resolve(
+        config.get("adversarial_dir", "data/tensors/adversarial"), REPO_ROOT)
+    # Rewrite the config with the resolved adversarial_dir so downstream code
+    # never has to worry about relative paths.
+    config["adversarial_dir"] = str(adversarial_dir)
 
     _print_config_banner(config_path, config, tensors_root, output_dir, args.mode)
 
@@ -343,9 +362,9 @@ def main() -> int:
         print(f"\n {bold('Overall metrics (test)')}")
         _print_overall_metrics(metrics["overall"])
 
-        print(f"\n {bold('Per-attack metrics')}  "
-              f"{dim('(each attack vs. all test benign)')}")
-        _print_per_attack_metrics(metrics.get("per_attack", {}))
+        print(f"\n {bold('Per-adversarial-source metrics')}  "
+              f"{dim('(each TANTGen variant vs. test benign)')}")
+        _print_per_source_metrics(metrics.get("per_adversarial_source", {}))
 
     # -----------------------------------------------------------------------
     # Wrap-up

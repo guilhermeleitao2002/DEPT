@@ -1,14 +1,22 @@
 # ===================================
 # ADEPT — Random Forest base learner
 # ===================================
-# Binary classifier (benign vs attack) over the 24-dim aggregated window
-# statistics produced by the Packet-to-Tensor pipeline.
+# Binary classifier (benign vs adversarial) over the 24-dim aggregated
+# window statistics produced by the Packet-to-Tensor pipeline.
+#
+# Under ADEPT's dataset-driven label convention, every Kitsune/CIC-IDS2017
+# window is benign and every TANTGen-generated window is adversarial. The
+# RF learns to distinguish the benign manifold from adversarial
+# perturbations — the upstream NIDS is expected to handle the raw-dataset
+# attacks, so they contribute to the benign class here.
 
 tensors_dir: data/tensors
+adversarial_dir: data/tensors/adversarial   # auto-discovered: every subdir with metadata.json
 output_dir: data/models/rf
 
-# All 16 attacks currently in data/tensors/.
-attacks:
+# Benign pool — Kitsune + CIC-IDS2017 folders under tensors_dir/. Every
+# window in these folders is treated as benign.
+benign_sources:
   - active_wiretap
   - arp_mitm
   - brute_force_ftp
@@ -18,6 +26,7 @@ attacks:
   - fuzzing
   - infiltration
   - mirai
+  - monday_benign
   - os_scan
   - portscan
   - ssdp_flood
@@ -26,21 +35,26 @@ attacks:
   - video_injection
   - web_attacks
 
-# Split
+# Adversarial pool — every subdirectory of adversarial_dir/ that contains
+# metadata.json is loaded automatically. Expect 21 under the default
+# TANTGen setup (7 attacks × 3 perturbation modes: both, iat, size).
+
+# Split (flow-atomic, stratified by source).
 split:
   train_frac: 0.70
   val_frac: 0.15
   test_frac: 0.15
   seed: 42
 
-# Benign capping: per-attack benign windows ≤ benign_cap_ratio × attack windows
-# (prevents high-benign datasets from dominating the global benign pool).
+# Benign capping: total benign windows ≤ benign_cap_ratio × adversarial
+# windows (applied globally, flow-atomic). Prevents the much larger
+# benign pool from dominating training.
 benign_cap_ratio: 3.0
 
-# Drop windows whose label_str is 'unknown' (case-insensitive).
+# Safety net — should never fire since attach_labels.py writes only
+# "benign" or "adversarial" label_str values.
 drop_unknown: true
 
-# Random Forest defaults (grid search overrides n_estimators / max_depth / min_samples_leaf).
 rf_defaults:
   n_estimators: 300
   max_depth: null
@@ -50,7 +64,6 @@ rf_defaults:
   class_weight: balanced_subsample
   random_state: 42
 
-# Small validation grid. Set enabled: false to skip and use rf_defaults only.
 grid_search:
   enabled: true
   scoring: macro_f1
