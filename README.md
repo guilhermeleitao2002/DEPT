@@ -310,6 +310,12 @@ Automates batch processing across all available attack PCAPs. For CIC-IDS2017 at
 | `infiltration` | Infiltration | CIC-IDS2017 | 2017-07-06 18:15–18:40 |
 | `monday_benign` | Monday Benign | CIC-IDS2017 | 2017-07-03 09:00–11:00 |
 
+The `--tantgen` flag restricts processing to the 7 attacks supported by
+TANTGen (`mirai`, `syn_dos`, `fuzzing`, `ssdp_flood`, `ddos`, `dos_slow`,
+`portscan`) — the evaluation subset used when ADEPT drives TANTGen as its
+adversarial packet generator. It is mutually exclusive with `--only` and
+`--exclude`.
+
 **CLI flags**: `--only KEY [KEY...]`, `--force`, `--dry-run`, `-N/--window-size`, `--include-benign`, `--keep-filtered`
 
 **Per-attack flow**:
@@ -392,6 +398,12 @@ Keep the time-filtered CIC-IDS2017 PCAPs after processing (re-runs reuse them au
 
 ```bash
 python scripts/packet_to_tensor/process_all_attacks.py --keep-filtered
+```
+
+Process only the 7 attacks TANTGen supports:
+
+```bash
+python scripts/packet_to_tensor/process_all_attacks.py --tantgen
 ```
 
 Available `--only` keys:

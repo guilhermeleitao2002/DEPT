@@ -31,6 +31,11 @@ Datasets:
   Benign baseline:
     17. Monday benign     — Enterprise benign manifold (sampled, CIC-IDS2017)
 
+The --tantgen flag restricts processing to the 7-attack subset that TANTGen
+supports (mirai, syn_dos, fuzzing, ssdp_flood, ddos, dos_slow, portscan),
+matching the evaluation set used when ADEPT drives TANTGen as its
+adversarial packet generator.
+
 CIC-IDS2017 PCAPs are time-filtered with editcap before processing to
 reduce size and isolate attack windows.
 
@@ -56,6 +61,9 @@ Usage
 
     # Process with benign baseline:
     python scripts/packet_to_tensor/process_all_attacks.py --include-benign
+
+    # Restrict to the 7 attacks supported by TANTGen:
+    python scripts/packet_to_tensor/process_all_attacks.py --tantgen
 """
 
 import argparse
@@ -300,6 +308,12 @@ ATTACKS = [
 ATTACK_KEYS = [a.key for a in ATTACKS]
 # Keys that are not included by default (need --include-benign)
 BENIGN_KEYS = {"monday_benign"}
+# The 7-attack subset TANTGen supports. Selected via --tantgen so ADEPT can
+# process only the attack set used downstream by its adversarial generator.
+TANTGEN_KEYS = {
+    "mirai", "syn_dos", "fuzzing", "ssdp_flood",
+    "ddos", "dos_slow", "portscan",
+}
 
 
 # ---------------------------------------------------------------------------
@@ -434,6 +448,11 @@ def main():
         "--exclude", nargs="+", metavar="KEY",
         help=f"Exclude these attacks from processing (choices: {', '.join(ATTACK_KEYS)})",
     )
+    only_exclude.add_argument(
+        "--tantgen", action="store_true",
+        help=f"Restrict to the 7 attacks supported by TANTGen "
+             f"({', '.join(sorted(TANTGEN_KEYS))}).",
+    )
     parser.add_argument(
         "--force", action="store_true",
         help="Re-process attacks even if output already exists",
@@ -471,14 +490,16 @@ def main():
 
     # Build list of attacks to process
     excluded = set(args.exclude) if args.exclude else set()
+    # --tantgen acts like a preset --only restricted to the TANTGen subset.
+    only_set = set(args.only) if args.only else (TANTGEN_KEYS if args.tantgen else None)
     selected = []
     for attack in ATTACKS:
         # Skip benign unless explicitly requested
         if attack.key in BENIGN_KEYS and not args.include_benign:
-            if not (args.only and attack.key in args.only):
+            if not (only_set and attack.key in only_set):
                 continue
-        # Filter by --only / --exclude
-        if args.only and attack.key not in args.only:
+        # Filter by --only / --tantgen / --exclude
+        if only_set is not None and attack.key not in only_set:
             continue
         if attack.key in excluded:
             continue
