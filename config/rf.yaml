@@ -23,7 +23,7 @@ benign_sources:
   - brute_force_ssh
   - ddos
   - dos_slow
-  - fuzzing
+  # - fuzzing
   - infiltration
   - mirai
   - os_scan
