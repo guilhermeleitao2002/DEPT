@@ -61,6 +61,71 @@ from src.feature_extraction.incremental_pipeline import build_tensors_incrementa
 
 
 # ---------------------------------------------------------------------------
+# Streaming mean/std fitter (Welford / Chan parallel update)
+# ---------------------------------------------------------------------------
+def _welford_merge(state: dict, vals: "np.ndarray") -> dict:
+    """Fold a numpy batch of observations into a (count, mean, M2) accumulator.
+
+    Uses Chan's parallel-Welford formula so per-PCAP batches are merged into
+    one global accumulator without holding all values in memory at once.
+    """
+    n_b = len(vals)
+    if n_b == 0:
+        return state
+    n_a = state["count"]
+    mean_b = float(vals.mean())
+    M2_b = float(((vals - mean_b) ** 2).sum())
+    if n_a == 0:
+        return {"count": n_b, "mean": mean_b, "M2": M2_b}
+    n = n_a + n_b
+    delta = mean_b - state["mean"]
+    mean = state["mean"] + delta * n_b / n
+    M2 = state["M2"] + M2_b + delta * delta * n_a * n_b / n
+    return {"count": n, "mean": mean, "M2": M2}
+
+
+def _fit_mean_std_streaming(pcap_paths, columns, output_path, mask_prefixes,
+                            workers=None):
+    """Fit per-column mean/std across multiple PCAPs and write JSON.
+
+    Streams one PCAP at a time: extracts metadata + IPAT via the existing
+    extract_packet_features → group_by_flow path, accumulates with Welford,
+    discards arrays before moving to the next PCAP. nprint_bits is dropped
+    immediately to bound peak RAM.
+    """
+    accumulators = {c: {"count": 0, "mean": 0.0, "M2": 0.0} for c in columns}
+    for i, pcap in enumerate(pcap_paths, 1):
+        print(f"\n  {dim(f'[{i}/{len(pcap_paths)}]')} {os.path.basename(pcap)}")
+        nprint_bits, meta_df = extract_packet_features(
+            pcap, mask_prefixes=mask_prefixes, workers=workers,
+        )
+        del nprint_bits
+        meta_df, _, _ = group_by_flow(meta_df)
+        for c in columns:
+            if c in meta_df.columns:
+                accumulators[c] = _welford_merge(
+                    accumulators[c], meta_df[c].values.astype(np.float64)
+                )
+        del meta_df
+
+    stats = {}
+    for c, acc in accumulators.items():
+        n = acc["count"]
+        if n < 2:
+            std = 1.0
+        else:
+            std = (acc["M2"] / (n - 1)) ** 0.5
+            if std == 0:
+                std = 1.0
+        stats[c] = {"mean": acc["mean"], "std": std}
+
+    os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
+    with open(output_path, "w") as f:
+        json.dump(stats, f, indent=2)
+    return stats
+
+
+# ---------------------------------------------------------------------------
 # Terminal colours (ANSI — disabled when stdout is not a tty)
 # ---------------------------------------------------------------------------
 _USE_COLOR = sys.stdout.isatty()
@@ -90,8 +155,16 @@ def main():
         description="ADEPT Packet-to-Tensor pipeline (nPrint encoding)"
     )
     parser.add_argument(
-        "-i", "--input", required=True,
-        help="Input PCAP file"
+        "-i", "--input", nargs="+", required=True,
+        help="Input PCAP file(s). With --fit-mean-std, accepts multiple paths.",
+    )
+    parser.add_argument(
+        "--fit-mean-std", action="store_true",
+        help="Fit-only mode: stream one or more PCAPs (-i ...), accumulate "
+             "mean/std for the columns listed in pipeline.yaml, and write "
+             "the result to -o (treated as a JSON file path). No tensors "
+             "are produced. Used to derive a shared standardizer over "
+             "benign + adversarial inputs before training.",
     )
     parser.add_argument(
         "-o", "--output-dir", required=True,
@@ -137,13 +210,48 @@ def main():
     std_cols = cfg["standardize_columns"]
     mask_prefixes = [] if args.no_mask else cfg.get("mask_prefixes", [])
 
+    # ── Fit-only mode (multi-PCAP shared standardizer) ──────────────────────
+    if args.fit_mean_std:
+        print(f"\n{bold('Fitting shared mean/std')}  {dim(f'over {len(args.input)} PCAP(s)')}")
+        print(f"  Columns: {std_cols}")
+        print(f"  Output:  {args.output_dir}")
+        t0 = time.time()
+        stats = _fit_mean_std_streaming(
+            pcap_paths=args.input,
+            columns=std_cols,
+            output_path=args.output_dir,  # treated as JSON file path
+            mask_prefixes=mask_prefixes,
+            workers=args.workers,
+        )
+        print(f"\n{green('✓')} Wrote {args.output_dir}  {dim(f'({time.time() - t0:.1f}s)')}")
+        for c, s in stats.items():
+            print(f"  {cyan(c):<20}  mean={s['mean']:.6f}  std={s['std']:.6f}")
+        return
+
+    # ── Tensor-building modes require exactly one input PCAP ────────────────
+    if len(args.input) != 1:
+        parser.error("In tensor-building mode, -i takes exactly one PCAP. "
+                     "Use --fit-mean-std for multi-PCAP standardizer fitting.")
+    input_pcap = args.input[0]
+
     os.makedirs(args.output_dir, exist_ok=True)
 
     mean_std_path = args.mean_std or os.path.join(
         args.output_dir, cfg["mean_std_filename"]
     )
 
-    fname = os.path.basename(args.input)
+    # When a shared standardizer is supplied, mirror it into the local
+    # output dir so per-attack consumers can find mean_std.json next to
+    # their tensors (downstream code that looks up the per-output copy
+    # keeps working unchanged).
+    if args.mean_std and os.path.abspath(args.mean_std) != os.path.abspath(
+        os.path.join(args.output_dir, cfg["mean_std_filename"])
+    ):
+        local_copy = os.path.join(args.output_dir, cfg["mean_std_filename"])
+        with open(args.mean_std) as src, open(local_copy, "w") as dst:
+            dst.write(src.read())
+
+    fname = os.path.basename(input_pcap)
     t0 = time.time()
 
     # ── Pipeline branch: batch (default) or online (incremental) ─────────────
@@ -152,7 +260,7 @@ def main():
         # ── Batch: 3-stage pipeline ───────────────────────────────────────
         _step(1, 3, f"Extracting nPrint features  {dim(fname)}")
         nprint_bits, meta_df = extract_packet_features(
-            args.input, mask_prefixes=mask_prefixes, workers=args.workers
+            input_pcap, mask_prefixes=mask_prefixes, workers=args.workers
         )
         t1 = time.time()
         print(f"      {green('✓')} {len(meta_df):,} packets  {dim(f'({t1 - t0:.1f}s)')}")
@@ -197,7 +305,7 @@ def main():
         _step(2, 2, f"Encoding + building tensors  "
                     f"{dim(f'(N={window_size}, stride={stride})')}")
         result = build_tensors_incremental(
-            pcap_path=args.input,
+            pcap_path=input_pcap,
             output_dir=args.output_dir,
             window_size=window_size,
             stride=stride,
@@ -221,7 +329,7 @@ def main():
     seq_shape = (n_windows, window_size, len(result["feature_names"]))
     rf_shape  = (n_windows, len(result["rf_stat_names"]))
     metadata  = {
-        "input":                    args.input,
+        "input":                    input_pcap,
         "encoding":                 "nprint",
         "pipeline_mode":            "online" if args.online else "batch",
         "nprint_bits":              1088,

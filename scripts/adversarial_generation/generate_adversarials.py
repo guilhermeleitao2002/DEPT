@@ -122,9 +122,10 @@ ATTACKS = [
     Attack("syn_dos", "kitsune", "SYN_DoS",
            KITSUNE_PCAP / "SYN_DoS_pcap.pcap",
            KITSUNE_CSV / "SYN_DoS_labels.csv"),
-    Attack("fuzzing", "kitsune", "Fuzzing",
-           KITSUNE_PCAP / "Fuzzing_pcap.pcapng",
-           KITSUNE_CSV / "Fuzzing_labels.csv"),
+    # Fuzzing was dropped: Kitsune's Fuzzing PCAP is snaplen-truncated to 200 B,
+    # leaving TANTGen no room to perturb either packet size or IAT meaningfully
+    # — all three modes degraded to no-ops (size variant was byte-identical to
+    # source). See scripts/adversarial_generation/README.md for details.
     Attack("ssdp_flood", "kitsune", "SSDP_Flood",
            KITSUNE_PCAP / "SSDP_Flood_pcap.pcap",
            KITSUNE_CSV / "SSDP_Flood_labels.csv"),
