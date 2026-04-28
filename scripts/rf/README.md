@@ -99,12 +99,11 @@ python3 scripts/rf/run_rf.py --config config/rf_experiment.yaml
 ### Typical end-to-end flow
 
 ```bash
-# 1. Build benign tensors (16 raw-dataset folders + excluded Monday benign)
-python3 scripts/packet_to_tensor/process_all_attacks.py
-
-# 2. Generate and tensorise adversarial PCAPs
+# 1. Generate the TANTGen adversarial PCAPs
 python3 scripts/adversarial_generation/generate_adversarials.py
-python3 scripts/packet_to_tensor/process_all_attacks.py --adversarial
+
+# 2. Tensorise the 6 TANTGen-supported attacks + their adversarial variants
+python3 scripts/packet_to_tensor/process_all_attacks.py --tantgen
 
 # 3. Train + evaluate the RF
 python3 scripts/rf/run_rf.py

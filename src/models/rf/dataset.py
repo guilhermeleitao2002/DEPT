@@ -170,7 +170,7 @@ def assemble(
     if not adv_names:
         raise FileNotFoundError(
             f"no adversarial sources under {adversarial_dir}. "
-            f"Run scripts/packet_to_tensor/process_all_attacks.py --adversarial first.")
+            f"Run scripts/packet_to_tensor/process_all_attacks.py --tantgen first.")
     for src in adv_names:
         folder = adversarial_dir / src
         X, y, flow_ids, label_str, fnames = load_source(folder, src)

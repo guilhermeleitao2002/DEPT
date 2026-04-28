@@ -166,17 +166,18 @@ For TANTGen integration, additional setup is needed (sibling repo install, Cytho
 A complete ADEPT training run currently goes through three stages. All commands are run from `ADEPT/`.
 
 ```bash
-# 1. Build benign tensors for every Kitsune + CIC-IDS2017 capture
-#    (16 raw-dataset folders - excluding the Monday benign baseline)
-python scripts/packet_to_tensor/process_all_attacks.py
-
-# 2. Generate TANTGen adversarial PCAPs and tensorise them
+# 1. Generate TANTGen adversarial PCAPs (6 attacks × 3 modes)
 python scripts/adversarial_generation/generate_adversarials.py
-python scripts/packet_to_tensor/process_all_attacks.py --adversarial
+
+# 2. Build tensors for the 6 TANTGen-supported attacks AND their
+#    matching adversarial PCAPs in one go
+python scripts/packet_to_tensor/process_all_attacks.py --tantgen
 
 # 3. Train + evaluate the Random Forest base learner
 python scripts/rf/run_rf.py
 ```
+
+To process the full Kitsune + CIC-IDS2017 attack set (16 captures) instead, drop `--tantgen`. Use `--include-benign` to add the Monday benign baseline.
 
 Each step is fully documented in its own README:
 

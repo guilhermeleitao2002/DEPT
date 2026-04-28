@@ -284,8 +284,7 @@ The Fuzzing Kitsune capture was deliberately excluded — see the [TANTGen integ
 |---|---|
 | `--only KEY [KEY...]` | Process only these attack keys. |
 | `--exclude KEY [KEY...]` | Skip these attack keys. |
-| `--tantgen` | Restrict to the 7-attack subset that TANTGen supports (`mirai`, `syn_dos`, `ssdp_flood`, `ddos`, `dos_slow`, `portscan`). Mutually exclusive with `--only` / `--exclude`. |
-| `--adversarial` | Replace the registry with entries built from `data/adversarial/<attack>/<attack>_adversarial_<mode>.pcap`; output goes to `data/tensors/adversarial/<attack>_adv_<mode>/` and labels are written as `label=1, label_str="adversarial"`. Mutually exclusive with `--only`, `--exclude`, `--tantgen`. |
+| `--tantgen` | Restrict to the 6-attack subset that TANTGen supports (`mirai`, `syn_dos`, `ssdp_flood`, `ddos`, `dos_slow`, `portscan`) **and** also tensorise their matching TANTGen-generated adversarial PCAPs from `data/adversarial/<attack>/<attack>_adversarial_<mode>.pcap` (output: `data/tensors/adversarial/<attack>_adv_<mode>/`, labels written as `label=1, label_str="adversarial"`). Mutually exclusive with `--only` / `--exclude`. |
 | `--force` | Re-process attacks even if `metadata.json` already exists. |
 | `--dry-run` | Show what would be processed without running. |
 | `-N / --window-size` | Override the N-Packet window size from `config/pipeline.yaml`. |
@@ -331,12 +330,9 @@ python3 scripts/packet_to_tensor/process_all_attacks.py --include-benign
 # Keep filtered CIC PCAPs (re-runs reuse them automatically)
 python3 scripts/packet_to_tensor/process_all_attacks.py --keep-filtered
 
-# Restrict to the 7 attacks TANTGen supports
+# Restrict to the 6 TANTGen-supported attacks AND their adversarial variants
+# (6 raw attacks + 18 adversarial PCAPs = 24 tensor dirs in one run)
 python3 scripts/packet_to_tensor/process_all_attacks.py --tantgen
-
-# Process all 18 TANTGen-generated adversarial PCAPs
-# (6 attacks × 3 perturbation modes — fuzzing was dropped)
-python3 scripts/packet_to_tensor/process_all_attacks.py --adversarial
 ```
 
 ## Configuration — `config/pipeline.yaml`

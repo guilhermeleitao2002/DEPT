@@ -30,14 +30,12 @@ Datasets:
   Benign baseline:
     16. Monday benign     — Enterprise benign manifold (sampled, CIC-IDS2017)
 
-The --tantgen flag restricts processing to the 7-attack subset that TANTGen
-supports (mirai, syn_dos, ssdp_flood, ddos, dos_slow, portscan),
-matching the evaluation set used when ADEPT drives TANTGen as its
-adversarial packet generator.
-
-The --adversarial flag replaces the registry with entries built dynamically
-from data/adversarial/<attack>/<attack>_adversarial_<mode>.pcap (3 modes:
-both / iat / size). Output goes to data/tensors/adversarial/<attack>_adv_<mode>/.
+The --tantgen flag restricts processing to the 6-attack subset that TANTGen
+supports (mirai, syn_dos, ssdp_flood, ddos, dos_slow, portscan), matching
+the evaluation set used when ADEPT drives TANTGen as its adversarial packet
+generator. It additionally processes the matching TANTGen-generated
+adversarial PCAPs found under data/adversarial/<attack>/<attack>_adversarial_<mode>.pcap
+(modes: both / iat / size; output: data/tensors/adversarial/<attack>_adv_<mode>/).
 
 Labels follow ADEPT's dataset-driven convention: every Kitsune/CIC window
 is written as "benign" and every adversarial window as "adversarial" — the
@@ -50,40 +48,36 @@ reduce size and isolate attack windows.
 Usage
 -----
     # Process all attacks (skips already-processed ones):
-    python scripts/packet_to_tensor/process_all_attacks.py
+    python3 scripts/packet_to_tensor/process_all_attacks.py
 
     # Process a specific attack:
-    python scripts/packet_to_tensor/process_all_attacks.py --only syn_dos
+    python3 scripts/packet_to_tensor/process_all_attacks.py --only syn_dos
 
     # Re-process an attack even if output already exists:
-    python scripts/packet_to_tensor/process_all_attacks.py --only mirai --force
+    python3 scripts/packet_to_tensor/process_all_attacks.py --only mirai --force
 
     # Process all attacks except some:
-    python scripts/packet_to_tensor/process_all_attacks.py --exclude mirai syn_dos
+    python3 scripts/packet_to_tensor/process_all_attacks.py --exclude mirai syn_dos
 
     # Dry run — show what would be processed without running:
-    python scripts/packet_to_tensor/process_all_attacks.py --dry-run
+    python3 scripts/packet_to_tensor/process_all_attacks.py --dry-run
 
     # Custom window size:
-    python scripts/packet_to_tensor/process_all_attacks.py --window-size 20
+    python3 scripts/packet_to_tensor/process_all_attacks.py --window-size 20
 
     # Process with benign baseline:
-    python scripts/packet_to_tensor/process_all_attacks.py --include-benign
+    python3 scripts/packet_to_tensor/process_all_attacks.py --include-benign
 
-    # Restrict to the 7 attacks supported by TANTGen:
-    python scripts/packet_to_tensor/process_all_attacks.py --tantgen
-
-    # Process TANTGen-generated adversarial PCAPs under data/adversarial/:
-    python scripts/packet_to_tensor/process_all_attacks.py --adversarial
+    # Restrict to the 6 attacks supported by TANTGen and also
+    # tensorise their matching adversarial PCAPs under data/adversarial/:
+    python3 scripts/packet_to_tensor/process_all_attacks.py --tantgen
 """
 
 import argparse
 import json
-import os
 import shutil
 import subprocess
 import sys
-import tempfile
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -160,9 +154,13 @@ ATTACKS = [
         pcap_path=KITSUNE_PCAP / "SYN_DoS_pcap.pcap",
         output_dir=TENSOR_DIR / "syn_dos",
     ),
-    # Fuzzing was dropped from the dataset: Kitsune's Fuzzing PCAP is
-    # snaplen-truncated to 200 B, so TANTGen could not produce useful
-    # adversarial variants. See scripts/adversarial_generation/README.md.
+    Attack(
+        key="fuzzing",
+        name="Fuzzing",
+        dataset="kitsune",
+        pcap_path=KITSUNE_PCAP / "Fuzzing_pcap.pcapng",
+        output_dir=TENSOR_DIR / "fuzzing",
+    ),
     Attack(
         key="ssdp_flood",
         name="SSDP Flood",
@@ -545,14 +543,10 @@ def main():
     only_exclude.add_argument(
         "--tantgen", action="store_true",
         help=f"Restrict to the {len(TANTGEN_KEYS)} attacks supported by TANTGen "
-             f"({', '.join(sorted(TANTGEN_KEYS))}).",
-    )
-    only_exclude.add_argument(
-        "--adversarial", action="store_true",
-        help="Process TANTGen-generated adversarial PCAPs under "
-             "data/adversarial/<attack>/<attack>_adversarial_<mode>.pcap "
-             "instead of the standard attack registry. Output lands in "
-             "data/tensors/adversarial/<attack>_adv_<mode>/.",
+             f"({', '.join(sorted(TANTGEN_KEYS))}). Also processes their "
+             f"matching TANTGen-generated adversarial PCAPs under "
+             f"data/adversarial/<attack>/<attack>_adversarial_<mode>.pcap "
+             f"(output: data/tensors/adversarial/<attack>_adv_<mode>/).",
     )
     parser.add_argument(
         "--force", action="store_true",
@@ -589,46 +583,47 @@ def main():
     )
     args = parser.parse_args()
 
-    # --adversarial swaps out the standard registry for one built from
-    # data/adversarial/. All other selection logic (benign, --only, etc.)
-    # does not apply in that mode.
-    if args.adversarial:
+    # Validate --only / --exclude keys
+    if args.only:
+        for key in args.only:
+            if key not in ATTACK_KEYS:
+                parser.error(f"Unknown attack key: '{key}'. "
+                             f"Choose from: {', '.join(ATTACK_KEYS)}")
+    if args.exclude:
+        for key in args.exclude:
+            if key not in ATTACK_KEYS:
+                parser.error(f"Unknown attack key: '{key}'. "
+                             f"Choose from: {', '.join(ATTACK_KEYS)}")
+
+    # Build list of attacks to process from the standard registry.
+    excluded = set(args.exclude) if args.exclude else set()
+    # --tantgen acts like a preset --only restricted to the TANTGen subset.
+    only_set = set(args.only) if args.only else (TANTGEN_KEYS if args.tantgen else None)
+    selected = []
+    for attack in ATTACKS:
+        # Skip benign unless explicitly requested
+        if attack.key in BENIGN_KEYS and not args.include_benign:
+            if not (only_set and attack.key in only_set):
+                continue
+        # Filter by --only / --tantgen / --exclude
+        if only_set is not None and attack.key not in only_set:
+            continue
+        if attack.key in excluded:
+            continue
+        selected.append(attack)
+
+    # --tantgen automatically also processes the matching TANTGen-generated
+    # adversarial PCAPs (the two are directly correlated): standard benign
+    # attacks first, then their adversarial variants.
+    if args.tantgen:
         adversarial_attacks = build_adversarial_attacks()
         if not adversarial_attacks:
-            print(f"{red(bold('ERROR:'))} no adversarial PCAPs found under "
+            print(f"{yellow('WARNING:')} no adversarial PCAPs found under "
                   f"{ADVERSARIAL_DIR}. Run "
-                  f"scripts/adversarial_generation/generate_adversarials.py first.")
-            sys.exit(1)
-        selected = adversarial_attacks
-    else:
-        # Validate --only / --exclude keys
-        if args.only:
-            for key in args.only:
-                if key not in ATTACK_KEYS:
-                    parser.error(f"Unknown attack key: '{key}'. "
-                                 f"Choose from: {', '.join(ATTACK_KEYS)}")
-        if args.exclude:
-            for key in args.exclude:
-                if key not in ATTACK_KEYS:
-                    parser.error(f"Unknown attack key: '{key}'. "
-                                 f"Choose from: {', '.join(ATTACK_KEYS)}")
-
-        # Build list of attacks to process
-        excluded = set(args.exclude) if args.exclude else set()
-        # --tantgen acts like a preset --only restricted to the TANTGen subset.
-        only_set = set(args.only) if args.only else (TANTGEN_KEYS if args.tantgen else None)
-        selected = []
-        for attack in ATTACKS:
-            # Skip benign unless explicitly requested
-            if attack.key in BENIGN_KEYS and not args.include_benign:
-                if not (only_set and attack.key in only_set):
-                    continue
-            # Filter by --only / --tantgen / --exclude
-            if only_set is not None and attack.key not in only_set:
-                continue
-            if attack.key in excluded:
-                continue
-            selected.append(attack)
+                  f"scripts/adversarial_generation/generate_adversarials.py first "
+                  f"to produce them.\n")
+        else:
+            selected.extend(adversarial_attacks)
 
     if not selected:
         print("Nothing to process. Check --only keys or add --include-benign.")

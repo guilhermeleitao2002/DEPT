@@ -1,6 +1,6 @@
 # ADEPT × TANTGen — Adversarial PCAP Generation
 
-> Part of [ADEPT](../../README.md). Thin driver that operates [TANTGen](../../../Transformer-based_Adversarial_Network_Traffic_Generator/) (sibling repo) as an external tool to produce adversarial versions of attack PCAPs. Its outputs feed into [Phase 1](../packet_to_tensor/README.md) via `process_all_attacks.py --adversarial` and become the positive class for [Phase 2](../rf/README.md).
+> Part of [ADEPT](../../README.md). Thin driver that operates [TANTGen](../../../Transformer-based_Adversarial_Network_Traffic_Generator/) (sibling repo) as an external tool to produce adversarial versions of attack PCAPs. Its outputs are picked up automatically by [Phase 1](../packet_to_tensor/README.md) via `process_all_attacks.py --tantgen` and become the positive class for [Phase 2](../rf/README.md).
 
 TANTGen itself is documented in its own repository — this README only covers the ADEPT-side glue.
 
@@ -66,9 +66,8 @@ The driver runs each attack through TANTGen's standard pipeline (split → surro
 # 1. (If sources or driver changed) regenerate adversarial PCAPs
 python3 scripts/adversarial_generation/generate_adversarials.py [--force]
 
-# 2. Build tensors with a shared standardizer (benign + adversarial side-by-side)
+# 2. Build tensors with a shared standardizer (benign + adversarial in one pass)
 python3 scripts/packet_to_tensor/process_all_attacks.py --tantgen --include-benign --force
-python3 scripts/packet_to_tensor/process_all_attacks.py --adversarial --force
 
 # 3. Train downstream models (RF today; TCN / Transformer later)
 python3 scripts/rf/run_rf.py
