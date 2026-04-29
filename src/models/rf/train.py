@@ -87,6 +87,7 @@ def train(config: dict, tensors_root: Path, output_dir: Path) -> dict:
         adversarial_dir=Path(config["adversarial_dir"]),
         benign_cap_ratio=float(config["benign_cap_ratio"]),
         seed=int(config["split"]["seed"]),
+        adversarial_exclude=config.get("adversarial_exclude", []),
     )
     log.info("assembled dataset: X=%s y=%s", dataset.X.shape, dataset.y.shape)
 

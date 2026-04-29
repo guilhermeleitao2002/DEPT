@@ -146,6 +146,7 @@ def assemble(
     adversarial_dir: Path,
     benign_cap_ratio: float,
     seed: int,
+    adversarial_exclude: list[str] = (),
 ) -> RFDataset:
     """Merge benign sources + auto-discovered adversarial sources."""
     rng = np.random.default_rng(seed)
@@ -171,7 +172,10 @@ def assemble(
         raise FileNotFoundError(
             f"no adversarial sources under {adversarial_dir}. "
             f"Run scripts/packet_to_tensor/process_all_attacks.py --tantgen first.")
+    exclude = set(adversarial_exclude)
     for src in adv_names:
+        if src in exclude:
+            continue
         folder = adversarial_dir / src
         X, y, flow_ids, label_str, fnames = load_source(folder, src)
         feature_names = feature_names or fnames

@@ -14,29 +14,34 @@ tensors_dir: data/tensors
 adversarial_dir: data/tensors/adversarial   # auto-discovered: every subdir with metadata.json
 output_dir: data/models/rf
 
-# Benign pool — Kitsune + CIC-IDS2017 folders under tensors_dir/. Every
-# window in these folders is treated as benign.
+# Benign pool — restricted to the 4 attacks for which TANTGen generated
+# working adversarial PCAPs (ddos, dos_slow, mirai, ssdp_flood).
+# Excluded sources and reasons:
+#   portscan, syn_dos  — structurally incompatible with N-packet windowing
+#                        (1–2 packet flows → effectively 0 adversarial windows)
+#   active_wiretap, arp_mitm, brute_force_ftp, brute_force_ssh,
+#   infiltration, os_scan, ssl_renegotiation, video_injection, web_attacks
+#                      — no TANTGen adversarial counterpart; including them
+#                        inflates the benign class without a matching signal
 benign_sources:
-  - active_wiretap
-  - arp_mitm
-  - brute_force_ftp
-  - brute_force_ssh
   - ddos
   - dos_slow
-  # - fuzzing
-  - infiltration
   - mirai
-  - os_scan
-  - portscan
   - ssdp_flood
-  - ssl_renegotiation
-  - syn_dos
-  - video_injection
-  - web_attacks
 
 # Adversarial pool — every subdirectory of adversarial_dir/ that contains
-# metadata.json is loaded automatically. Expect 21 under the default
-# TANTGen setup (7 attacks × 3 perturbation modes: both, iat, size).
+# metadata.json is loaded automatically, except those listed in
+# adversarial_exclude below.
+adversarial_exclude:
+  - fuzzing_adv_both    # snaplen-200B no-op: adversarial ≡ benign (F1 < 0.02)
+  - fuzzing_adv_iat
+  - fuzzing_adv_size
+  - portscan_adv_both   # structurally incompatible: only 128 windows from 158k flows
+  - portscan_adv_iat
+  - portscan_adv_size
+  - syn_dos_adv_both    # structurally incompatible: only 531 windows from 491 flows
+  - syn_dos_adv_iat
+  - syn_dos_adv_size
 
 # Split (flow-atomic, stratified by source).
 split:
