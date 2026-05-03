@@ -19,13 +19,13 @@ ADEPT is a defense framework against adversarial attacks on Machine Learning-bas
     Sequence Tensor [W,N,F]          RF Statistics [W,S]
               │                               │
               ▼                               ▼
-     ┌────────────────┐              ┌────────────────┐
+     ┌────────────────┐                ┌────────────────┐
      │      TCN       │ ── Phase 3 ✅ │  Random Forest  │ ── Phase 2 ✅
-     │ (temporal base │              │ (statistical    │
-     │    learner)    │              │  base learner)  │
-     └───────┬────────┘              └───────┬────────┘
-             │                               │
-             └───────────┬───────────────────┘
+     │ (temporal base │                │ (statistical   │
+     │    learner)    │                │  base learner) │
+     └───────┬────────┘                └───────┬────────┘
+             │                                 │
+             └───────────┬─────────────────────┘
                          ▼
               ┌──────────────────┐
               │  Meta-Learner    │
