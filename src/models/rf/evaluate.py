@@ -1,0 +1,208 @@
+"""Evaluate a trained RF on the held-out test split.
+
+Under ADEPT's benign-vs-adversarial label convention, the positive class
+is "adversarial" (TANTGen-perturbed traffic) and the negative class is
+"benign" (all Kitsune + CIC-IDS2017 windows). Per-source metrics are
+reported only for adversarial sources, since benign folders contribute
+only to the negative pool.
+"""
+from __future__ import annotations
+
+import json
+import logging
+from pathlib import Path
+
+import joblib
+import matplotlib
+
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt  # noqa: E402
+import numpy as np  # noqa: E402
+from sklearn.metrics import (  # noqa: E402
+    ConfusionMatrixDisplay,
+    average_precision_score,
+    confusion_matrix,
+    f1_score,
+    precision_recall_curve,
+    precision_score,
+    recall_score,
+    roc_auc_score,
+    roc_curve,
+)
+
+
+log = logging.getLogger(__name__)
+
+ADV_MODE_SUFFIXES = ("_adv_both", "_adv_iat", "_adv_size")
+
+
+def _base_source(adv_source: str) -> str | None:
+    """Strip '_adv_<mode>' → base attack name (e.g. 'mirai_adv_both' → 'mirai')."""
+    for suffix in ADV_MODE_SUFFIXES:
+        if adv_source.endswith(suffix):
+            return adv_source[: -len(suffix)]
+    return None
+
+
+def _classification_block(y_true: np.ndarray, y_pred: np.ndarray, y_prob: np.ndarray) -> dict:
+    out = {
+        "n": int(len(y_true)),
+        "n_benign": int((y_true == 0).sum()),
+        "n_adversarial": int((y_true == 1).sum()),
+        "accuracy": float((y_pred == y_true).mean()) if len(y_true) else 0.0,
+        "precision_adversarial": float(
+            precision_score(y_true, y_pred, pos_label=1, zero_division=0)),
+        "recall_adversarial": float(
+            recall_score(y_true, y_pred, pos_label=1, zero_division=0)),
+        "f1_adversarial": float(
+            f1_score(y_true, y_pred, pos_label=1, zero_division=0)),
+        "precision_benign": float(
+            precision_score(y_true, y_pred, pos_label=0, zero_division=0)),
+        "recall_benign": float(
+            recall_score(y_true, y_pred, pos_label=0, zero_division=0)),
+        "f1_benign": float(
+            f1_score(y_true, y_pred, pos_label=0, zero_division=0)),
+        "macro_f1": float(
+            f1_score(y_true, y_pred, average="macro", zero_division=0)),
+    }
+    if out["n_benign"] > 0 and out["n_adversarial"] > 0:
+        out["roc_auc"] = float(roc_auc_score(y_true, y_prob))
+        out["pr_auc"] = float(average_precision_score(y_true, y_prob))
+    else:
+        out["roc_auc"] = None
+        out["pr_auc"] = None
+    return out
+
+
+def evaluate(output_dir: Path) -> dict:
+    clf = joblib.load(output_dir / "rf.joblib")
+    split = np.load(output_dir / "split.npz")
+    data = np.load(output_dir / "dataset.npz", allow_pickle=False)
+    feature_names = json.loads((output_dir / "feature_names.json").read_text())
+
+    test_idx = split["test_idx"]
+    X_te = data["X"][test_idx]
+    y_te = data["y"][test_idx]
+    sources_te = data["sources"][test_idx]
+    label_str_te = data["label_str"][test_idx]
+
+    y_prob = clf.predict_proba(X_te)[:, 1]
+    y_pred = clf.predict(X_te)
+
+    metrics: dict = {"overall": _classification_block(y_te, y_pred, y_prob)}
+
+    # Per adversarial source. For each TANTGen variant we report:
+    #   * vs_all_benign       — this variant's positives + every benign window.
+    #                           Realistic prevalence; precision is dominated
+    #                           by total benign FP count.
+    #   * vs_balanced_benign  — this variant's positives + K × n_adv benign
+    #                           (subsample, capped at total benign). Makes
+    #                           precision comparable across variants.
+    #   * vs_same_base_benign — positives + benign from the same base-attack
+    #                           capture (e.g. mirai_adv_both → benign from
+    #                           mirai/). Lets us see within-capture separability
+    #                           without cross-capture confounds.
+    # low_support flags variants with fewer than MIN_SUPPORT adversarial windows.
+    MIN_SUPPORT = 50
+    BALANCE_K = 10
+    rng = np.random.default_rng(42)
+    benign_all_idx = np.where(y_te == 0)[0]
+
+    adv_sources = sorted(set(sources_te[y_te == 1].tolist()))
+    per_source: dict = {}
+    for src in adv_sources:
+        src_mask = (sources_te == src) & (y_te == 1)
+        n_adv = int(src_mask.sum())
+        sel_all = src_mask | (y_te == 0)
+
+        base = _base_source(src)
+        if base is not None:
+            sel_same = src_mask | ((y_te == 0) & (sources_te == base))
+        else:
+            sel_same = src_mask  # no matching base → benign subset is empty
+
+        target_bn = min(BALANCE_K * n_adv, len(benign_all_idx))
+        if n_adv > 0 and target_bn > 0:
+            bn_pick = rng.choice(benign_all_idx, size=target_bn, replace=False)
+            bal_mask = np.zeros_like(src_mask)
+            bal_mask[np.where(src_mask)[0]] = True
+            bal_mask[bn_pick] = True
+        else:
+            bal_mask = src_mask
+
+        per_source[src] = {
+            "low_support": n_adv < MIN_SUPPORT,
+            "base_source": base,
+            "vs_all_benign": _classification_block(
+                y_te[sel_all], y_pred[sel_all], y_prob[sel_all]),
+            "vs_balanced_benign": _classification_block(
+                y_te[bal_mask], y_pred[bal_mask], y_prob[bal_mask]),
+            "vs_same_base_benign": _classification_block(
+                y_te[sel_same], y_pred[sel_same], y_prob[sel_same]),
+        }
+    metrics["per_adversarial_source"] = per_source
+    metrics["per_source_config"] = {"min_support": MIN_SUPPORT, "balance_k": BALANCE_K}
+
+    # Per label_str (trivially just benign vs adversarial under this convention).
+    per_label: dict[str, dict] = {}
+    for lab in sorted(set(label_str_te.tolist())):
+        mask = label_str_te == lab
+        per_label[lab] = {
+            "n": int(mask.sum()),
+            "y_true_majority": int(round(float(y_te[mask].mean()))),
+            "predicted_adversarial_rate": float((y_pred[mask] == 1).mean()),
+            "mean_adversarial_prob": float(y_prob[mask].mean()),
+        }
+    metrics["per_label_str"] = per_label
+
+    (output_dir / "metrics.json").write_text(json.dumps(metrics, indent=2))
+
+    # ---------- Plots ----------
+    cm = confusion_matrix(y_te, y_pred, labels=[0, 1])
+    fig, ax = plt.subplots(figsize=(4.5, 4))
+    ConfusionMatrixDisplay(cm, display_labels=["benign", "adversarial"]).plot(
+        ax=ax, colorbar=False)
+    ax.set_title("RF — Confusion Matrix (test)")
+    fig.tight_layout()
+    fig.savefig(output_dir / "confusion_matrix.png", dpi=140)
+    plt.close(fig)
+
+    if metrics["overall"]["roc_auc"] is not None:
+        fpr, tpr, _ = roc_curve(y_te, y_prob)
+        fig, ax = plt.subplots(figsize=(4.5, 4))
+        ax.plot(fpr, tpr, label=f"AUC = {metrics['overall']['roc_auc']:.3f}")
+        ax.plot([0, 1], [0, 1], "k--", alpha=0.5)
+        ax.set_xlabel("FPR")
+        ax.set_ylabel("TPR")
+        ax.set_title("RF — ROC (test)")
+        ax.legend(loc="lower right")
+        fig.tight_layout()
+        fig.savefig(output_dir / "roc_curve.png", dpi=140)
+        plt.close(fig)
+
+        prec, rec, _ = precision_recall_curve(y_te, y_prob)
+        fig, ax = plt.subplots(figsize=(4.5, 4))
+        ax.plot(rec, prec, label=f"AP = {metrics['overall']['pr_auc']:.3f}")
+        ax.set_xlabel("Recall")
+        ax.set_ylabel("Precision")
+        ax.set_title("RF — PR (test)")
+        ax.legend(loc="lower left")
+        fig.tight_layout()
+        fig.savefig(output_dir / "pr_curve.png", dpi=140)
+        plt.close(fig)
+
+    importances = clf.feature_importances_
+    order = np.argsort(importances)[::-1]
+    fig, ax = plt.subplots(figsize=(7, max(4, 0.3 * len(importances))))
+    ax.barh(
+        [feature_names[i] if i < len(feature_names) else f"f{i}" for i in order[::-1]],
+        importances[order[::-1]],
+    )
+    ax.set_title("RF — Feature Importance")
+    ax.set_xlabel("Importance (Gini)")
+    fig.tight_layout()
+    fig.savefig(output_dir / "feature_importance.png", dpi=140)
+    plt.close(fig)
+
+    log.info("evaluation written to %s", output_dir)
+    return metrics

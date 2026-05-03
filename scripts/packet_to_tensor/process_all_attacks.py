@@ -11,25 +11,36 @@ Datasets:
   Kitsune:
      1. Mirai             — Botnet C&C / IoT DDoS
      2. SYN DoS           — Volumetric DoS (TCP)
-     3. Fuzzing           — Stealthy protocol exploitation
-     4. SSDP Flood        — Volumetric amplification (UDP)
-     5. ARP MitM          — Layer-2 ARP poisoning / MitM
-     6. Active Wiretap    — Passive tap (Linux-bridge based)
-     7. OS Scan           — OS fingerprinting / reconnaissance
-     8. SSL Renegotiation — TLS renegotiation abuse
-     9. Video Injection   — Adversarial video stream injection
+     3. SSDP Flood        — Volumetric amplification (UDP)
+     4. ARP MitM          — Layer-2 ARP poisoning / MitM
+     5. Active Wiretap    — Passive tap (Linux-bridge based)
+     6. OS Scan           — OS fingerprinting / reconnaissance
+     7. SSL Renegotiation — TLS renegotiation abuse
+     8. Video Injection   — Adversarial video stream injection
 
   CIC-IDS2017:
-    10. DDoS              — Distributed DoS (Friday 19:30-21:05 UTC)
-    11. DoS Slow          — Slowloris+SlowHTTPTest+Hulk+GoldenEye (Wednesday 13:40-15:30 UTC)
-    12. Port Scan         — Reconnaissance (Friday 17:00-19:30 UTC)
-    13. Brute Force FTP   — FTP-Patator credential stuffing (Tuesday 13:15-14:25 UTC)
-    14. Brute Force SSH   — SSH-Patator credential stuffing (Tuesday 18:00-19:05 UTC)
-    15. Web Attacks       — HTTP Brute Force + XSS + SQL Injection (Thursday 13:15-14:45 UTC)
-    16. Infiltration      — Malware download + C&C beaconing (Thursday 18:15-18:40 UTC)
+     9. DDoS              — Distributed DoS (Friday 19:30-21:05 UTC)
+    10. DoS Slow          — Slowloris+SlowHTTPTest+Hulk+GoldenEye (Wednesday 13:40-15:30 UTC)
+    11. Port Scan         — Reconnaissance (Friday 17:00-19:30 UTC)
+    12. Brute Force FTP   — FTP-Patator credential stuffing (Tuesday 13:15-14:25 UTC)
+    13. Brute Force SSH   — SSH-Patator credential stuffing (Tuesday 18:00-19:05 UTC)
+    14. Web Attacks       — HTTP Brute Force + XSS + SQL Injection (Thursday 13:15-14:45 UTC)
+    15. Infiltration      — Malware download + C&C beaconing (Thursday 18:15-18:40 UTC)
 
   Benign baseline:
-    17. Monday benign     — Enterprise benign manifold (sampled, CIC-IDS2017)
+    16. Monday benign     — Enterprise benign manifold (sampled, CIC-IDS2017)
+
+The --tantgen flag restricts processing to the 6-attack subset that TANTGen
+supports (mirai, syn_dos, ssdp_flood, ddos, dos_slow, portscan), matching
+the evaluation set used when ADEPT drives TANTGen as its adversarial packet
+generator. It additionally processes the matching TANTGen-generated
+adversarial PCAPs found under data/adversarial/<attack>/<attack>_adversarial_<mode>.pcap
+(modes: both / iat / size; output: data/tensors/adversarial/<attack>_adv_<mode>/).
+
+Labels follow ADEPT's dataset-driven convention: every Kitsune/CIC window
+is written as "benign" and every adversarial window as "adversarial" — the
+upstream NIDS is expected to catch the raw-dataset attacks, so the only
+novel threat ADEPT learns to flag is the TANTGen-generated perturbation.
 
 CIC-IDS2017 PCAPs are time-filtered with editcap before processing to
 reduce size and isolate attack windows.
@@ -37,34 +48,36 @@ reduce size and isolate attack windows.
 Usage
 -----
     # Process all attacks (skips already-processed ones):
-    python scripts/process_all_attacks.py
+    python3 scripts/packet_to_tensor/process_all_attacks.py
 
     # Process a specific attack:
-    python scripts/process_all_attacks.py --only syn_dos
+    python3 scripts/packet_to_tensor/process_all_attacks.py --only syn_dos
 
     # Re-process an attack even if output already exists:
-    python scripts/process_all_attacks.py --only mirai --force
+    python3 scripts/packet_to_tensor/process_all_attacks.py --only mirai --force
 
     # Process all attacks except some:
-    python scripts/process_all_attacks.py --exclude mirai syn_dos
+    python3 scripts/packet_to_tensor/process_all_attacks.py --exclude mirai syn_dos
 
     # Dry run — show what would be processed without running:
-    python scripts/process_all_attacks.py --dry-run
+    python3 scripts/packet_to_tensor/process_all_attacks.py --dry-run
 
     # Custom window size:
-    python scripts/process_all_attacks.py --window-size 20
+    python3 scripts/packet_to_tensor/process_all_attacks.py --window-size 20
 
     # Process with benign baseline:
-    python scripts/process_all_attacks.py --include-benign
+    python3 scripts/packet_to_tensor/process_all_attacks.py --include-benign
+
+    # Restrict to the 6 attacks supported by TANTGen and also
+    # tensorise their matching adversarial PCAPs under data/adversarial/:
+    python3 scripts/packet_to_tensor/process_all_attacks.py --tantgen
 """
 
 import argparse
 import json
-import os
 import shutil
 import subprocess
 import sys
-import tempfile
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -89,9 +102,8 @@ def magenta(t): return _c("35", t)
 # Project root = ADEPT/
 # ---------------------------------------------------------------------------
 SCRIPT_DIR = Path(__file__).resolve().parent
-PROJECT_ROOT = SCRIPT_DIR.parent
+PROJECT_ROOT = SCRIPT_DIR.parents[1]
 PIPELINE_SCRIPT = SCRIPT_DIR / "run_packet_to_tensor.py"
-LABEL_SCRIPT = SCRIPT_DIR / "attach_labels.py"
 PIPELINE_CONFIG = PROJECT_ROOT / "config" / "pipeline.yaml"
 
 # Data directories
@@ -101,6 +113,12 @@ KITSUNE_CSV = DATA_DIR / "Kitsune" / "csv"
 CIC_PCAP = DATA_DIR / "CIC-IDS-2017" / "pcap"
 CIC_CSV = DATA_DIR / "CIC-IDS-2017" / "csv" / "TrafficLabelling"
 TENSOR_DIR = DATA_DIR / "tensors"
+ADVERSARIAL_DIR = DATA_DIR / "adversarial"
+ADVERSARIAL_MODES = ("both", "iat", "size")
+# Shared IPAT standardizer fitted over benign + adversarial inputs together
+# (see fit_shared_mean_std()). Per-attack pipeline runs reuse this file via
+# run_packet_to_tensor.py's --mean-std flag instead of refitting locally.
+SHARED_MEAN_STD = TENSOR_DIR / "mean_std.json"
 
 
 # ---------------------------------------------------------------------------
@@ -111,10 +129,9 @@ class Attack:
     """Defines one attack to process."""
     key: str                        # Short identifier (used with --only)
     name: str                       # Human-readable name
-    dataset: str                    # "kitsune" or "cic-ids2017"
+    dataset: str                    # "kitsune", "cic-ids2017", or "adversarial"
     pcap_path: Path                 # Path to raw PCAP
     output_dir: Path                # Tensor output directory
-    labels_csv: Path | None = None  # Ground-truth label CSV (None = no labels)
     # CIC-IDS2017 time-filtering (editcap -A / -B)
     time_start: str = ""            # e.g. "2017-07-05 09:20:00"
     time_end: str = ""              # e.g. "2017-07-05 12:00:00"
@@ -129,7 +146,6 @@ ATTACKS = [
         dataset="kitsune",
         pcap_path=KITSUNE_PCAP / "Mirai_pcap.pcap",
         output_dir=TENSOR_DIR / "mirai",
-        labels_csv=KITSUNE_CSV / "mirai_labels.csv",
     ),
     Attack(
         key="syn_dos",
@@ -137,7 +153,6 @@ ATTACKS = [
         dataset="kitsune",
         pcap_path=KITSUNE_PCAP / "SYN_DoS_pcap.pcap",
         output_dir=TENSOR_DIR / "syn_dos",
-        labels_csv=KITSUNE_CSV / "SYN_DoS_labels.csv",
     ),
     Attack(
         key="fuzzing",
@@ -145,7 +160,6 @@ ATTACKS = [
         dataset="kitsune",
         pcap_path=KITSUNE_PCAP / "Fuzzing_pcap.pcapng",
         output_dir=TENSOR_DIR / "fuzzing",
-        labels_csv=KITSUNE_CSV / "Fuzzing_labels.csv",
     ),
     Attack(
         key="ssdp_flood",
@@ -153,7 +167,6 @@ ATTACKS = [
         dataset="kitsune",
         pcap_path=KITSUNE_PCAP / "SSDP_Flood_pcap.pcap",
         output_dir=TENSOR_DIR / "ssdp_flood",
-        labels_csv=KITSUNE_CSV / "SSDP_Flood_labels.csv",
     ),
     Attack(
         key="arp_mitm",
@@ -161,7 +174,6 @@ ATTACKS = [
         dataset="kitsune",
         pcap_path=KITSUNE_PCAP / "ARP_MitM_pcap.pcapng",
         output_dir=TENSOR_DIR / "arp_mitm",
-        labels_csv=KITSUNE_CSV / "ARP_MitM_labels.csv",
     ),
     Attack(
         key="active_wiretap",
@@ -169,7 +181,6 @@ ATTACKS = [
         dataset="kitsune",
         pcap_path=KITSUNE_PCAP / "Active_Wiretap_pcap.pcapng",
         output_dir=TENSOR_DIR / "active_wiretap",
-        labels_csv=KITSUNE_CSV / "Active_Wiretap_labels.csv",
     ),
     Attack(
         key="os_scan",
@@ -177,7 +188,6 @@ ATTACKS = [
         dataset="kitsune",
         pcap_path=KITSUNE_PCAP / "OS_Scan_pcap.pcapng",
         output_dir=TENSOR_DIR / "os_scan",
-        labels_csv=KITSUNE_CSV / "OS_Scan_labels.csv",
     ),
     Attack(
         key="ssl_renegotiation",
@@ -185,7 +195,6 @@ ATTACKS = [
         dataset="kitsune",
         pcap_path=KITSUNE_PCAP / "SSL_Renegotiation_pcap.pcap",
         output_dir=TENSOR_DIR / "ssl_renegotiation",
-        labels_csv=KITSUNE_CSV / "SSL_Renegotiation_labels.csv",
     ),
     Attack(
         key="video_injection",
@@ -193,7 +202,6 @@ ATTACKS = [
         dataset="kitsune",
         pcap_path=KITSUNE_PCAP / "Video_Injection_pcap.pcapng",
         output_dir=TENSOR_DIR / "video_injection",
-        labels_csv=KITSUNE_CSV / "Video_Injection_labels.csv",
     ),
     # --- CIC-IDS2017 -------------------------------------------------------
     # Time windows from CIC-IDS2017 documentation and TANTGen run scripts.
@@ -203,7 +211,6 @@ ATTACKS = [
         dataset="cic-ids2017",
         pcap_path=CIC_PCAP / "Friday-WorkingHours.pcap",
         output_dir=TENSOR_DIR / "ddos",
-        labels_csv=CIC_CSV / "Friday-WorkingHours-Afternoon-DDos.pcap_ISCX.csv",
         time_start="2017-07-07 19:30:00",
         time_end="2017-07-07 21:05:00",
     ),
@@ -213,7 +220,6 @@ ATTACKS = [
         dataset="cic-ids2017",
         pcap_path=CIC_PCAP / "Wednesday-workingHours.pcap",
         output_dir=TENSOR_DIR / "dos_slow",
-        labels_csv=CIC_CSV / "Wednesday-workingHours.pcap_ISCX.csv",
         # Covers all 4 DoS sub-attacks (times are UTC; CIC-IDS2017 uses EDT=UTC-4):
         #   Slowloris     09:47-10:10 EDT = 13:47-14:10 UTC
         #   SlowHTTPTest  10:14-10:35 EDT = 14:14-14:35 UTC
@@ -229,7 +235,6 @@ ATTACKS = [
         dataset="cic-ids2017",
         pcap_path=CIC_PCAP / "Friday-WorkingHours.pcap",
         output_dir=TENSOR_DIR / "portscan",
-        labels_csv=CIC_CSV / "Friday-WorkingHours-Afternoon-PortScan.pcap_ISCX.csv",
         time_start="2017-07-07 17:00:00",
         time_end="2017-07-07 19:30:00",
     ),
@@ -239,7 +244,6 @@ ATTACKS = [
         dataset="cic-ids2017",
         pcap_path=CIC_PCAP / "Tuesday-WorkingHours.pcap",
         output_dir=TENSOR_DIR / "brute_force_ftp",
-        labels_csv=CIC_CSV / "Tuesday-WorkingHours.pcap_ISCX.csv",
         # FTP-Patator: 09:20-10:20 EDT = 13:20-14:20 UTC
         time_start="2017-07-04 13:15:00",
         time_end="2017-07-04 14:25:00",
@@ -250,7 +254,6 @@ ATTACKS = [
         dataset="cic-ids2017",
         pcap_path=CIC_PCAP / "Tuesday-WorkingHours.pcap",
         output_dir=TENSOR_DIR / "brute_force_ssh",
-        labels_csv=CIC_CSV / "Tuesday-WorkingHours.pcap_ISCX.csv",
         # SSH-Patator: 14:00-15:00 EDT = 18:00-19:00 UTC
         time_start="2017-07-04 18:00:00",
         time_end="2017-07-04 19:05:00",
@@ -261,7 +264,6 @@ ATTACKS = [
         dataset="cic-ids2017",
         pcap_path=CIC_PCAP / "Thursday-WorkingHours.pcap",
         output_dir=TENSOR_DIR / "web_attacks",
-        labels_csv=CIC_CSV / "Thursday-WorkingHours-Morning-WebAttacks.pcap_ISCX.csv",
         # Brute Force HTTP: 09:20-10:00 EDT = 13:20-14:00 UTC
         # XSS:             10:15-10:35 EDT = 14:15-14:35 UTC
         # SQL Injection:   10:40-10:42 EDT = 14:40-14:42 UTC
@@ -275,7 +277,6 @@ ATTACKS = [
         dataset="cic-ids2017",
         pcap_path=CIC_PCAP / "Thursday-WorkingHours.pcap",
         output_dir=TENSOR_DIR / "infiltration",
-        labels_csv=CIC_CSV / "Thursday-WorkingHours-Afternoon-Infilteration.pcap_ISCX.csv",
         # MetaExploit Vista: 14:19-14:21, 14:33-14:35 EDT = 18:19-18:21, 18:33-18:35 UTC
         # Cool disk MAC:    14:53-15:00 EDT = 18:53-19:00 UTC
         # Dropbox + Portscan (Vista): 15:04-15:45 EDT = 19:04-19:45 UTC
@@ -289,7 +290,6 @@ ATTACKS = [
         dataset="cic-ids2017",
         pcap_path=CIC_PCAP / "Monday-WorkingHours.pcap",
         output_dir=TENSOR_DIR / "monday_benign",
-        labels_csv=CIC_CSV / "Monday-WorkingHours.pcap_ISCX.csv",
         # Monday traffic runs roughly 09:00-17:00. Sample a 2-hour window
         # to keep tensor output manageable (~10K flows target).
         time_start="2017-07-03 09:00:00",
@@ -300,6 +300,43 @@ ATTACKS = [
 ATTACK_KEYS = [a.key for a in ATTACKS]
 # Keys that are not included by default (need --include-benign)
 BENIGN_KEYS = {"monday_benign"}
+# The 7-attack subset TANTGen supports. Selected via --tantgen so ADEPT can
+# process only the attack set used downstream by its adversarial generator.
+TANTGEN_KEYS = {
+    "mirai", "syn_dos", "ssdp_flood",
+    "ddos", "dos_slow", "portscan",
+}
+
+
+def build_adversarial_attacks() -> list[Attack]:
+    """Discover TANTGen-generated adversarial PCAPs under data/adversarial/.
+
+    Expected layout (written by scripts/adversarial_generation/generate_adversarials.py):
+        data/adversarial/<attack>/<attack>_adversarial_<mode>.pcap
+    where <mode> ∈ {both, iat, size}. Produces one Attack per (attack, mode)
+    pair, with output under data/tensors/adversarial/<attack>_adv_<mode>/.
+    """
+    attacks: list[Attack] = []
+    if not ADVERSARIAL_DIR.exists():
+        return attacks
+    for attack_dir in sorted(ADVERSARIAL_DIR.iterdir()):
+        if not attack_dir.is_dir():
+            continue
+        atk = attack_dir.name
+        for mode in ADVERSARIAL_MODES:
+            pcap = attack_dir / f"{atk}_adversarial_{mode}.pcap"
+            if not pcap.exists() or pcap.stat().st_size == 0:
+                continue
+            key = f"{atk}_adv_{mode}"
+            pretty = atk.replace("_", " ").title()
+            attacks.append(Attack(
+                key=key,
+                name=f"{pretty} (adversarial / {mode})",
+                dataset="adversarial",
+                pcap_path=pcap,
+                output_dir=TENSOR_DIR / "adversarial" / key,
+            ))
+    return attacks
 
 
 # ---------------------------------------------------------------------------
@@ -329,7 +366,8 @@ def time_filter_pcap(editcap: str, src: Path, dst: Path,
 
 
 def run_pipeline(pcap: Path, output_dir: Path, window_size: int | None,
-                 extra_args: list) -> subprocess.CompletedProcess:
+                 extra_args: list, mean_std: Path | None = None,
+                 ) -> subprocess.CompletedProcess:
     """Run run_packet_to_tensor.py on a single PCAP."""
     cmd = [
         sys.executable, str(PIPELINE_SCRIPT),
@@ -339,28 +377,96 @@ def run_pipeline(pcap: Path, output_dir: Path, window_size: int | None,
     ]
     if window_size is not None:
         cmd += ["-N", str(window_size)]
+    if mean_std is not None:
+        cmd += ["--mean-std", str(mean_std)]
     cmd += extra_args
     return subprocess.run(cmd, check=True)
 
 
-def run_label_attach(attack: Attack) -> bool:
-    """Run attach_labels.py for an attack. Returns True on success."""
-    if attack.labels_csv is None:
-        return True
-    if not attack.labels_csv.exists():
-        print(f"  {yellow('⚠  labels CSV not found, skipping label attachment:')} "
-              f"{attack.labels_csv.name}")
-        return False
+def collect_shared_fit_pcaps() -> list[Path]:
+    """Inputs to fit the shared IPAT standardizer over.
+
+    All benign + adversarial PCAPs that ADEPT will see during training. We
+    intentionally include adversarial variants so the standardizer sees the
+    heavier IPAT tails introduced by TANTGen (e.g. PortScan retains its
+    long inter-scan gaps; SYN_DoS adversarial IATs are ~24× the originals).
+    Without this, training-time z-scoring on adversarial windows lands far
+    in the tails of a benign-only fit.
+    """
+    paths: list[Path] = []
+    # Benign / raw-attack PCAPs from the standard registry, time-filtered if
+    # the .filtered cache already has them (avoids re-filtering massive CIC
+    # day captures here; the cache is reused later by per-attack runs).
+    for atk in ATTACKS:
+        if atk.time_start:
+            cached = TENSOR_DIR / ".filtered" / f"{atk.key}_filtered.pcap"
+            if cached.exists() and cached.stat().st_size > 0:
+                paths.append(cached)
+            elif atk.pcap_path.exists():
+                paths.append(atk.pcap_path)
+        elif atk.pcap_path.exists():
+            paths.append(atk.pcap_path)
+    # Adversarial PCAPs
+    if ADVERSARIAL_DIR.exists():
+        for adv in sorted(ADVERSARIAL_DIR.glob("*/*_adversarial_*.pcap")):
+            if adv.stat().st_size > 0:
+                paths.append(adv)
+    return paths
+
+
+def fit_shared_mean_std(force: bool = False) -> Path:
+    """Fit (once) the shared mean_std.json over benign + adversarial PCAPs.
+
+    Idempotent: skips if SHARED_MEAN_STD already exists unless force=True.
+    Returns the path to the JSON file regardless.
+    """
+    SHARED_MEAN_STD.parent.mkdir(parents=True, exist_ok=True)
+    if SHARED_MEAN_STD.exists() and not force:
+        print(f"  {dim('Shared mean/std already present:')} {SHARED_MEAN_STD}")
+        return SHARED_MEAN_STD
+    inputs = collect_shared_fit_pcaps()
+    if not inputs:
+        print(f"  {yellow('No PCAPs found for shared fit; falling back to per-PCAP fits.')}")
+        return SHARED_MEAN_STD  # caller can check for existence
+    print(f"  Fitting shared mean/std over {len(inputs)} PCAP(s) → {SHARED_MEAN_STD}")
     cmd = [
-        sys.executable, str(LABEL_SCRIPT),
-        "-d", "kitsune" if attack.dataset == "kitsune" else "cic",
-        "-t", str(attack.output_dir),
-        "-l", str(attack.labels_csv),
+        sys.executable, str(PIPELINE_SCRIPT),
+        "--fit-mean-std",
+        "-i", *[str(p) for p in inputs],
+        "-o", str(SHARED_MEAN_STD),
+        "-c", str(PIPELINE_CONFIG),
     ]
-    if attack.dataset == "kitsune":
-        cmd += ["-i", str(attack.pcap_path)]
-    result = subprocess.run(cmd)
-    return result.returncode == 0
+    subprocess.run(cmd, check=True)
+    return SHARED_MEAN_STD
+
+
+def write_window_labels(output_dir: Path, label: int, label_str: str) -> bool:
+    """Write window_labels.csv with `num_windows` uniform rows."""
+    meta = load_metadata(output_dir)
+    if meta is None:
+        print(f"  {yellow('⚠  metadata.json missing, cannot write labels')}")
+        return False
+    n = int(meta["num_windows"])
+    out = output_dir / "window_labels.csv"
+    with open(out, "w") as f:
+        f.write("window_idx,label,label_str\n")
+        for i in range(n):
+            f.write(f"{i},{label},{label_str}\n")
+    print(f"  {dim('Wrote labels:')} {n:,} windows → {label_str}")
+    return True
+
+
+def run_label_attach(attack: Attack) -> bool:
+    """Write window_labels.csv for an attack.
+
+    ADEPT treats all raw-dataset traffic (Kitsune + CIC-IDS2017) as benign
+    — the upstream NIDS is expected to catch those attacks — and only
+    TANTGen-generated adversarial PCAPs as malicious. The label is driven
+    entirely by the source dataset; no ground-truth CSV is consulted.
+    """
+    if attack.dataset == "adversarial":
+        return write_window_labels(attack.output_dir, 1, "adversarial")
+    return write_window_labels(attack.output_dir, 0, "benign")
 
 
 def is_already_processed(output_dir: Path) -> bool:
@@ -434,6 +540,14 @@ def main():
         "--exclude", nargs="+", metavar="KEY",
         help=f"Exclude these attacks from processing (choices: {', '.join(ATTACK_KEYS)})",
     )
+    only_exclude.add_argument(
+        "--tantgen", action="store_true",
+        help=f"Restrict to the {len(TANTGEN_KEYS)} attacks supported by TANTGen "
+             f"({', '.join(sorted(TANTGEN_KEYS))}). Also processes their "
+             f"matching TANTGen-generated adversarial PCAPs under "
+             f"data/adversarial/<attack>/<attack>_adversarial_<mode>.pcap "
+             f"(output: data/tensors/adversarial/<attack>_adv_<mode>/).",
+    )
     parser.add_argument(
         "--force", action="store_true",
         help="Re-process attacks even if output already exists",
@@ -455,6 +569,18 @@ def main():
         help="Keep time-filtered PCAPs in data/tensors/.filtered/ after processing "
              "(by default they are deleted to save disk space)",
     )
+    parser.add_argument(
+        "--no-shared-mean-std", action="store_true",
+        help="Disable the shared mean_std.json step and let each per-PCAP "
+             "run refit its own standardizer. Default behaviour fits one "
+             "shared mean_std.json over benign + adversarial PCAPs and "
+             "passes it to every per-attack run via --mean-std.",
+    )
+    parser.add_argument(
+        "--refit-shared-mean-std", action="store_true",
+        help="Force the shared mean_std.json fit even if data/tensors/mean_std.json "
+             "already exists.",
+    )
     args = parser.parse_args()
 
     # Validate --only / --exclude keys
@@ -469,20 +595,35 @@ def main():
                 parser.error(f"Unknown attack key: '{key}'. "
                              f"Choose from: {', '.join(ATTACK_KEYS)}")
 
-    # Build list of attacks to process
+    # Build list of attacks to process from the standard registry.
     excluded = set(args.exclude) if args.exclude else set()
+    # --tantgen acts like a preset --only restricted to the TANTGen subset.
+    only_set = set(args.only) if args.only else (TANTGEN_KEYS if args.tantgen else None)
     selected = []
     for attack in ATTACKS:
         # Skip benign unless explicitly requested
         if attack.key in BENIGN_KEYS and not args.include_benign:
-            if not (args.only and attack.key in args.only):
+            if not (only_set and attack.key in only_set):
                 continue
-        # Filter by --only / --exclude
-        if args.only and attack.key not in args.only:
+        # Filter by --only / --tantgen / --exclude
+        if only_set is not None and attack.key not in only_set:
             continue
         if attack.key in excluded:
             continue
         selected.append(attack)
+
+    # --tantgen automatically also processes the matching TANTGen-generated
+    # adversarial PCAPs (the two are directly correlated): standard benign
+    # attacks first, then their adversarial variants.
+    if args.tantgen:
+        adversarial_attacks = build_adversarial_attacks()
+        if not adversarial_attacks:
+            print(f"{yellow('WARNING:')} no adversarial PCAPs found under "
+                  f"{ADVERSARIAL_DIR}. Run "
+                  f"scripts/adversarial_generation/generate_adversarials.py first "
+                  f"to produce them.\n")
+        else:
+            selected.extend(adversarial_attacks)
 
     if not selected:
         print("Nothing to process. Check --only keys or add --include-benign.")
@@ -522,6 +663,15 @@ def main():
     editcap = None
     if any(a.time_start for a in selected):
         editcap = find_editcap()
+
+    # Fit shared IPAT standardizer once over benign + adversarial PCAPs so
+    # every per-attack run uses the same z-score reference.
+    shared_mean_std: Path | None = None
+    if not args.no_shared_mean_std:
+        print(f"\n{bold('Shared standardizer')}")
+        shared_mean_std = fit_shared_mean_std(force=args.refit_shared_mean_std)
+        if not shared_mean_std.exists():
+            shared_mean_std = None  # fallback to per-PCAP fits
 
     # Process each attack
     results: list[tuple[str, str, dict | None]] = []
@@ -584,6 +734,7 @@ def main():
                     output_dir=attack.output_dir,
                     window_size=args.window_size,
                     extra_args=attack.extra_args,
+                    mean_std=shared_mean_std,
                 )
 
                 meta = load_metadata(attack.output_dir)

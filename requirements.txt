@@ -3,3 +3,6 @@ pandas
 scapy
 pyyaml
 tqdm
+matplotlib
+joblib
+scikit-learn

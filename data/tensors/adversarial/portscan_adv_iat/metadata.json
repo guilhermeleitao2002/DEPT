@@ -1,5 +1,5 @@
 {
-  "input": "/home/gleitao/Master Thesis/ADEPT/data/Kitsune/pcap/Fuzzing_pcap.pcapng",
+  "input": "/home/gleitao/Master Thesis/ADEPT/data/adversarial/portscan/portscan_adversarial_iat.pcap",
   "encoding": "nprint",
   "pipeline_mode": "batch",
   "nprint_bits": 1088,
@@ -15,14 +15,14 @@
   ],
   "window_size": 10,
   "stride": 10,
-  "num_windows": 224226,
+  "num_windows": 128,
   "sequence_shape": [
-    224226,
+    128,
     10,
     1090
   ],
   "rf_stats_shape": [
-    224226,
+    128,
     24
   ],
   "sequence_feature_count": 1090,
@@ -54,10 +54,10 @@
   ],
   "normalization_stats": {
     "IPAT": {
-      "mean": 0.013718188697506824,
-      "std": 0.8134594225147487
+      "mean": 14.397037382523651,
+      "std": 268.8585435440289
     }
   },
-  "num_flows_total": 1803,
-  "num_flows_used": 19
+  "num_flows_total": 158675,
+  "num_flows_used": 127
 }
