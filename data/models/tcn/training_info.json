@@ -1,0 +1,136 @@
+{
+  "best_epoch": 0,
+  "best_val_macro_f1": 0.91160102114256,
+  "epochs_run": 4,
+  "epochs_planned": 20,
+  "train_seconds": 3006.6708586215973,
+  "device": "cuda",
+  "amp": true,
+  "n_parameters": 806018,
+  "max_windows_per_split": null,
+  "split_summary": {
+    "train": {
+      "n_windows": 1875163,
+      "n_benign": 733654,
+      "n_adversarial": 1141509,
+      "per_source": {
+        "ddos": 127156,
+        "ddos_adv_both": 78292,
+        "ddos_adv_iat": 78292,
+        "ddos_adv_size": 78292,
+        "dos_slow": 285024,
+        "dos_slow_adv_both": 166411,
+        "dos_slow_adv_iat": 166411,
+        "dos_slow_adv_size": 166411,
+        "mirai": 56642,
+        "mirai_adv_both": 55553,
+        "mirai_adv_iat": 55553,
+        "mirai_adv_size": 55553,
+        "ssdp_flood": 264832,
+        "ssdp_flood_adv_both": 80247,
+        "ssdp_flood_adv_iat": 80247,
+        "ssdp_flood_adv_size": 80247
+      }
+    },
+    "val": {
+      "n_windows": 369119,
+      "n_benign": 151424,
+      "n_adversarial": 217695,
+      "per_source": {
+        "ddos": 27248,
+        "ddos_adv_both": 16777,
+        "ddos_adv_iat": 16777,
+        "ddos_adv_size": 16777,
+        "dos_slow": 61077,
+        "dos_slow_adv_both": 35664,
+        "dos_slow_adv_iat": 35664,
+        "dos_slow_adv_size": 35664,
+        "mirai": 6349,
+        "mirai_adv_both": 2928,
+        "mirai_adv_iat": 2928,
+        "mirai_adv_size": 2928,
+        "ssdp_flood": 56750,
+        "ssdp_flood_adv_both": 17196,
+        "ssdp_flood_adv_iat": 17196,
+        "ssdp_flood_adv_size": 17196
+      }
+    },
+    "test": {
+      "n_windows": 369099,
+      "n_benign": 151422,
+      "n_adversarial": 217677,
+      "per_source": {
+        "ddos": 27247,
+        "ddos_adv_both": 16777,
+        "ddos_adv_iat": 16777,
+        "ddos_adv_size": 16777,
+        "dos_slow": 61077,
+        "dos_slow_adv_both": 35658,
+        "dos_slow_adv_iat": 35658,
+        "dos_slow_adv_size": 35658,
+        "mirai": 6349,
+        "mirai_adv_both": 2928,
+        "mirai_adv_iat": 2928,
+        "mirai_adv_size": 2928,
+        "ssdp_flood": 56749,
+        "ssdp_flood_adv_both": 17196,
+        "ssdp_flood_adv_iat": 17196,
+        "ssdp_flood_adv_size": 17196
+      }
+    }
+  },
+  "config": {
+    "tensors_dir": "data/tensors",
+    "adversarial_dir": "/home/gleitao/Master Thesis/ADEPT/data/tensors/adversarial",
+    "output_dir": "data/models/tcn",
+    "benign_sources": [
+      "ddos",
+      "dos_slow",
+      "mirai",
+      "ssdp_flood"
+    ],
+    "adversarial_exclude": [
+      "fuzzing_adv_both",
+      "fuzzing_adv_iat",
+      "fuzzing_adv_size",
+      "portscan_adv_both",
+      "portscan_adv_iat",
+      "portscan_adv_size",
+      "syn_dos_adv_both",
+      "syn_dos_adv_iat",
+      "syn_dos_adv_size"
+    ],
+    "split": {
+      "train_frac": 0.7,
+      "val_frac": 0.15,
+      "test_frac": 0.15,
+      "seed": 42
+    },
+    "benign_cap_ratio": 3.0,
+    "drop_unknown": true
+  },
+  "training_config": {
+    "device": "auto",
+    "epochs": 20,
+    "batch_size": 256,
+    "num_workers": 4,
+    "lr": 0.001,
+    "weight_decay": 0.0001,
+    "scheduler": "cosine",
+    "early_stop_patience": 3,
+    "amp": true,
+    "class_weight": "balanced",
+    "seed": 42
+  },
+  "model_config": {
+    "num_features": 1090,
+    "channels": [
+      128,
+      128,
+      128
+    ],
+    "kernel_size": 3,
+    "dropout": 0.15,
+    "num_classes": 2
+  }
+}
