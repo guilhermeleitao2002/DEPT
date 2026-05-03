@@ -1,0 +1,74 @@
+# ===================================
+# ADEPT — TCN base learner
+# ===================================
+# Binary classifier (benign vs adversarial) over the [N=10, F=1090]
+# packet-sequence tensor produced by the Packet-to-Tensor pipeline.
+#
+# Same dataset scope as config/rf.yaml so RF and TCN see the same windows
+# under the same flow-atomic split (driven by `split.seed`). This is the
+# basis for a fair RF-vs-TCN comparison and the future ensemble step.
+
+tensors_dir: data/tensors
+adversarial_dir: data/tensors/adversarial   # auto-discovered: every subdir with metadata.json
+output_dir: data/models/tcn
+
+# Benign pool — restricted to the 4 attacks for which TANTGen generated
+# working adversarial PCAPs (ddos, dos_slow, mirai, ssdp_flood). Same as
+# rf.yaml; see that file for the exclusion rationale.
+benign_sources:
+  - ddos
+  - dos_slow
+  - mirai
+  - ssdp_flood
+
+# Adversarial pool — every subdirectory of adversarial_dir/ that contains
+# metadata.json is loaded automatically, except those listed below. Same
+# exclusion list as rf.yaml.
+adversarial_exclude:
+  - fuzzing_adv_both    # snaplen-200B no-op: adversarial ≡ benign
+  - fuzzing_adv_iat
+  - fuzzing_adv_size
+  - portscan_adv_both   # 1–2 packet flows → no full N=10 windows
+  - portscan_adv_iat
+  - portscan_adv_size
+  - syn_dos_adv_both    # only ~500 windows from ~500 flows
+  - syn_dos_adv_iat
+  - syn_dos_adv_size
+
+# Split (flow-atomic, stratified by source). Use the same seed as rf.yaml
+# so TCN's split.npz matches RF's element-wise.
+split:
+  train_frac: 0.70
+  val_frac: 0.15
+  test_frac: 0.15
+  seed: 42
+
+# Benign capping: total benign windows ≤ benign_cap_ratio × adversarial
+# windows (applied globally, flow-atomic). Same value as rf.yaml.
+benign_cap_ratio: 3.0
+
+drop_unknown: true
+
+# ---- TCN architecture ----
+# Default: 3 dilated temporal blocks at 128 channels (~0.8M params).
+# Receptive field = 1 + 2·(2+4+8) = 29 ≫ window_size=10.
+model:
+  num_features: 1090       # 1088 nPrint bits + IPAT (z-score) + Direction
+  channels: [128, 128, 128]
+  kernel_size: 3
+  dropout: 0.15
+  num_classes: 2
+
+# ---- Training ----
+training:
+  device: auto             # auto | cuda | cpu
+  epochs: 20
+  batch_size: 256
+  num_workers: 4
+  lr: 1.0e-3
+  weight_decay: 1.0e-4
+  scheduler: cosine        # cosine | plateau
+  early_stop_patience: 3
+  amp: true                # mixed precision (only effective when device=cuda)
+  class_weight: balanced   # balanced | none — mirrors sklearn's 'balanced'
+  seed: 42
