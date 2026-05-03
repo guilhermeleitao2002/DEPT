@@ -20,7 +20,7 @@ ADEPT is a defense framework against adversarial attacks on Machine Learning-bas
               │                               │
               ▼                               ▼
      ┌────────────────┐              ┌────────────────┐
-     │      TCN       │              │  Random Forest  │ ── Phase 2 ✅
+     │      TCN       │ ── Phase 3 ✅ │  Random Forest  │ ── Phase 2 ✅
      │ (temporal base │              │ (statistical    │
      │    learner)    │              │  base learner)  │
      └───────┬────────┘              └───────┬────────┘
@@ -50,7 +50,7 @@ ADEPT is paired with **TANTGen**, a Transformer-based black-box adversarial netw
 | 1 | Packet-to-Tensor pipeline | ✅ done | [`scripts/packet_to_tensor/`](scripts/packet_to_tensor/) | [Phase 1 README](scripts/packet_to_tensor/README.md) |
 | 2 | Random Forest base learner | ✅ done | [`scripts/rf/`](scripts/rf/) | [Phase 2 README](scripts/rf/README.md) |
 | — | TANTGen adversarial generation | ✅ done | [`scripts/adversarial_generation/`](scripts/adversarial_generation/) | [TANTGen integration README](scripts/adversarial_generation/README.md) |
-| 3 | TCN base learner | ⏳ planned | — | — |
+| 3 | TCN base learner | ✅ done | [`scripts/tcn/`](scripts/tcn/) | [Phase 3 README](scripts/tcn/README.md) |
 | 4 | Mini-Transformer meta-learner | ⏳ planned | — | — |
 | 5 | Purification Transformer | ⏳ planned | — | — |
 | 6 | RL Adaptation Agent | ⏳ planned | — | — |
@@ -100,7 +100,8 @@ ADEPT/
 ├── requirements.txt
 ├── config/
 │   ├── pipeline.yaml                        # Phase 1 — Packet-to-Tensor parameters
-│   └── rf.yaml                              # Phase 2 — Random Forest
+│   ├── rf.yaml                              # Phase 2 — Random Forest
+│   └── tcn.yaml                             # Phase 3 — TCN
 ├── data/                                    # Raw PCAPs/CSVs + produced tensors & models
 │   ├── Kitsune/                             #   raw Kitsune captures + per-packet labels
 │   ├── CIC-IDS-2017/                        #   raw CIC-IDS2017 day captures + per-flow labels
@@ -112,7 +113,8 @@ ADEPT/
 │   │   ├── .filtered/                       #     editcap'd CIC sub-PCAPs (cache)
 │   │   └── mean_std.json                    #     shared IPAT z-score reference
 │   └── models/
-│       └── rf/                              #   Phase-2 output (rf.joblib + plots + metrics)
+│       ├── rf/                              #   Phase-2 output (rf.joblib + plots + metrics)
+│       └── tcn/                             #   Phase-3 output (tcn.pt + plots + metrics)
 ├── scripts/
 │   ├── packet_to_tensor/                    # Phase 1 CLIs
 │   │   ├── README.md                        #   ← Phase 1 documentation
@@ -123,9 +125,12 @@ ADEPT/
 │   │   ├── README.md                        #   ← TANTGen integration documentation
 │   │   ├── generate_adversarials.py
 │   │   └── __init__.py
-│   └── rf/                                  # Phase 2 CLI
-│       ├── README.md                        #   ← Phase 2 documentation
-│       └── run_rf.py                        #   Train + evaluate Random Forest
+│   ├── rf/                                  # Phase 2 CLI
+│   │   ├── README.md                        #   ← Phase 2 documentation
+│   │   └── run_rf.py                        #   Train + evaluate Random Forest
+│   └── tcn/                                 # Phase 3 CLI
+│       ├── README.md                        #   ← Phase 3 documentation
+│       └── run_tcn.py                       #   Train + evaluate TCN
 └── src/
     ├── feature_extraction/                  # Phase 1 internals
     │   ├── pcap_parser.py
@@ -133,7 +138,14 @@ ADEPT/
     │   ├── tensor_builder.py
     │   └── incremental_pipeline.py
     └── models/                              # Phase 2+ internals
-        └── rf/
+        ├── common/
+        │   └── dataset.py                   #   Shared flow-level split (RF + TCN)
+        ├── rf/
+        │   ├── dataset.py
+        │   ├── train.py
+        │   └── evaluate.py
+        └── tcn/
+            ├── model.py                     #   Causal TCN architecture
             ├── dataset.py
             ├── train.py
             └── evaluate.py
@@ -147,7 +159,7 @@ ADEPT/
 pip3 install -r requirements.txt
 ```
 
-Dependencies: `numpy`, `pandas`, `scapy`, `pyyaml`, `tqdm`, `scikit-learn`, `joblib`, `matplotlib`.
+Dependencies: `numpy`, `pandas`, `scapy`, `pyyaml`, `tqdm`, `scikit-learn`, `joblib`, `matplotlib`, `torch`.
 
 ### System
 
@@ -163,7 +175,7 @@ For TANTGen integration, additional setup is needed (sibling repo install, Cytho
 
 ## End-to-end pipeline
 
-A complete ADEPT training run currently goes through three stages. All commands are run from `ADEPT/`.
+A complete ADEPT training run currently goes through four stages. All commands are run from `ADEPT/`.
 
 ```bash
 # 1. Generate TANTGen adversarial PCAPs (6 attacks × 3 modes)
@@ -175,7 +187,12 @@ python scripts/packet_to_tensor/process_all_attacks.py --tantgen
 
 # 3. Train + evaluate the Random Forest base learner
 python scripts/rf/run_rf.py
+
+# 4. Train + evaluate the TCN base learner
+python scripts/tcn/run_tcn.py
 ```
+
+Steps 3 and 4 share the same `data/tensors/` artifacts and the same flow-level split (via `src/models/common/dataset.py`), so RF and TCN results are directly comparable.
 
 To process the full Kitsune + CIC-IDS2017 attack set (16 captures) instead, drop `--tantgen`. Use `--include-benign` to add the Monday benign baseline.
 
@@ -184,8 +201,9 @@ Each step is fully documented in its own README:
 - **Step 1 — Packet-to-Tensor:** [scripts/packet_to_tensor/README.md](scripts/packet_to_tensor/README.md)
 - **Step 2 — Adversarial generation:** [scripts/adversarial_generation/README.md](scripts/adversarial_generation/README.md)
 - **Step 3 — Random Forest:** [scripts/rf/README.md](scripts/rf/README.md)
+- **Step 4 — TCN:** [scripts/tcn/README.md](scripts/tcn/README.md)
 
-Subsequent phases (TCN, meta-Transformer, Purification Transformer, RL Adaptation Agent) will plug into the same `data/tensors/` artifacts produced by step 1 and the same dataset-driven labels written by `attach_labels.py`.
+Subsequent phases (meta-Transformer, Purification Transformer, RL Adaptation Agent) will consume the RF and TCN logits produced by steps 3 and 4.
 
 ## Reference documents
 
