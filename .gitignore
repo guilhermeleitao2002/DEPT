@@ -8,3 +8,5 @@ __pycache__/
 *.log
 *.joblib
 *.npz
+.ignore
+99236-Ines-Pissarra.pdf
