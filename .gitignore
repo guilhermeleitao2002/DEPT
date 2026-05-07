@@ -9,3 +9,4 @@ __pycache__/
 *.joblib
 *.npz
 .ignore
+*.tex
