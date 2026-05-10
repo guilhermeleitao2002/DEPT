@@ -1,5 +1,5 @@
 {
-  "input": "/home/gleitao/Master Thesis/ADEPT/data/adversarial/fuzzing/fuzzing_adversarial_iat.pcap",
+  "input": "/home/gleitao/Master Thesis/ADEPT/data/adversarial/brute_force/brute_force_adversarial_size.pcap",
   "encoding": "nprint",
   "pipeline_mode": "batch",
   "nprint_bits": 1088,
@@ -15,14 +15,14 @@
   ],
   "window_size": 10,
   "stride": 10,
-  "num_windows": 43093,
+  "num_windows": 213,
   "sequence_shape": [
-    43093,
+    213,
     10,
     1090
   ],
   "rf_stats_shape": [
-    43093,
+    213,
     24
   ],
   "sequence_feature_count": 1090,
@@ -54,10 +54,10 @@
   ],
   "normalization_stats": {
     "IPAT": {
-      "mean": 0.015496522776061923,
-      "std": 0.5738530127670752
+      "mean": 27.380071845387118,
+      "std": 547.3207026551573
     }
   },
-  "num_flows_total": 1794,
-  "num_flows_used": 9
+  "num_flows_total": 80,
+  "num_flows_used": 78
 }

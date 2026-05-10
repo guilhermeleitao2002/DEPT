@@ -102,7 +102,7 @@ python3 scripts/rf/run_rf.py --config config/rf_experiment.yaml
 # 1. Generate the TANTGen adversarial PCAPs
 python3 scripts/adversarial_generation/generate_adversarials.py
 
-# 2. Tensorise the 6 TANTGen-supported attacks + their adversarial variants
+# 2. Tensorise the 5 attacks whose adversarial PCAPs exist on disk + variants
 python3 scripts/packet_to_tensor/process_all_attacks.py --tantgen
 
 # 3. Train + evaluate the RF
@@ -125,7 +125,7 @@ python3 scripts/rf/run_rf.py
 | `grid_search.{n_estimators, max_depth, min_samples_leaf}` | Candidate values — Cartesian product, scored by val macro-F1. |
 | `grid_search.scoring` | Currently fixed to `macro_f1` (informational). |
 
-The default benign pool covers every Kitsune + CIC-IDS2017 capture handled by Phase 1 (Fuzzing is intentionally excluded — see the [TANTGen integration README](../adversarial_generation/README.md#why-fuzzing-was-excluded)). Under the default TANTGen setup the adversarial pool yields **18 sources** (6 attacks × 3 perturbation modes — Fuzzing was dropped from generation; see the same reference for why).
+The default benign pool is restricted to the **5 attacks for which TANTGen adversarial PCAPs exist on disk** (`brute_force`, `ddos`, `mirai`, `portscan`, `ssdp_flood`). Other Kitsune + CIC-IDS2017 captures are excluded because they have no matching adversarial counterpart and would only inflate the benign class. Under this setup the adversarial pool yields **15 sources** (5 attacks × 3 perturbation modes: `both`, `iat`, `size`).
 
 ## Output files (`data/models/rf/`)
 

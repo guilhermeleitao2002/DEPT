@@ -272,6 +272,7 @@ Batch driver that runs `run_packet_to_tensor.py` across every PCAP in the thesis
 | `portscan` | Port Scan | CIC-IDS2017 | 2017-07-07 17:00–19:30 |
 | `brute_force_ftp` | Brute Force FTP | CIC-IDS2017 | 2017-07-04 13:15–14:25 |
 | `brute_force_ssh` | Brute Force SSH | CIC-IDS2017 | 2017-07-04 18:00–19:05 |
+| `brute_force` | Brute Force FTP+SSH combined (paired with `BruteForce_adversarial_*.pcap`) | CIC-IDS2017 | 2017-07-04 13:15–19:05 |
 | `web_attacks` | Web Attacks (Brute Force HTTP + XSS + SQLi) | CIC-IDS2017 | 2017-07-06 13:15–14:45 |
 | `infiltration` | Infiltration | CIC-IDS2017 | 2017-07-06 18:15–19:50 |
 | `monday_benign` | Monday Benign baseline | CIC-IDS2017 | 2017-07-03 09:00–11:00 |
@@ -284,7 +285,7 @@ The Fuzzing Kitsune capture was deliberately excluded — see the [TANTGen integ
 |---|---|
 | `--only KEY [KEY...]` | Process only these attack keys. |
 | `--exclude KEY [KEY...]` | Skip these attack keys. |
-| `--tantgen` | Restrict to the 6-attack subset that TANTGen supports (`mirai`, `syn_dos`, `ssdp_flood`, `ddos`, `dos_slow`, `portscan`) **and** also tensorise their matching TANTGen-generated adversarial PCAPs from `data/adversarial/<attack>/<attack>_adversarial_<mode>.pcap` (output: `data/tensors/adversarial/<attack>_adv_<mode>/`, labels written as `label=1, label_str="adversarial"`). Mutually exclusive with `--only` / `--exclude`. |
+| `--tantgen` | Restrict to the 5-attack subset for which TANTGen adversarial PCAPs exist on disk (`mirai`, `ssdp_flood`, `ddos`, `portscan`, `brute_force`) **and** also tensorise those matching adversarial PCAPs from `data/adversarial/<attack>/<attack>_adversarial_<mode>.pcap` (output: `data/tensors/adversarial/<attack>_adv_<mode>/`, labels written as `label=1, label_str="adversarial"`). Mutually exclusive with `--only` / `--exclude`. |
 | `--force` | Re-process attacks even if `metadata.json` already exists. |
 | `--dry-run` | Show what would be processed without running. |
 | `-N / --window-size` | Override the N-Packet window size from `config/pipeline.yaml`. |
@@ -330,8 +331,9 @@ python3 scripts/packet_to_tensor/process_all_attacks.py --include-benign
 # Keep filtered CIC PCAPs (re-runs reuse them automatically)
 python3 scripts/packet_to_tensor/process_all_attacks.py --keep-filtered
 
-# Restrict to the 6 TANTGen-supported attacks AND their adversarial variants
-# (6 raw attacks + 18 adversarial PCAPs = 24 tensor dirs in one run)
+# Restrict to the 5 attacks whose adversarial PCAPs exist on disk AND
+# tensorise their adversarial variants
+# (5 raw attacks + 15 adversarial PCAPs = 20 tensor dirs in one run)
 python3 scripts/packet_to_tensor/process_all_attacks.py --tantgen
 ```
 

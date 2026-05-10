@@ -15,14 +15,14 @@
   ],
   "window_size": 10,
   "stride": 10,
-  "num_windows": 61409,
+  "num_windows": 18474,
   "sequence_shape": [
-    61409,
+    18474,
     10,
     1090
   ],
   "rf_stats_shape": [
-    61409,
+    18474,
     24
   ],
   "sequence_feature_count": 1090,
@@ -54,10 +54,10 @@
   ],
   "normalization_stats": {
     "IPAT": {
-      "mean": 14.397037382523651,
-      "std": 268.8585435440289
+      "mean": 27.380071845387118,
+      "std": 547.3207026551573
     }
   },
-  "num_flows_total": 13046,
-  "num_flows_used": 85
+  "num_flows_total": 3830,
+  "num_flows_used": 40
 }

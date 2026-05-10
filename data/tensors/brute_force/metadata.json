@@ -1,5 +1,5 @@
 {
-  "input": "/home/vagrant/ADEPT/data/tensors/.filtered/brute_force_ftp_filtered.pcap",
+  "input": "/home/gleitao/Master Thesis/ADEPT/data/tensors/.filtered/brute_force_filtered.pcap",
   "encoding": "nprint",
   "pipeline_mode": "batch",
   "nprint_bits": 1088,
@@ -15,14 +15,14 @@
   ],
   "window_size": 10,
   "stride": 10,
-  "num_windows": 82799,
+  "num_windows": 911622,
   "sequence_shape": [
-    82799,
+    911622,
     10,
     1090
   ],
   "rf_stats_shape": [
-    82799,
+    911622,
     24
   ],
   "sequence_feature_count": 1090,
@@ -54,10 +54,10 @@
   ],
   "normalization_stats": {
     "IPAT": {
-      "mean": 7.988185884569542,
-      "std": 97.85049007898698
+      "mean": 27.380071845387118,
+      "std": 547.3207026551573
     }
   },
-  "num_flows_total": 36306,
-  "num_flows_used": 15066
+  "num_flows_total": 158115,
+  "num_flows_used": 79849
 }

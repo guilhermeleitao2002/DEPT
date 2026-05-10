@@ -13,8 +13,8 @@ The TCN learns the same benign-vs-adversarial distinction the RF does, but from 
 | **Input** | `sequence.npy` — `[W, N=10, F=1090]` float32 (memmap) | 1088 nPrint bits + IPAT (z-score) + Direction. Read lazily — a single source can be ~17 GB so concatenation into RAM is impossible. |
 | **Architecture** | Bai et al. 2018 TCN: 3 stacked dilated causal Conv1d blocks (channels=[128,128,128], k=3, d=[1,2,4]), weight-normed, residual, with mean+max temporal pooling and a 2-class linear head | Dilations give a receptive field of 29 ≫ N=10. ~0.8 M parameters fit on any modern GPU; causal padding makes the model streaming-compatible. |
 | **Labels** | Same as RF: `0` = benign, `1` = adversarial (TANTGen) | Dataset-driven via `attach_labels.py`. |
-| **Benign pool** | Same 4 sources as `rf.yaml` (ddos, dos_slow, mirai, ssdp_flood) | Same coverage so RF and TCN see the same windows. |
-| **Adversarial pool** | Auto-discovered, same exclusion list as RF | 4 attacks × 3 modes = 12 adversarial folders. |
+| **Benign pool** | Same 5 sources as `rf.yaml` (brute_force, ddos, mirai, portscan, ssdp_flood) | Same coverage so RF and TCN see the same windows. |
+| **Adversarial pool** | Auto-discovered, same exclusion list as RF | 5 attacks × 3 modes = 15 adversarial folders. |
 | **Split** | Flow-level, source-stratified — shared with RF via `src/models/common/dataset.py` | Same `seed`, same `assemble_index`, same `flow_level_split`. |
 | **Benign capping** | Total benign windows ≤ `benign_cap_ratio` × adversarial windows (flow-atomic, global) | Same value as RF (3.0). |
 | **Loss** | Class-weighted `CrossEntropyLoss` | Mirrors sklearn's `class_weight='balanced'` from RF. |
@@ -114,7 +114,7 @@ diff <(jq '.overall' data/models/rf/metrics.json) \
 | `adversarial_dir` | Root of the adversarial tensor tree. |
 | `output_dir` | Where TCN artifacts (model, plots, metrics) are written. |
 | `benign_sources` | List of tensor subdir names treated as benign. |
-| `adversarial_exclude` | Adversarial subdirs to skip (fuzzing/portscan/syn_dos variants). |
+| `adversarial_exclude` | Adversarial subdirs to skip (defensively drops `dos_slow`/`syn_dos`/`fuzzing` variants left over from earlier runs). |
 | `benign_cap_ratio` | Global cap on benign windows. |
 | `split.{train_frac, val_frac, test_frac, seed}` | Same as `rf.yaml` for split parity. |
 | `model.num_features` | Per-packet feature count (1090). |

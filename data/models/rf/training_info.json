@@ -2,7 +2,7 @@
   "best_params": {
     "n_estimators": 200,
     "max_depth": null,
-    "min_samples_leaf": 1
+    "min_samples_leaf": 5
   },
   "grid_results": [
     {
@@ -11,8 +11,8 @@
         "max_depth": null,
         "min_samples_leaf": 1
       },
-      "val_macro_f1": 0.9789880455492397,
-      "fit_seconds": 112.45672941207886
+      "val_macro_f1": 0.589253049425166,
+      "fit_seconds": 6.516637563705444
     },
     {
       "params": {
@@ -20,8 +20,8 @@
         "max_depth": null,
         "min_samples_leaf": 2
       },
-      "val_macro_f1": 0.9788125871807367,
-      "fit_seconds": 112.49844312667847
+      "val_macro_f1": 0.5893069708781895,
+      "fit_seconds": 6.44064736366272
     },
     {
       "params": {
@@ -29,8 +29,8 @@
         "max_depth": null,
         "min_samples_leaf": 5
       },
-      "val_macro_f1": 0.9776564109417754,
-      "fit_seconds": 109.6550600528717
+      "val_macro_f1": 0.5912636562929205,
+      "fit_seconds": 6.392117023468018
     },
     {
       "params": {
@@ -38,8 +38,8 @@
         "max_depth": 20,
         "min_samples_leaf": 1
       },
-      "val_macro_f1": 0.9758223370890815,
-      "fit_seconds": 109.2802426815033
+      "val_macro_f1": 0.5903711383310107,
+      "fit_seconds": 6.519094228744507
     },
     {
       "params": {
@@ -47,8 +47,8 @@
         "max_depth": 20,
         "min_samples_leaf": 2
       },
-      "val_macro_f1": 0.9760075022903041,
-      "fit_seconds": 109.60384964942932
+      "val_macro_f1": 0.5892800063561795,
+      "fit_seconds": 6.563810586929321
     },
     {
       "params": {
@@ -56,8 +56,8 @@
         "max_depth": 20,
         "min_samples_leaf": 5
       },
-      "val_macro_f1": 0.9737329341502117,
-      "fit_seconds": 109.40793871879578
+      "val_macro_f1": 0.5894221735414462,
+      "fit_seconds": 6.471141815185547
     },
     {
       "params": {
@@ -65,8 +65,8 @@
         "max_depth": 40,
         "min_samples_leaf": 1
       },
-      "val_macro_f1": 0.9783707673957651,
-      "fit_seconds": 110.81057143211365
+      "val_macro_f1": 0.589253049425166,
+      "fit_seconds": 6.2985615730285645
     },
     {
       "params": {
@@ -74,8 +74,8 @@
         "max_depth": 40,
         "min_samples_leaf": 2
       },
-      "val_macro_f1": 0.9775347428727839,
-      "fit_seconds": 111.63852262496948
+      "val_macro_f1": 0.5893069708781895,
+      "fit_seconds": 6.2370452880859375
     },
     {
       "params": {
@@ -83,8 +83,8 @@
         "max_depth": 40,
         "min_samples_leaf": 5
       },
-      "val_macro_f1": 0.9779353934077177,
-      "fit_seconds": 106.39171290397644
+      "val_macro_f1": 0.5912636562929205,
+      "fit_seconds": 6.613459825515747
     },
     {
       "params": {
@@ -92,8 +92,8 @@
         "max_depth": null,
         "min_samples_leaf": 1
       },
-      "val_macro_f1": 0.9784761695239597,
-      "fit_seconds": 217.77648830413818
+      "val_macro_f1": 0.5893069708781895,
+      "fit_seconds": 12.701958179473877
     },
     {
       "params": {
@@ -101,8 +101,8 @@
         "max_depth": null,
         "min_samples_leaf": 2
       },
-      "val_macro_f1": 0.9787703349058794,
-      "fit_seconds": 214.3160057067871
+      "val_macro_f1": 0.5895301522917118,
+      "fit_seconds": 12.461842775344849
     },
     {
       "params": {
@@ -110,8 +110,8 @@
         "max_depth": null,
         "min_samples_leaf": 5
       },
-      "val_macro_f1": 0.9771682079884789,
-      "fit_seconds": 211.95970916748047
+      "val_macro_f1": 0.5912038098888561,
+      "fit_seconds": 12.867472171783447
     },
     {
       "params": {
@@ -119,8 +119,8 @@
         "max_depth": 20,
         "min_samples_leaf": 1
       },
-      "val_macro_f1": 0.9755443467863815,
-      "fit_seconds": 210.1822361946106
+      "val_macro_f1": 0.5900447193319855,
+      "fit_seconds": 12.60067629814148
     },
     {
       "params": {
@@ -128,8 +128,8 @@
         "max_depth": 20,
         "min_samples_leaf": 2
       },
-      "val_macro_f1": 0.9749916198878263,
-      "fit_seconds": 212.18180966377258
+      "val_macro_f1": 0.5896112162673035,
+      "fit_seconds": 12.548563957214355
     },
     {
       "params": {
@@ -137,8 +137,8 @@
         "max_depth": 20,
         "min_samples_leaf": 5
       },
-      "val_macro_f1": 0.9748066455086064,
-      "fit_seconds": 207.15404176712036
+      "val_macro_f1": 0.5904865951113107,
+      "fit_seconds": 13.008816003799438
     },
     {
       "params": {
@@ -146,8 +146,8 @@
         "max_depth": 40,
         "min_samples_leaf": 1
       },
-      "val_macro_f1": 0.977589633390113,
-      "fit_seconds": 214.2746706008911
+      "val_macro_f1": 0.5893069708781895,
+      "fit_seconds": 12.678072690963745
     },
     {
       "params": {
@@ -155,8 +155,8 @@
         "max_depth": 40,
         "min_samples_leaf": 2
       },
-      "val_macro_f1": 0.9785491887106226,
-      "fit_seconds": 214.02393221855164
+      "val_macro_f1": 0.5895301522917118,
+      "fit_seconds": 12.92042064666748
     },
     {
       "params": {
@@ -164,8 +164,8 @@
         "max_depth": 40,
         "min_samples_leaf": 5
       },
-      "val_macro_f1": 0.9779877406324398,
-      "fit_seconds": 209.91925072669983
+      "val_macro_f1": 0.5912038098888561,
+      "fit_seconds": 12.65083622932434
     }
   ],
   "defaults": {
@@ -182,21 +182,25 @@
     "adversarial_dir": "/home/gleitao/Master Thesis/ADEPT/data/tensors/adversarial",
     "output_dir": "data/models/rf",
     "benign_sources": [
+      "brute_force",
       "ddos",
-      "dos_slow",
       "mirai",
+      "portscan",
       "ssdp_flood"
     ],
     "adversarial_exclude": [
-      "fuzzing_adv_both",
-      "fuzzing_adv_iat",
-      "fuzzing_adv_size",
       "portscan_adv_both",
       "portscan_adv_iat",
       "portscan_adv_size",
+      "dos_slow_adv_both",
+      "dos_slow_adv_iat",
+      "dos_slow_adv_size",
       "syn_dos_adv_both",
       "syn_dos_adv_iat",
-      "syn_dos_adv_size"
+      "syn_dos_adv_size",
+      "fuzzing_adv_both",
+      "fuzzing_adv_iat",
+      "fuzzing_adv_size"
     ],
     "split": {
       "train_frac": 0.7,

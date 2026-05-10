@@ -14,34 +14,42 @@ tensors_dir: data/tensors
 adversarial_dir: data/tensors/adversarial   # auto-discovered: every subdir with metadata.json
 output_dir: data/models/rf
 
-# Benign pool — restricted to the 4 attacks for which TANTGen generated
-# working adversarial PCAPs (ddos, dos_slow, mirai, ssdp_flood).
+# Benign pool — restricted to the 5 attacks for which TANTGen adversarial
+# PCAPs exist on disk (brute_force, ddos, mirai, portscan, ssdp_flood).
 # Excluded sources and reasons:
-#   portscan, syn_dos  — structurally incompatible with N-packet windowing
-#                        (1–2 packet flows → effectively 0 adversarial windows)
+#   dos_slow, syn_dos  — no TANTGen adversarial PCAP on disk for this set
 #   active_wiretap, arp_mitm, brute_force_ftp, brute_force_ssh,
 #   infiltration, os_scan, ssl_renegotiation, video_injection, web_attacks
 #                      — no TANTGen adversarial counterpart; including them
 #                        inflates the benign class without a matching signal
 benign_sources:
+  - brute_force
   - ddos
-  - dos_slow
   - mirai
+  - portscan
   - ssdp_flood
 
 # Adversarial pool — every subdirectory of adversarial_dir/ that contains
-# metadata.json is loaded automatically, except those listed in
-# adversarial_exclude below.
+# metadata.json is loaded automatically, except those listed below.
+# - portscan_adv_*  : PortScan flows are 1–2 packets each (one SYN ± one
+#   RST), and TANTGen perturbs timing/size without adding packets, so 0
+#   flows out of 15,839 reach N=10 — empirically 0 windows. Excluded to
+#   keep the adversarial pool clean.
+# - dos_slow / syn_dos / fuzzing : defensively drops leftover tensors
+#   from attack sets no longer part of this configuration.
 adversarial_exclude:
-  - fuzzing_adv_both    # snaplen-200B no-op: adversarial ≡ benign (F1 < 0.02)
-  - fuzzing_adv_iat
-  - fuzzing_adv_size
-  - portscan_adv_both   # structurally incompatible: only 128 windows from 158k flows
+  - portscan_adv_both
   - portscan_adv_iat
   - portscan_adv_size
-  - syn_dos_adv_both    # structurally incompatible: only 531 windows from 491 flows
+  - dos_slow_adv_both
+  - dos_slow_adv_iat
+  - dos_slow_adv_size
+  - syn_dos_adv_both
   - syn_dos_adv_iat
   - syn_dos_adv_size
+  - fuzzing_adv_both
+  - fuzzing_adv_iat
+  - fuzzing_adv_size
 
 # Split (flow-atomic, stratified by source).
 split:

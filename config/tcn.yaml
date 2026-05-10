@@ -12,28 +12,34 @@ tensors_dir: data/tensors
 adversarial_dir: data/tensors/adversarial   # auto-discovered: every subdir with metadata.json
 output_dir: data/models/tcn
 
-# Benign pool — restricted to the 4 attacks for which TANTGen generated
-# working adversarial PCAPs (ddos, dos_slow, mirai, ssdp_flood). Same as
-# rf.yaml; see that file for the exclusion rationale.
+# Benign pool — restricted to the 5 attacks for which TANTGen adversarial
+# PCAPs exist on disk (brute_force, ddos, mirai, portscan, ssdp_flood).
+# Same as rf.yaml; see that file for the exclusion rationale.
 benign_sources:
+  - brute_force
   - ddos
-  - dos_slow
   - mirai
+  - portscan
   - ssdp_flood
 
 # Adversarial pool — every subdirectory of adversarial_dir/ that contains
 # metadata.json is loaded automatically, except those listed below. Same
-# exclusion list as rf.yaml.
+# list as rf.yaml; see that file for per-entry rationale (portscan_adv_*
+# is structurally incompatible with N=10 windowing; the rest are
+# defensive carry-overs from older attack sets).
 adversarial_exclude:
-  - fuzzing_adv_both    # snaplen-200B no-op: adversarial ≡ benign
-  - fuzzing_adv_iat
-  - fuzzing_adv_size
-  - portscan_adv_both   # 1–2 packet flows → no full N=10 windows
+  - portscan_adv_both
   - portscan_adv_iat
   - portscan_adv_size
-  - syn_dos_adv_both    # only ~500 windows from ~500 flows
+  - dos_slow_adv_both
+  - dos_slow_adv_iat
+  - dos_slow_adv_size
+  - syn_dos_adv_both
   - syn_dos_adv_iat
   - syn_dos_adv_size
+  - fuzzing_adv_both
+  - fuzzing_adv_iat
+  - fuzzing_adv_size
 
 # Split (flow-atomic, stratified by source). Use the same seed as rf.yaml
 # so TCN's split.npz matches RF's element-wise.

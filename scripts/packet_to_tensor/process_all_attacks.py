@@ -24,17 +24,19 @@ Datasets:
     11. Port Scan         — Reconnaissance (Friday 17:00-19:30 UTC)
     12. Brute Force FTP   — FTP-Patator credential stuffing (Tuesday 13:15-14:25 UTC)
     13. Brute Force SSH   — SSH-Patator credential stuffing (Tuesday 18:00-19:05 UTC)
-    14. Web Attacks       — HTTP Brute Force + XSS + SQL Injection (Thursday 13:15-14:45 UTC)
-    15. Infiltration      — Malware download + C&C beaconing (Thursday 18:15-18:40 UTC)
+    14. Brute Force       — FTP-Patator + SSH-Patator combined (Tuesday 13:15-19:05 UTC)
+    15. Web Attacks       — HTTP Brute Force + XSS + SQL Injection (Thursday 13:15-14:45 UTC)
+    16. Infiltration      — Malware download + C&C beaconing (Thursday 18:15-18:40 UTC)
 
   Benign baseline:
-    16. Monday benign     — Enterprise benign manifold (sampled, CIC-IDS2017)
+    17. Monday benign     — Enterprise benign manifold (sampled, CIC-IDS2017)
 
-The --tantgen flag restricts processing to the 6-attack subset that TANTGen
-supports (mirai, syn_dos, ssdp_flood, ddos, dos_slow, portscan), matching
-the evaluation set used when ADEPT drives TANTGen as its adversarial packet
-generator. It additionally processes the matching TANTGen-generated
-adversarial PCAPs found under data/adversarial/<attack>/<attack>_adversarial_<mode>.pcap
+The --tantgen flag restricts processing to the 5-attack subset for which
+TANTGen-generated adversarial PCAPs exist on disk (mirai, ssdp_flood, ddos,
+portscan, brute_force), matching the evaluation set used when ADEPT trains
+against TANTGen perturbations. It additionally processes the matching
+adversarial PCAPs found under
+data/adversarial/<attack>/<attack>_adversarial_<mode>.pcap
 (modes: both / iat / size; output: data/tensors/adversarial/<attack>_adv_<mode>/).
 
 Labels follow ADEPT's dataset-driven convention: every Kitsune/CIC window
@@ -68,8 +70,8 @@ Usage
     # Process with benign baseline:
     python3 scripts/packet_to_tensor/process_all_attacks.py --include-benign
 
-    # Restrict to the 6 attacks supported by TANTGen and also
-    # tensorise their matching adversarial PCAPs under data/adversarial/:
+    # Restrict to the 5 attacks whose TANTGen adversarial PCAPs exist on disk
+    # and also tensorise those matching adversarial PCAPs under data/adversarial/:
     python3 scripts/packet_to_tensor/process_all_attacks.py --tantgen
 """
 
@@ -259,6 +261,19 @@ ATTACKS = [
         time_end="2017-07-04 19:05:00",
     ),
     Attack(
+        key="brute_force",
+        name="Brute Force FTP+SSH (CIC-IDS2017 Tuesday)",
+        dataset="cic-ids2017",
+        pcap_path=CIC_PCAP / "Tuesday-WorkingHours.pcap",
+        output_dir=TENSOR_DIR / "brute_force",
+        # Combined window: FTP-Patator (13:15-14:25 UTC) + SSH-Patator (18:00-19:05 UTC)
+        # plus the benign gap in between. Matches the single TANTGen
+        # BruteForce_adversarial_*.pcap output and avoids splitting the
+        # adversarial PCAPs across two benign sources.
+        time_start="2017-07-04 13:15:00",
+        time_end="2017-07-04 19:05:00",
+    ),
+    Attack(
         key="web_attacks",
         name="Web Attacks (CIC-IDS2017 Thursday)",
         dataset="cic-ids2017",
@@ -300,11 +315,12 @@ ATTACKS = [
 ATTACK_KEYS = [a.key for a in ATTACKS]
 # Keys that are not included by default (need --include-benign)
 BENIGN_KEYS = {"monday_benign"}
-# The 7-attack subset TANTGen supports. Selected via --tantgen so ADEPT can
-# process only the attack set used downstream by its adversarial generator.
+# The 5-attack subset for which TANTGen-generated adversarial PCAPs exist on
+# disk under data/adversarial/. Selected via --tantgen so ADEPT trains on
+# exactly the attacks it has matched (benign + adversarial) data for.
 TANTGEN_KEYS = {
-    "mirai", "syn_dos", "ssdp_flood",
-    "ddos", "dos_slow", "portscan",
+    "mirai", "ssdp_flood",                  # Kitsune
+    "ddos", "portscan", "brute_force",      # CIC-IDS-2017
 }
 
 
@@ -383,39 +399,51 @@ def run_pipeline(pcap: Path, output_dir: Path, window_size: int | None,
     return subprocess.run(cmd, check=True)
 
 
-def collect_shared_fit_pcaps() -> list[Path]:
+def collect_shared_fit_pcaps(selected: list[Attack]) -> list[Path]:
     """Inputs to fit the shared IPAT standardizer over.
 
-    All benign + adversarial PCAPs that ADEPT will see during training. We
-    intentionally include adversarial variants so the standardizer sees the
-    heavier IPAT tails introduced by TANTGen (e.g. PortScan retains its
-    long inter-scan gaps; SYN_DoS adversarial IATs are ~24× the originals).
-    Without this, training-time z-scoring on adversarial windows lands far
-    in the tails of a benign-only fit.
+    Restricted to the PCAPs ADEPT will actually tensorise on this run (i.e.
+    the user's --tantgen / --only / --exclude selection, including the
+    adversarial Attack entries appended by build_adversarial_attacks()).
+    Fitting on the wider registry was a bug: it polluted the z-score with
+    attacks the train/val/test set never sees.
+
+    Adversarial variants are intentionally folded in alongside the raw
+    attacks so the standardizer sees the heavier IPAT tails TANTGen
+    introduces (e.g. PortScan retains its long inter-scan gaps; SYN_DoS
+    adversarial IATs are ~24× the originals). Without this, training-time
+    z-scoring on adversarial windows lands far in the tails of a
+    benign-only fit.
+
+    For CIC attacks we prefer the cached time-filtered PCAP (under
+    TENSOR_DIR/.filtered/) when present and fall back to the full day
+    capture otherwise. Paths are deduplicated so two selected attacks that
+    share a source PCAP (e.g. ddos and portscan both on Friday) only
+    contribute once.
     """
     paths: list[Path] = []
-    # Benign / raw-attack PCAPs from the standard registry, time-filtered if
-    # the .filtered cache already has them (avoids re-filtering massive CIC
-    # day captures here; the cache is reused later by per-attack runs).
-    for atk in ATTACKS:
+    seen: set[Path] = set()
+    for atk in selected:
         if atk.time_start:
             cached = TENSOR_DIR / ".filtered" / f"{atk.key}_filtered.pcap"
             if cached.exists() and cached.stat().st_size > 0:
-                paths.append(cached)
+                p = cached
             elif atk.pcap_path.exists():
-                paths.append(atk.pcap_path)
+                p = atk.pcap_path
+            else:
+                continue
         elif atk.pcap_path.exists():
-            paths.append(atk.pcap_path)
-    # Adversarial PCAPs
-    if ADVERSARIAL_DIR.exists():
-        for adv in sorted(ADVERSARIAL_DIR.glob("*/*_adversarial_*.pcap")):
-            if adv.stat().st_size > 0:
-                paths.append(adv)
+            p = atk.pcap_path
+        else:
+            continue
+        if p not in seen:
+            paths.append(p)
+            seen.add(p)
     return paths
 
 
-def fit_shared_mean_std(force: bool = False) -> Path:
-    """Fit (once) the shared mean_std.json over benign + adversarial PCAPs.
+def fit_shared_mean_std(selected: list[Attack], force: bool = False) -> Path:
+    """Fit (once) the shared mean_std.json over the selected attacks' PCAPs.
 
     Idempotent: skips if SHARED_MEAN_STD already exists unless force=True.
     Returns the path to the JSON file regardless.
@@ -424,7 +452,7 @@ def fit_shared_mean_std(force: bool = False) -> Path:
     if SHARED_MEAN_STD.exists() and not force:
         print(f"  {dim('Shared mean/std already present:')} {SHARED_MEAN_STD}")
         return SHARED_MEAN_STD
-    inputs = collect_shared_fit_pcaps()
+    inputs = collect_shared_fit_pcaps(selected)
     if not inputs:
         print(f"  {yellow('No PCAPs found for shared fit; falling back to per-PCAP fits.')}")
         return SHARED_MEAN_STD  # caller can check for existence
@@ -542,9 +570,10 @@ def main():
     )
     only_exclude.add_argument(
         "--tantgen", action="store_true",
-        help=f"Restrict to the {len(TANTGEN_KEYS)} attacks supported by TANTGen "
-             f"({', '.join(sorted(TANTGEN_KEYS))}). Also processes their "
-             f"matching TANTGen-generated adversarial PCAPs under "
+        help=f"Restrict to the {len(TANTGEN_KEYS)} attacks for which TANTGen "
+             f"adversarial PCAPs exist on disk "
+             f"({', '.join(sorted(TANTGEN_KEYS))}). Also processes those "
+             f"matching adversarial PCAPs under "
              f"data/adversarial/<attack>/<attack>_adversarial_<mode>.pcap "
              f"(output: data/tensors/adversarial/<attack>_adv_<mode>/).",
     )
@@ -664,12 +693,16 @@ def main():
     if any(a.time_start for a in selected):
         editcap = find_editcap()
 
-    # Fit shared IPAT standardizer once over benign + adversarial PCAPs so
-    # every per-attack run uses the same z-score reference.
+    # Fit shared IPAT standardizer once over the SELECTED attacks' PCAPs
+    # (benign + adversarial) so every per-attack run uses the same z-score
+    # reference and the standardizer reflects exactly the data training
+    # will see.
     shared_mean_std: Path | None = None
     if not args.no_shared_mean_std:
         print(f"\n{bold('Shared standardizer')}")
-        shared_mean_std = fit_shared_mean_std(force=args.refit_shared_mean_std)
+        shared_mean_std = fit_shared_mean_std(
+            selected, force=args.refit_shared_mean_std,
+        )
         if not shared_mean_std.exists():
             shared_mean_std = None  # fallback to per-PCAP fits
 

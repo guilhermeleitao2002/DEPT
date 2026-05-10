@@ -28,24 +28,25 @@ pip3 install --user captum
 # 1. Pretrain TANTGen base (one-time, after at least one attack split exists)
 python3 scripts/adversarial_generation/generate_adversarials.py --pretrain
 
-# 2. Generate adversarial PCAPs (6 attacks × 3 modes = 18 outputs)
+# 2. Generate adversarial PCAPs
 python3 scripts/adversarial_generation/generate_adversarials.py
 ```
 
 ## Attack set
 
-Six attacks, three perturbation modes each (`both` = IAT + size, `iat` = timing only, `size` = payload padding only):
+ADEPT trains against the **5 attacks** for which TANTGen adversarial PCAPs currently exist on disk in `data/adversarial/`, three perturbation modes each (`both` = IAT + size, `iat` = timing only, `size` = payload padding only) — i.e. **15 PCAPs total**:
 
 | Attack | Dataset | Notes |
 |---|---|---|
 | `mirai` | Kitsune | Botnet C&C / IoT DDoS |
-| `syn_dos` | Kitsune | Volumetric TCP DoS — `size` mode is weak (snaplen-truncated source) |
 | `ssdp_flood` | Kitsune | UDP amplification |
 | `ddos` | CIC-IDS2017 | Friday afternoon DDoS window |
-| `dos_slow` | CIC-IDS2017 | Slowloris / SlowHTTPTest / Hulk / GoldenEye composite |
 | `portscan` | CIC-IDS2017 | Friday afternoon recon scan |
+| `brute_force` | CIC-IDS2017 | Tuesday FTP-Patator + SSH-Patator combined window |
 
 CIC attacks reuse the same time windows as `process_all_attacks.py`, so the malicious PCAPs ADEPT trains on match the ones TANTGen perturbed.
+
+> The `generate_adversarials.py` script's built-in `ATTACKS` list still reflects the older 6-attack TANTGen scope (`mirai`, `syn_dos`, `ssdp_flood`, `ddos`, `dos_slow`, `portscan`). The PCAPs actually consumed by ADEPT are whatever lives under `data/adversarial/<attack>/<attack>_adversarial_<mode>.pcap` — the table above is the source of truth for that on-disk set, including `brute_force` (which was produced outside the current generator script).
 
 ## CLI — `generate_adversarials.py`
 
