@@ -125,10 +125,13 @@ def _fmt_metric(v) -> str:
     return f"{v:.4f}"
 
 
-def _colour_metric(v, good: float = 0.9, ok: float = 0.75) -> str:
+def _colour_metric(v, good: float = 0.9, ok: float = 0.75, width: int = 0) -> str:
     if v is None:
-        return dim("—")
+        s = "—".rjust(width) if width else "—"
+        return dim(s)
     s = f"{v:.4f}"
+    if width:
+        s = s.rjust(width)
     if v >= good:
         return green(s)
     if v >= ok:
@@ -241,7 +244,7 @@ def _print_grid_results(training_info_path: Path) -> None:
         fit_str = f"{fit_s:>8.1f}"
         row = (f"{i:>4}  {p['n_estimators']:>6} "
                f"{str(p['max_depth']):>10} {p['min_samples_leaf']:>9}  "
-               f"{_colour_metric(r['val_macro_f1']):>9}  "
+               f"{_colour_metric(r['val_macro_f1'], width=9)}  "
                f"{dim(fit_str)}")
         print(f"  {marker}{row}")
     print(f"\n {cyan('Best params')}  {bold(str(best))}")
@@ -273,14 +276,14 @@ def _print_overall_metrics(overall: dict) -> None:
     n_b_str = f"{n_b:>10,}"
     n_a_str = f"{n_a:>10,}"
     print(f" {'benign':<12} "
-          f"{_colour_metric(overall.get('precision_benign')):>10} "
-          f"{_colour_metric(overall.get('recall_benign')):>10} "
-          f"{_colour_metric(overall.get('f1_benign')):>10} "
+          f"{_colour_metric(overall.get('precision_benign'), width=10)} "
+          f"{_colour_metric(overall.get('recall_benign'), width=10)} "
+          f"{_colour_metric(overall.get('f1_benign'), width=10)} "
           f"{dim(n_b_str)}")
     print(f" {'adversarial':<12} "
-          f"{_colour_metric(overall.get('precision_adversarial')):>10} "
-          f"{_colour_metric(overall.get('recall_adversarial')):>10} "
-          f"{_colour_metric(overall.get('f1_adversarial')):>10} "
+          f"{_colour_metric(overall.get('precision_adversarial'), width=10)} "
+          f"{_colour_metric(overall.get('recall_adversarial'), width=10)} "
+          f"{_colour_metric(overall.get('f1_adversarial'), width=10)} "
           f"{green(n_a_str)}")
 
 
@@ -331,25 +334,27 @@ def _print_per_source_metrics(per_source: dict) -> None:
         mode = _mode(src)
         if mode:
             label = f"{base}  {magenta(mode)}"
+            visible_len = len(base) + 2 + len(mode)
         else:
             label = src
+            visible_len = len(src)
         if low:
             label = f"{label} {dim('*')}"
+            visible_len += 2
             low_support.append(src)
 
         # Pad to 26 visible chars (account for ANSI).
-        visible = src + (" *" if low else "")
-        pad = max(0, 26 - len(visible))
+        pad = max(0, 26 - visible_len)
         padded_label = label + (" " * pad)
 
         n_adv = all_bn.get("n_adversarial", 0)
         n_adv_str = f"{n_adv:>8,}"
         print(f" {padded_label} "
-              f"{_colour_metric(bal.get('precision_adversarial')):>10} "
-              f"{_colour_metric(bal.get('recall_adversarial')):>10} "
-              f"{_colour_metric(bal.get('f1_adversarial')):>10} "
-              f"{_colour_metric(all_bn.get('roc_auc')):>10} "
-              f"{_colour_metric(all_bn.get('pr_auc')):>10} "
+              f"{_colour_metric(bal.get('precision_adversarial'), width=10)} "
+              f"{_colour_metric(bal.get('recall_adversarial'), width=10)} "
+              f"{_colour_metric(bal.get('f1_adversarial'), width=10)} "
+              f"{_colour_metric(all_bn.get('roc_auc'), width=10)} "
+              f"{_colour_metric(all_bn.get('pr_auc'), width=10)} "
               f"{green(n_adv_str)}")
 
     if low_support:

@@ -125,7 +125,7 @@ python3 scripts/rf/run_rf.py
 | `grid_search.{n_estimators, max_depth, min_samples_leaf}` | Candidate values — Cartesian product, scored by val macro-F1. |
 | `grid_search.scoring` | Currently fixed to `macro_f1` (informational). |
 
-The default benign pool is restricted to the **5 attacks for which TANTGen adversarial PCAPs exist on disk** (`brute_force`, `ddos`, `mirai`, `portscan`, `ssdp_flood`). Other Kitsune + CIC-IDS2017 captures are excluded because they have no matching adversarial counterpart and would only inflate the benign class. Under this setup the adversarial pool yields **15 sources** (5 attacks × 3 perturbation modes: `both`, `iat`, `size`).
+The default benign pool is restricted to the **5 raw-dataset benign attacks for which TANTGen adversarial PCAPs exist on disk** (`brute_force`, `ddos`, `mirai`, `portscan`, `ssdp_flood`). Other Kitsune + CIC-IDS2017 captures are excluded because they have no matching adversarial counterpart and would only inflate the benign class. The adversarial pool covers **6 sources × 3 perturbation modes = 18 folders**: the 5 paired sources above plus the adversarial-only `ddos_kitsune` variant (a Kitsune-trained TANTGen against the CIC DDoS benign manifold). `portscan_adv_*` is excluded from training (PortScan flows are too short for the `N=10` window), so 15 adversarial folders contribute non-empty windows.
 
 ## Output files (`data/models/rf/`)
 

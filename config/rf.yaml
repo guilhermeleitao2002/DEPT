@@ -37,6 +37,9 @@ benign_sources:
 #   keep the adversarial pool clean.
 # - dos_slow / syn_dos / fuzzing : defensively drops leftover tensors
 #   from attack sets no longer part of this configuration.
+# - brute_force_kitsune / portscan_kitsune *_adv_* : defensive guard against
+#   tensors that would only exist if process_all_attacks.py's TANTGEN_KEYS
+#   filter were bypassed. Currently only ddos_kitsune is opted in.
 adversarial_exclude:
   - portscan_adv_both
   - portscan_adv_iat
@@ -50,6 +53,12 @@ adversarial_exclude:
   - fuzzing_adv_both
   - fuzzing_adv_iat
   - fuzzing_adv_size
+  - brute_force_kitsune_adv_both
+  - brute_force_kitsune_adv_iat
+  - brute_force_kitsune_adv_size
+  - portscan_kitsune_adv_both
+  - portscan_kitsune_adv_iat
+  - portscan_kitsune_adv_size
 
 # Split (flow-atomic, stratified by source).
 split:

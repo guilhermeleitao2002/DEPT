@@ -40,6 +40,12 @@ adversarial_exclude:
   - fuzzing_adv_both
   - fuzzing_adv_iat
   - fuzzing_adv_size
+  - brute_force_kitsune_adv_both
+  - brute_force_kitsune_adv_iat
+  - brute_force_kitsune_adv_size
+  - portscan_kitsune_adv_both
+  - portscan_kitsune_adv_iat
+  - portscan_kitsune_adv_size
 
 # Split (flow-atomic, stratified by source). Use the same seed as rf.yaml
 # so TCN's split.npz matches RF's element-wise.

@@ -285,7 +285,7 @@ The Fuzzing Kitsune capture was deliberately excluded — see the [TANTGen integ
 |---|---|
 | `--only KEY [KEY...]` | Process only these attack keys. |
 | `--exclude KEY [KEY...]` | Skip these attack keys. |
-| `--tantgen` | Restrict to the 5-attack subset for which TANTGen adversarial PCAPs exist on disk (`mirai`, `ssdp_flood`, `ddos`, `portscan`, `brute_force`) **and** also tensorise those matching adversarial PCAPs from `data/adversarial/<attack>/<attack>_adversarial_<mode>.pcap` (output: `data/tensors/adversarial/<attack>_adv_<mode>/`, labels written as `label=1, label_str="adversarial"`). Mutually exclusive with `--only` / `--exclude`. |
+| `--tantgen` | Restrict to the 5 raw-dataset benign attacks for which TANTGen adversarial PCAPs exist on disk (`mirai`, `ssdp_flood`, `ddos`, `portscan`, `brute_force`) **and** tensorise the matching adversarial PCAPs plus the adversarial-only `ddos_kitsune` variant from `data/adversarial/<attack>/<attack>_adversarial_<mode>.pcap` (output: `data/tensors/adversarial/<attack>_adv_<mode>/`, labels written as `label=1, label_str="adversarial"`). Other on-disk kitsune variants (`brute_force_kitsune`, `portscan_kitsune`) are filtered out by `build_adversarial_attacks()` in the script and are left untensorised until they are explicitly opted in via `TANTGEN_KEYS`. Mutually exclusive with `--only` / `--exclude`. |
 | `--force` | Re-process attacks even if `metadata.json` already exists. |
 | `--dry-run` | Show what would be processed without running. |
 | `-N / --window-size` | Override the N-Packet window size from `config/pipeline.yaml`. |
@@ -331,9 +331,9 @@ python3 scripts/packet_to_tensor/process_all_attacks.py --include-benign
 # Keep filtered CIC PCAPs (re-runs reuse them automatically)
 python3 scripts/packet_to_tensor/process_all_attacks.py --keep-filtered
 
-# Restrict to the 5 attacks whose adversarial PCAPs exist on disk AND
-# tensorise their adversarial variants
-# (5 raw attacks + 15 adversarial PCAPs = 20 tensor dirs in one run)
+# Restrict to the 5 raw-dataset benign attacks whose adversarial PCAPs exist
+# on disk AND tensorise their adversarial variants plus the adversarial-only
+# ddos_kitsune variant (5 raw + 6 adversarial × 3 modes = 23 tensor dirs).
 python3 scripts/packet_to_tensor/process_all_attacks.py --tantgen
 ```
 

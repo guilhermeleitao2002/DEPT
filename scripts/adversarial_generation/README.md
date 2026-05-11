@@ -34,7 +34,7 @@ python3 scripts/adversarial_generation/generate_adversarials.py
 
 ## Attack set
 
-ADEPT trains against the **5 attacks** for which TANTGen adversarial PCAPs currently exist on disk in `data/adversarial/`, three perturbation modes each (`both` = IAT + size, `iat` = timing only, `size` = payload padding only) — i.e. **15 PCAPs total**:
+ADEPT currently consumes **6 adversarial sources** under `--tantgen`, three perturbation modes each (`both` = IAT + size, `iat` = timing only, `size` = payload padding only) — i.e. **18 PCAPs total**. Five sources pair with a matching benign source; `ddos_kitsune` is adversarial-only:
 
 | Attack | Dataset | Notes |
 |---|---|---|
@@ -43,6 +43,9 @@ ADEPT trains against the **5 attacks** for which TANTGen adversarial PCAPs curre
 | `ddos` | CIC-IDS2017 | Friday afternoon DDoS window |
 | `portscan` | CIC-IDS2017 | Friday afternoon recon scan |
 | `brute_force` | CIC-IDS2017 | Tuesday FTP-Patator + SSH-Patator combined window |
+| `ddos_kitsune` | adversarial-only | Kitsune-trained TANTGen perturbing the CIC DDoS benign manifold; no separate benign source — augments the adversarial pool only |
+
+`data/adversarial/brute_force_kitsune/` and `data/adversarial/portscan_kitsune/` are also on disk but intentionally left out of `TANTGEN_KEYS` in `scripts/packet_to_tensor/process_all_attacks.py`; they are skipped by `build_adversarial_attacks()` until explicitly opted in.
 
 CIC attacks reuse the same time windows as `process_all_attacks.py`, so the malicious PCAPs ADEPT trains on match the ones TANTGen perturbed.
 

@@ -31,13 +31,15 @@ Datasets:
   Benign baseline:
     17. Monday benign     — Enterprise benign manifold (sampled, CIC-IDS2017)
 
-The --tantgen flag restricts processing to the 5-attack subset for which
-TANTGen-generated adversarial PCAPs exist on disk (mirai, ssdp_flood, ddos,
-portscan, brute_force), matching the evaluation set used when ADEPT trains
-against TANTGen perturbations. It additionally processes the matching
-adversarial PCAPs found under
+The --tantgen flag restricts processing to the 5 raw-dataset benign attacks
+for which TANTGen-generated adversarial PCAPs exist on disk (mirai,
+ssdp_flood, ddos, portscan, brute_force), and additionally processes the
+matching adversarial PCAPs (plus the adversarial-only ddos_kitsune variant)
+found under
 data/adversarial/<attack>/<attack>_adversarial_<mode>.pcap
 (modes: both / iat / size; output: data/tensors/adversarial/<attack>_adv_<mode>/).
+Adversarial directories not listed in TANTGEN_KEYS (e.g. brute_force_kitsune,
+portscan_kitsune sitting on disk for future use) are skipped here.
 
 Labels follow ADEPT's dataset-driven convention: every Kitsune/CIC window
 is written as "benign" and every adversarial window as "adversarial" — the
@@ -315,12 +317,19 @@ ATTACKS = [
 ATTACK_KEYS = [a.key for a in ATTACKS]
 # Keys that are not included by default (need --include-benign)
 BENIGN_KEYS = {"monday_benign"}
-# The 5-attack subset for which TANTGen-generated adversarial PCAPs exist on
-# disk under data/adversarial/. Selected via --tantgen so ADEPT trains on
-# exactly the attacks it has matched (benign + adversarial) data for.
+# Attack keys consumed under --tantgen. Most entries are benign/adversarial
+# pairs: the same key names a benign Attack in ATTACKS and a subdirectory
+# of data/adversarial/. ddos_kitsune is adversarial-only — its TANTGen
+# model was trained against a Kitsune capture but the adversarial PCAPs
+# perturb the same CIC DDoS benign manifold, so they augment the
+# adversarial pool without introducing a new benign source.
+# Additional kitsune variants (brute_force_kitsune, portscan_kitsune) live
+# on disk under data/adversarial/ but are intentionally left out of this
+# set for now; the discovery in build_adversarial_attacks() filters them.
 TANTGEN_KEYS = {
-    "mirai", "ssdp_flood",                  # Kitsune
-    "ddos", "portscan", "brute_force",      # CIC-IDS-2017
+    "mirai", "ssdp_flood",                  # Kitsune (benign + adversarial)
+    "ddos", "portscan", "brute_force",      # CIC-IDS-2017 (benign + adversarial)
+    "ddos_kitsune",                          # Adversarial-only (paired with ddos benign)
 }
 
 
@@ -331,6 +340,11 @@ def build_adversarial_attacks() -> list[Attack]:
         data/adversarial/<attack>/<attack>_adversarial_<mode>.pcap
     where <mode> ∈ {both, iat, size}. Produces one Attack per (attack, mode)
     pair, with output under data/tensors/adversarial/<attack>_adv_<mode>/.
+
+    Only directories whose name appears in TANTGEN_KEYS are tensorised;
+    other directories on disk (e.g. brute_force_kitsune / portscan_kitsune)
+    are intentionally skipped here so they never reach
+    data/tensors/adversarial/ until they are explicitly opted in.
     """
     attacks: list[Attack] = []
     if not ADVERSARIAL_DIR.exists():
@@ -339,6 +353,8 @@ def build_adversarial_attacks() -> list[Attack]:
         if not attack_dir.is_dir():
             continue
         atk = attack_dir.name
+        if atk not in TANTGEN_KEYS:
+            continue
         for mode in ADVERSARIAL_MODES:
             pcap = attack_dir / f"{atk}_adversarial_{mode}.pcap"
             if not pcap.exists() or pcap.stat().st_size == 0:
@@ -570,12 +586,15 @@ def main():
     )
     only_exclude.add_argument(
         "--tantgen", action="store_true",
-        help=f"Restrict to the {len(TANTGEN_KEYS)} attacks for which TANTGen "
-             f"adversarial PCAPs exist on disk "
-             f"({', '.join(sorted(TANTGEN_KEYS))}). Also processes those "
-             f"matching adversarial PCAPs under "
+        help=f"Restrict to the 5 raw-dataset benign attacks for which "
+             f"TANTGen adversarial PCAPs exist on disk (mirai, ssdp_flood, "
+             f"ddos, portscan, brute_force) and tensorise the matching "
+             f"adversarial PCAPs plus the adversarial-only ddos_kitsune "
+             f"variant under "
              f"data/adversarial/<attack>/<attack>_adversarial_<mode>.pcap "
-             f"(output: data/tensors/adversarial/<attack>_adv_<mode>/).",
+             f"(output: data/tensors/adversarial/<attack>_adv_<mode>/). "
+             f"Other on-disk kitsune variants (brute_force_kitsune, "
+             f"portscan_kitsune) are filtered out by build_adversarial_attacks().",
     )
     parser.add_argument(
         "--force", action="store_true",
