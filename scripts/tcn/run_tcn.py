@@ -24,7 +24,7 @@ Usage
     python scripts/tcn/run_tcn.py --mode eval
 
     # Smoke test with 2000 windows per split (1 minute):
-    python scripts/tcn/run_tcn.py --max-windows 2000
+    python scripts/tcn/run_tcn.py --max-flows 2000
 
 Outputs (under <output_dir> from tcn.yaml)
 ------------------------------------------
@@ -154,7 +154,7 @@ def _resolve_device_label(device_cfg: str) -> str:
 
 def _print_config_banner(config_path: Path, config: dict,
                          tensors_root: Path, output_dir: Path,
-                         mode: str, max_windows: int | None) -> None:
+                         mode: str, max_flows: int | None) -> None:
     benign_sources = config.get("benign_sources", [])
     adv_dir = Path(config.get("adversarial_dir", "data/tensors/adversarial"))
     adv_names: list[str] = []
@@ -180,7 +180,7 @@ def _print_config_banner(config_path: Path, config: dict,
     _row("Output dir",   str(output_dir))
     _row("Benign pool",  f"{bold(str(len(benign_sources)))} source(s)  "
                          f"{dim('(' + ', '.join(benign_sources) + ')')}")
-    _row("Benign cap",   f"{bold(str(config.get('benign_cap_ratio')))}× adversarial windows")
+    _row("Benign cap",   f"{bold(str(config.get('benign_cap_ratio')))}× adversarial flows")
     _row("Split",        f"train={sp.get('train_frac')}  "
                          f"val={sp.get('val_frac')}  "
                          f"test={sp.get('test_frac')}  "
@@ -195,27 +195,27 @@ def _print_config_banner(config_path: Path, config: dict,
     _row("LR",           f"{train_cfg.get('lr')}  "
                          f"{dim('wd=' + str(train_cfg.get('weight_decay')) + '  sched=' + str(train_cfg.get('scheduler')))}")
     _row("AMP",          green(bold('ON')) if train_cfg.get('amp') else yellow('OFF'))
-    if max_windows:
-        _row("Smoke test", yellow(f"--max-windows={max_windows}  (subsample per split)"))
+    if max_flows:
+        _row("Smoke test", yellow(f"--max-flows={max_flows}  (subsample per split)"))
     print(f"{bold('═' * W)}")
 
 
 def _print_split_summary(summary: dict) -> None:
     _subhead("Split summary")
-    hdr = (f" {'Split':<8} {'Windows':>12} {'Benign':>12} "
+    hdr = (f" {'Split':<8} {'Flows':>12} {'Benign':>12} "
            f"{'Adversarial':>13} {'Adv %':>8}")
     print(cyan(hdr))
     print(f" {dim('-' * 8)} {dim('-' * 12)} {dim('-' * 12)} "
           f"{dim('-' * 13)} {dim('-' * 8)}")
 
-    totals = {"n_windows": 0, "n_benign": 0, "n_adversarial": 0}
+    totals = {"n_flows": 0, "n_benign": 0, "n_adversarial": 0}
     for name in ("train", "val", "test"):
         s = summary[name]
-        n = s["n_windows"]
+        n = s["n_flows"]
         n_b = s["n_benign"]
         n_a = s["n_adversarial"]
         pct = (100.0 * n_a / n) if n else 0.0
-        totals["n_windows"] += n
+        totals["n_flows"] += n
         totals["n_benign"] += n_b
         totals["n_adversarial"] += n_a
         print(f" {name:<8} {n:>12,} {dim(f'{n_b:>12,}')} "
@@ -223,7 +223,7 @@ def _print_split_summary(summary: dict) -> None:
 
     print(f" {dim('-' * 8)} {dim('-' * 12)} {dim('-' * 12)} "
           f"{dim('-' * 13)} {dim('-' * 8)}")
-    tn = totals["n_windows"]
+    tn = totals["n_flows"]
     tb = totals["n_benign"]
     ta = totals["n_adversarial"]
     pct = (100.0 * ta / tn) if tn else 0.0
@@ -422,8 +422,8 @@ def main() -> int:
     )
     parser.add_argument("--config", default="config/tcn.yaml", help="Path to tcn.yaml")
     parser.add_argument("--mode", choices=["train", "eval", "both"], default="both")
-    parser.add_argument("--max-windows", type=int, default=None,
-                        help="Cap windows per split (smoke-test knob; full split if omitted)")
+    parser.add_argument("--max-flows", type=int, default=None,
+                        help="Cap flows per split (smoke-test knob; full split if omitted)")
     parser.add_argument("--log-level", default="WARNING",
                         help="Python logging level (default: WARNING — keeps terminal clean)")
     parser.add_argument("--json", action="store_true",
@@ -447,7 +447,7 @@ def main() -> int:
     config["adversarial_dir"] = str(adversarial_dir)
 
     _print_config_banner(config_path, config, tensors_root, output_dir,
-                          args.mode, args.max_windows)
+                          args.mode, args.max_flows)
 
     total_t0 = time.time()
     total_steps = 2 if args.mode == "both" else 1
@@ -462,7 +462,7 @@ def main() -> int:
         t0 = time.time()
         try:
             info = tcn_train.train(config, tensors_root, output_dir,
-                                    max_windows=args.max_windows)
+                                    max_flows=args.max_flows)
         except Exception as e:
             print(f"  {red(bold('✗ FAILED'))} {e}")
             raise

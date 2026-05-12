@@ -1,11 +1,15 @@
-"""Evaluate a trained TCN on the held-out test split.
+"""Evaluate a trained TCN on the held-out test split (flow-level).
 
-Mirrors ``src/models/rf/evaluate.py`` so RF and TCN produce ``metrics.json``
-with identical schemas (``overall``, ``per_adversarial_source`` with
-``vs_all_benign`` / ``vs_balanced_benign`` / ``vs_same_base_benign``,
-``per_label_str``). The only TCN-specific deviation is that
-``feature_importance.png`` has no analogue (no Gini importance for a
-neural net), so it's replaced by ``training_curves.png``.
+Under the streaming-native schema the TCN emits per-packet logits, so the
+flow-level test verdict here is taken at each flow's **final valid
+timestep** — i.e., the model's prediction after seeing the whole flow.
+This produces the same per-flow ``metrics.json`` schema RF used to write
+(``overall``, ``per_adversarial_source`` with ``vs_*`` slicings,
+``per_label_str``), so existing summary tooling keeps working.
+
+The richer streaming metrics (AUROC@t, EDP) are computed in
+``src/models/common/streaming_eval.py`` and will be folded into this
+file in Phase 4 of the streaming retrofit.
 """
 from __future__ import annotations
 
@@ -32,8 +36,14 @@ from sklearn.metrics import (  # noqa: E402
 )
 from torch.utils.data import DataLoader  # noqa: E402
 
-from .dataset import TCNWindowDataset  # noqa: E402
+from .dataset import FlowSequenceDataset, collate_padded  # noqa: E402
 from .model import TCN  # noqa: E402
+
+from ..common.streaming_eval import (  # noqa: E402
+    StreamingPredictions,
+    plot_latency_accuracy,
+    streaming_metrics,
+)
 
 
 log = logging.getLogger(__name__)
@@ -42,7 +52,7 @@ ADV_MODE_SUFFIXES = ("_adv_both", "_adv_iat", "_adv_size")
 
 
 def _base_source(adv_source: str) -> str | None:
-    """Strip '_adv_<mode>' → base attack name (e.g. 'mirai_adv_both' → 'mirai')."""
+    """Strip '_adv_<mode>' → base attack name."""
     for suffix in ADV_MODE_SUFFIXES:
         if adv_source.endswith(suffix):
             return adv_source[: -len(suffix)]
@@ -106,33 +116,60 @@ def _load_dataset_index(path: Path) -> dict:
 
 
 @torch.inference_mode()
-def _collect_predictions(
+def _collect_flow_predictions(
     model: torch.nn.Module,
     loader: DataLoader,
     device: torch.device,
-) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """Run a full forward pass over ``loader`` and return ``(y_true, y_pred, y_prob)``."""
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, list[np.ndarray]]:
+    """Forward through ``loader`` and return per-flow predictions.
+
+    Returns ``(y_true, y_pred, y_prob, per_flow_streams)`` where:
+      * ``y_true``/``y_pred``/``y_prob`` are the per-flow last-timestep
+        verdict for the flow-level summary metrics.
+      * ``per_flow_streams`` is a list of 1D ``np.float32`` arrays of
+        length ``L_i`` — the TCN's per-packet ``P(adversarial)`` for
+        each flow in dataloader order.
+    """
     model.eval()
     y_true_chunks: list[np.ndarray] = []
     y_pred_chunks: list[np.ndarray] = []
     y_prob_chunks: list[np.ndarray] = []
+    streams: list[np.ndarray] = []
     use_amp = device.type == "cuda"
     amp_device = "cuda" if device.type == "cuda" else "cpu"
-    for x, y in loader:
-        x = x.to(device, non_blocking=True)
+    for seq, labels, lengths, _mask in loader:
+        seq = seq.to(device, non_blocking=True)
+        lengths_dev = lengths.to(device, non_blocking=True)
         with torch.amp.autocast(device_type=amp_device, enabled=use_amp):
-            logits = model(x)
-        probs = torch.softmax(logits.float(), dim=1)[:, 1]
-        preds = logits.argmax(dim=1)
-        y_true_chunks.append(y.numpy().astype(np.int64))
+            logits = model(seq)              # [B, T, C]
+        B, T, C = logits.shape
+        # Per-flow last-timestep verdict.
+        idx = (lengths_dev - 1).clamp(min=0).view(B, 1, 1).expand(B, 1, C)
+        last_logits = logits.gather(dim=1, index=idx).squeeze(1).float()
+        probs = torch.softmax(last_logits, dim=1)[:, 1]
+        preds = last_logits.argmax(dim=1)
+        y_true_chunks.append(labels.numpy().astype(np.int64))
         y_pred_chunks.append(preds.detach().cpu().numpy().astype(np.int64))
         y_prob_chunks.append(probs.detach().cpu().numpy().astype(np.float32))
+
+        # Per-packet streams (clip to each flow's real length).
+        per_pkt = torch.softmax(logits.float(), dim=2)[:, :, 1]  # [B, T]
+        per_pkt_cpu = per_pkt.detach().cpu().numpy().astype(np.float32)
+        for b in range(B):
+            Lb = int(lengths[b].item())
+            streams.append(per_pkt_cpu[b, :Lb].copy())
     if not y_true_chunks:
-        return np.zeros(0, dtype=np.int64), np.zeros(0, dtype=np.int64), np.zeros(0, dtype=np.float32)
+        return (
+            np.zeros(0, dtype=np.int64),
+            np.zeros(0, dtype=np.int64),
+            np.zeros(0, dtype=np.float32),
+            [],
+        )
     return (
         np.concatenate(y_true_chunks),
         np.concatenate(y_pred_chunks),
         np.concatenate(y_prob_chunks),
+        streams,
     )
 
 
@@ -167,8 +204,9 @@ def _plot_training_curves(curves: list[dict], output_path: Path) -> None:
 
 
 def evaluate(output_dir: Path) -> dict:
-    """Load artifacts produced by ``train``, run inference on the test
-    split, and write metrics + plots."""
+    """Load artifacts produced by ``train``, run flow-level inference on the
+    test split, and write metrics + plots.
+    """
     cfg = json.loads((output_dir / "tcn_config.json").read_text())
     train_info = json.loads((output_dir / "training_info.json").read_text())
 
@@ -177,7 +215,6 @@ def evaluate(output_dir: Path) -> dict:
 
     device = _resolve_device(str(train_cfg.get("device", "auto")))
 
-    # Rebuild model + load weights
     model = TCN(
         num_features=int(model_cfg.get("num_features", 1090)),
         channels=tuple(model_cfg.get("channels", (128, 128, 128))),
@@ -188,18 +225,18 @@ def evaluate(output_dir: Path) -> dict:
     state = torch.load(output_dir / "tcn.pt", map_location=device)
     model.load_state_dict(state)
 
-    # Reload dataset index + test loader
     idx = _load_dataset_index(output_dir / "dataset_index.npz")
     test_idx = idx["used_test_idx"]
 
-    test_ds = TCNWindowDataset(
+    test_ds = FlowSequenceDataset(
         sources=idx["sources"],
         local_idx=idx["local_idx"],
         y=idx["y"],
         sample_indices=test_idx,
         source_folders=idx["source_folders"],
+        max_length=train_cfg.get("max_length", None),
     )
-    batch_size = int(train_cfg.get("batch_size", 256))
+    batch_size = int(train_cfg.get("batch_size", 32))
     num_workers = int(train_cfg.get("num_workers", 4))
     test_loader = DataLoader(
         test_ds,
@@ -208,12 +245,13 @@ def evaluate(output_dir: Path) -> dict:
         num_workers=num_workers,
         pin_memory=device.type == "cuda",
         persistent_workers=num_workers > 0,
+        collate_fn=collate_padded,
     )
 
-    y_te, y_pred, y_prob = _collect_predictions(model, test_loader, device)
+    y_te, y_pred, y_prob, per_flow_streams = _collect_flow_predictions(
+        model, test_loader, device,
+    )
 
-    # The DataLoader iterates test_idx in order, so the prediction arrays
-    # align with that ordering. Use the same ordering for sources/labels.
     sources_te = idx["sources"][test_idx]
     label_str_te = idx["label_str"][test_idx]
 
@@ -272,15 +310,37 @@ def evaluate(output_dir: Path) -> dict:
 
     metrics["device"] = str(device)
     metrics["best_epoch"] = train_info.get("best_epoch")
+    metrics["verdict_at"] = "last_valid_timestep"
 
     (output_dir / "metrics.json").write_text(json.dumps(metrics, indent=2))
 
-    # ---- Plots ----
+    # ---------- Streaming metrics (per-packet AUROC@t + EDP) ----------
+    if per_flow_streams:
+        lengths = np.asarray([len(s) for s in per_flow_streams], dtype=np.int64)
+        packet_idx_list = [np.arange(1, L + 1, dtype=np.int64) for L in lengths]
+        sp = StreamingPredictions(
+            probs=[s.astype(np.float64) for s in per_flow_streams],
+            packet_idx=packet_idx_list,
+            labels=y_te.astype(np.int64),
+            sources=sources_te.astype(object),
+            lengths=lengths,
+        )
+        streaming = streaming_metrics(sp)
+        (output_dir / "streaming_metrics.json").write_text(
+            json.dumps(streaming, indent=2))
+        plot_latency_accuracy(
+            streaming,
+            output_dir / "latency_vs_accuracy.png",
+            title="TCN — Latency vs Accuracy (per-packet)",
+        )
+        metrics["streaming"] = streaming["overall"]
+        (output_dir / "metrics.json").write_text(json.dumps(metrics, indent=2))
+
     cm = confusion_matrix(y_te, y_pred, labels=[0, 1])
     fig, ax = plt.subplots(figsize=(4.5, 4))
     ConfusionMatrixDisplay(cm, display_labels=["benign", "adversarial"]).plot(
         ax=ax, colorbar=False)
-    ax.set_title("TCN — Confusion Matrix (test)")
+    ax.set_title("TCN — Confusion Matrix (flow-level, end-of-flow)")
     fig.tight_layout()
     fig.savefig(output_dir / "confusion_matrix.png", dpi=140)
     plt.close(fig)
@@ -292,7 +352,7 @@ def evaluate(output_dir: Path) -> dict:
         ax.plot([0, 1], [0, 1], "k--", alpha=0.5)
         ax.set_xlabel("FPR")
         ax.set_ylabel("TPR")
-        ax.set_title("TCN — ROC (test)")
+        ax.set_title("TCN — ROC (flow-level, end-of-flow)")
         ax.legend(loc="lower right")
         fig.tight_layout()
         fig.savefig(output_dir / "roc_curve.png", dpi=140)
@@ -303,7 +363,7 @@ def evaluate(output_dir: Path) -> dict:
         ax.plot(rec, prec, label=f"AP = {metrics['overall']['pr_auc']:.3f}")
         ax.set_xlabel("Recall")
         ax.set_ylabel("Precision")
-        ax.set_title("TCN — PR (test)")
+        ax.set_title("TCN — PR (flow-level, end-of-flow)")
         ax.legend(loc="lower left")
         fig.tight_layout()
         fig.savefig(output_dir / "pr_curve.png", dpi=140)
