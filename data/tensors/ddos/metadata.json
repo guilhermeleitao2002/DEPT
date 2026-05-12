@@ -2,6 +2,7 @@
   "input": "/home/gleitao/Master Thesis/ADEPT/data/tensors/.filtered/ddos_filtered.pcap",
   "encoding": "nprint",
   "pipeline_mode": "batch",
+  "schema": "ragged-per-flow-v1",
   "nprint_bits": 1088,
   "identity_masking": true,
   "mask_prefixes": [
@@ -13,15 +14,15 @@
     "udp_sport",
     "udp_dport"
   ],
-  "window_size": 10,
-  "stride": 10,
-  "num_windows": 181651,
-  "sequence_shape": [
-    181651,
-    10,
+  "rf_checkpoint_stride": 10,
+  "num_flows": 86272,
+  "num_packets": 2151810,
+  "num_checkpoints": 181651,
+  "flow_packets_shape": [
+    2151810,
     1090
   ],
-  "rf_stats_shape": [
+  "rf_checkpoints_shape": [
     181651,
     24
   ],
@@ -57,7 +58,5 @@
       "mean": 26.744513662992706,
       "std": 539.9896285057356
     }
-  },
-  "num_flows_total": 86272,
-  "num_flows_used": 60941
+  }
 }

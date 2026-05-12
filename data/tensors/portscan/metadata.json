@@ -2,6 +2,7 @@
   "input": "/home/gleitao/Master Thesis/ADEPT/data/tensors/.filtered/portscan_filtered.pcap",
   "encoding": "nprint",
   "pipeline_mode": "batch",
+  "schema": "ragged-per-flow-v1",
   "nprint_bits": 1088,
   "identity_masking": true,
   "mask_prefixes": [
@@ -13,15 +14,15 @@
     "udp_sport",
     "udp_dport"
   ],
-  "window_size": 10,
-  "stride": 10,
-  "num_windows": 139679,
-  "sequence_shape": [
-    139679,
-    10,
+  "rf_checkpoint_stride": 10,
+  "num_flows": 230156,
+  "num_packets": 2026245,
+  "num_checkpoints": 139679,
+  "flow_packets_shape": [
+    2026245,
     1090
   ],
-  "rf_stats_shape": [
+  "rf_checkpoints_shape": [
     139679,
     24
   ],
@@ -57,7 +58,5 @@
       "mean": 26.744513662992706,
       "std": 539.9896285057356
     }
-  },
-  "num_flows_total": 230156,
-  "num_flows_used": 30668
+  }
 }

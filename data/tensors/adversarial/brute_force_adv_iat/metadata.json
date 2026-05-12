@@ -2,6 +2,7 @@
   "input": "/home/gleitao/Master Thesis/ADEPT/data/adversarial/brute_force/brute_force_adversarial_iat.pcap",
   "encoding": "nprint",
   "pipeline_mode": "batch",
+  "schema": "ragged-per-flow-v1",
   "nprint_bits": 1088,
   "identity_masking": true,
   "mask_prefixes": [
@@ -13,15 +14,15 @@
     "udp_sport",
     "udp_dport"
   ],
-  "window_size": 10,
-  "stride": 10,
-  "num_windows": 213,
-  "sequence_shape": [
-    213,
-    10,
+  "rf_checkpoint_stride": 10,
+  "num_flows": 80,
+  "num_packets": 2500,
+  "num_checkpoints": 213,
+  "flow_packets_shape": [
+    2500,
     1090
   ],
-  "rf_stats_shape": [
+  "rf_checkpoints_shape": [
     213,
     24
   ],
@@ -57,7 +58,5 @@
       "mean": 26.744513662992706,
       "std": 539.9896285057356
     }
-  },
-  "num_flows_total": 80,
-  "num_flows_used": 78
+  }
 }
