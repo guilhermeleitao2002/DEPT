@@ -1,18 +1,22 @@
-"""Model-agnostic dataset primitives for ADEPT base learners.
+"""Model-agnostic dataset primitives for ADEPT's streaming base learners.
 
 This module owns the parts of the data pipeline that don't care which
 tensor view a model consumes:
 
   * source discovery (benign + auto-discovered adversarial folders)
   * label normalisation under the benign-vs-adversarial convention
-  * flow-atomic, source-stratified train/val/test splitting
-  * benign capping at a configurable ratio of adversarial windows
+  * source-stratified train/val/test splitting (one row = one flow)
+  * benign capping at a configurable ratio of adversarial flows
 
-The Random Forest base learner consumes ``rf_stats.npy`` (small, eagerly
-concatenated) and the TCN base learner consumes ``sequence.npy`` (multi-GB
-per source, read lazily through memmaps). Both reuse ``assemble_index``
-below to land on the **same** flow-level split, so a per-window
-RF/TCN/ensemble comparison is apples-to-apples.
+Under the streaming-native schema, each *row* of the assembled index
+represents one **flow**, not one window. The flow's underlying tensor
+data is the variable-length slice
+``flow_packets.npy[start_p:start_p + length]`` (for TCN) or the
+multi-scale prefix rows
+``rf_checkpoints.npy[start_c:start_c + n_checkpoints]`` (for RF), keyed
+off ``flow_offsets.npy`` / ``rf_checkpoint_offsets.npy`` respectively.
+Both base learners reuse ``assemble_index`` to land on the **same**
+flow-level split.
 """
 from __future__ import annotations
 
@@ -38,15 +42,16 @@ class Split:
 
 @dataclass
 class AssembledIndex:
-    """Per-window index into the on-disk tensors, with no payload loaded.
+    """Per-flow index into the on-disk ragged tensors, with no payload loaded.
 
-    Each row identifies one window by ``(source, local_idx)`` — the source
-    folder name and the row number within that source's ``*.npy`` files.
-    Consumers materialise the heavy payload themselves (RF concatenates
-    ``rf_stats.npy``; TCN memmaps ``sequence.npy``).
+    Each row identifies one flow by ``(source, local_idx)`` — the source
+    folder name and the flow's index within that source's
+    ``flow_offsets.npy`` / ``rf_checkpoint_offsets.npy`` tables. Heavy
+    payload (``flow_packets.npy``, ``rf_checkpoints.npy``) is loaded by
+    the consumer.
     """
     sources: np.ndarray         # [N] str    source folder name
-    local_idx: np.ndarray       # [N] int64  row index within that source
+    local_idx: np.ndarray       # [N] int64  flow index within that source
     y: np.ndarray               # [N] int8   0 benign / 1 adversarial
     flow_ids: np.ndarray        # [N] str    stringified canonical 5-tuple
     label_str: np.ndarray       # [N] str    "benign" or "adversarial"
@@ -54,9 +59,11 @@ class AssembledIndex:
     source_folders: dict[str, Path] = field(default_factory=dict)
 
 
-def _flow_id_to_str(fid_row: np.ndarray) -> str:
-    # object array of 5 items: src_ip, dst_ip, sport, dport, proto
-    return "|".join(str(x) for x in fid_row)
+def _flow_id_to_str(fid_row) -> str:
+    """Stringify a flow-id row (5-tuple object array or already-stringified)."""
+    if isinstance(fid_row, (tuple, list, np.ndarray)):
+        return "|".join(str(x) for x in fid_row)
+    return str(fid_row)
 
 
 def _normalize_label(raw: str) -> tuple[int, bool]:
@@ -80,23 +87,25 @@ def discover_adversarial_sources(adversarial_dir: Path) -> list[str]:
 
 
 def load_source_meta(folder: Path, source_name: str) -> tuple[
-    np.ndarray, np.ndarray, np.ndarray, int, list[str]
+    np.ndarray, np.ndarray, np.ndarray, np.ndarray, list[str]
 ]:
     """Read labels/flow_ids/metadata for one source without loading any payload.
 
-    Returns ``(y, flow_ids, label_str, n_rows, feature_names)`` after
-    dropping rows whose label_str is empty/unknown.
+    Returns ``(y, flow_ids, label_str, local_idx, rf_stat_names)`` after
+    dropping rows whose label_str is empty/unknown. ``local_idx`` is the
+    flow's row in this source's ``flow_offsets.npy`` table.
     """
     flow_ids_raw = np.load(folder / "flow_ids.npy", allow_pickle=True)
-    labels_df = pd.read_csv(folder / "window_labels.csv")
+    labels_df = pd.read_csv(folder / "flow_labels.csv")
     meta = json.loads((folder / "metadata.json").read_text())
-    n_meta_rows = int(meta.get("num_windows", len(labels_df)))
-    feature_names = list(meta.get("rf_stat_names", []))
+    n_flows_meta = int(meta.get("num_flows", len(labels_df)))
+    rf_stat_names = list(meta.get("rf_stat_names", []))
 
-    if len(labels_df) != n_meta_rows:
+    if len(labels_df) != n_flows_meta:
         raise ValueError(
-            f"{source_name}: rows mismatch ({len(labels_df)} labels vs {n_meta_rows} in metadata)")
-    if len(flow_ids_raw) != n_meta_rows:
+            f"{source_name}: rows mismatch ({len(labels_df)} labels "
+            f"vs {n_flows_meta} in metadata)")
+    if len(flow_ids_raw) != n_flows_meta:
         raise ValueError(f"{source_name}: flow_ids rows mismatch")
 
     y_parts, keep_mask = [], []
@@ -110,11 +119,11 @@ def load_source_meta(folder: Path, source_name: str) -> tuple[
     y = y_full[keep]
     label_str = labels_df["label_str"].values[keep].astype(str)
     flow_ids = np.array(
-        [_flow_id_to_str(flow_ids_raw[i]) for i in np.where(keep)[0]], dtype=object)
-    # local_idx (within this source) is the row index *before* dropping unknowns
-    # so consumers can slice the underlying .npy files correctly.
+        [_flow_id_to_str(flow_ids_raw[i]) for i in np.where(keep)[0]],
+        dtype=object,
+    )
     local_idx = np.where(keep)[0].astype(np.int64)
-    return y, flow_ids, label_str, local_idx, feature_names
+    return y, flow_ids, label_str, local_idx, rf_stat_names
 
 
 def cap_benign(
@@ -123,11 +132,12 @@ def cap_benign(
     ratio: float,
     rng: np.random.Generator,
 ) -> np.ndarray:
-    """Globally cap benign windows at ratio × adversarial windows, flow-atomic.
+    """Globally cap benign flows at ratio × adversarial flows.
 
-    scoped_flow_ids are expected to already encode the source (e.g.
-    ``"mirai|1.2.3.4|..."``) so benign flows from different folders don't
-    collide.
+    Under the per-flow schema every row is already a unique flow, so this
+    function selects a random subset of benign flows. ``scoped_flow_ids``
+    is expected to encode the source (e.g. ``"mirai|1.2.3.4|..."``) so
+    benign flows from different folders don't collide.
     """
     n_pos = int((y == 1).sum())
     if n_pos == 0:
@@ -140,15 +150,7 @@ def cap_benign(
 
     benign_flows = np.unique(scoped_flow_ids[benign_mask])
     rng.shuffle(benign_flows)
-    flow_to_count = pd.Series(scoped_flow_ids[benign_mask]).value_counts().to_dict()
-
-    keep_flows: set[str] = set()
-    kept = 0
-    for f in benign_flows:
-        if kept >= cap:
-            break
-        keep_flows.add(f)
-        kept += flow_to_count.get(f, 0)
+    keep_flows = set(benign_flows[:cap].tolist())
 
     mask = np.ones(len(y), dtype=bool)
     benign_drop = benign_mask & ~np.isin(scoped_flow_ids, list(keep_flows))
@@ -164,12 +166,12 @@ def assemble_index(
     seed: int,
     adversarial_exclude: list[str] = (),
 ) -> AssembledIndex:
-    """Build a per-window index over benign + adversarial sources.
+    """Build a per-flow index over benign + adversarial sources.
 
-    No heavy payload (``rf_stats.npy``, ``sequence.npy``) is touched here —
-    only metadata, labels, and flow ids. Flow-atomic capping at
-    ``benign_cap_ratio × n_adversarial`` is applied globally across all
-    benign sources.
+    No heavy payload (``flow_packets.npy``, ``rf_checkpoints.npy``) is
+    touched here — only metadata, labels, and flow ids. Flow-level
+    capping at ``benign_cap_ratio × n_adversarial_flows`` is applied
+    globally across all benign sources.
     """
     rng = np.random.default_rng(seed)
     src_arrs: list[np.ndarray] = []
@@ -180,7 +182,6 @@ def assemble_index(
     folders: dict[str, Path] = {}
     feature_names: list[str] | None = None
 
-    # Benign pool (Kitsune + CIC folders).
     for src in benign_sources:
         folder = tensors_dir / src
         if not folder.exists():
@@ -194,7 +195,6 @@ def assemble_index(
         fid_arrs.append(flow_ids)
         lstr_arrs.append(label_str)
 
-    # Adversarial pool (auto-discovered TANTGen outputs).
     adv_names = discover_adversarial_sources(adversarial_dir)
     if not adv_names:
         raise FileNotFoundError(
@@ -243,13 +243,12 @@ def flow_level_split(
     test_frac: float,
     seed: int,
 ) -> Split:
-    """Stratified, flow-atomic split.
+    """Stratified split. One row per flow, one source per stratum.
 
     Each source contributes a single class (benign xor adversarial) under
     ADEPT's label convention, so the stratum is just the source folder.
-    Flows are bin-packed largest-first into the split with the greatest
-    window-count deficit so every split lands near its target window
-    fraction.
+    Flows are bin-packed into the split with the greatest deficit so every
+    split lands near its target flow fraction.
     """
     assert abs(train_frac + val_frac + test_frac - 1.0) < 1e-6
     rng = np.random.default_rng(seed)
@@ -257,36 +256,25 @@ def flow_level_split(
     scoped_flow = np.array(
         [f"{s}|{f}" for s, f in zip(sources, flow_ids)], dtype=object)
 
-    flow_df = pd.DataFrame({"flow": scoped_flow, "source": sources})
-    flow_agg = (
-        flow_df.groupby("flow")
-        .agg(source=("source", "first"), n=("flow", "size"))
-        .reset_index()
-    )
-
     flow_to_split: dict[str, str] = {}
     fracs = {"train": train_frac, "val": val_frac, "test": test_frac}
 
-    for key in sorted(flow_agg["source"].unique()):
-        stratum = flow_agg.loc[flow_agg["source"] == key, ["flow", "n"]].reset_index(drop=True)
-        perm = rng.permutation(len(stratum))
-        stratum = stratum.iloc[perm].reset_index(drop=True)
-        stratum = stratum.sort_values("n", ascending=False, kind="stable").reset_index(drop=True)
-
-        total = int(stratum["n"].sum())
+    for src_key in sorted(np.unique(sources).tolist()):
+        mask = sources == src_key
+        stratum_flows = scoped_flow[mask]
+        perm = rng.permutation(len(stratum_flows))
+        stratum_flows = stratum_flows[perm]
+        total = len(stratum_flows)
         targets = {s: total * f for s, f in fracs.items()}
         current = {"train": 0, "val": 0, "test": 0}
-        for _, row in stratum.iterrows():
-            flow, n = row["flow"], int(row["n"])
+        for f in stratum_flows:
             pick = max(current.keys(), key=lambda s: targets[s] - current[s])
-            flow_to_split[flow] = pick
-            current[pick] += n
+            flow_to_split[str(f)] = pick
+            current[pick] += 1
 
-    train_idx: list[int] = []
-    val_idx: list[int] = []
-    test_idx: list[int] = []
+    train_idx, val_idx, test_idx = [], [], []
     for i, f in enumerate(scoped_flow):
-        s = flow_to_split.get(f)
+        s = flow_to_split.get(str(f))
         if s == "train":
             train_idx.append(i)
         elif s == "val":
@@ -317,7 +305,7 @@ def split_summary(
     def _stats(idx: np.ndarray) -> dict:
         ys = y[idx]
         return {
-            "n_windows": int(len(idx)),
+            "n_flows": int(len(idx)),
             "n_benign": int((ys == 0).sum()),
             "n_adversarial": int((ys == 1).sum()),
             "per_source": {

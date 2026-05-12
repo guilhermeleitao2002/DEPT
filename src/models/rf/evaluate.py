@@ -1,10 +1,17 @@
-"""Evaluate a trained RF on the held-out test split.
+"""Evaluate a trained RF on the held-out test split (per-checkpoint).
+
+Under the streaming-native schema each row of ``dataset.X`` is one
+*multi-scale prefix view* of a flow (a checkpoint emitted every K
+packets per flow). The metrics produced here are therefore per-checkpoint
+— a fair view of the RF's behaviour across the full inference-time
+distribution of prefix sizes. The richer per-prefix + per-flow streaming
+metrics (AUROC@t, EDP) are produced separately by
+``src/models/common/streaming_eval.py`` in Phase 4.
 
 Under ADEPT's benign-vs-adversarial label convention, the positive class
 is "adversarial" (TANTGen-perturbed traffic) and the negative class is
 "benign" (all Kitsune + CIC-IDS2017 windows). Per-source metrics are
-reported only for adversarial sources, since benign folders contribute
-only to the negative pool.
+reported only for adversarial sources.
 """
 from __future__ import annotations
 
@@ -28,6 +35,12 @@ from sklearn.metrics import (  # noqa: E402
     recall_score,
     roc_auc_score,
     roc_curve,
+)
+
+from ..common.streaming_eval import (  # noqa: E402
+    StreamingPredictions,
+    plot_latency_accuracy,
+    streaming_metrics,
 )
 
 
@@ -162,7 +175,7 @@ def evaluate(output_dir: Path) -> dict:
     fig, ax = plt.subplots(figsize=(4.5, 4))
     ConfusionMatrixDisplay(cm, display_labels=["benign", "adversarial"]).plot(
         ax=ax, colorbar=False)
-    ax.set_title("RF — Confusion Matrix (test)")
+    ax.set_title("RF — Confusion Matrix (test, per-checkpoint)")
     fig.tight_layout()
     fig.savefig(output_dir / "confusion_matrix.png", dpi=140)
     plt.close(fig)
@@ -174,7 +187,7 @@ def evaluate(output_dir: Path) -> dict:
         ax.plot([0, 1], [0, 1], "k--", alpha=0.5)
         ax.set_xlabel("FPR")
         ax.set_ylabel("TPR")
-        ax.set_title("RF — ROC (test)")
+        ax.set_title("RF — ROC (test, per-checkpoint)")
         ax.legend(loc="lower right")
         fig.tight_layout()
         fig.savefig(output_dir / "roc_curve.png", dpi=140)
@@ -185,11 +198,55 @@ def evaluate(output_dir: Path) -> dict:
         ax.plot(rec, prec, label=f"AP = {metrics['overall']['pr_auc']:.3f}")
         ax.set_xlabel("Recall")
         ax.set_ylabel("Precision")
-        ax.set_title("RF — PR (test)")
+        ax.set_title("RF — PR (test, per-checkpoint)")
         ax.legend(loc="lower left")
         fig.tight_layout()
         fig.savefig(output_dir / "pr_curve.png", dpi=140)
         plt.close(fig)
+
+    # ---------- Streaming metrics ----------
+    # Group the per-checkpoint predictions by flow into a per-flow stream
+    # ordered by ascending checkpoint_idx, then by packet index = (k+1)·stride.
+    rf_stride = 10  # packets per checkpoint (mirrors pipeline default)
+    if "flow_ids" in data.files and "checkpoint_idx" in data.files:
+        flow_ids_te = data["flow_ids"][test_idx]
+        ckpt_idx_te = data["checkpoint_idx"][test_idx]
+        scoped = np.char.add(
+            np.char.add(sources_te.astype(str), "|"),
+            flow_ids_te.astype(str),
+        )
+        flow_keys, inv = np.unique(scoped, return_inverse=True)
+        per_flow_probs: list[np.ndarray] = []
+        per_flow_pkt: list[np.ndarray] = []
+        per_flow_label: list[int] = []
+        per_flow_source: list[str] = []
+        per_flow_length: list[int] = []
+        for fk_idx in range(len(flow_keys)):
+            rows = np.where(inv == fk_idx)[0]
+            order = np.argsort(ckpt_idx_te[rows])
+            rows = rows[order]
+            per_flow_probs.append(y_prob[rows].astype(np.float64))
+            per_flow_pkt.append((ckpt_idx_te[rows] + 1) * rf_stride)
+            per_flow_label.append(int(y_te[rows][0]))
+            per_flow_source.append(str(sources_te[rows][0]))
+            per_flow_length.append(int(per_flow_pkt[-1][-1]))
+
+        sp = StreamingPredictions(
+            probs=per_flow_probs,
+            packet_idx=per_flow_pkt,
+            labels=np.asarray(per_flow_label, dtype=np.int64),
+            sources=np.asarray(per_flow_source, dtype=object),
+            lengths=np.asarray(per_flow_length, dtype=np.int64),
+        )
+        streaming = streaming_metrics(sp)
+        (output_dir / "streaming_metrics.json").write_text(
+            json.dumps(streaming, indent=2))
+        plot_latency_accuracy(
+            streaming,
+            output_dir / "latency_vs_accuracy.png",
+            title="RF — Latency vs Accuracy (per-prefix)",
+        )
+        metrics["streaming"] = streaming["overall"]
 
     importances = clf.feature_importances_
     order = np.argsort(importances)[::-1]
