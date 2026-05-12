@@ -1,21 +1,34 @@
 # ===================================
-# ADEPT — Packet-to-Tensor Pipeline
+# ADEPT — Packet-to-Tensor Pipeline (streaming-native)
 # ===================================
-# Uses nPrint bit-level encoding (Holland et al., CCS 2021) for rich
-# per-packet header representation, inspired by FlowPaint (SIGCOMM'26).
+# Emits ragged per-flow tensors consumed by the streaming RF/TCN ensemble:
+#   flow_packets.npy             [P_total, F=1090] float32  — per-packet nPrint
+#                                                              bits + IPAT (z-score)
+#                                                              + Direction, all flows
+#                                                              concatenated.
+#   flow_offsets.npy             [N_flows, 2]      int64    — (start, length)
+#   rf_checkpoints.npy           [C_total, S=24]   float32  — multi-scale RF stats
+#                                                              at every K-packet prefix
+#   rf_checkpoint_offsets.npy    [N_flows, 2]      int64    — (start, n_checkpoints)
+#
+# Uses nPrint bit-level encoding (Holland et al., CCS 2021) for rich per-packet
+# header representation, inspired by FlowPaint (SIGCOMM'26).
 
 # --------------------------
-# N-Packet Window parameters
+# RF checkpoint stride
 # --------------------------
-window_size: 10            # N packets per flow window (N-Packet Snapshot)
-window_stride: 10          # non-overlapping windows (stride = window_size)
+# Emit one row in rf_checkpoints.npy every K packets per flow. The k-th
+# checkpoint contains aggregated statistics over the first k·K packets of
+# the flow (growing-prefix semantics), matching how the RF will be queried
+# at inference time. K=10 mirrors the previous fixed-window N=10.
+rf_checkpoint_stride: 10
 
 # --------------------------
 # nPrint identity masking
 # --------------------------
-# Following FlowPaint §3.3.2: zero out high-entropy identity fields
-# to prevent overfitting to flow identity (IPs, ports, IP ID).
-# These column prefixes are masked in the nPrint bit matrix.
+# Following FlowPaint §3.3.2: zero out high-entropy identity fields to
+# prevent overfitting to flow identity (IPs, ports, IP ID). These column
+# prefixes are masked in the nPrint bit matrix.
 mask_prefixes:
   - ipv4_src
   - ipv4_dst
@@ -28,10 +41,10 @@ mask_prefixes:
 # --------------------------
 # Aggregated statistics (for Random Forest)
 # --------------------------
-# Computed from Scapy-derived metadata (not nPrint bits) over each
-# N-packet window. Each base feature generates len(rf_agg_functions) stats.
-# This preserves ensemble diversity: TCN sees bit-level features,
-# RF sees statistical aggregates.
+# Computed incrementally (Welford + running min/max) per flow over its
+# growing prefix. Each base feature generates len(rf_agg_functions) stats.
+# This preserves ensemble diversity: TCN sees the raw per-packet sequence,
+# RF sees prefix-aggregated summaries.
 rf_agg_functions:
   - mean
   - std
@@ -49,7 +62,7 @@ rf_base_features:
 # --------------------------
 # Standardization
 # --------------------------
-# Only IPAT needs z-score normalization.
+# Only IPAT needs z-score normalization for the TCN sequence tensor.
 # nPrint bits are already bounded {-1, 0, 1}; Direction is binary.
 mean_std_filename: mean_std.json
 

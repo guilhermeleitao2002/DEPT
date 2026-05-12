@@ -1,33 +1,38 @@
 """
-Build the dual-output tensors for ADEPT's ensemble.
+Build the dual-output tensors for ADEPT's *streaming-native* ensemble.
 
-For each N-packet window in a flow, produce:
-    1. Sequence tensor  [N, F]  — nPrint bit-level features + IPAT + Direction
-                                  for TCN & Purification Transformer
-    2. Statistics vector [S]    — aggregated stats for Random Forest
+Each source folder under ``data/tensors/<source>/`` now stores **ragged
+per-flow** data instead of fixed N-packet windows. Two memory-mapped views
+support the new ensemble:
 
-Both outputs are synchronized at the Nth packet boundary ("N-Packet Snapshot").
+    1. flow_packets.npy             [P_total, F=1090] float32
+       Per-packet nPrint bits + IPAT (z-score) + Direction, concatenated
+       across all flows in flow-arrival order.
+    2. flow_offsets.npy             [N_flows, 2]      int64
+       (start_idx, length) into ``flow_packets.npy`` for each flow.
+    3. rf_checkpoints.npy           [C_total, S=24]   float32
+       Aggregated statistics over the **growing prefix** of each flow,
+       emitted every ``rf_checkpoint_stride`` packets (default 10). For a
+       flow of length L this gives ``floor(L / stride)`` checkpoints,
+       computed over packets [0:stride], [0:2*stride], …, [0:L_floor].
+    4. rf_checkpoint_offsets.npy    [N_flows, 2]      int64
+       (start_idx, n_checkpoints) into ``rf_checkpoints.npy``.
 
-The sequence tensor uses the full nPrint bit columns (1088) plus IPAT and
-Direction, giving F = 1090. The RF statistics are computed from the
-Scapy-derived metadata columns (Packet_Size, Payload_Length, etc.) to
-preserve ensemble diversity.
+The streaming-native architecture means **TCN reads full per-flow sequences**
+(variable length) and emits a per-packet prediction stream, while **RF reads
+multi-scale prefix checkpoints** and emits one prediction per checkpoint.
+The meta-learner combines both streams.
 
-Only IPAT is z-score standardized; nPrint bits are already bounded {-1, 0, 1}
-and Direction is binary.
-
-Memory strategy
----------------
-Large pcaps (2-4 M packets) produce per-flow float32 arrays that exceed
-available RAM (32GB) when accumulated in Python lists before stacking. To avoid
-this, build_tensors:
-
-    1. Pre-counts the total number of windows so output arrays can be
-       pre-allocated exactly once.
-    2. Writes windows directly into memory-mapped .npy files on disk,
-       so the output never fully resides in RAM.
-    3. Converts nPrint bits to float32 *per window* (10 packets at a time)
-       rather than per flow, capping the working-set overhead at ~43 KB/window.
+Implementation notes
+--------------------
+- All RF prefix statistics are computed via Welford's online algorithm so a
+  flow of length L is processed in O(L) time and O(1) extra memory per
+  flow. The emitted ``[mean, std, min, max]`` per base feature matches the
+  semantics of the old ``_compute_rf_stats`` but over the growing prefix
+  instead of the latest N-packet window.
+- Output tensors are pre-allocated as memory-mapped ``.npy`` files using the
+  same pattern as the previous windowed builder, so peak RAM stays bounded
+  even when a source's ``flow_packets.npy`` exceeds available memory.
 """
 
 import json
@@ -80,51 +85,77 @@ def _load_or_compute_stats(
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Aggregate statistics for Random Forest
+# Streaming RF statistics
 # ──────────────────────────────────────────────────────────────────────────────
 
-_AGG_FUNCS = {
-    "mean": np.mean,
-    "std": np.std,
-    "min": np.min,
-    "max": np.max,
-}
+# Aggregations supported in the emitted RF checkpoint vector. The order
+# ``[mean, std, min, max]`` is mirrored from the previous windowed builder.
+_SUPPORTED_AGGS = ("mean", "std", "min", "max")
 
 
-def _compute_rf_stats(
-    window_meta: np.ndarray,
-    meta_feature_names: List[str],
-    base_features: List[str],
-    agg_functions: List[str],
-) -> np.ndarray:
+class StreamingStats:
+    """Per-flow running (Welford) mean/std/min/max for the RF base features.
+
+    Maintains ``(count, mean, M2, min, max)`` per feature vector entry. The
+    ``emit`` method returns the flattened ``[feat0_mean, feat0_std, feat0_min,
+    feat0_max, feat1_mean, …]`` vector that the RF base learner consumes,
+    matching the configured ``rf_base_features × rf_agg_functions`` order.
     """
-    Compute aggregated statistics over one N-packet window.
 
-    Uses the Scapy-derived metadata columns (not nPrint bits).
-    """
-    col_idx = {name: i for i, name in enumerate(meta_feature_names)}
-    stats = []
-    for feat in base_features:
-        if feat not in col_idx:
-            continue
-        col = window_meta[:, col_idx[feat]]
-        for agg_name in agg_functions:
-            stats.append(_AGG_FUNCS[agg_name](col))
-    return np.array(stats, dtype=np.float32)
+    __slots__ = ("n", "mean", "_M2", "min", "max", "_n_feat")
 
+    def __init__(self, n_features: int) -> None:
+        self._n_feat = int(n_features)
+        self.n = 0
+        self.mean = np.zeros(self._n_feat, dtype=np.float64)
+        self._M2 = np.zeros(self._n_feat, dtype=np.float64)
+        self.min = np.full(self._n_feat, np.inf, dtype=np.float64)
+        self.max = np.full(self._n_feat, -np.inf, dtype=np.float64)
 
-def _count_windows(
-    flow_indices: OrderedDict,
-    window_size: int,
-    stride: int,
-) -> int:
-    """Count total windows across all qualifying flows."""
-    total = 0
-    for indices in flow_indices.values():
-        n = len(indices)
-        if n >= window_size:
-            total += (n - window_size) // stride + 1
-    return total
+    def update(self, x: np.ndarray) -> None:
+        """Fold one packet's [n_features] vector into the accumulator."""
+        x = np.asarray(x, dtype=np.float64)
+        self.n += 1
+        delta = x - self.mean
+        self.mean += delta / self.n
+        delta2 = x - self.mean
+        self._M2 += delta * delta2
+        np.minimum(self.min, x, out=self.min)
+        np.maximum(self.max, x, out=self.max)
+
+    def emit(self, agg_functions: List[str]) -> np.ndarray:
+        """Return ``[feat × agg]`` flattened vector for the current prefix.
+
+        Uses sample std (ddof=1, matching pandas ``.std()`` and the previous
+        windowed ``np.std`` semantics with ``ddof=0`` — see note). For
+        single-packet prefixes std is 0.
+
+        Note on std semantics: the previous batch builder used ``np.std``
+        with default ``ddof=0`` (population std). We preserve that here for
+        consistency: ``std = sqrt(M2 / n)``. Switch to ``ddof=1`` only if
+        ``rf_agg_functions`` is later versioned.
+        """
+        if self.n == 0:
+            return np.zeros(self._n_feat * len(agg_functions), dtype=np.float32)
+        std = np.sqrt(self._M2 / self.n)  # ddof=0 (matches old np.std default)
+        out = np.empty(self._n_feat * len(agg_functions), dtype=np.float32)
+        for i in range(self._n_feat):
+            for j, agg in enumerate(agg_functions):
+                k = i * len(agg_functions) + j
+                if agg == "mean":
+                    out[k] = self.mean[i]
+                elif agg == "std":
+                    out[k] = std[i]
+                elif agg == "min":
+                    out[k] = self.min[i]
+                elif agg == "max":
+                    out[k] = self.max[i]
+                else:
+                    raise ValueError(
+                        f"Unsupported RF aggregation {agg!r}. Supported: "
+                        f"{_SUPPORTED_AGGS}"
+                    )
+        return out
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -136,18 +167,19 @@ def build_tensors(
     meta_df: pd.DataFrame,
     flow_indices: OrderedDict,
     output_dir: str,
-    window_size: int = 10,
-    stride: int = 10,
+    rf_checkpoint_stride: int = 10,
     rf_base_features: Optional[List[str]] = None,
     rf_agg_functions: Optional[List[str]] = None,
     standardize_columns: Optional[List[str]] = None,
     mean_std_path: str = "mean_std.json",
 ) -> Dict:
     """
-    Main entry-point: convert per-flow data into ADEPT tensors.
+    Convert per-flow data into ADEPT's ragged streaming tensors.
 
-    Writes sequence.npy and rf_stats.npy as memory-mapped files directly
-    to output_dir, avoiding the need to hold all windows in RAM at once.
+    Writes four memory-mapped artifacts (``flow_packets.npy``,
+    ``flow_offsets.npy``, ``rf_checkpoints.npy``,
+    ``rf_checkpoint_offsets.npy``) plus ``flow_ids.npy`` directly to
+    ``output_dir``. Output never fully resides in RAM.
 
     Parameters
     ----------
@@ -156,17 +188,19 @@ def build_tensors(
     meta_df : pd.DataFrame
         Metadata with IPAT and Direction columns (sorted by Timestamp).
     flow_indices : OrderedDict[tuple, np.ndarray]
-        Flow key → array of row indices into nprint_bits / meta_df.
+        Flow key → array of row indices into nprint_bits / meta_df. Keys are
+        iterated in insertion order, which defines the per-flow ordering in
+        the output ``flow_packets.npy``.
     output_dir : str
-        Directory to write sequence.npy and rf_stats.npy.
-    window_size : int
-        N in the "N-Packet Snapshot".
-    stride : int
-        Window stride (typically == window_size for non-overlapping).
+        Directory to write tensors into.
+    rf_checkpoint_stride : int
+        Emit a multi-scale RF feature row every ``stride`` packets. The
+        first checkpoint covers packets ``[0:stride]``, the next
+        ``[0:2*stride]``, etc.
     rf_base_features : list[str]
         Metadata columns to aggregate for the RF input.
     rf_agg_functions : list[str]
-        Aggregation function names.
+        Aggregation function names in ``{mean, std, min, max}``.
     standardize_columns : list[str]
         Columns to z-score normalize (typically just IPAT).
     mean_std_path : str
@@ -175,13 +209,18 @@ def build_tensors(
     Returns
     -------
     dict with keys:
-        "sequence_path"  : str            — path to sequence.npy
-        "rf_stats_path"  : str            — path to rf_stats.npy
-        "flow_ids"       : list[tuple]    — flow key for each window
-        "stats"          : dict           — normalization statistics
-        "feature_names"  : list[str]      — sequence feature column order
-        "rf_stat_names"  : list[str]      — RF stat column names
-        "num_windows"    : int
+        "flow_packets_path"           : str   — path to flow_packets.npy
+        "flow_offsets_path"           : str   — path to flow_offsets.npy
+        "rf_checkpoints_path"         : str   — path to rf_checkpoints.npy
+        "rf_checkpoint_offsets_path"  : str   — path to rf_checkpoint_offsets.npy
+        "flow_ids"                    : list  — flow key per flow
+        "stats"                       : dict  — normalization statistics
+        "feature_names"               : list  — sequence column order
+        "rf_stat_names"               : list  — RF stat column names
+        "num_flows"                   : int
+        "num_packets"                 : int   — total packets across flows
+        "num_checkpoints"             : int   — total RF checkpoint rows
+        "rf_checkpoint_stride"        : int
     """
     # Defaults
     if rf_base_features is None:
@@ -190,121 +229,183 @@ def build_tensors(
             "Payload_Entropy", "TCP_Flags", "Direction",
         ]
     if rf_agg_functions is None:
-        rf_agg_functions = ["mean", "std", "min", "max"]
+        rf_agg_functions = list(_SUPPORTED_AGGS)
     if standardize_columns is None:
         standardize_columns = ["IPAT"]
+    if rf_checkpoint_stride < 1:
+        raise ValueError(
+            f"rf_checkpoint_stride must be >=1, got {rf_checkpoint_stride}"
+        )
+
+    unknown = [a for a in rf_agg_functions if a not in _SUPPORTED_AGGS]
+    if unknown:
+        raise ValueError(
+            f"Unsupported RF aggregations {unknown}. Supported: {_SUPPORTED_AGGS}"
+        )
 
     # --- Step 1: Global statistics for standardization -----------------------
     stats = _load_or_compute_stats(meta_df, standardize_columns, mean_std_path)
 
-    # Sequence features: all nPrint columns + IPAT + Direction
     sequence_features = list(NPRINT_COLUMNS) + ["IPAT", "Direction"]
     n_seq_features = len(sequence_features)   # 1090
 
-    # RF metadata columns
     rf_meta_cols = [c for c in rf_base_features if c in meta_df.columns]
     rf_stat_names = [
         f"{feat}_{agg}"
-        for feat in rf_base_features
+        for feat in rf_meta_cols
         for agg in rf_agg_functions
     ]
     n_rf_stats = len(rf_stat_names)
+    n_base = len(rf_meta_cols)
 
-    # Pre-extract metadata as numpy arrays for fast indexing
+    # Pre-extract metadata as numpy arrays for fast per-packet access.
     rf_meta_values = meta_df[rf_meta_cols].values.astype(np.float32)
     ipat_values = meta_df["IPAT"].values.astype(np.float64)
     direction_values = meta_df["Direction"].values.astype(np.float32)
     ipat_mean = stats.get("IPAT", {}).get("mean", 0.0)
     ipat_std = stats.get("IPAT", {}).get("std", 1.0)
 
-    # --- Step 2: Pre-count windows and open memmaps --------------------------
-    n_windows = _count_windows(flow_indices, window_size, stride)
+    # --- Step 2: Pre-count packets and checkpoints, build offset tables -----
+    flow_keys = list(flow_indices.keys())
+    n_flows = len(flow_keys)
 
-    if n_windows == 0:
-        print("[!] No windows produced (all flows shorter than window_size)")
+    flow_packet_offsets = np.zeros((n_flows, 2), dtype=np.int64)
+    rf_checkpoint_offsets = np.zeros((n_flows, 2), dtype=np.int64)
+
+    pkt_cursor = 0
+    ckpt_cursor = 0
+    for i, fk in enumerate(flow_keys):
+        L = int(len(flow_indices[fk]))
+        flow_packet_offsets[i, 0] = pkt_cursor
+        flow_packet_offsets[i, 1] = L
+        n_ckpt = L // rf_checkpoint_stride
+        rf_checkpoint_offsets[i, 0] = ckpt_cursor
+        rf_checkpoint_offsets[i, 1] = n_ckpt
+        pkt_cursor += L
+        ckpt_cursor += n_ckpt
+
+    total_packets = int(pkt_cursor)
+    total_checkpoints = int(ckpt_cursor)
+
+    if total_packets == 0:
+        print("[!] No flows / no packets to write.")
         return {
-            "sequence_path": None,
-            "rf_stats_path": None,
+            "flow_packets_path": None,
+            "flow_offsets_path": None,
+            "rf_checkpoints_path": None,
+            "rf_checkpoint_offsets_path": None,
             "flow_ids": [],
             "stats": stats,
             "feature_names": sequence_features,
             "rf_stat_names": rf_stat_names,
-            "num_windows": 0,
+            "num_flows": 0,
+            "num_packets": 0,
+            "num_checkpoints": 0,
+            "rf_checkpoint_stride": rf_checkpoint_stride,
         }
 
     os.makedirs(output_dir, exist_ok=True)
-    seq_path = os.path.join(output_dir, "sequence.npy")
-    rf_path = os.path.join(output_dir, "rf_stats.npy")
-
-    # Memory-mapped output: windows are written directly to disk, not
-    # accumulated in RAM. Peak working set = one window (~43 KB at N=10).
-    seq_mmap = np.lib.format.open_memmap(
-        seq_path, mode="w+", dtype=np.float32,
-        shape=(n_windows, window_size, n_seq_features),
-    )
-    rf_mmap = np.lib.format.open_memmap(
-        rf_path, mode="w+", dtype=np.float32,
-        shape=(n_windows, n_rf_stats),
+    flow_packets_path = os.path.join(output_dir, "flow_packets.npy")
+    flow_offsets_path = os.path.join(output_dir, "flow_offsets.npy")
+    rf_checkpoints_path = os.path.join(output_dir, "rf_checkpoints.npy")
+    rf_checkpoint_offsets_path = os.path.join(
+        output_dir, "rf_checkpoint_offsets.npy",
     )
 
-    # --- Step 3: Per-flow, per-window fill -----------------------------------
-    window_flow_ids: List[Tuple] = []
-    w = 0
+    # Memory-mapped output: scattered per-flow writes are fine — each flow's
+    # packets occupy a contiguous slice of flow_packets.npy.
+    pkt_mmap = np.lib.format.open_memmap(
+        flow_packets_path, mode="w+", dtype=np.float32,
+        shape=(total_packets, n_seq_features),
+    )
+    if total_checkpoints > 0:
+        ckpt_mmap = np.lib.format.open_memmap(
+            rf_checkpoints_path, mode="w+", dtype=np.float32,
+            shape=(total_checkpoints, n_rf_stats),
+        )
+    else:
+        # Some sources may have only sub-stride flows; still write a 0-row file
+        # so downstream loaders can stat it consistently.
+        ckpt_mmap = np.lib.format.open_memmap(
+            rf_checkpoints_path, mode="w+", dtype=np.float32,
+            shape=(0, n_rf_stats),
+        )
 
-    flow_iter = flow_indices.items()
+    # --- Step 3: Per-flow streaming write -----------------------------------
+    flow_iter = enumerate(flow_keys)
     if _tqdm is not None:
         pbar = _tqdm(
-            flow_iter, total=len(flow_indices),
-            desc="      Building windows", unit=" flow", dynamic_ncols=True,
+            flow_iter, total=n_flows,
+            desc="      Building per-flow tensors", unit=" flow",
+            dynamic_ncols=True,
         )
     else:
         pbar = flow_iter
 
-    for flow_key, indices in pbar:
-        n_pkts = len(indices)
-        if n_pkts < window_size:
+    for i, fk in pbar:
+        indices = flow_indices[fk]
+        L = int(len(indices))
+        if L == 0:
             continue
 
-        for start in range(0, n_pkts - window_size + 1, stride):
-            end = start + window_size
-            win_idx = indices[start:end]
+        flow_start = int(flow_packet_offsets[i, 0])
+        ckpt_start = int(rf_checkpoint_offsets[i, 0])
 
-            # nPrint bits: convert only this window to float32 (~43 KB at N=10)
-            seq_mmap[w, :, :1088] = nprint_bits[win_idx].astype(np.float32)
-            seq_mmap[w, :, 1088] = (
-                (ipat_values[win_idx] - ipat_mean) / ipat_std
-            ).astype(np.float32)
-            seq_mmap[w, :, 1089] = direction_values[win_idx]
+        # Write the per-flow [L, 1090] block directly into the memmap.
+        pkt_mmap[flow_start:flow_start + L, :1088] = (
+            nprint_bits[indices].astype(np.float32)
+        )
+        pkt_mmap[flow_start:flow_start + L, 1088] = (
+            (ipat_values[indices] - ipat_mean) / ipat_std
+        ).astype(np.float32)
+        pkt_mmap[flow_start:flow_start + L, 1089] = direction_values[indices]
 
-            rf_mmap[w] = _compute_rf_stats(
-                rf_meta_values[win_idx], rf_meta_cols,
-                rf_base_features, rf_agg_functions,
+        # Streaming aggregation over the growing prefix → multi-scale RF rows.
+        rf_meta_flow = rf_meta_values[indices]
+        stat = StreamingStats(n_base)
+        ckpt_local = 0
+        for t in range(L):
+            stat.update(rf_meta_flow[t])
+            if (t + 1) % rf_checkpoint_stride == 0:
+                if ckpt_local < int(rf_checkpoint_offsets[i, 1]):
+                    ckpt_mmap[ckpt_start + ckpt_local] = stat.emit(rf_agg_functions)
+                ckpt_local += 1
+
+        if _tqdm is not None and i % 1000 == 0:
+            pbar.set_postfix(
+                flows=i + 1, packets=int(flow_packet_offsets[i, 0]) + L,
             )
-            window_flow_ids.append(flow_key)
-            w += 1
-
-        if _tqdm is not None:
-            pbar.set_postfix(windows=w)
 
     if _tqdm is not None:
         pbar.close()
 
-    # Flush memmaps to disk
-    seq_mmap.flush()
-    rf_mmap.flush()
+    # Persist offsets and flush memmaps.
+    np.save(flow_offsets_path, flow_packet_offsets)
+    np.save(rf_checkpoint_offsets_path, rf_checkpoint_offsets)
+    pkt_mmap.flush()
+    ckpt_mmap.flush()
 
-    print(f"[+] Built {n_windows} windows:")
-    print(f"    Sequence tensor : {seq_mmap.shape}  "
-          f"(W, N={window_size}, F={n_seq_features})")
-    print(f"    RF stats tensor : {rf_mmap.shape}  "
-          f"(W, S={n_rf_stats})")
+    print(f"[+] Built ragged tensors:")
+    print(f"    flow_packets    : {pkt_mmap.shape}   "
+          f"(P, F={n_seq_features})")
+    print(f"    flow_offsets    : {flow_packet_offsets.shape}  "
+          f"(N_flows, 2)")
+    print(f"    rf_checkpoints  : {ckpt_mmap.shape}  "
+          f"(C, S={n_rf_stats})  stride={rf_checkpoint_stride}")
+    print(f"    rf_ckpt_offsets : {rf_checkpoint_offsets.shape}  "
+          f"(N_flows, 2)")
 
     return {
-        "sequence_path": seq_path,
-        "rf_stats_path": rf_path,
-        "flow_ids": window_flow_ids,
+        "flow_packets_path": flow_packets_path,
+        "flow_offsets_path": flow_offsets_path,
+        "rf_checkpoints_path": rf_checkpoints_path,
+        "rf_checkpoint_offsets_path": rf_checkpoint_offsets_path,
+        "flow_ids": flow_keys,
         "stats": stats,
         "feature_names": sequence_features,
         "rf_stat_names": rf_stat_names,
-        "num_windows": n_windows,
+        "num_flows": n_flows,
+        "num_packets": total_packets,
+        "num_checkpoints": total_checkpoints,
+        "rf_checkpoint_stride": rf_checkpoint_stride,
     }
