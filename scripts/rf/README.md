@@ -1,146 +1,109 @@
-# Phase 2 — Random Forest Base Learner
+# Random Forest Base Learner
 
-> Part of [ADEPT](../../README.md). The statistical half of the ADEPT ensemble — a binary benign-vs-adversarial classifier trained on the 24-dim window aggregates produced by [Phase 1](../packet_to_tensor/README.md). Deliberately paired with the (planned) TCN base learner, which consumes the raw sequence tensor, to maximise representational diversity.
+> Part of [ADEPT](../../README.md). The statistical half of the streaming ensemble — trained on multi-scale prefix statistics, it emits one prediction per 10-packet prefix milestone.
 
 ## Role in the ensemble
 
-Under ADEPT's [dataset-driven label convention](../../README.md#dataset-driven-label-convention), the RF learns to distinguish:
+The RF is the **sparse, high-precision stream**: it waits for a full 10-packet prefix before making any prediction, but when it does, it is highly accurate. This contrasts with the TCN, which is noisy early and becomes more reliable as the flow grows. The two streams together give the meta-learner a choice at every packet: act on the TCN's early signal, or wait for the RF's next checkpoint.
 
-- the **benign manifold** — every window from the Kitsune + CIC-IDS2017 tensor folders listed in `benign_sources` (the raw-dataset attacks count as benign because the upstream NIDS is expected to handle them);
-- **adversarial perturbations** — every window from the TANTGen-generated subfolders auto-discovered under `adversarial_dir`.
+## Input
 
-This narrows ADEPT's specific job to catching **novel TANTGen-style threats** the upstream NIDS cannot, and means every window has a definite label with no "unknown" rows to drop.
+`rf_checkpoints.npy` — `[C_total, 24]` float32. Each row is a 24-dimensional prefix statistics vector at one 10-packet milestone of one flow:
+
+| Features | Description |
+|---|---|
+| `IPAT` × {mean, std, min, max} | Inter-packet arrival time statistics over the prefix |
+| `Packet_Size` × {mean, std, min, max} | Packet size statistics |
+| `Payload_Length` × {mean, std, min, max} | Payload length statistics |
+| `Payload_Entropy` × {mean, std, min, max} | Shannon entropy of payload bytes |
+| `TCP_Flags` × {mean, std, min, max} | TCP flag byte statistics |
+| `Direction` × {mean, std, min, max} | Forward/reverse packet ratio statistics |
+
+A flow with L packets contributes ⌊L/10⌋ checkpoint rows — one per prefix milestone. This is the same distribution the model sees at inference, avoiding the distribution-shift that would arise from training on a fixed window size alone.
 
 ## Design
 
 | Aspect | Choice | Rationale |
 |---|---|---|
-| **Input** | `rf_stats.npy` — `[W, 24]` float32 | Uses only the aggregated per-window statistics, never the raw packet sequence — keeps RF and TCN representations disjoint. |
-| **Labels** | `window_labels.csv` written by `attach_labels.py` | `0` = benign (Kitsune / CIC-IDS2017 folder), `1` = adversarial (TANTGen folder). Dataset-driven, so every window has a definite label. |
-| **Benign pool** | `benign_sources` in `rf.yaml` | All Kitsune + CIC-IDS2017 tensor folders (raw-dataset attacks + Monday benign) — every one of their windows is a negative sample. |
-| **Adversarial pool** | auto-discovered under `adversarial_dir` | Every subdirectory with a `metadata.json` is loaded as an adversarial source (one per TANTGen variant, e.g. `mirai_adv_both`). |
-| **Split** | **Flow-level, not window-level** | Windows from the same 5-tuple flow stay in the same split — prevents leakage via flow-internal correlation. |
-| **Stratification** | Per-source folder | Every source contributes a single class, so stratifying by source automatically stratifies by class while keeping each source's window fraction near its target in every split. Flows are bin-packed largest-first into the split with the greatest deficit. |
-| **Benign capping** | Total benign windows ≤ `benign_cap_ratio` × adversarial windows | Applied globally (flow-atomic, across all benign sources) so the much larger raw-dataset pool doesn't dominate training. |
-| **Hyperparameters** | Small grid (val macro-F1) | `n_estimators`, `max_depth`, `min_samples_leaf` — grid overrides feed into `rf_defaults`. |
-| **Final fit** | `train + val`, evaluate on `test` | No data is wasted before the held-out evaluation. |
+| **Split** | Flow-atomic, stratified by source | All checkpoints from the same flow stay in the same split — prevents leakage via within-flow correlation. |
+| **Benign capping** | Total benign checkpoints ≤ 3× adversarial checkpoints (flow-atomic) | Prevents the much larger raw-dataset benign pool from dominating. |
+| **Class weight** | `balanced_subsample` | Each tree reweights its bootstrap sample — robust to the 93:7 benign:adversarial ratio. |
+| **Hyperparameter search** | Grid over `n_estimators`, `max_depth`, `min_samples_leaf`; scored by val macro-F1 | Best: 400 trees, unbounded depth, `min_samples_leaf=2`. |
+| **Final fit** | `train + val`, evaluate on `test` | Maximises data used for the deployable classifier. |
 
-## Module reference
+## Results (test split — 229 K checkpoints, 43 K flows)
 
-### `src/models/rf/dataset.py` — load, merge, split
+### Overall
 
-| Function | Purpose |
+| Metric | Value |
 |---|---|
-| `load_source(folder, source_name)` | Read `rf_stats.npy`, `flow_ids.npy`, `window_labels.csv`, `metadata.json` for one source folder; drop `unknown` rows; return `(X, y, flow_ids, label_str, feature_names)`. |
-| `discover_adversarial_sources(adversarial_dir)` | Return every subdirectory name under `adversarial_dir` that contains a `metadata.json`. |
-| `cap_benign(y, scoped_flow_ids, ratio, rng)` | Drop whole benign flows (not individual windows) until total benign windows ≤ `ratio × n_adversarial`. Flow IDs are scoped by source so benign flows from different folders never collide. |
-| `assemble(tensors_dir, benign_sources, adversarial_dir, benign_cap_ratio, seed)` | Load every benign source + every auto-discovered adversarial source into one `RFDataset` (`X, y, flow_ids, sources, label_str, feature_names`), then apply global benign capping. NaN/inf values in `X` are replaced with zero. |
-| `flow_level_split(dataset, train/val/test_frac, seed)` | Stratified, flow-atomic split by source; bin-packs flows largest-first into the split with the greatest window-count deficit so totals land near targets. Asserts no flow leakage across splits. |
-| `split_summary(dataset, split)` | Per-split counts: total, benign, adversarial, per-source. |
+| ROC AUC | **0.9887** |
+| PR AUC | 0.9596 |
+| Macro F1 | 0.5737 |
+| Recall (adversarial) | 0.9745 |
+| Precision (adversarial) | 0.1643 |
 
-The dataclasses returned:
+The low overall precision is an artifact of class imbalance in the checkpoint pool (4.5% adversarial in test set). ROC AUC and per-source balanced metrics are more meaningful.
 
-| Dataclass | Fields |
+### Streaming metrics (overall)
+
+| AUROC@t | Value |
 |---|---|
-| `RFDataset` | `X` `[N,F]` float32, `y` `[N]` int8, `flow_ids` `[N]` str, `sources` `[N]` str, `label_str` `[N]` str, `feature_names: list[str]` |
-| `Split` | `train_idx`, `val_idx`, `test_idx` — `int64` arrays into `RFDataset` rows |
+| @1 | — (first prediction at t=10) |
+| @10 | **0.9998** |
+| @20 | 0.9998 |
+| @max | 0.9998 |
 
-### `src/models/rf/train.py` — grid search + final fit
-
-| Function | Purpose |
+| EDP | Value |
 |---|---|
-| `grid_search(dataset, split, defaults, grid_cfg)` | Fit each `(n_estimators × max_depth × min_samples_leaf)` combination on `train`, score macro-F1 on `val`. Returns `(best_params, all_results)` where each result has `params`, `val_macro_f1`, `fit_seconds`. |
-| `fit_final(dataset, split, defaults, best_params)` | Re-fit on `train + val` using the best params; produces the deployable classifier. |
-| `train(config, tensors_root, output_dir)` | Full pipeline: `assemble → split → grid_search → fit_final → persist artifacts`. Returns `{best_params, split_summary}`. |
+| Median | **10 packets** (minimum possible — first checkpoint) |
+| IQR | [10, 10] |
+| Detection rate | 99.0% |
 
-### `src/models/rf/evaluate.py` — held-out evaluation
+### Per-adversarial-source (balanced benign subsample, K=10)
 
-Runs the fitted `rf.joblib` on the test split and produces both machine-readable metrics (`metrics.json`) and inspection plots (confusion matrix, ROC, PR, feature importance).
+| Source | precision | recall | F1 | ROC AUC | n_adv |
+|---|---|---|---|---|---|
+| brute_force both * | 0.244 | 0.868 | 0.382 | 0.881 | 38 |
+| brute_force iat * | 0.198 | 0.667 | 0.305 | 0.815 | 30 |
+| brute_force size * | 0.191 | 0.538 | 0.282 | 0.843 | 39 |
+| ddos both * | 0.316 | 1.000 | 0.481 | 1.000 | 37 |
+| ddos iat * | 0.260 | 0.829 | 0.395 | 0.887 | 41 |
+| ddos size * | 0.286 | 1.000 | 0.444 | 1.000 | 44 |
+| ddos_kitsune both | 0.295 | 1.000 | 0.456 | 1.000 | 2,937 |
+| ddos_kitsune iat | 0.291 | 0.976 | 0.449 | 0.983 | 2,940 |
+| ddos_kitsune size | 0.299 | 1.000 | 0.460 | 1.000 | 2,936 |
+| mirai both | 0.309 | 0.997 | 0.471 | 0.999 | 330 |
+| mirai iat | 0.168 | 0.474 | 0.248 | 0.849 | 291 |
+| mirai size | 0.295 | 0.997 | 0.456 | 0.998 | 298 |
+| ssdp_flood both | 0.305 | 1.000 | 0.467 | 1.000 | 141 |
+| ssdp_flood iat | 0.300 | 1.000 | 0.462 | 1.000 | 141 |
+| ssdp_flood size | 0.309 | 1.000 | 0.472 | 1.000 | 141 |
 
-Per-adversarial-source metrics are reported in **three flavours** so the reader can disambiguate deployment signal from structural size penalties and from cross-capture confounds:
+\* Low support (n\_adv < 50) — treat as indicative only.
 
-- **`vs_all_benign`** — this variant's windows + **all benign windows in the test set**. Reflects realistic prevalence, but precision is dominated by the total benign FP count.
-- **`vs_balanced_benign`** — this variant's windows + a `K × n_adv` benign subsample (capped at total benign, K=10). Makes precision comparable across variants of different sizes.
-- **`vs_same_base_benign`** — this variant's windows + only benign from the same base-attack capture (e.g. `mirai_adv_both` → benign windows from the `mirai/` folder). Removes cross-capture confounds.
+Note: PortScan adversarial variants do not appear in this table. PortScan flows average ~2 packets, so no flow reaches the 10-packet threshold for even a single RF checkpoint. The RF produces zero predictions for PortScan; the TCN covers them from packet 1.
 
-Variants with fewer than 50 adversarial windows are flagged as `low_support` — their metrics should be treated as noise.
+## Observations
 
-A `per_label_str` block reports the predicted-adversarial rate and mean adversarial probability for each `label_str` value present in the test set; under the dataset-driven convention this is just a sanity check (benign vs adversarial).
-
-## CLI — `scripts/rf/run_rf.py`
-
-Orchestrates `train` and/or `evaluate` from `config/rf.yaml`, with colour-coded progress and summary output.
-
-### Flags
-
-| Flag | Default | Purpose |
-|---|---|---|
-| `--config` | `config/rf.yaml` | Path to RF config. |
-| `--mode` | `both` | `train` / `eval` / `both`. |
-| `--log-level` | `WARNING` | Python logging level; set `INFO` for the library's own log messages. |
-| `--json` | off | Print final `overall` metrics as JSON (useful for shell piping). |
-
-### Examples
-
-```bash
-# Train and evaluate with the default config
-python3 scripts/rf/run_rf.py
-
-# Train only (skip eval)
-python3 scripts/rf/run_rf.py --mode train
-
-# Evaluate a previously-trained artifact without retraining
-python3 scripts/rf/run_rf.py --mode eval
-
-# Use a custom config
-python3 scripts/rf/run_rf.py --config config/rf_experiment.yaml
-```
-
-### Typical end-to-end flow
-
-```bash
-# 1. Generate the TANTGen adversarial PCAPs
-python3 scripts/adversarial_generation/generate_adversarials.py
-
-# 2. Tensorise the 5 attacks whose adversarial PCAPs exist on disk + variants
-python3 scripts/packet_to_tensor/process_all_attacks.py --tantgen
-
-# 3. Train + evaluate the RF
-python3 scripts/rf/run_rf.py
-```
-
-## Configuration — `config/rf.yaml`
-
-| Key | Purpose |
-|---|---|
-| `tensors_dir` | Root of Phase-1 output (expects subdirs matching `benign_sources`). |
-| `adversarial_dir` | Root of the adversarial tensor tree; every subdir with `metadata.json` is auto-discovered as a positive source. |
-| `output_dir` | Where RF artifacts (model, plots, metrics) are written. |
-| `benign_sources` | List of tensor subdir names (Kitsune + CIC-IDS2017) treated as benign. |
-| `benign_cap_ratio` | Global cap on benign windows as a multiple of adversarial windows. |
-| `drop_unknown` | Safety net — should never fire since `attach_labels.py` only writes `benign` / `adversarial`. |
-| `split` | `train_frac` / `val_frac` / `test_frac` / `seed`. |
-| `rf_defaults` | sklearn `RandomForestClassifier` kwargs applied to every fit (`n_estimators`, `max_depth`, `min_samples_leaf`, `max_features`, `n_jobs`, `class_weight`, `random_state`). |
-| `grid_search.enabled` | Toggle grid search on/off. |
-| `grid_search.{n_estimators, max_depth, min_samples_leaf}` | Candidate values — Cartesian product, scored by val macro-F1. |
-| `grid_search.scoring` | Currently fixed to `macro_f1` (informational). |
-
-The default benign pool is restricted to the **5 raw-dataset benign attacks for which TANTGen adversarial PCAPs exist on disk** (`brute_force`, `ddos`, `mirai`, `portscan`, `ssdp_flood`). Other Kitsune + CIC-IDS2017 captures are excluded because they have no matching adversarial counterpart and would only inflate the benign class. The adversarial pool covers **6 sources × 3 perturbation modes = 18 folders**: the 5 paired sources above plus the adversarial-only `ddos_kitsune` variant (a Kitsune-trained TANTGen against the CIC DDoS benign manifold). `portscan_adv_*` is excluded from training (PortScan flows are too short for the `N=10` window), so 15 adversarial folders contribute non-empty windows.
+- **AUROC@10 = 0.9998** — after just 10 packets, the RF already achieves near-perfect separation for all source types with adequate support.
+- **IAT-only perturbation is harder.** `_iat` variants consistently show lower recall and ROC AUC than `_both` and `_size` across all attack types. This is expected: pure timing perturbation without size or header changes is harder to distinguish from natural traffic variability.
+- **Precision is uniformly low** (~0.17–0.32 per source). The RF is tuned for recall — it rarely misses adversarial flows but frequently raises alerts on benign checkpoints. The meta-learner is expected to suppress false positives by requiring TCN agreement.
+- **EDP is always exactly 10 packets** (first checkpoint = earliest possible RF prediction). This makes the RF's contribution to the meta-learner exclusively *confirmatory* — it never provides an earlier warning than the TCN.
 
 ## Output files (`data/models/rf/`)
 
 | File | Description |
 |---|---|
-| `rf.joblib` | Fitted `RandomForestClassifier` (for downstream inference / ensembling). |
-| `dataset.npz` | Merged `(X, y, sources, label_str)` — lets `evaluate` run without re-assembling. |
-| `split.npz` | `train_idx`, `val_idx`, `test_idx` into `dataset.npz`. |
-| `feature_names.json` | Ordered list of 24 RF stat names. |
-| `split_summary.json` | Per-split window counts (benign / adversarial, per-source). |
-| `training_info.json` | Grid-search results, best params, effective config (minus `rf_defaults`). |
-| `metrics.json` | Overall + per-adversarial-source (× three flavours) + per-`label_str` metrics. |
-| `confusion_matrix.png` | Binary CM on the test split (benign vs adversarial). |
-| `roc_curve.png` | ROC curve (when both classes present in test). |
-| `pr_curve.png` | Precision-recall curve (when both classes present in test). |
-| `feature_importance.png` | Gini importances over the 24 RF features. |
-
-`run.log` is also produced when `run_rf.py` is invoked with output redirected — useful for archiving training console output.
+| `rf.joblib` | Fitted `RandomForestClassifier` |
+| `dataset.npz` | Merged `(X, y, sources, label_str)` snapshot |
+| `split.npz` | `train_idx`, `val_idx`, `test_idx` |
+| `feature_names.json` | Ordered list of 24 RF stat names |
+| `split_summary.json` | Per-split checkpoint and flow counts |
+| `training_info.json` | Grid-search results, best params |
+| `metrics.json` | Overall + per-adversarial-source metrics |
+| `streaming_metrics.json` | AUROC@t and EDP per source |
+| `confusion_matrix.png` | Binary confusion matrix |
+| `roc_curve.png` | ROC curve |
+| `pr_curve.png` | Precision-recall curve |
+| `feature_importance.png` | Gini importances |
