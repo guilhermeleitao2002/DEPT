@@ -185,7 +185,27 @@ def main():
             "Two lightweight PCAP passes; lower peak RAM than batch mode."
         )
     )
+    outputs_group = parser.add_mutually_exclusive_group()
+    outputs_group.add_argument(
+        "--rf-only", action="store_true",
+        help="Only build the RF checkpoint tensors "
+             "(rf_checkpoints.npy + rf_checkpoint_offsets.npy). Skips "
+             "flow_packets.npy / flow_offsets.npy.",
+    )
+    outputs_group.add_argument(
+        "--tcn-only", action="store_true",
+        help="Only build the per-packet sequence tensors "
+             "(flow_packets.npy + flow_offsets.npy). Skips "
+             "rf_checkpoints.npy / rf_checkpoint_offsets.npy.",
+    )
     args = parser.parse_args()
+
+    if args.rf_only:
+        selected_outputs = ("rf",)
+    elif args.tcn_only:
+        selected_outputs = ("tcn",)
+    else:
+        selected_outputs = ("rf", "tcn")
 
     cfg = load_config(args.config)
     rf_checkpoint_stride = (
@@ -261,7 +281,7 @@ def main():
                   f"{cyan(str(usable))}/{len(sizes)} have ≥{rf_checkpoint_stride} packets")
 
         _step(3, 3, f"Building ragged tensors  "
-                    f"{dim(f'(rf_checkpoint_stride={rf_checkpoint_stride})')}")
+                    f"{dim(f'(rf_checkpoint_stride={rf_checkpoint_stride}, outputs={list(selected_outputs)})')}")
         result = build_tensors(
             nprint_bits=nprint_bits,
             meta_df=meta_df,
@@ -272,6 +292,7 @@ def main():
             rf_agg_functions=rf_agg,
             standardize_columns=std_cols,
             mean_std_path=mean_std_path,
+            outputs=selected_outputs,
         )
         del nprint_bits, meta_df
         t3 = time.time()
@@ -283,7 +304,7 @@ def main():
     else:
         _step(1, 2, f"Prescan  {dim(fname)}")
         _step(2, 2, f"Encoding + building ragged tensors  "
-                    f"{dim(f'(rf_checkpoint_stride={rf_checkpoint_stride})')}")
+                    f"{dim(f'(rf_checkpoint_stride={rf_checkpoint_stride}, outputs={list(selected_outputs)})')}")
         result = build_tensors_incremental(
             pcap_path=input_pcap,
             output_dir=args.output_dir,
@@ -292,6 +313,7 @@ def main():
             rf_agg_functions=rf_agg,
             mean_std_path=mean_std_path,
             mask_prefixes=mask_prefixes,
+            outputs=selected_outputs,
         )
         t3 = time.time()
         print(f"      {green('✓')} {result['num_flows']:,} flows, "
@@ -306,11 +328,15 @@ def main():
     n_flows = result["num_flows"]
     n_packets = result["num_packets"]
     n_ckpts = result["num_checkpoints"]
+    outputs_built = list(result.get("outputs", list(selected_outputs)))
+    built_tcn = "tcn" in outputs_built
+    built_rf = "rf" in outputs_built
     metadata = {
         "input":                    input_pcap,
         "encoding":                 "nprint",
         "pipeline_mode":            "online" if args.online else "batch",
         "schema":                   "ragged-per-flow-v1",
+        "outputs":                  outputs_built,
         "nprint_bits":              1088,
         "identity_masking":         not args.no_mask,
         "mask_prefixes":            mask_prefixes,
@@ -318,25 +344,36 @@ def main():
         "num_flows":                n_flows,
         "num_packets":              n_packets,
         "num_checkpoints":          n_ckpts,
-        "flow_packets_shape":       [n_packets, len(result["feature_names"])],
-        "rf_checkpoints_shape":     [n_ckpts, len(result["rf_stat_names"])],
         "sequence_feature_count":   len(result["feature_names"]),
         "rf_stat_names":            result["rf_stat_names"],
         "normalization_stats":      result["stats"],
     }
+    if built_tcn:
+        metadata["flow_packets_shape"] = [n_packets, len(result["feature_names"])]
+    if built_rf:
+        metadata["rf_checkpoints_shape"] = [n_ckpts, len(result["rf_stat_names"])]
     with open(os.path.join(args.output_dir, "metadata.json"), "w") as f:
         json.dump(metadata, f, indent=2)
 
     total = t3 - t0
     W = 62
     masking_str = green("ON") if not args.no_mask else yellow("OFF")
+    skipped = yellow("(skipped)")
     print(f"\n{bold('═' * W)}")
     print(f" {bold('ADEPT Packet-to-Tensor (streaming)')}  {dim(f'Done in {total:.1f}s')}")
     print(f"{'─' * W}")
-    print(f" {cyan('flow_packets')}     [{n_packets}, {len(result['feature_names'])}]  "
-          f"{dim('TCN / Transformer (per-flow ragged)')}")
-    print(f" {cyan('rf_checkpoints')}   [{n_ckpts}, {len(result['rf_stat_names'])}]  "
-          f"{dim(f'Random Forest (stride={rf_checkpoint_stride})')}")
+    if built_tcn:
+        print(f" {cyan('flow_packets')}     [{n_packets}, {len(result['feature_names'])}]  "
+              f"{dim('TCN / Transformer (per-flow ragged)')}")
+    else:
+        print(f" {cyan('flow_packets')}     {skipped}  "
+              f"{dim('TCN / Transformer (per-flow ragged)')}")
+    if built_rf:
+        print(f" {cyan('rf_checkpoints')}   [{n_ckpts}, {len(result['rf_stat_names'])}]  "
+              f"{dim(f'Random Forest (stride={rf_checkpoint_stride})')}")
+    else:
+        print(f" {cyan('rf_checkpoints')}   {skipped}  "
+              f"{dim(f'Random Forest (stride={rf_checkpoint_stride})')}")
     print(f" {cyan('Identity masking')} {masking_str}")
     print(f" {cyan('Output')}           {args.output_dir}")
     print(f"{bold('═' * W)}\n")

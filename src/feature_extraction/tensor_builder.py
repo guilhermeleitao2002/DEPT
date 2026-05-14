@@ -38,7 +38,7 @@ Implementation notes
 import json
 import os
 from collections import OrderedDict
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, Iterable, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
@@ -91,6 +91,30 @@ def _load_or_compute_stats(
 # Aggregations supported in the emitted RF checkpoint vector. The order
 # ``[mean, std, min, max]`` is mirrored from the previous windowed builder.
 _SUPPORTED_AGGS = ("mean", "std", "min", "max")
+
+# Output kinds that can be selectively built. "tcn" governs the per-packet
+# ``flow_packets.npy``/``flow_offsets.npy`` pair (Transformer + TCN input);
+# "rf" governs ``rf_checkpoints.npy``/``rf_checkpoint_offsets.npy``.
+_SUPPORTED_OUTPUTS = ("rf", "tcn")
+
+
+def _normalize_outputs(outputs: Optional[Iterable[str]]) -> Tuple[str, ...]:
+    """Validate and canonicalise the ``outputs`` selector."""
+    if outputs is None:
+        return tuple(_SUPPORTED_OUTPUTS)
+    norm = tuple(o.lower() for o in outputs)
+    bad = [o for o in norm if o not in _SUPPORTED_OUTPUTS]
+    if bad:
+        raise ValueError(
+            f"Unknown outputs {bad}. Supported: {list(_SUPPORTED_OUTPUTS)}"
+        )
+    if not norm:
+        raise ValueError(
+            f"outputs must contain at least one of {list(_SUPPORTED_OUTPUTS)}"
+        )
+    # Preserve insertion order but de-dupe.
+    seen: set = set()
+    return tuple(o for o in norm if not (o in seen or seen.add(o)))
 
 
 class StreamingStats:
@@ -172,6 +196,7 @@ def build_tensors(
     rf_agg_functions: Optional[List[str]] = None,
     standardize_columns: Optional[List[str]] = None,
     mean_std_path: str = "mean_std.json",
+    outputs: Optional[Iterable[str]] = None,
 ) -> Dict:
     """
     Convert per-flow data into ADEPT's ragged streaming tensors.
@@ -205,6 +230,14 @@ def build_tensors(
         Columns to z-score normalize (typically just IPAT).
     mean_std_path : str
         Path to load/save normalization statistics.
+    outputs : iterable[str], optional
+        Subset of ``{"rf", "tcn"}`` selecting which on-disk tensor groups
+        to materialise. ``"tcn"`` controls ``flow_packets.npy`` +
+        ``flow_offsets.npy``; ``"rf"`` controls ``rf_checkpoints.npy`` +
+        ``rf_checkpoint_offsets.npy``. Defaults to both. The returned
+        ``num_packets`` / ``num_checkpoints`` always reflect the data
+        counts, but the matching ``*_path`` entries are ``None`` for
+        groups that were not written.
 
     Returns
     -------
@@ -243,6 +276,10 @@ def build_tensors(
             f"Unsupported RF aggregations {unknown}. Supported: {_SUPPORTED_AGGS}"
         )
 
+    outputs_norm = _normalize_outputs(outputs)
+    build_rf = "rf" in outputs_norm
+    build_tcn = "tcn" in outputs_norm
+
     # --- Step 1: Global statistics for standardization -----------------------
     stats = _load_or_compute_stats(meta_df, standardize_columns, mean_std_path)
 
@@ -259,11 +296,18 @@ def build_tensors(
     n_base = len(rf_meta_cols)
 
     # Pre-extract metadata as numpy arrays for fast per-packet access.
-    rf_meta_values = meta_df[rf_meta_cols].values.astype(np.float32)
-    ipat_values = meta_df["IPAT"].values.astype(np.float64)
-    direction_values = meta_df["Direction"].values.astype(np.float32)
-    ipat_mean = stats.get("IPAT", {}).get("mean", 0.0)
-    ipat_std = stats.get("IPAT", {}).get("std", 1.0)
+    # Only materialise the views the selected outputs actually need.
+    rf_meta_values = (
+        meta_df[rf_meta_cols].values.astype(np.float32) if build_rf else None
+    )
+    if build_tcn:
+        ipat_values = meta_df["IPAT"].values.astype(np.float64)
+        direction_values = meta_df["Direction"].values.astype(np.float32)
+        ipat_mean = stats.get("IPAT", {}).get("mean", 0.0)
+        ipat_std = stats.get("IPAT", {}).get("std", 1.0)
+    else:
+        ipat_values = direction_values = None
+        ipat_mean = ipat_std = None
 
     # --- Step 2: Pre-count packets and checkpoints, build offset tables -----
     flow_keys = list(flow_indices.keys())
@@ -302,6 +346,7 @@ def build_tensors(
             "num_packets": 0,
             "num_checkpoints": 0,
             "rf_checkpoint_stride": rf_checkpoint_stride,
+            "outputs": list(outputs_norm),
         }
 
     os.makedirs(output_dir, exist_ok=True)
@@ -313,23 +358,25 @@ def build_tensors(
     )
 
     # Memory-mapped output: scattered per-flow writes are fine — each flow's
-    # packets occupy a contiguous slice of flow_packets.npy.
-    pkt_mmap = np.lib.format.open_memmap(
-        flow_packets_path, mode="w+", dtype=np.float32,
-        shape=(total_packets, n_seq_features),
-    )
-    if total_checkpoints > 0:
-        ckpt_mmap = np.lib.format.open_memmap(
-            rf_checkpoints_path, mode="w+", dtype=np.float32,
-            shape=(total_checkpoints, n_rf_stats),
+    # packets occupy a contiguous slice of flow_packets.npy. Only allocate
+    # the views the selected outputs need.
+    if build_tcn:
+        pkt_mmap = np.lib.format.open_memmap(
+            flow_packets_path, mode="w+", dtype=np.float32,
+            shape=(total_packets, n_seq_features),
         )
     else:
+        pkt_mmap = None
+
+    if build_rf:
         # Some sources may have only sub-stride flows; still write a 0-row file
         # so downstream loaders can stat it consistently.
         ckpt_mmap = np.lib.format.open_memmap(
             rf_checkpoints_path, mode="w+", dtype=np.float32,
-            shape=(0, n_rf_stats),
+            shape=(max(total_checkpoints, 0), n_rf_stats),
         )
+    else:
+        ckpt_mmap = None
 
     # --- Step 3: Per-flow streaming write -----------------------------------
     flow_iter = enumerate(flow_keys)
@@ -351,25 +398,27 @@ def build_tensors(
         flow_start = int(flow_packet_offsets[i, 0])
         ckpt_start = int(rf_checkpoint_offsets[i, 0])
 
-        # Write the per-flow [L, 1090] block directly into the memmap.
-        pkt_mmap[flow_start:flow_start + L, :1088] = (
-            nprint_bits[indices].astype(np.float32)
-        )
-        pkt_mmap[flow_start:flow_start + L, 1088] = (
-            (ipat_values[indices] - ipat_mean) / ipat_std
-        ).astype(np.float32)
-        pkt_mmap[flow_start:flow_start + L, 1089] = direction_values[indices]
+        if build_tcn:
+            # Write the per-flow [L, 1090] block directly into the memmap.
+            pkt_mmap[flow_start:flow_start + L, :1088] = (
+                nprint_bits[indices].astype(np.float32)
+            )
+            pkt_mmap[flow_start:flow_start + L, 1088] = (
+                (ipat_values[indices] - ipat_mean) / ipat_std
+            ).astype(np.float32)
+            pkt_mmap[flow_start:flow_start + L, 1089] = direction_values[indices]
 
-        # Streaming aggregation over the growing prefix → multi-scale RF rows.
-        rf_meta_flow = rf_meta_values[indices]
-        stat = StreamingStats(n_base)
-        ckpt_local = 0
-        for t in range(L):
-            stat.update(rf_meta_flow[t])
-            if (t + 1) % rf_checkpoint_stride == 0:
-                if ckpt_local < int(rf_checkpoint_offsets[i, 1]):
-                    ckpt_mmap[ckpt_start + ckpt_local] = stat.emit(rf_agg_functions)
-                ckpt_local += 1
+        if build_rf:
+            # Streaming aggregation over the growing prefix → multi-scale RF rows.
+            rf_meta_flow = rf_meta_values[indices]
+            stat = StreamingStats(n_base)
+            ckpt_local = 0
+            for t in range(L):
+                stat.update(rf_meta_flow[t])
+                if (t + 1) % rf_checkpoint_stride == 0:
+                    if ckpt_local < int(rf_checkpoint_offsets[i, 1]):
+                        ckpt_mmap[ckpt_start + ckpt_local] = stat.emit(rf_agg_functions)
+                    ckpt_local += 1
 
         if _tqdm is not None and i % 1000 == 0:
             pbar.set_postfix(
@@ -379,27 +428,33 @@ def build_tensors(
     if _tqdm is not None:
         pbar.close()
 
-    # Persist offsets and flush memmaps.
-    np.save(flow_offsets_path, flow_packet_offsets)
-    np.save(rf_checkpoint_offsets_path, rf_checkpoint_offsets)
-    pkt_mmap.flush()
-    ckpt_mmap.flush()
+    # Persist offsets and flush memmaps — only for the groups we built.
+    if build_tcn:
+        np.save(flow_offsets_path, flow_packet_offsets)
+        pkt_mmap.flush()
+    if build_rf:
+        np.save(rf_checkpoint_offsets_path, rf_checkpoint_offsets)
+        ckpt_mmap.flush()
 
     print(f"[+] Built ragged tensors:")
-    print(f"    flow_packets    : {pkt_mmap.shape}   "
-          f"(P, F={n_seq_features})")
-    print(f"    flow_offsets    : {flow_packet_offsets.shape}  "
-          f"(N_flows, 2)")
-    print(f"    rf_checkpoints  : {ckpt_mmap.shape}  "
-          f"(C, S={n_rf_stats})  stride={rf_checkpoint_stride}")
-    print(f"    rf_ckpt_offsets : {rf_checkpoint_offsets.shape}  "
-          f"(N_flows, 2)")
+    if build_tcn:
+        print(f"    flow_packets    : {pkt_mmap.shape}   "
+              f"(P, F={n_seq_features})")
+        print(f"    flow_offsets    : {flow_packet_offsets.shape}  "
+              f"(N_flows, 2)")
+    if build_rf:
+        print(f"    rf_checkpoints  : {ckpt_mmap.shape}  "
+              f"(C, S={n_rf_stats})  stride={rf_checkpoint_stride}")
+        print(f"    rf_ckpt_offsets : {rf_checkpoint_offsets.shape}  "
+              f"(N_flows, 2)")
 
     return {
-        "flow_packets_path": flow_packets_path,
-        "flow_offsets_path": flow_offsets_path,
-        "rf_checkpoints_path": rf_checkpoints_path,
-        "rf_checkpoint_offsets_path": rf_checkpoint_offsets_path,
+        "flow_packets_path": flow_packets_path if build_tcn else None,
+        "flow_offsets_path": flow_offsets_path if build_tcn else None,
+        "rf_checkpoints_path": rf_checkpoints_path if build_rf else None,
+        "rf_checkpoint_offsets_path": (
+            rf_checkpoint_offsets_path if build_rf else None
+        ),
         "flow_ids": flow_keys,
         "stats": stats,
         "feature_names": sequence_features,
@@ -408,4 +463,5 @@ def build_tensors(
         "num_packets": total_packets,
         "num_checkpoints": total_checkpoints,
         "rf_checkpoint_stride": rf_checkpoint_stride,
+        "outputs": list(outputs_norm),
     }

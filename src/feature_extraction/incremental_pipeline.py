@@ -33,7 +33,7 @@ Peak RAM is O(active_flows × per_flow_state). Per-flow state is the
 
 import json
 import os
-from typing import Dict, List, Optional
+from typing import Dict, Iterable, List, Optional
 
 import numpy as np
 from scapy.all import IP, TCP, PcapReader
@@ -48,7 +48,7 @@ from .pcap_parser import (
     NPRINT_COLUMNS,
     DEFAULT_MASK_PREFIXES,
 )
-from .tensor_builder import StreamingStats, _SUPPORTED_AGGS
+from .tensor_builder import StreamingStats, _SUPPORTED_AGGS, _normalize_outputs
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -177,6 +177,7 @@ def build_tensors_incremental(
     rf_agg_functions: Optional[List[str]] = None,
     mean_std_path: Optional[str] = None,
     mask_prefixes: Optional[List[str]] = None,
+    outputs: Optional[Iterable[str]] = None,
 ) -> Dict:
     """Two-pass incremental packet-to-tensor pipeline (ragged output).
 
@@ -209,6 +210,10 @@ def build_tensors_incremental(
         raise ValueError(
             f"Unsupported RF aggregations {unknown}. Supported: {_SUPPORTED_AGGS}"
         )
+
+    outputs_norm = _normalize_outputs(outputs)
+    build_rf = "rf" in outputs_norm
+    build_tcn = "tcn" in outputs_norm
 
     sequence_features = list(NPRINT_COLUMNS) + ["IPAT", "Direction"]
     n_seq_features = len(sequence_features)   # 1090
@@ -283,6 +288,7 @@ def build_tensors_incremental(
             "num_packets": 0,
             "num_checkpoints": 0,
             "rf_checkpoint_stride": rf_checkpoint_stride,
+            "outputs": list(outputs_norm),
         }
 
     os.makedirs(output_dir, exist_ok=True)
@@ -293,19 +299,26 @@ def build_tensors_incremental(
         output_dir, "rf_checkpoint_offsets.npy",
     )
 
-    pkt_mmap = np.lib.format.open_memmap(
-        flow_packets_path, mode="w+", dtype=np.float32,
-        shape=(total_packets, n_seq_features),
-    )
-    ckpt_shape = (max(total_checkpoints, 0), n_rf_stats)
-    ckpt_mmap = np.lib.format.open_memmap(
-        rf_checkpoints_path, mode="w+", dtype=np.float32,
-        shape=ckpt_shape,
-    )
+    if build_tcn:
+        pkt_mmap = np.lib.format.open_memmap(
+            flow_packets_path, mode="w+", dtype=np.float32,
+            shape=(total_packets, n_seq_features),
+        )
+    else:
+        pkt_mmap = None
+    if build_rf:
+        ckpt_shape = (max(total_checkpoints, 0), n_rf_stats)
+        ckpt_mmap = np.lib.format.open_memmap(
+            rf_checkpoints_path, mode="w+", dtype=np.float32,
+            shape=ckpt_shape,
+        )
+    else:
+        ckpt_mmap = None
 
     # Pre-compute masking column indices (done once, not per packet).
+    # Only needed when we actually encode and write the TCN per-packet view.
     cols_to_mask: list = []
-    if mask_prefixes:
+    if build_tcn and mask_prefixes:
         for i, col in enumerate(NPRINT_COLUMNS):
             for prefix in mask_prefixes:
                 if col.startswith(prefix + "_") and col[len(prefix) + 1:].isdigit():
@@ -325,9 +338,12 @@ def build_tensors_incremental(
     ckpts_written = 0
     for pkt in pbar:
         bits_list, meta = _encode_packet(pkt)
-        bits = np.array(bits_list, dtype=np.int8)
-        if cols_to_mask:
-            bits[cols_to_mask] = 0
+        # nPrint bit expansion is only needed for the TCN per-packet view —
+        # skip the dtype conversion + masking when only RF is being built.
+        if build_tcn:
+            bits = np.array(bits_list, dtype=np.int8)
+            if cols_to_mask:
+                bits[cols_to_mask] = 0
 
         fk = _canonical_key(
             meta["Source_IP"], meta["Destination_IP"],
@@ -365,23 +381,26 @@ def build_tensors_incremental(
             # (truncated/corrupt PCAP); skip rather than corrupt the memmap.
             continue
 
-        row = flow_start + per_flow_idx
-        pkt_mmap[row, :1088] = bits.astype(np.float32)
-        pkt_mmap[row, 1088] = (ipat - ipat_mean) / ipat_std
-        pkt_mmap[row, 1089] = float(direction)
+        if build_tcn:
+            row = flow_start + per_flow_idx
+            pkt_mmap[row, :1088] = bits.astype(np.float32)
+            pkt_mmap[row, 1088] = (ipat - ipat_mean) / ipat_std
+            pkt_mmap[row, 1089] = float(direction)
 
-        # Streaming RF stats over the growing flow prefix.
-        # Order matches rf_meta_cols == rf_base_features.
-        feat_vec = np.array(
-            [ipat, meta["Packet_Size"], meta["Payload_Length"],
-             meta["Payload_Entropy"], meta["TCP_Flags"], float(direction)],
-            dtype=np.float64,
-        )
-        state.stats.update(feat_vec)
+        if build_rf:
+            # Streaming RF stats over the growing flow prefix.
+            # Order matches rf_meta_cols == rf_base_features.
+            feat_vec = np.array(
+                [ipat, meta["Packet_Size"], meta["Payload_Length"],
+                 meta["Payload_Entropy"], meta["TCP_Flags"], float(direction)],
+                dtype=np.float64,
+            )
+            state.stats.update(feat_vec)
+
         state.pkt_idx += 1
         pkts_seen += 1
 
-        if state.pkt_idx % rf_checkpoint_stride == 0:
+        if build_rf and state.pkt_idx % rf_checkpoint_stride == 0:
             ckpt_slot = int(rf_checkpoint_offsets[slot, 0]) + state.ckpt_idx
             if state.ckpt_idx < int(rf_checkpoint_offsets[slot, 1]):
                 ckpt_mmap[ckpt_slot] = state.stats.emit(rf_agg_functions)
@@ -395,11 +414,13 @@ def build_tensors_incremental(
         pbar.close()
     reader.close()
 
-    # Persist offsets and flush memmaps.
-    np.save(flow_offsets_path, flow_packet_offsets)
-    np.save(rf_checkpoint_offsets_path, rf_checkpoint_offsets)
-    pkt_mmap.flush()
-    ckpt_mmap.flush()
+    # Persist offsets and flush memmaps — only for the groups we built.
+    if build_tcn:
+        np.save(flow_offsets_path, flow_packet_offsets)
+        pkt_mmap.flush()
+    if build_rf:
+        np.save(rf_checkpoint_offsets_path, rf_checkpoint_offsets)
+        ckpt_mmap.flush()
 
     if pkts_seen != total_packets:
         print(f"[!] Packet-count mismatch: prescan={total_packets}, "
@@ -407,17 +428,21 @@ def build_tensors_incremental(
               f"loaders should rely on flow_offsets.npy for valid ranges.")
 
     print(f"[+] Built ragged tensors (incremental):")
-    print(f"    flow_packets    : {pkt_mmap.shape}   (P, F={n_seq_features})")
-    print(f"    flow_offsets    : {flow_packet_offsets.shape}  (N_flows, 2)")
-    print(f"    rf_checkpoints  : {ckpt_mmap.shape}  "
-          f"(C, S={n_rf_stats})  stride={rf_checkpoint_stride}")
-    print(f"    rf_ckpt_offsets : {rf_checkpoint_offsets.shape}  (N_flows, 2)")
+    if build_tcn:
+        print(f"    flow_packets    : {pkt_mmap.shape}   (P, F={n_seq_features})")
+        print(f"    flow_offsets    : {flow_packet_offsets.shape}  (N_flows, 2)")
+    if build_rf:
+        print(f"    rf_checkpoints  : {ckpt_mmap.shape}  "
+              f"(C, S={n_rf_stats})  stride={rf_checkpoint_stride}")
+        print(f"    rf_ckpt_offsets : {rf_checkpoint_offsets.shape}  (N_flows, 2)")
 
     return {
-        "flow_packets_path": flow_packets_path,
-        "flow_offsets_path": flow_offsets_path,
-        "rf_checkpoints_path": rf_checkpoints_path,
-        "rf_checkpoint_offsets_path": rf_checkpoint_offsets_path,
+        "flow_packets_path": flow_packets_path if build_tcn else None,
+        "flow_offsets_path": flow_offsets_path if build_tcn else None,
+        "rf_checkpoints_path": rf_checkpoints_path if build_rf else None,
+        "rf_checkpoint_offsets_path": (
+            rf_checkpoint_offsets_path if build_rf else None
+        ),
         "flow_ids": flow_arrival_order,
         "stats": stats,
         "feature_names": sequence_features,
@@ -426,4 +451,5 @@ def build_tensors_incremental(
         "num_packets": total_packets,
         "num_checkpoints": total_checkpoints,
         "rf_checkpoint_stride": rf_checkpoint_stride,
+        "outputs": list(outputs_norm),
     }

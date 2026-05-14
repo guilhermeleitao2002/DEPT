@@ -75,6 +75,12 @@ Usage
     # Restrict to the 5 attacks whose TANTGen adversarial PCAPs exist on disk
     # and also tensorise those matching adversarial PCAPs under data/adversarial/:
     python3 scripts/packet_to_tensor/process_all_attacks.py --tantgen
+
+    # Build only the RF input tensors (rf_checkpoints.npy + offsets):
+    python3 scripts/packet_to_tensor/process_all_attacks.py --rf
+
+    # Build only the TCN/Transformer input tensors (flow_packets.npy + offsets):
+    python3 scripts/packet_to_tensor/process_all_attacks.py --tcn
 """
 
 import argparse
@@ -400,6 +406,7 @@ def time_filter_pcap(editcap: str, src: Path, dst: Path,
 def run_pipeline(pcap: Path, output_dir: Path,
                  rf_checkpoint_stride: int | None,
                  extra_args: list, mean_std: Path | None = None,
+                 outputs: tuple[str, ...] = ("rf", "tcn"),
                  ) -> subprocess.CompletedProcess:
     """Run run_packet_to_tensor.py on a single PCAP."""
     cmd = [
@@ -412,6 +419,12 @@ def run_pipeline(pcap: Path, output_dir: Path,
         cmd += ["--rf-checkpoint-stride", str(rf_checkpoint_stride)]
     if mean_std is not None:
         cmd += ["--mean-std", str(mean_std)]
+    # outputs == ("rf", "tcn") is the pipeline's default — emit a flag only
+    # when the user has restricted to a single tensor group.
+    if outputs == ("rf",):
+        cmd += ["--rf-only"]
+    elif outputs == ("tcn",):
+        cmd += ["--tcn-only"]
     cmd += extra_args
     return subprocess.run(cmd, check=True)
 
@@ -514,9 +527,22 @@ def run_label_attach(attack: Attack) -> bool:
     return write_flow_labels(attack.output_dir, 0, "benign")
 
 
-def is_already_processed(output_dir: Path) -> bool:
-    """Check if tensor outputs already exist."""
-    return (output_dir / "metadata.json").exists()
+def is_already_processed(output_dir: Path,
+                         requested_outputs: tuple[str, ...] = ("rf", "tcn"),
+                         ) -> bool:
+    """Check if the requested tensor outputs already exist on disk.
+
+    A previous run that only built one tensor group still leaves a
+    metadata.json behind, so we additionally require the requested
+    outputs to be a subset of what that run actually produced. Falls
+    back to the pre-feature default (both groups) when metadata predates
+    the per-output ``outputs`` field.
+    """
+    meta = load_metadata(output_dir)
+    if meta is None:
+        return False
+    existing = set(meta.get("outputs") or ("rf", "tcn"))
+    return set(requested_outputs).issubset(existing)
 
 
 def load_metadata(output_dir: Path) -> dict | None:
@@ -630,7 +656,27 @@ def main():
         help="Force the shared mean_std.json fit even if data/tensors/mean_std.json "
              "already exists.",
     )
+    outputs_group = parser.add_mutually_exclusive_group()
+    outputs_group.add_argument(
+        "--rf", action="store_true",
+        help="Only build the RF input tensors (rf_checkpoints.npy + "
+             "rf_checkpoint_offsets.npy) for each selected attack. Skips "
+             "the TCN per-packet view. Default builds both.",
+    )
+    outputs_group.add_argument(
+        "--tcn", action="store_true",
+        help="Only build the TCN/Transformer input tensors "
+             "(flow_packets.npy + flow_offsets.npy) for each selected "
+             "attack. Skips the RF checkpoint view. Default builds both.",
+    )
     args = parser.parse_args()
+
+    if args.rf:
+        selected_outputs: tuple[str, ...] = ("rf",)
+    elif args.tcn:
+        selected_outputs = ("tcn",)
+    else:
+        selected_outputs = ("rf", "tcn")
 
     # Validate --only / --exclude keys
     if args.only:
@@ -678,7 +724,8 @@ def main():
         print("Nothing to process. Check --only keys or add --include-benign.")
         sys.exit(0)
 
-    print(f"\n{bold('ADEPT Batch Processing')} — {cyan(str(len(selected)))} attack(s) selected\n")
+    print(f"\n{bold('ADEPT Batch Processing')} — {cyan(str(len(selected)))} attack(s) selected"
+          f"  {dim(f'(outputs={list(selected_outputs)})')}\n")
     for i, a in enumerate(selected, 1):
         tag = dim(" [time-filtered]") if a.time_start else ""
         print(f"  {dim(str(i) + '.')} {a.name} {dim('(' + a.dataset + ')')}{tag}")
@@ -687,7 +734,7 @@ def main():
     if args.dry_run:
         print("Dry run — nothing will be processed.\n")
         for a in selected:
-            exists = is_already_processed(a.output_dir)
+            exists = is_already_processed(a.output_dir, selected_outputs)
             if exists and not args.force:
                 status = yellow("EXISTS — skip")
             elif exists and args.force:
@@ -737,11 +784,13 @@ def main():
                   f"{dim('(' + attack.dataset + ')')}")
             print(f"{dim('─' * 72)}")
 
-            # Skip if already processed
-            if is_already_processed(attack.output_dir) and not args.force:
+            # Skip if already processed for the requested output set
+            if (is_already_processed(attack.output_dir, selected_outputs)
+                    and not args.force):
                 meta = load_metadata(attack.output_dir)
                 print(f"  {yellow('Already processed')} ({meta.get('num_flows', '?')} flows, "
-                      f"{meta.get('num_packets', '?')} packets). "
+                      f"{meta.get('num_packets', '?')} packets, "
+                      f"outputs={meta.get('outputs', ['rf', 'tcn'])}). "
                       f"Use {bold('--force')} to re-process.")
                 # Still attach labels if flow_labels.csv is missing
                 if not (attack.output_dir / "flow_labels.csv").exists():
@@ -789,6 +838,7 @@ def main():
                     rf_checkpoint_stride=args.rf_checkpoint_stride,
                     extra_args=attack.extra_args,
                     mean_std=shared_mean_std,
+                    outputs=selected_outputs,
                 )
 
                 meta = load_metadata(attack.output_dir)
