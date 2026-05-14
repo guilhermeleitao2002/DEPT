@@ -67,7 +67,7 @@ Usage
     python3 scripts/packet_to_tensor/process_all_attacks.py --dry-run
 
     # Custom window size:
-    python3 scripts/packet_to_tensor/process_all_attacks.py --window-size 20
+    python3 scripts/packet_to_tensor/process_all_attacks.py --rf-checkpoint-stride 20
 
     # Process with benign baseline:
     python3 scripts/packet_to_tensor/process_all_attacks.py --include-benign
@@ -75,6 +75,12 @@ Usage
     # Restrict to the 5 attacks whose TANTGen adversarial PCAPs exist on disk
     # and also tensorise those matching adversarial PCAPs under data/adversarial/:
     python3 scripts/packet_to_tensor/process_all_attacks.py --tantgen
+
+    # Build only the RF input tensors (rf_checkpoints.npy + offsets):
+    python3 scripts/packet_to_tensor/process_all_attacks.py --rf
+
+    # Build only the TCN/Transformer input tensors (flow_packets.npy + offsets):
+    python3 scripts/packet_to_tensor/process_all_attacks.py --tcn
 """
 
 import argparse
@@ -397,8 +403,10 @@ def time_filter_pcap(editcap: str, src: Path, dst: Path,
           + (f"  {yellow('⚠  empty — check time window')}" if size_mb < 1 else ""))
 
 
-def run_pipeline(pcap: Path, output_dir: Path, window_size: int | None,
+def run_pipeline(pcap: Path, output_dir: Path,
+                 rf_checkpoint_stride: int | None,
                  extra_args: list, mean_std: Path | None = None,
+                 outputs: tuple[str, ...] = ("rf", "tcn"),
                  ) -> subprocess.CompletedProcess:
     """Run run_packet_to_tensor.py on a single PCAP."""
     cmd = [
@@ -407,10 +415,16 @@ def run_pipeline(pcap: Path, output_dir: Path, window_size: int | None,
         "-o", str(output_dir),
         "-c", str(PIPELINE_CONFIG),
     ]
-    if window_size is not None:
-        cmd += ["-N", str(window_size)]
+    if rf_checkpoint_stride is not None:
+        cmd += ["--rf-checkpoint-stride", str(rf_checkpoint_stride)]
     if mean_std is not None:
         cmd += ["--mean-std", str(mean_std)]
+    # outputs == ("rf", "tcn") is the pipeline's default — emit a flag only
+    # when the user has restricted to a single tensor group.
+    if outputs == ("rf",):
+        cmd += ["--rf-only"]
+    elif outputs == ("tcn",):
+        cmd += ["--tcn-only"]
     cmd += extra_args
     return subprocess.run(cmd, check=True)
 
@@ -484,24 +498,24 @@ def fit_shared_mean_std(selected: list[Attack], force: bool = False) -> Path:
     return SHARED_MEAN_STD
 
 
-def write_window_labels(output_dir: Path, label: int, label_str: str) -> bool:
-    """Write window_labels.csv with `num_windows` uniform rows."""
+def write_flow_labels(output_dir: Path, label: int, label_str: str) -> bool:
+    """Write flow_labels.csv with `num_flows` uniform rows."""
     meta = load_metadata(output_dir)
     if meta is None:
         print(f"  {yellow('⚠  metadata.json missing, cannot write labels')}")
         return False
-    n = int(meta["num_windows"])
-    out = output_dir / "window_labels.csv"
+    n = int(meta["num_flows"])
+    out = output_dir / "flow_labels.csv"
     with open(out, "w") as f:
-        f.write("window_idx,label,label_str\n")
+        f.write("flow_idx,label,label_str\n")
         for i in range(n):
             f.write(f"{i},{label},{label_str}\n")
-    print(f"  {dim('Wrote labels:')} {n:,} windows → {label_str}")
+    print(f"  {dim('Wrote labels:')} {n:,} flows → {label_str}")
     return True
 
 
 def run_label_attach(attack: Attack) -> bool:
-    """Write window_labels.csv for an attack.
+    """Write flow_labels.csv for an attack.
 
     ADEPT treats all raw-dataset traffic (Kitsune + CIC-IDS2017) as benign
     — the upstream NIDS is expected to catch those attacks — and only
@@ -509,13 +523,26 @@ def run_label_attach(attack: Attack) -> bool:
     entirely by the source dataset; no ground-truth CSV is consulted.
     """
     if attack.dataset == "adversarial":
-        return write_window_labels(attack.output_dir, 1, "adversarial")
-    return write_window_labels(attack.output_dir, 0, "benign")
+        return write_flow_labels(attack.output_dir, 1, "adversarial")
+    return write_flow_labels(attack.output_dir, 0, "benign")
 
 
-def is_already_processed(output_dir: Path) -> bool:
-    """Check if tensor outputs already exist."""
-    return (output_dir / "metadata.json").exists()
+def is_already_processed(output_dir: Path,
+                         requested_outputs: tuple[str, ...] = ("rf", "tcn"),
+                         ) -> bool:
+    """Check if the requested tensor outputs already exist on disk.
+
+    A previous run that only built one tensor group still leaves a
+    metadata.json behind, so we additionally require the requested
+    outputs to be a subset of what that run actually produced. Falls
+    back to the pre-feature default (both groups) when metadata predates
+    the per-output ``outputs`` field.
+    """
+    meta = load_metadata(output_dir)
+    if meta is None:
+        return False
+    existing = set(meta.get("outputs") or ("rf", "tcn"))
+    return set(requested_outputs).issubset(existing)
 
 
 def load_metadata(output_dir: Path) -> dict | None:
@@ -539,26 +566,26 @@ def _status_colored(status: str) -> str:
 
 def print_summary(results: list[tuple[str, str, dict | None]]) -> None:
     """Print a summary table of all processed attacks."""
-    W = 72
+    W = 80
     print(f"\n{bold('=' * W)}")
     print(f" {bold('ADEPT Batch Processing — Summary')}")
     print(f"{bold('=' * W)}")
     h_attack  = cyan(f"{'Attack':<35}")
     h_status  = cyan(f"{'Status':<12}")
-    h_windows = cyan(f"{'Windows':>10}")
-    h_flows   = cyan(f"{'Flows':>12}")
-    print(f" {h_attack} {h_status} {h_windows} {h_flows}")
+    h_flows   = cyan(f"{'Flows':>10}")
+    h_pkts    = cyan(f"{'Packets':>12}")
+    print(f" {h_attack} {h_status} {h_flows} {h_pkts}")
     print(f" {'-' * 35} {'-' * 12} {'-' * 10} {'-' * 12}")
 
     for name, status, meta in results:
         if meta:
-            windows = green(f"{meta['num_windows']:>10,}")
-            flows = f"{meta['num_flows_used']:,}/{meta['num_flows_total']:,}"
+            flows_str = green(f"{meta.get('num_flows', 0):>10,}")
+            pkts_str  = f"{meta.get('num_packets', 0):>12,}"
         else:
-            windows = dim(f"{'—':>10}")
-            flows = dim(f"{'—':>12}")
+            flows_str = dim(f"{'—':>10}")
+            pkts_str  = dim(f"{'—':>12}")
         status_str = _status_colored(status)
-        print(f" {name:<35} {status_str} {windows} {flows:>12}")
+        print(f" {name:<35} {status_str} {flows_str} {pkts_str}")
 
     print(f"{bold('=' * W)}")
     print(f" Output directory: {cyan(str(TENSOR_DIR))}")
@@ -605,8 +632,8 @@ def main():
         help="Show what would be processed without actually running",
     )
     parser.add_argument(
-        "-N", "--window-size", type=int, default=None,
-        help="Override N-Packet window size (default: from pipeline.yaml)",
+        "--rf-checkpoint-stride", type=int, default=None,
+        help="Override RF checkpoint stride (default: from pipeline.yaml)",
     )
     parser.add_argument(
         "--include-benign", action="store_true",
@@ -629,7 +656,27 @@ def main():
         help="Force the shared mean_std.json fit even if data/tensors/mean_std.json "
              "already exists.",
     )
+    outputs_group = parser.add_mutually_exclusive_group()
+    outputs_group.add_argument(
+        "--rf", action="store_true",
+        help="Only build the RF input tensors (rf_checkpoints.npy + "
+             "rf_checkpoint_offsets.npy) for each selected attack. Skips "
+             "the TCN per-packet view. Default builds both.",
+    )
+    outputs_group.add_argument(
+        "--tcn", action="store_true",
+        help="Only build the TCN/Transformer input tensors "
+             "(flow_packets.npy + flow_offsets.npy) for each selected "
+             "attack. Skips the RF checkpoint view. Default builds both.",
+    )
     args = parser.parse_args()
+
+    if args.rf:
+        selected_outputs: tuple[str, ...] = ("rf",)
+    elif args.tcn:
+        selected_outputs = ("tcn",)
+    else:
+        selected_outputs = ("rf", "tcn")
 
     # Validate --only / --exclude keys
     if args.only:
@@ -677,7 +724,8 @@ def main():
         print("Nothing to process. Check --only keys or add --include-benign.")
         sys.exit(0)
 
-    print(f"\n{bold('ADEPT Batch Processing')} — {cyan(str(len(selected)))} attack(s) selected\n")
+    print(f"\n{bold('ADEPT Batch Processing')} — {cyan(str(len(selected)))} attack(s) selected"
+          f"  {dim(f'(outputs={list(selected_outputs)})')}\n")
     for i, a in enumerate(selected, 1):
         tag = dim(" [time-filtered]") if a.time_start else ""
         print(f"  {dim(str(i) + '.')} {a.name} {dim('(' + a.dataset + ')')}{tag}")
@@ -686,7 +734,7 @@ def main():
     if args.dry_run:
         print("Dry run — nothing will be processed.\n")
         for a in selected:
-            exists = is_already_processed(a.output_dir)
+            exists = is_already_processed(a.output_dir, selected_outputs)
             if exists and not args.force:
                 status = yellow("EXISTS — skip")
             elif exists and args.force:
@@ -736,14 +784,17 @@ def main():
                   f"{dim('(' + attack.dataset + ')')}")
             print(f"{dim('─' * 72)}")
 
-            # Skip if already processed
-            if is_already_processed(attack.output_dir) and not args.force:
+            # Skip if already processed for the requested output set
+            if (is_already_processed(attack.output_dir, selected_outputs)
+                    and not args.force):
                 meta = load_metadata(attack.output_dir)
-                print(f"  {yellow('Already processed')} ({meta['num_windows']:,} windows). "
+                print(f"  {yellow('Already processed')} ({meta.get('num_flows', '?')} flows, "
+                      f"{meta.get('num_packets', '?')} packets, "
+                      f"outputs={meta.get('outputs', ['rf', 'tcn'])}). "
                       f"Use {bold('--force')} to re-process.")
-                # Still attach labels if window_labels.csv is missing
-                if not (attack.output_dir / "window_labels.csv").exists():
-                    print(f"  {dim('window_labels.csv missing — attaching labels...')}")
+                # Still attach labels if flow_labels.csv is missing
+                if not (attack.output_dir / "flow_labels.csv").exists():
+                    print(f"  {dim('flow_labels.csv missing — attaching labels...')}")
                     run_label_attach(attack)
                 results.append((attack.name, "skipped", meta))
                 continue
@@ -784,9 +835,10 @@ def main():
                 run_pipeline(
                     pcap=pcap_to_process,
                     output_dir=attack.output_dir,
-                    window_size=args.window_size,
+                    rf_checkpoint_stride=args.rf_checkpoint_stride,
                     extra_args=attack.extra_args,
                     mean_std=shared_mean_std,
+                    outputs=selected_outputs,
                 )
 
                 meta = load_metadata(attack.output_dir)

@@ -13,7 +13,7 @@
   "training": {
     "device": "auto",
     "epochs": 20,
-    "batch_size": 256,
+    "batch_size": 32,
     "num_workers": 4,
     "lr": 0.001,
     "weight_decay": 0.0001,
@@ -21,8 +21,9 @@
     "early_stop_patience": 3,
     "amp": true,
     "class_weight": "balanced",
+    "max_length": 200,
     "seed": 42
   },
-  "n_parameters": 806018,
+  "n_parameters": 805762,
   "receptive_field": 29
 }

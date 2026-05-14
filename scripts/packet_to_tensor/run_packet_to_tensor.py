@@ -1,45 +1,44 @@
 #!/usr/bin/env python3
 """
-ADEPT — Packet-to-Tensor Pipeline (nPrint Edition)
-====================================================
+ADEPT — Packet-to-Tensor Pipeline (streaming-native edition)
+=============================================================
 
-End-to-end script that converts a raw PCAP into the two synchronized tensor
-outputs consumed by the ADEPT ensemble:
+End-to-end script that converts a raw PCAP into the ragged per-flow tensor
+layout consumed by the streaming-native ADEPT ensemble:
 
-    1. Sequence tensor  [W, N, F≈1090]  → TCN & Purification Transformer
-       (nPrint bit-level header encoding + IPAT + Direction)
-    2. RF statistics    [W, S=24]       → Random Forest
-       (aggregated from Scapy-derived metadata)
+    1. flow_packets.npy            [P_total, F=1090] float32
+       Per-packet nPrint bits + IPAT (z-score) + Direction, concatenated
+       across all flows in flow-arrival order.
+    2. flow_offsets.npy            [N_flows, 2]      int64
+       (start_idx, length) into flow_packets.npy per flow.
+    3. rf_checkpoints.npy          [C_total, S=24]   float32
+       Aggregated statistics over the growing prefix of each flow, emitted
+       every `rf_checkpoint_stride` packets (default 10).
+    4. rf_checkpoint_offsets.npy   [N_flows, 2]      int64
+       (start_idx, n_checkpoints) into rf_checkpoints.npy per flow.
 
-Uses nPrint-compatible bit-level encoding (Holland et al., CCS 2021),
-with selective identity masking inspired by FlowPaint (SIGCOMM'26).
+Plus:
+    flow_ids.npy      — per-flow 5-tuple keys (object array)
+    metadata.json     — config, shapes, normalisation stats
+    mean_std.json     — IPAT normalisation parameters
 
 Usage
 -----
     python scripts/packet_to_tensor/run_packet_to_tensor.py \\
         --input data/CIC-IDS-2017/pcap/Monday-WorkingHours.pcap \\
-        --output-dir data/processed/monday/
+        --output-dir data/tensors/monday/
 
-    # With custom window size (e.g., N=20):
+    # With custom RF checkpoint stride (e.g., every 20 packets):
     python scripts/packet_to_tensor/run_packet_to_tensor.py \\
-        --input data/CIC-IDS-2017/pcap/Monday-WorkingHours.pcap \\
-        --output-dir data/processed/monday_n20/ \\
-        --window-size 20
+        --input data/Kitsune/ddos.pcap \\
+        --output-dir data/tensors/ddos_s20/ \\
+        --rf-checkpoint-stride 20
 
     # Disable identity masking:
     python scripts/packet_to_tensor/run_packet_to_tensor.py \\
         --input data/CIC-IDS-2017/pcap/Monday-WorkingHours.pcap \\
-        --output-dir data/processed/monday_unmasked/ \\
+        --output-dir data/tensors/monday_unmasked/ \\
         --no-mask
-
-Outputs
--------
-    <output-dir>/
-        sequence.npy       — [W, N, F≈1090] float32
-        rf_stats.npy       — [W, S=24]      float32
-        flow_ids.npy       — [W]            object (5-tuple per window)
-        mean_std.json      — normalization statistics
-        metadata.json      — pipeline config & tensor shapes
 """
 
 import argparse
@@ -64,11 +63,7 @@ from src.feature_extraction.incremental_pipeline import build_tensors_incrementa
 # Streaming mean/std fitter (Welford / Chan parallel update)
 # ---------------------------------------------------------------------------
 def _welford_merge(state: dict, vals: "np.ndarray") -> dict:
-    """Fold a numpy batch of observations into a (count, mean, M2) accumulator.
-
-    Uses Chan's parallel-Welford formula so per-PCAP batches are merged into
-    one global accumulator without holding all values in memory at once.
-    """
+    """Fold a numpy batch of observations into a (count, mean, M2) accumulator."""
     n_b = len(vals)
     if n_b == 0:
         return state
@@ -86,13 +81,7 @@ def _welford_merge(state: dict, vals: "np.ndarray") -> dict:
 
 def _fit_mean_std_streaming(pcap_paths, columns, output_path, mask_prefixes,
                             workers=None):
-    """Fit per-column mean/std across multiple PCAPs and write JSON.
-
-    Streams one PCAP at a time: extracts metadata + IPAT via the existing
-    extract_packet_features → group_by_flow path, accumulates with Welford,
-    discards arrays before moving to the next PCAP. nprint_bits is dropped
-    immediately to bound peak RAM.
-    """
+    """Fit per-column mean/std across multiple PCAPs and write JSON."""
     accumulators = {c: {"count": 0, "mean": 0.0, "M2": 0.0} for c in columns}
     for i, pcap in enumerate(pcap_paths, 1):
         print(f"\n  {dim(f'[{i}/{len(pcap_paths)}]')} {os.path.basename(pcap)}")
@@ -141,7 +130,6 @@ def cyan(t):    return _c("36", t)
 
 
 def _step(n: int, total: int, msg: str) -> None:
-    """Print a coloured step header."""
     print(f"\n{dim(f'[{n}/{total}]')} {bold(msg)}")
 
 
@@ -152,7 +140,7 @@ def load_config(config_path: str) -> dict:
 
 def main():
     parser = argparse.ArgumentParser(
-        description="ADEPT Packet-to-Tensor pipeline (nPrint encoding)"
+        description="ADEPT Packet-to-Tensor pipeline (streaming-native, nPrint encoding)"
     )
     parser.add_argument(
         "-i", "--input", nargs="+", required=True,
@@ -163,8 +151,7 @@ def main():
         help="Fit-only mode: stream one or more PCAPs (-i ...), accumulate "
              "mean/std for the columns listed in pipeline.yaml, and write "
              "the result to -o (treated as a JSON file path). No tensors "
-             "are produced. Used to derive a shared standardizer over "
-             "benign + adversarial inputs before training.",
+             "are produced.",
     )
     parser.add_argument(
         "-o", "--output-dir", required=True,
@@ -176,8 +163,8 @@ def main():
         help="Pipeline config YAML (default: config/pipeline.yaml)"
     )
     parser.add_argument(
-        "-N", "--window-size", type=int, default=None,
-        help="Override N-Packet window size from config"
+        "--rf-checkpoint-stride", type=int, default=None,
+        help="Emit an RF feature row every K packets per flow (override config)"
     )
     parser.add_argument(
         "--mean-std", default=None,
@@ -195,16 +182,37 @@ def main():
         "--online", action="store_true",
         help=(
             "Incremental (online) mode: no global timestamp sort. "
-            "Emits each window the moment N packets arrive for a flow. "
-            "Lower peak RAM than batch mode; uses two lightweight PCAP passes."
+            "Two lightweight PCAP passes; lower peak RAM than batch mode."
         )
+    )
+    outputs_group = parser.add_mutually_exclusive_group()
+    outputs_group.add_argument(
+        "--rf-only", action="store_true",
+        help="Only build the RF checkpoint tensors "
+             "(rf_checkpoints.npy + rf_checkpoint_offsets.npy). Skips "
+             "flow_packets.npy / flow_offsets.npy.",
+    )
+    outputs_group.add_argument(
+        "--tcn-only", action="store_true",
+        help="Only build the per-packet sequence tensors "
+             "(flow_packets.npy + flow_offsets.npy). Skips "
+             "rf_checkpoints.npy / rf_checkpoint_offsets.npy.",
     )
     args = parser.parse_args()
 
-    # --- Load config ---------------------------------------------------------
+    if args.rf_only:
+        selected_outputs = ("rf",)
+    elif args.tcn_only:
+        selected_outputs = ("tcn",)
+    else:
+        selected_outputs = ("rf", "tcn")
+
     cfg = load_config(args.config)
-    window_size = args.window_size or cfg["window_size"]
-    stride = cfg.get("window_stride", window_size)
+    rf_checkpoint_stride = (
+        args.rf_checkpoint_stride
+        if args.rf_checkpoint_stride is not None
+        else int(cfg.get("rf_checkpoint_stride", 10))
+    )
     rf_base = cfg["rf_base_features"]
     rf_agg = cfg["rf_agg_functions"]
     std_cols = cfg["standardize_columns"]
@@ -219,7 +227,7 @@ def main():
         stats = _fit_mean_std_streaming(
             pcap_paths=args.input,
             columns=std_cols,
-            output_path=args.output_dir,  # treated as JSON file path
+            output_path=args.output_dir,
             mask_prefixes=mask_prefixes,
             workers=args.workers,
         )
@@ -228,7 +236,6 @@ def main():
             print(f"  {cyan(c):<20}  mean={s['mean']:.6f}  std={s['std']:.6f}")
         return
 
-    # ── Tensor-building modes require exactly one input PCAP ────────────────
     if len(args.input) != 1:
         parser.error("In tensor-building mode, -i takes exactly one PCAP. "
                      "Use --fit-mean-std for multi-PCAP standardizer fitting.")
@@ -240,10 +247,6 @@ def main():
         args.output_dir, cfg["mean_std_filename"]
     )
 
-    # When a shared standardizer is supplied, mirror it into the local
-    # output dir so per-attack consumers can find mean_std.json next to
-    # their tensors (downstream code that looks up the per-output copy
-    # keeps working unchanged).
     if args.mean_std and os.path.abspath(args.mean_std) != os.path.abspath(
         os.path.join(args.output_dir, cfg["mean_std_filename"])
     ):
@@ -254,10 +257,7 @@ def main():
     fname = os.path.basename(input_pcap)
     t0 = time.time()
 
-    # ── Pipeline branch: batch (default) or online (incremental) ─────────────
-
     if not args.online:
-        # ── Batch: 3-stage pipeline ───────────────────────────────────────
         _step(1, 3, f"Extracting nPrint features  {dim(fname)}")
         nprint_bits, meta_df = extract_packet_features(
             input_pcap, mask_prefixes=mask_prefixes, workers=args.workers
@@ -273,91 +273,107 @@ def main():
         print(f"      {green('✓')} {len(flow_indices):,} flows  {dim(f'({t2 - t1:.1f}s)')}")
 
         sizes = [len(idx) for idx in flow_indices.values()]
-        usable = sum(1 for s in sizes if s >= window_size)
-        print(f"      Flow sizes: min={min(sizes)}, "
-              f"median={np.median(sizes):.0f}, "
-              f"max={max(sizes)} — "
-              f"{cyan(str(usable))}/{len(sizes)} usable (≥N={window_size})")
+        if sizes:
+            usable = sum(1 for s in sizes if s >= rf_checkpoint_stride)
+            print(f"      Flow sizes: min={min(sizes)}, "
+                  f"median={np.median(sizes):.0f}, "
+                  f"max={max(sizes)} — "
+                  f"{cyan(str(usable))}/{len(sizes)} have ≥{rf_checkpoint_stride} packets")
 
-        _step(3, 3, f"Building tensors  {dim(f'(N={window_size}, stride={stride})')}")
+        _step(3, 3, f"Building ragged tensors  "
+                    f"{dim(f'(rf_checkpoint_stride={rf_checkpoint_stride}, outputs={list(selected_outputs)})')}")
         result = build_tensors(
             nprint_bits=nprint_bits,
             meta_df=meta_df,
             flow_indices=flow_indices,
             output_dir=args.output_dir,
-            window_size=window_size,
-            stride=stride,
+            rf_checkpoint_stride=rf_checkpoint_stride,
             rf_base_features=rf_base,
             rf_agg_functions=rf_agg,
             standardize_columns=std_cols,
             mean_std_path=mean_std_path,
+            outputs=selected_outputs,
         )
         del nprint_bits, meta_df
         t3 = time.time()
-        print(f"      {green('✓')} {result['num_windows']:,} windows  {dim(f'({t3 - t2:.1f}s)')}")
-
-        num_flows_total = len(flow_indices)
-        num_flows_used  = len(set(result["flow_ids"]))
+        print(f"      {green('✓')} {result['num_flows']:,} flows, "
+              f"{result['num_packets']:,} packets, "
+              f"{result['num_checkpoints']:,} RF checkpoints  "
+              f"{dim(f'({t3 - t2:.1f}s)')}")
 
     else:
-        # ── Online: incremental 2-pass pipeline ───────────────────────────
         _step(1, 2, f"Prescan  {dim(fname)}")
-        _step(2, 2, f"Encoding + building tensors  "
-                    f"{dim(f'(N={window_size}, stride={stride})')}")
+        _step(2, 2, f"Encoding + building ragged tensors  "
+                    f"{dim(f'(rf_checkpoint_stride={rf_checkpoint_stride}, outputs={list(selected_outputs)})')}")
         result = build_tensors_incremental(
             pcap_path=input_pcap,
             output_dir=args.output_dir,
-            window_size=window_size,
-            stride=stride,
+            rf_checkpoint_stride=rf_checkpoint_stride,
             rf_base_features=rf_base,
             rf_agg_functions=rf_agg,
             mean_std_path=mean_std_path,
             mask_prefixes=mask_prefixes,
+            outputs=selected_outputs,
         )
         t3 = time.time()
-        print(f"      {green('✓')} {result['num_windows']:,} windows  "
+        print(f"      {green('✓')} {result['num_flows']:,} flows, "
+              f"{result['num_packets']:,} packets, "
+              f"{result['num_checkpoints']:,} RF checkpoints  "
               f"{dim(f'({t3 - t0:.1f}s)')}")
 
-        num_flows_total = result.get("num_flows_total", len(set(result["flow_ids"])))
-        num_flows_used  = len(set(result["flow_ids"]))
-
     # ── Common: write flow_ids.npy and metadata.json ──────────────────────────
-    n_windows = result["num_windows"]
     np.save(os.path.join(args.output_dir, "flow_ids.npy"),
             np.array(result["flow_ids"], dtype=object), allow_pickle=True)
 
-    seq_shape = (n_windows, window_size, len(result["feature_names"]))
-    rf_shape  = (n_windows, len(result["rf_stat_names"]))
-    metadata  = {
+    n_flows = result["num_flows"]
+    n_packets = result["num_packets"]
+    n_ckpts = result["num_checkpoints"]
+    outputs_built = list(result.get("outputs", list(selected_outputs)))
+    built_tcn = "tcn" in outputs_built
+    built_rf = "rf" in outputs_built
+    metadata = {
         "input":                    input_pcap,
         "encoding":                 "nprint",
         "pipeline_mode":            "online" if args.online else "batch",
+        "schema":                   "ragged-per-flow-v1",
+        "outputs":                  outputs_built,
         "nprint_bits":              1088,
         "identity_masking":         not args.no_mask,
         "mask_prefixes":            mask_prefixes,
-        "window_size":              window_size,
-        "stride":                   stride,
-        "num_windows":              n_windows,
-        "sequence_shape":           list(seq_shape),
-        "rf_stats_shape":           list(rf_shape),
+        "rf_checkpoint_stride":     rf_checkpoint_stride,
+        "num_flows":                n_flows,
+        "num_packets":              n_packets,
+        "num_checkpoints":          n_ckpts,
         "sequence_feature_count":   len(result["feature_names"]),
         "rf_stat_names":            result["rf_stat_names"],
         "normalization_stats":      result["stats"],
-        "num_flows_total":          num_flows_total,
-        "num_flows_used":           num_flows_used,
     }
+    if built_tcn:
+        metadata["flow_packets_shape"] = [n_packets, len(result["feature_names"])]
+    if built_rf:
+        metadata["rf_checkpoints_shape"] = [n_ckpts, len(result["rf_stat_names"])]
     with open(os.path.join(args.output_dir, "metadata.json"), "w") as f:
         json.dump(metadata, f, indent=2)
 
-    # --- Summary -------------------------------------------------------------
     total = t3 - t0
     W = 62
     masking_str = green("ON") if not args.no_mask else yellow("OFF")
+    skipped = yellow("(skipped)")
     print(f"\n{bold('═' * W)}")
-    print(f" {bold('ADEPT Packet-to-Tensor')}  {dim(f'Done in {total:.1f}s')}")
+    print(f" {bold('ADEPT Packet-to-Tensor (streaming)')}  {dim(f'Done in {total:.1f}s')}")
     print(f"{'─' * W}")
-    print(f" {cyan('Sequence tensor')}  {str(seq_shape):<28} {dim('TCN / Transformer')}")
-    print(f" {cyan('RF stats tensor')}  {str(rf_shape):<28} {dim('Random Forest')}")
+    if built_tcn:
+        print(f" {cyan('flow_packets')}     [{n_packets}, {len(result['feature_names'])}]  "
+              f"{dim('TCN / Transformer (per-flow ragged)')}")
+    else:
+        print(f" {cyan('flow_packets')}     {skipped}  "
+              f"{dim('TCN / Transformer (per-flow ragged)')}")
+    if built_rf:
+        print(f" {cyan('rf_checkpoints')}   [{n_ckpts}, {len(result['rf_stat_names'])}]  "
+              f"{dim(f'Random Forest (stride={rf_checkpoint_stride})')}")
+    else:
+        print(f" {cyan('rf_checkpoints')}   {skipped}  "
+              f"{dim(f'Random Forest (stride={rf_checkpoint_stride})')}")
     print(f" {cyan('Identity masking')} {masking_str}")
     print(f" {cyan('Output')}           {args.output_dir}")
     print(f"{bold('═' * W)}\n")

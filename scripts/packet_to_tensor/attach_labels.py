@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-ADEPT — Window Label Attachment
-================================
+ADEPT — Flow Label Attachment (streaming-native edition)
+=========================================================
 
-Produces <tensor-dir>/window_labels.csv.
+Produces ``<tensor-dir>/flow_labels.csv`` — one row per flow.
 
 ADEPT is a defense against adversarially-perturbed traffic: the purifier
 and ensemble are trained to distinguish the benign manifold from TANTGen-
@@ -18,10 +18,10 @@ Labels are therefore driven purely by the source dataset:
   cic          → label=0, label_str="benign"
   adversarial  → label=1, label_str="adversarial"
 
-No ground-truth CSV or PCAP re-read is needed; `num_windows` is read from
+No ground-truth CSV or PCAP re-read is needed; ``num_flows`` is read from
 metadata.json produced by the pipeline.
 
-Output columns: window_idx, label (0=benign, 1=adversarial), label_str.
+Output columns: flow_idx, label (0=benign, 1=adversarial), label_str.
 
 Usage
 -----
@@ -45,7 +45,7 @@ import json
 import sys
 from pathlib import Path
 
-OUTPUT_FILENAME = "window_labels.csv"
+OUTPUT_FILENAME = "flow_labels.csv"
 
 # Dataset → (label, label_str).
 LABEL_FOR_DATASET = {
@@ -55,18 +55,18 @@ LABEL_FOR_DATASET = {
 }
 
 
-def write_window_labels(tensor_dir: Path, label: int, label_str: str) -> int:
-    """Write window_labels.csv with `num_windows` uniform rows. Returns count."""
+def write_flow_labels(tensor_dir: Path, label: int, label_str: str) -> int:
+    """Write flow_labels.csv with `num_flows` uniform rows. Returns count."""
     meta_path = tensor_dir / "metadata.json"
     if not meta_path.exists():
         raise FileNotFoundError(
             f"metadata.json not found in {tensor_dir}. Run the pipeline first.")
     with open(meta_path) as f:
         meta = json.load(f)
-    n = int(meta["num_windows"])
+    n = int(meta["num_flows"])
     out = tensor_dir / OUTPUT_FILENAME
     with open(out, "w") as f:
-        f.write("window_idx,label,label_str\n")
+        f.write("flow_idx,label,label_str\n")
         for i in range(n):
             f.write(f"{i},{label},{label_str}\n")
     return n
@@ -74,13 +74,13 @@ def write_window_labels(tensor_dir: Path, label: int, label_str: str) -> int:
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Write window_labels.csv using ADEPT's dataset-driven "
+        description="Write flow_labels.csv using ADEPT's dataset-driven "
                     "label convention (benign vs adversarial).")
     parser.add_argument("-d", "--dataset", required=True,
                         choices=sorted(LABEL_FOR_DATASET))
     parser.add_argument("-t", "--tensor-dir", required=True)
     parser.add_argument("--force", action="store_true",
-                        help="Overwrite existing window_labels.csv")
+                        help="Overwrite existing flow_labels.csv")
     args = parser.parse_args()
 
     tensor_dir = Path(args.tensor_dir)
@@ -95,8 +95,8 @@ def main():
         sys.exit(0)
 
     label, label_str = LABEL_FOR_DATASET[args.dataset]
-    n = write_window_labels(tensor_dir, label, label_str)
-    print(f"  Labelled {n:,} windows — {label_str}")
+    n = write_flow_labels(tensor_dir, label, label_str)
+    print(f"  Labelled {n:,} flows — {label_str}")
     print(f"  Output: {out_path}")
 
 

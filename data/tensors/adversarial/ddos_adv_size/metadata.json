@@ -2,6 +2,7 @@
   "input": "/home/gleitao/Master Thesis/ADEPT/data/adversarial/ddos/ddos_adversarial_size.pcap",
   "encoding": "nprint",
   "pipeline_mode": "batch",
+  "schema": "ragged-per-flow-v1",
   "nprint_bits": 1088,
   "identity_masking": true,
   "mask_prefixes": [
@@ -13,15 +14,15 @@
     "udp_sport",
     "udp_dport"
   ],
-  "window_size": 10,
-  "stride": 10,
-  "num_windows": 266,
-  "sequence_shape": [
-    266,
-    10,
+  "rf_checkpoint_stride": 10,
+  "num_flows": 1011,
+  "num_packets": 9741,
+  "num_checkpoints": 266,
+  "flow_packets_shape": [
+    9741,
     1090
   ],
-  "rf_stats_shape": [
+  "rf_checkpoints_shape": [
     266,
     24
   ],
@@ -57,7 +58,5 @@
       "mean": 26.744513662992706,
       "std": 539.9896285057356
     }
-  },
-  "num_flows_total": 1011,
-  "num_flows_used": 232
+  }
 }

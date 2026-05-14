@@ -1,14 +1,21 @@
-"""Temporal Convolutional Network for ADEPT.
+"""Temporal Convolutional Network for ADEPT (streaming-native edition).
 
 Architecture follows Bai et al. 2018 ("An Empirical Evaluation of Generic
 Convolutional and Recurrent Networks for Sequence Modeling"): stacked
 dilated 1-D convolutions with weight normalisation, causal padding via
 right-side chomp, and residual connections per block.
 
-Input convention: DataLoader emits tensors with shape ``[B, T, F]`` to
-match the on-disk ``sequence.npy`` layout (``T`` = window size, ``F`` =
-1088 nPrint bits + IPAT + Direction). The forward pass permutes to the
-``[B, F, T]`` channels-first layout that ``Conv1d`` expects.
+Under the streaming-native ensemble, the TCN emits **per-packet** logits
+over a variable-length input sequence rather than a single logit per
+fixed-size window. Causality is enforced at the convolution level (Bai-
+style chomp), so the output at timestep ``t`` depends only on input
+packets ``≤ t`` — making the forward pass valid for online inference
+where packets arrive one at a time.
+
+Input convention: DataLoader emits tensors with shape ``[B, T, F]`` where
+``T`` is the (per-batch padded) flow length and ``F`` = 1088 nPrint bits
++ IPAT (z-score) + Direction. The forward pass permutes to ``[B, F, T]``
+for ``Conv1d`` and returns ``[B, T, num_classes]`` per-packet logits.
 """
 from __future__ import annotations
 
@@ -87,7 +94,14 @@ class TemporalBlock(nn.Module):
 
 
 class TCN(nn.Module):
-    """Stack of ``TemporalBlock`` layers with mean+max pooling head.
+    """Stack of ``TemporalBlock`` layers with a per-timestep classification head.
+
+    The head is applied independently at every timestep, so ``forward``
+    returns logits of shape ``[B, T, num_classes]`` — one prediction per
+    packet position. Combined with causal padding in ``TemporalBlock``,
+    this is the streaming-native form of the classifier: the logits at
+    position ``t`` represent the model's verdict after seeing the first
+    ``t + 1`` packets of the flow.
 
     Args:
         num_features: per-packet feature count ``F`` (1090 for ADEPT).
@@ -126,22 +140,23 @@ class TCN(nn.Module):
             in_ch = int(out_ch)
         self.tcn = nn.Sequential(*blocks)
 
-        head_in = 2 * in_ch  # mean + max pooled
-        self.head = nn.Linear(head_in, self.num_classes)
+        # Per-timestep head — applied as a 1x1 conv on the channel axis so
+        # it broadcasts across T without an explicit Python loop.
+        self.head = nn.Conv1d(in_ch, self.num_classes, kernel_size=1)
+        nn.init.kaiming_normal_(self.head.weight, nonlinearity="linear")
+        if self.head.bias is not None:
+            nn.init.zeros_(self.head.bias)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        # x: [B, T, F] -> [B, F, T]
+        # x: [B, T, F] -> [B, F, T] for Conv1d
         x = x.transpose(1, 2).contiguous()
-        h = self.tcn(x)                       # [B, C_last, T]
-        pooled_mean = h.mean(dim=2)
-            # [B, C_last]
-        pooled_max = h.max(dim=2).values      # [B, C_last]
-        pooled = torch.cat([pooled_mean, pooled_max], dim=1)
-        return self.head(pooled)              # [B, num_classes]
+        h = self.tcn(x)                          # [B, C_last, T]
+        logits = self.head(h)                    # [B, num_classes, T]
+        return logits.transpose(1, 2).contiguous()  # [B, T, num_classes]
 
     @property
     def receptive_field(self) -> int:
-        """Symbolic receptive field for sanity checking against window size."""
+        """Symbolic receptive field for sanity checking against flow length."""
         rf = 1
         for i in range(len(self.channels)):
             rf += 2 * (self.kernel_size - 1) * (2 ** i)

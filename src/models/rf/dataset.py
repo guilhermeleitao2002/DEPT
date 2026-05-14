@@ -1,17 +1,28 @@
-"""Random Forest dataset assembly — RF-specific wrapper around
-``src/models/common/dataset.py``.
+"""Random Forest dataset assembly — streaming-native edition.
 
-Loads the 24-dim aggregate-statistics view (``rf_stats.npy``) for every
-window selected by the shared ``assemble_index``, so RF and TCN see the
-same flow-level split.
+Under the new schema each source folder stores ``rf_checkpoints.npy``
+([C_total, 24]) holding *multi-scale prefix* features computed at every
+``rf_checkpoint_stride`` packets per flow. The k-th checkpoint of a flow
+contains aggregated stats over packets ``[0:(k+1)·stride]``.
 
-Public API preserved: ``RFDataset``, ``Split``, ``assemble``,
-``flow_level_split``, ``split_summary``, ``load_source``,
+This module expands the per-flow assembled index into a **per-checkpoint**
+training matrix: each row of ``RFDataset.X`` is one prefix view of one
+flow, labelled with the flow's class. Training the RF on this multi-scale
+pool ensures the model is calibrated for the full inference-time
+distribution of prefix sizes (not just N=10 windows).
+
+The split is computed in **per-flow** space first (using the shared
+``flow_level_split``) and then expanded to per-checkpoint rows so all
+prefix views of the same flow land in the same split — no leakage.
+
+Public API mirrors the previous module: ``RFDataset``, ``Split``,
+``assemble``, ``flow_level_split``, ``split_summary``, ``load_source``,
 ``discover_adversarial_sources``, ``cap_benign``, plus the label string
 constants.
 """
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -28,7 +39,6 @@ from ..common.dataset import (
     discover_adversarial_sources,
     flow_level_split as _common_flow_level_split,
     load_source_meta,
-    split_summary as _common_split_summary,
 )
 
 
@@ -49,29 +59,96 @@ __all__ = [
 
 @dataclass
 class RFDataset:
-    X: np.ndarray               # [N, F] float32
-    y: np.ndarray               # [N]    int8   (0 benign, 1 adversarial)
-    flow_ids: np.ndarray        # [N]    str    (stringified 5-tuple)
-    sources: np.ndarray         # [N]    str    (source folder name)
-    label_str: np.ndarray       # [N]    str    ("benign" or "adversarial")
+    X: np.ndarray               # [N, F] float32  — N = total checkpoints
+    y: np.ndarray               # [N]    int8     — flow label propagated
+    flow_ids: np.ndarray        # [N]    str      — duplicated per checkpoint
+    sources: np.ndarray         # [N]    str      — duplicated per checkpoint
+    label_str: np.ndarray       # [N]    str
+    checkpoint_idx: np.ndarray  # [N]    int32    — 0..n_ckpt-1 within flow
     feature_names: list[str] = field(default_factory=list)
 
 
-def load_source(folder: Path, source_name: str) -> tuple[
-    np.ndarray, np.ndarray, np.ndarray, np.ndarray, list[str]
+def _expand_source_checkpoints(
+    folder: Path,
+    flow_local_idx: np.ndarray,
+    y_per_flow: np.ndarray,
+    flow_ids_per_flow: np.ndarray,
+    label_str_per_flow: np.ndarray,
+    source_name: str,
+) -> tuple[
+    np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray,
 ]:
-    """Load one source folder. Returns (X, y, flow_ids, label_str, feature_names).
+    """Expand the selected flows of one source into per-checkpoint rows.
 
-    Kept for backwards compatibility — internally this loads the heavy
-    ``rf_stats.npy`` and slices to the rows that survived label
-    normalisation. Prefer the shared ``assemble_index`` for new code.
+    Reads ``rf_checkpoints.npy`` (small, eagerly loaded) and
+    ``rf_checkpoint_offsets.npy`` (small) and slices each flow's
+    contiguous checkpoint block. Flows whose length is below the
+    pipeline's ``rf_checkpoint_stride`` produce zero checkpoints and are
+    silently skipped.
     """
-    y, flow_ids, label_str, local_idx, feature_names = load_source_meta(folder, source_name)
-    X_full = np.load(folder / "rf_stats.npy").astype(np.float32, copy=False)
-    if X_full.shape[0] < (int(local_idx.max()) + 1 if len(local_idx) else 0):
-        raise ValueError(f"{source_name}: rf_stats rows mismatch")
-    X = X_full[local_idx]
-    return X, y, flow_ids, label_str, feature_names
+    rf_ckpts = np.load(folder / "rf_checkpoints.npy").astype(np.float32, copy=False)
+    rf_offsets = np.load(folder / "rf_checkpoint_offsets.npy")
+
+    Xs: list[np.ndarray] = []
+    ys: list[np.ndarray] = []
+    flows: list[np.ndarray] = []
+    srcs: list[np.ndarray] = []
+    labs: list[np.ndarray] = []
+    cidx: list[np.ndarray] = []
+
+    for fi, y_val, fid, lstr in zip(
+        flow_local_idx, y_per_flow, flow_ids_per_flow, label_str_per_flow,
+    ):
+        start, n_ckpt = rf_offsets[int(fi)]
+        n_ckpt = int(n_ckpt)
+        if n_ckpt <= 0:
+            continue
+        Xs.append(rf_ckpts[int(start):int(start) + n_ckpt])
+        ys.append(np.full(n_ckpt, int(y_val), dtype=np.int8))
+        flows.append(np.full(n_ckpt, fid, dtype=object))
+        srcs.append(np.full(n_ckpt, source_name, dtype=object))
+        labs.append(np.full(n_ckpt, lstr, dtype=object))
+        cidx.append(np.arange(n_ckpt, dtype=np.int32))
+
+    if not Xs:
+        return (
+            np.zeros((0, rf_ckpts.shape[1] if rf_ckpts.ndim == 2 else 24), dtype=np.float32),
+            np.zeros(0, dtype=np.int8),
+            np.zeros(0, dtype=object),
+            np.zeros(0, dtype=object),
+            np.zeros(0, dtype=object),
+            np.zeros(0, dtype=np.int32),
+        )
+    return (
+        np.concatenate(Xs, axis=0),
+        np.concatenate(ys, axis=0),
+        np.concatenate(flows, axis=0),
+        np.concatenate(srcs, axis=0),
+        np.concatenate(labs, axis=0),
+        np.concatenate(cidx, axis=0),
+    )
+
+
+def load_source(folder: Path, source_name: str) -> tuple[
+    np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, list[str]
+]:
+    """Load one source folder. Returns ``(X, y, flow_ids, label_str,
+    checkpoint_idx, feature_names)`` expanded to per-checkpoint rows.
+
+    Kept for backwards-compat callers; prefer ``assemble`` for new code.
+    """
+    y_pf, flow_ids_pf, label_str_pf, local_idx, feature_names = load_source_meta(
+        folder, source_name,
+    )
+    X, y, flow_ids, sources, label_str, cidx = _expand_source_checkpoints(
+        folder=folder,
+        flow_local_idx=local_idx,
+        y_per_flow=y_pf,
+        flow_ids_per_flow=flow_ids_pf,
+        label_str_per_flow=label_str_pf,
+        source_name=source_name,
+    )
+    return X, y, flow_ids, label_str, cidx, feature_names
 
 
 def assemble(
@@ -82,8 +159,11 @@ def assemble(
     seed: int,
     adversarial_exclude: list[str] = (),
 ) -> RFDataset:
-    """Merge benign sources + auto-discovered adversarial sources into an
-    ``RFDataset`` whose row order matches the shared ``assemble_index``.
+    """Merge benign + adversarial sources, expand to per-checkpoint rows.
+
+    Row order: grouped by source in the iteration order of the shared
+    ``assemble_index``, then by flow (per-flow row order), then by
+    checkpoint index (ascending prefix length).
     """
     idx: AssembledIndex = assemble_index(
         tensors_dir=tensors_dir,
@@ -94,35 +174,63 @@ def assemble(
         adversarial_exclude=list(adversarial_exclude),
     )
 
-    # Gather rf_stats rows per source (small files, ~1MB each — fine in RAM).
-    # The index's row order groups rows by source in iteration order, so we
-    # can slice once per source and concatenate.
-    parts: list[np.ndarray] = []
     feature_names = list(idx.feature_names)
     seen_order: list[str] = []
     for src in idx.sources:
         if not seen_order or seen_order[-1] != src:
             seen_order.append(src)
+
+    X_parts: list[np.ndarray] = []
+    y_parts: list[np.ndarray] = []
+    flow_parts: list[np.ndarray] = []
+    src_parts: list[np.ndarray] = []
+    lab_parts: list[np.ndarray] = []
+    ckpt_parts: list[np.ndarray] = []
+
     for src in seen_order:
         folder = idx.source_folders[src]
-        X_full = np.load(folder / "rf_stats.npy").astype(np.float32, copy=False)
         mask = idx.sources == src
-        parts.append(X_full[idx.local_idx[mask]])
+        X_s, y_s, flow_s, src_s, lab_s, cidx_s = _expand_source_checkpoints(
+            folder=folder,
+            flow_local_idx=idx.local_idx[mask],
+            y_per_flow=idx.y[mask],
+            flow_ids_per_flow=idx.flow_ids[mask],
+            label_str_per_flow=idx.label_str[mask],
+            source_name=src,
+        )
+        X_parts.append(X_s)
+        y_parts.append(y_s)
+        flow_parts.append(flow_s)
+        src_parts.append(src_s)
+        lab_parts.append(lab_s)
+        ckpt_parts.append(cidx_s)
         if not feature_names:
-            # Fall back to source-specific names if assemble_index didn't pick any up.
-            import json
             meta = json.loads((folder / "metadata.json").read_text())
             feature_names = list(meta.get("rf_stat_names", []))
 
-    X = np.concatenate(parts, axis=0)
+    X = np.concatenate(X_parts, axis=0) if X_parts else np.zeros((0, 24), dtype=np.float32)
     X = np.nan_to_num(X, nan=0.0, posinf=0.0, neginf=0.0)
+    y = np.concatenate(y_parts, axis=0) if y_parts else np.zeros(0, dtype=np.int8)
+    flow_ids = (
+        np.concatenate(flow_parts, axis=0) if flow_parts else np.zeros(0, dtype=object)
+    )
+    sources = (
+        np.concatenate(src_parts, axis=0) if src_parts else np.zeros(0, dtype=object)
+    )
+    label_str = (
+        np.concatenate(lab_parts, axis=0) if lab_parts else np.zeros(0, dtype=object)
+    )
+    checkpoint_idx = (
+        np.concatenate(ckpt_parts, axis=0) if ckpt_parts else np.zeros(0, dtype=np.int32)
+    )
 
     return RFDataset(
         X=X,
-        y=idx.y,
-        flow_ids=idx.flow_ids,
-        sources=idx.sources,
-        label_str=idx.label_str,
+        y=y,
+        flow_ids=flow_ids,
+        sources=sources,
+        label_str=label_str,
+        checkpoint_idx=checkpoint_idx,
         feature_names=feature_names or [f"f{i}" for i in range(X.shape[1])],
     )
 
@@ -134,22 +242,76 @@ def flow_level_split(
     test_frac: float,
     seed: int,
 ) -> Split:
-    """Stratified, flow-atomic split — RF-flavoured wrapper accepting an
-    ``RFDataset``."""
-    return _common_flow_level_split(
-        sources=dataset.sources,
-        flow_ids=dataset.flow_ids,
+    """Flow-atomic split, expanded to per-checkpoint row indices.
+
+    The decision is made on the deduplicated per-flow view, then mapped
+    back to every checkpoint row of that flow, so a single flow's
+    prefixes never split across train/val/test.
+    """
+    if len(dataset.sources) == 0:
+        return Split(
+            train_idx=np.zeros(0, dtype=np.int64),
+            val_idx=np.zeros(0, dtype=np.int64),
+            test_idx=np.zeros(0, dtype=np.int64),
+        )
+
+    scoped = np.array(
+        [f"{s}|{f}" for s, f in zip(dataset.sources, dataset.flow_ids)],
+        dtype=object,
+    )
+    _, first_idx = np.unique(scoped.astype(str), return_index=True)
+    first_idx_sorted = np.sort(first_idx)
+    per_flow_sources = dataset.sources[first_idx_sorted]
+    per_flow_flow_ids = dataset.flow_ids[first_idx_sorted]
+
+    flow_split = _common_flow_level_split(
+        sources=per_flow_sources,
+        flow_ids=per_flow_flow_ids,
         train_frac=train_frac,
         val_frac=val_frac,
         test_frac=test_frac,
         seed=seed,
     )
 
+    per_flow_scoped = scoped[first_idx_sorted]
+    train_flows = set(per_flow_scoped[flow_split.train_idx].tolist())
+    val_flows = set(per_flow_scoped[flow_split.val_idx].tolist())
+    test_flows = set(per_flow_scoped[flow_split.test_idx].tolist())
+
+    train_idx = np.where(np.isin(scoped, list(train_flows)))[0].astype(np.int64)
+    val_idx = np.where(np.isin(scoped, list(val_flows)))[0].astype(np.int64)
+    test_idx = np.where(np.isin(scoped, list(test_flows)))[0].astype(np.int64)
+
+    return Split(train_idx=train_idx, val_idx=val_idx, test_idx=test_idx)
+
 
 def split_summary(dataset: RFDataset, split: Split) -> dict:
-    """Per-split window/source counts."""
-    return _common_split_summary(
-        sources=dataset.sources,
-        y=dataset.y,
-        split=split,
-    )
+    """Per-split checkpoint + unique-flow counts."""
+    def _stats(idx: np.ndarray) -> dict:
+        if len(idx) == 0:
+            return {
+                "n_checkpoints": 0, "n_flows": 0,
+                "n_benign": 0, "n_adversarial": 0,
+                "per_source": {},
+            }
+        ys = dataset.y[idx]
+        srcs = dataset.sources[idx]
+        scoped = np.array(
+            [f"{s}|{f}" for s, f in zip(srcs, dataset.flow_ids[idx])],
+            dtype=object,
+        )
+        return {
+            "n_checkpoints": int(len(idx)),
+            "n_flows": int(len(set(scoped.astype(str).tolist()))),
+            "n_benign": int((ys == 0).sum()),
+            "n_adversarial": int((ys == 1).sum()),
+            "per_source": {
+                s: int((srcs == s).sum())
+                for s in sorted(set(srcs.tolist()))
+            },
+        }
+    return {
+        "train": _stats(split.train_idx),
+        "val": _stats(split.val_idx),
+        "test": _stats(split.test_idx),
+    }

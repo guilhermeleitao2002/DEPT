@@ -1,2 +1,2 @@
-"""TCN base learner for ADEPT — temporal model over the raw N-packet
-sequence tensor (``sequence.npy``)."""
+"""TCN base learner for ADEPT — per-packet temporal model over the
+ragged per-flow sequence tensor (``flow_packets.npy``)."""

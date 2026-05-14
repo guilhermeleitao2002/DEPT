@@ -74,7 +74,7 @@ def fit_final(
     clf = _build_rf(defaults, best_params)
     t0 = time.time()
     clf.fit(X_fit, y_fit)
-    log.info("final fit on %d windows in %.1fs", len(y_fit), time.time() - t0)
+    log.info("final fit on %d checkpoint rows in %.1fs", len(y_fit), time.time() - t0)
     return clf
 
 
@@ -126,7 +126,9 @@ def train(config: dict, tensors_root: Path, output_dir: Path) -> dict:
         X=dataset.X,
         y=dataset.y,
         sources=dataset.sources.astype(str),
+        flow_ids=dataset.flow_ids.astype(str),
         label_str=dataset.label_str.astype(str),
+        checkpoint_idx=dataset.checkpoint_idx,
     )
     (output_dir / "feature_names.json").write_text(json.dumps(dataset.feature_names))
     (output_dir / "split_summary.json").write_text(json.dumps(summary, indent=2))

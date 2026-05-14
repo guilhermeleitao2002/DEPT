@@ -177,38 +177,43 @@ def _print_config_banner(config_path: Path, config: dict,
 
 
 def _print_split_summary(summary: dict) -> None:
-    _subhead("Split summary")
-    hdr = (f" {'Split':<8} {'Windows':>12} {'Benign':>12} "
+    _subhead("Split summary  (rows = RF checkpoints, multi-scale prefixes)")
+    hdr = (f" {'Split':<8} {'Ckpts':>12} {'Flows':>10} {'Benign':>12} "
            f"{'Adversarial':>13} {'Adv %':>8}")
     print(cyan(hdr))
-    print(f" {dim('-' * 8)} {dim('-' * 12)} {dim('-' * 12)} "
+    print(f" {dim('-' * 8)} {dim('-' * 12)} {dim('-' * 10)} {dim('-' * 12)} "
           f"{dim('-' * 13)} {dim('-' * 8)}")
 
-    totals = {"n_windows": 0, "n_benign": 0, "n_adversarial": 0}
+    totals = {"n_checkpoints": 0, "n_flows": 0, "n_benign": 0, "n_adversarial": 0}
     for name in ("train", "val", "test"):
         s = summary[name]
-        n = s["n_windows"]
+        n = s["n_checkpoints"]
+        nf = s.get("n_flows", 0)
         n_b = s["n_benign"]
         n_a = s["n_adversarial"]
         pct = (100.0 * n_a / n) if n else 0.0
-        totals["n_windows"] += n
+        totals["n_checkpoints"] += n
+        totals["n_flows"] += nf
         totals["n_benign"] += n_b
         totals["n_adversarial"] += n_a
-        print(f" {name:<8} {n:>12,} {dim(f'{n_b:>12,}')} "
+        print(f" {name:<8} {n:>12,} {dim(f'{nf:>10,}')} "
+              f"{dim(f'{n_b:>12,}')} "
               f"{green(f'{n_a:>13,}')} {yellow(f'{pct:>7.1f}%')}")
 
-    print(f" {dim('-' * 8)} {dim('-' * 12)} {dim('-' * 12)} "
+    print(f" {dim('-' * 8)} {dim('-' * 12)} {dim('-' * 10)} {dim('-' * 12)} "
           f"{dim('-' * 13)} {dim('-' * 8)}")
-    tn = totals["n_windows"]
+    tn = totals["n_checkpoints"]
+    tf = totals["n_flows"]
     tb = totals["n_benign"]
     ta = totals["n_adversarial"]
     pct = (100.0 * ta / tn) if tn else 0.0
     total_label = f"{'total':<8}"
     tn_str = f"{tn:>12,}"
+    tf_str = f"{tf:>10,}"
     tb_str = f"{tb:>12,}"
     ta_str = f"{ta:>13,}"
     pct_str = f"{pct:>7.1f}%"
-    print(f" {bold(total_label)} {bold(tn_str)} "
+    print(f" {bold(total_label)} {bold(tn_str)} {dim(tf_str)} "
           f"{dim(tb_str)} {green(bold(ta_str))} {yellow(pct_str)}")
 
 

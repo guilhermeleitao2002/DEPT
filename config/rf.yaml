@@ -41,9 +41,9 @@ benign_sources:
 #   tensors that would only exist if process_all_attacks.py's TANTGEN_KEYS
 #   filter were bypassed. Currently only ddos_kitsune is opted in.
 adversarial_exclude:
-  - portscan_adv_both
-  - portscan_adv_iat
-  - portscan_adv_size
+  # - portscan_adv_both
+  # - portscan_adv_iat
+  # - portscan_adv_size
   - dos_slow_adv_both
   - dos_slow_adv_iat
   - dos_slow_adv_size
@@ -67,9 +67,9 @@ split:
   test_frac: 0.15
   seed: 42
 
-# Benign capping: total benign windows ≤ benign_cap_ratio × adversarial
-# windows (applied globally, flow-atomic). Prevents the much larger
-# benign pool from dominating training.
+# Benign capping: total benign *flows* ≤ benign_cap_ratio × adversarial
+# *flows* (applied globally before the per-checkpoint expansion).
+# Prevents the much larger benign pool from dominating training.
 benign_cap_ratio: 3.0
 
 # Safety net — should never fire since attach_labels.py writes only
