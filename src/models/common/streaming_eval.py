@@ -41,7 +41,7 @@ from sklearn.metrics import roc_auc_score  # noqa: E402
 
 ADV_MODE_SUFFIXES = ("_adv_both", "_adv_iat", "_adv_size")
 
-DEFAULT_T_GRID = (1, 5, 10, 20, 50, 100)  # plus "max" appended at runtime.
+DEFAULT_T_GRID = (1, 2, 5, 10, 20, 50, 100)  # plus "max" appended at runtime.
 
 
 def _base_source(adv_source: str) -> str | None:

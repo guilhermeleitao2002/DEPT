@@ -206,11 +206,18 @@ def evaluate(output_dir: Path) -> dict:
 
     # ---------- Streaming metrics ----------
     # Group the per-checkpoint predictions by flow into a per-flow stream
-    # ordered by ascending checkpoint_idx, then by packet index = (k+1)·stride.
-    rf_stride = 10  # packets per checkpoint (mirrors pipeline default)
+    # ordered by ascending checkpoint_idx. The absolute packet index of
+    # each checkpoint is captured during dataset assembly (cadence is per
+    # source in metadata.json) and stored in ``packet_idx``. For datasets
+    # built before that field existed we fall back to the legacy
+    # ``(ckpt_idx + 1) * stride`` formula with stride=10.
     if "flow_ids" in data.files and "checkpoint_idx" in data.files:
         flow_ids_te = data["flow_ids"][test_idx]
         ckpt_idx_te = data["checkpoint_idx"][test_idx]
+        if "packet_idx" in data.files:
+            pkt_idx_te = data["packet_idx"][test_idx]
+        else:
+            pkt_idx_te = (ckpt_idx_te + 1) * 10
         scoped = np.char.add(
             np.char.add(sources_te.astype(str), "|"),
             flow_ids_te.astype(str),
@@ -226,7 +233,7 @@ def evaluate(output_dir: Path) -> dict:
             order = np.argsort(ckpt_idx_te[rows])
             rows = rows[order]
             per_flow_probs.append(y_prob[rows].astype(np.float64))
-            per_flow_pkt.append((ckpt_idx_te[rows] + 1) * rf_stride)
+            per_flow_pkt.append(pkt_idx_te[rows].astype(np.int64))
             per_flow_label.append(int(y_te[rows][0]))
             per_flow_source.append(str(sources_te[rows][0]))
             per_flow_length.append(int(per_flow_pkt[-1][-1]))

@@ -11,6 +11,13 @@
         "n_adversarial": 45582,
         "auroc": 0.9492908622185707
       },
+      "2": {
+        "n_used": 131562,
+        "n_excluded": 0,
+        "n_benign": 85980,
+        "n_adversarial": 45582,
+        "auroc": 0.9765325645290233
+      },
       "5": {
         "n_used": 131562,
         "n_excluded": 0,
@@ -85,6 +92,13 @@
             "n_adversarial": 12,
             "auroc": 0.8293231953167404
           },
+          "2": {
+            "n_used": 85992,
+            "n_excluded": 0,
+            "n_benign": 85980,
+            "n_adversarial": 12,
+            "auroc": 0.8303529890672249
+          },
           "5": {
             "n_used": 85992,
             "n_excluded": 0,
@@ -154,6 +168,13 @@
             "n_adversarial": 12,
             "auroc": 0.8416666666666667
           },
+          "2": {
+            "n_used": 132,
+            "n_excluded": 0,
+            "n_benign": 120,
+            "n_adversarial": 12,
+            "auroc": 0.8267361111111111
+          },
           "5": {
             "n_used": 132,
             "n_excluded": 0,
@@ -222,6 +243,13 @@
             "n_benign": 23717,
             "n_adversarial": 12,
             "auroc": 0.9293948784978426
+          },
+          "2": {
+            "n_used": 23729,
+            "n_excluded": 0,
+            "n_benign": 23717,
+            "n_adversarial": 12,
+            "auroc": 0.9370739694452643
           },
           "5": {
             "n_used": 23729,
@@ -297,6 +325,13 @@
             "n_adversarial": 12,
             "auroc": 0.5185929867411025
           },
+          "2": {
+            "n_used": 85992,
+            "n_excluded": 0,
+            "n_benign": 85980,
+            "n_adversarial": 12,
+            "auroc": 0.7291448592695975
+          },
           "5": {
             "n_used": 85992,
             "n_excluded": 0,
@@ -366,6 +401,13 @@
             "n_adversarial": 12,
             "auroc": 0.5322916666666667
           },
+          "2": {
+            "n_used": 132,
+            "n_excluded": 0,
+            "n_benign": 120,
+            "n_adversarial": 12,
+            "auroc": 0.7347222222222223
+          },
           "5": {
             "n_used": 132,
             "n_excluded": 0,
@@ -434,6 +476,13 @@
             "n_benign": 23717,
             "n_adversarial": 12,
             "auroc": 0.813930935615803
+          },
+          "2": {
+            "n_used": 23729,
+            "n_excluded": 0,
+            "n_benign": 23717,
+            "n_adversarial": 12,
+            "auroc": 0.9025962389846947
           },
           "5": {
             "n_used": 23729,
@@ -509,6 +558,13 @@
             "n_adversarial": 12,
             "auroc": 0.7272427696363495
           },
+          "2": {
+            "n_used": 85992,
+            "n_excluded": 0,
+            "n_benign": 85980,
+            "n_adversarial": 12,
+            "auroc": 0.6925161859347135
+          },
           "5": {
             "n_used": 85992,
             "n_excluded": 0,
@@ -578,6 +634,13 @@
             "n_adversarial": 12,
             "auroc": 0.728125
           },
+          "2": {
+            "n_used": 132,
+            "n_excluded": 0,
+            "n_benign": 120,
+            "n_adversarial": 12,
+            "auroc": 0.6923611111111111
+          },
           "5": {
             "n_used": 132,
             "n_excluded": 0,
@@ -646,6 +709,13 @@
             "n_benign": 23717,
             "n_adversarial": 12,
             "auroc": 0.8887067644867956
+          },
+          "2": {
+            "n_used": 23729,
+            "n_excluded": 0,
+            "n_benign": 23717,
+            "n_adversarial": 12,
+            "auroc": 0.911937288302343
           },
           "5": {
             "n_used": 23729,
@@ -721,6 +791,13 @@
             "n_adversarial": 151,
             "auroc": 1.0
           },
+          "2": {
+            "n_used": 86131,
+            "n_excluded": 0,
+            "n_benign": 85980,
+            "n_adversarial": 151,
+            "auroc": 0.9999941846941148
+          },
           "5": {
             "n_used": 86131,
             "n_excluded": 0,
@@ -790,6 +867,13 @@
             "n_adversarial": 151,
             "auroc": 1.0
           },
+          "2": {
+            "n_used": 1661,
+            "n_excluded": 0,
+            "n_benign": 1510,
+            "n_adversarial": 151,
+            "auroc": 1.0
+          },
           "5": {
             "n_used": 1661,
             "n_excluded": 0,
@@ -853,6 +937,13 @@
         "n_adversarial": 151,
         "auroc_at": {
           "1": {
+            "n_used": 13092,
+            "n_excluded": 0,
+            "n_benign": 12941,
+            "n_adversarial": 151,
+            "auroc": 1.0
+          },
+          "2": {
             "n_used": 13092,
             "n_excluded": 0,
             "n_benign": 12941,
@@ -933,6 +1024,13 @@
             "n_adversarial": 151,
             "auroc": 0.8392250854580382
           },
+          "2": {
+            "n_used": 86131,
+            "n_excluded": 0,
+            "n_benign": 85980,
+            "n_adversarial": 151,
+            "auroc": 0.9891368160468552
+          },
           "5": {
             "n_used": 86131,
             "n_excluded": 0,
@@ -1002,6 +1100,13 @@
             "n_adversarial": 151,
             "auroc": 0.8379785974299373
           },
+          "2": {
+            "n_used": 1661,
+            "n_excluded": 0,
+            "n_benign": 1510,
+            "n_adversarial": 151,
+            "auroc": 0.9879983334064295
+          },
           "5": {
             "n_used": 1661,
             "n_excluded": 0,
@@ -1070,6 +1175,13 @@
             "n_benign": 12941,
             "n_adversarial": 151,
             "auroc": 0.7286364862230059
+          },
+          "2": {
+            "n_used": 13092,
+            "n_excluded": 0,
+            "n_benign": 12941,
+            "n_adversarial": 151,
+            "auroc": 0.9407865345063254
           },
           "5": {
             "n_used": 13092,
@@ -1145,6 +1257,13 @@
             "n_adversarial": 151,
             "auroc": 1.0
           },
+          "2": {
+            "n_used": 86131,
+            "n_excluded": 0,
+            "n_benign": 85980,
+            "n_adversarial": 151,
+            "auroc": 0.9999941846941148
+          },
           "5": {
             "n_used": 86131,
             "n_excluded": 0,
@@ -1214,6 +1333,13 @@
             "n_adversarial": 151,
             "auroc": 1.0
           },
+          "2": {
+            "n_used": 1661,
+            "n_excluded": 0,
+            "n_benign": 1510,
+            "n_adversarial": 151,
+            "auroc": 1.0
+          },
           "5": {
             "n_used": 1661,
             "n_excluded": 0,
@@ -1277,6 +1403,13 @@
         "n_adversarial": 151,
         "auroc_at": {
           "1": {
+            "n_used": 13092,
+            "n_excluded": 0,
+            "n_benign": 12941,
+            "n_adversarial": 151,
+            "auroc": 1.0
+          },
+          "2": {
             "n_used": 13092,
             "n_excluded": 0,
             "n_benign": 12941,
@@ -1357,6 +1490,13 @@
             "n_adversarial": 2373,
             "auroc": 1.0
           },
+          "2": {
+            "n_used": 88353,
+            "n_excluded": 0,
+            "n_benign": 85980,
+            "n_adversarial": 2373,
+            "auroc": 0.9999941773422744
+          },
           "5": {
             "n_used": 88353,
             "n_excluded": 0,
@@ -1426,6 +1566,13 @@
             "n_adversarial": 2373,
             "auroc": 1.0
           },
+          "2": {
+            "n_used": 26103,
+            "n_excluded": 0,
+            "n_benign": 23730,
+            "n_adversarial": 2373,
+            "auroc": 1.0
+          },
           "5": {
             "n_used": 26103,
             "n_excluded": 0,
@@ -1489,6 +1636,13 @@
         "n_adversarial": 2373,
         "auroc_at": {
           "1": {
+            "n_used": 2373,
+            "n_excluded": 0,
+            "n_benign": 0,
+            "n_adversarial": 2373,
+            "auroc": null
+          },
+          "2": {
             "n_used": 2373,
             "n_excluded": 0,
             "n_benign": 0,
@@ -1569,6 +1723,13 @@
             "n_adversarial": 2373,
             "auroc": 0.8473683032942029
           },
+          "2": {
+            "n_used": 88353,
+            "n_excluded": 0,
+            "n_benign": 85980,
+            "n_adversarial": 2373,
+            "auroc": 0.9519436845091916
+          },
           "5": {
             "n_used": 88353,
             "n_excluded": 0,
@@ -1638,6 +1799,13 @@
             "n_adversarial": 2373,
             "auroc": 0.8453924159791047
           },
+          "2": {
+            "n_used": 26103,
+            "n_excluded": 0,
+            "n_benign": 23730,
+            "n_adversarial": 2373,
+            "auroc": 0.9512205900450869
+          },
           "5": {
             "n_used": 26103,
             "n_excluded": 0,
@@ -1701,6 +1869,13 @@
         "n_adversarial": 2373,
         "auroc_at": {
           "1": {
+            "n_used": 2373,
+            "n_excluded": 0,
+            "n_benign": 0,
+            "n_adversarial": 2373,
+            "auroc": null
+          },
+          "2": {
             "n_used": 2373,
             "n_excluded": 0,
             "n_benign": 0,
@@ -1781,6 +1956,13 @@
             "n_adversarial": 2373,
             "auroc": 0.9999516935062761
           },
+          "2": {
+            "n_used": 88353,
+            "n_excluded": 0,
+            "n_benign": 85980,
+            "n_adversarial": 2373,
+            "auroc": 0.9999937484849082
+          },
           "5": {
             "n_used": 88353,
             "n_excluded": 0,
@@ -1850,6 +2032,13 @@
             "n_adversarial": 2373,
             "auroc": 0.9999498679572072
           },
+          "2": {
+            "n_used": 26103,
+            "n_excluded": 0,
+            "n_benign": 23730,
+            "n_adversarial": 2373,
+            "auroc": 0.9999778818776838
+          },
           "5": {
             "n_used": 26103,
             "n_excluded": 0,
@@ -1913,6 +2102,13 @@
         "n_adversarial": 2373,
         "auroc_at": {
           "1": {
+            "n_used": 2373,
+            "n_excluded": 0,
+            "n_benign": 0,
+            "n_adversarial": 2373,
+            "auroc": null
+          },
+          "2": {
             "n_used": 2373,
             "n_excluded": 0,
             "n_benign": 0,
@@ -1993,6 +2189,13 @@
             "n_adversarial": 574,
             "auroc": 0.840998858822204
           },
+          "2": {
+            "n_used": 86554,
+            "n_excluded": 0,
+            "n_benign": 85980,
+            "n_adversarial": 574,
+            "auroc": 0.9122766172831701
+          },
           "5": {
             "n_used": 86554,
             "n_excluded": 0,
@@ -2062,6 +2265,13 @@
             "n_adversarial": 574,
             "auroc": 0.8400098944991441
           },
+          "2": {
+            "n_used": 6314,
+            "n_excluded": 0,
+            "n_benign": 5740,
+            "n_adversarial": 574,
+            "auroc": 0.910046558778181
+          },
           "5": {
             "n_used": 6314,
             "n_excluded": 0,
@@ -2130,6 +2340,13 @@
             "n_benign": 4938,
             "n_adversarial": 574,
             "auroc": 0.7814626102345037
+          },
+          "2": {
+            "n_used": 5512,
+            "n_excluded": 0,
+            "n_benign": 4938,
+            "n_adversarial": 574,
+            "auroc": 0.786171170599052
           },
           "5": {
             "n_used": 5512,
@@ -2205,6 +2422,13 @@
             "n_adversarial": 574,
             "auroc": 0.7927891828016076
           },
+          "2": {
+            "n_used": 86554,
+            "n_excluded": 0,
+            "n_benign": 85980,
+            "n_adversarial": 574,
+            "auroc": 0.9032405842700635
+          },
           "5": {
             "n_used": 86554,
             "n_excluded": 0,
@@ -2274,6 +2498,13 @@
             "n_adversarial": 574,
             "auroc": 0.7971529033981231
           },
+          "2": {
+            "n_used": 6314,
+            "n_excluded": 0,
+            "n_benign": 5740,
+            "n_adversarial": 574,
+            "auroc": 0.9028927751945512
+          },
           "5": {
             "n_used": 6314,
             "n_excluded": 0,
@@ -2342,6 +2573,13 @@
             "n_benign": 4938,
             "n_adversarial": 574,
             "auroc": 0.7419969291690833
+          },
+          "2": {
+            "n_used": 5512,
+            "n_excluded": 0,
+            "n_benign": 4938,
+            "n_adversarial": 574,
+            "auroc": 0.747121272419112
           },
           "5": {
             "n_used": 5512,
@@ -2417,6 +2655,13 @@
             "n_adversarial": 574,
             "auroc": 0.843211126807709
           },
+          "2": {
+            "n_used": 86554,
+            "n_excluded": 0,
+            "n_benign": 85980,
+            "n_adversarial": 574,
+            "auroc": 0.9163117101213879
+          },
           "5": {
             "n_used": 86554,
             "n_excluded": 0,
@@ -2486,6 +2731,13 @@
             "n_adversarial": 574,
             "auroc": 0.8438385496970948
           },
+          "2": {
+            "n_used": 6314,
+            "n_excluded": 0,
+            "n_benign": 5740,
+            "n_adversarial": 574,
+            "auroc": 0.9168825650426737
+          },
           "5": {
             "n_used": 6314,
             "n_excluded": 0,
@@ -2554,6 +2806,13 @@
             "n_benign": 4938,
             "n_adversarial": 574,
             "auroc": 0.7837706727180099
+          },
+          "2": {
+            "n_used": 5512,
+            "n_excluded": 0,
+            "n_benign": 4938,
+            "n_adversarial": 574,
+            "auroc": 0.7874317495127737
           },
           "5": {
             "n_used": 5512,
@@ -2629,6 +2888,13 @@
             "n_adversarial": 2376,
             "auroc": 0.9940238774110023
           },
+          "2": {
+            "n_used": 88356,
+            "n_excluded": 0,
+            "n_benign": 85980,
+            "n_adversarial": 2376,
+            "auroc": 0.9968871910936926
+          },
           "5": {
             "n_used": 88356,
             "n_excluded": 0,
@@ -2698,6 +2964,13 @@
             "n_adversarial": 2376,
             "auroc": 0.9940094069907832
           },
+          "2": {
+            "n_used": 26136,
+            "n_excluded": 0,
+            "n_benign": 23760,
+            "n_adversarial": 2376,
+            "auroc": 0.9968635215794308
+          },
           "5": {
             "n_used": 26136,
             "n_excluded": 0,
@@ -2766,6 +3039,13 @@
             "n_benign": 34523,
             "n_adversarial": 2376,
             "auroc": 0.9946763215290719
+          },
+          "2": {
+            "n_used": 36899,
+            "n_excluded": 0,
+            "n_benign": 34523,
+            "n_adversarial": 2376,
+            "auroc": 0.9971266776621179
           },
           "5": {
             "n_used": 36899,
@@ -2841,6 +3121,13 @@
             "n_adversarial": 2376,
             "auroc": 0.549774784167957
           },
+          "2": {
+            "n_used": 88356,
+            "n_excluded": 0,
+            "n_benign": 85980,
+            "n_adversarial": 2376,
+            "auroc": 0.6972432513081501
+          },
           "5": {
             "n_used": 88356,
             "n_excluded": 0,
@@ -2910,6 +3197,13 @@
             "n_adversarial": 2376,
             "auroc": 0.5499337776615765
           },
+          "2": {
+            "n_used": 26136,
+            "n_excluded": 0,
+            "n_benign": 23760,
+            "n_adversarial": 2376,
+            "auroc": 0.6929022619573966
+          },
           "5": {
             "n_used": 26136,
             "n_excluded": 0,
@@ -2978,6 +3272,13 @@
             "n_benign": 34523,
             "n_adversarial": 2376,
             "auroc": 0.6128157705530037
+          },
+          "2": {
+            "n_used": 36899,
+            "n_excluded": 0,
+            "n_benign": 34523,
+            "n_adversarial": 2376,
+            "auroc": 0.6568818282078283
           },
           "5": {
             "n_used": 36899,
@@ -3053,6 +3354,13 @@
             "n_adversarial": 2376,
             "auroc": 0.9945447070730568
           },
+          "2": {
+            "n_used": 88356,
+            "n_excluded": 0,
+            "n_benign": 85980,
+            "n_adversarial": 2376,
+            "auroc": 0.9968037062099635
+          },
           "5": {
             "n_used": 88356,
             "n_excluded": 0,
@@ -3122,6 +3430,13 @@
             "n_adversarial": 2376,
             "auroc": 0.9945473428164926
           },
+          "2": {
+            "n_used": 26136,
+            "n_excluded": 0,
+            "n_benign": 23760,
+            "n_adversarial": 2376,
+            "auroc": 0.9967974055226791
+          },
           "5": {
             "n_used": 26136,
             "n_excluded": 0,
@@ -3190,6 +3505,13 @@
             "n_benign": 34523,
             "n_adversarial": 2376,
             "auroc": 0.995558022802541
+          },
+          "2": {
+            "n_used": 36899,
+            "n_excluded": 0,
+            "n_benign": 34523,
+            "n_adversarial": 2376,
+            "auroc": 0.9969438407381952
           },
           "5": {
             "n_used": 36899,
@@ -3265,6 +3587,13 @@
             "n_adversarial": 9708,
             "auroc": 0.99999375579434
           },
+          "2": {
+            "n_used": 95688,
+            "n_excluded": 0,
+            "n_benign": 85980,
+            "n_adversarial": 9708,
+            "auroc": 0.9999278777473667
+          },
           "5": {
             "n_used": 95688,
             "n_excluded": 0,
@@ -3334,6 +3663,13 @@
             "n_adversarial": 9708,
             "auroc": 0.99999375579434
           },
+          "2": {
+            "n_used": 95688,
+            "n_excluded": 0,
+            "n_benign": 85980,
+            "n_adversarial": 9708,
+            "auroc": 0.9999278777473667
+          },
           "5": {
             "n_used": 95688,
             "n_excluded": 0,
@@ -3402,6 +3738,13 @@
             "n_benign": 9861,
             "n_adversarial": 9708,
             "auroc": 0.9999462501995706
+          },
+          "2": {
+            "n_used": 19569,
+            "n_excluded": 0,
+            "n_benign": 9861,
+            "n_adversarial": 9708,
+            "auroc": 0.9998374500739513
           },
           "5": {
             "n_used": 19569,
@@ -3477,6 +3820,13 @@
             "n_adversarial": 9708,
             "auroc": 0.9467922340243939
           },
+          "2": {
+            "n_used": 95688,
+            "n_excluded": 0,
+            "n_benign": 85980,
+            "n_adversarial": 9708,
+            "auroc": 0.9942800620165113
+          },
           "5": {
             "n_used": 95688,
             "n_excluded": 0,
@@ -3546,6 +3896,13 @@
             "n_adversarial": 9708,
             "auroc": 0.9467922340243939
           },
+          "2": {
+            "n_used": 95688,
+            "n_excluded": 0,
+            "n_benign": 85980,
+            "n_adversarial": 9708,
+            "auroc": 0.9942800620165113
+          },
           "5": {
             "n_used": 95688,
             "n_excluded": 0,
@@ -3614,6 +3971,13 @@
             "n_benign": 9861,
             "n_adversarial": 9708,
             "auroc": 0.5362738344404612
+          },
+          "2": {
+            "n_used": 19569,
+            "n_excluded": 0,
+            "n_benign": 9861,
+            "n_adversarial": 9708,
+            "auroc": 0.9915473359465838
           },
           "5": {
             "n_used": 19569,
@@ -3689,6 +4053,13 @@
             "n_adversarial": 9708,
             "auroc": 0.9999959907455409
           },
+          "2": {
+            "n_used": 95688,
+            "n_excluded": 0,
+            "n_benign": 85980,
+            "n_adversarial": 9708,
+            "auroc": 0.9999476269047344
+          },
           "5": {
             "n_used": 95688,
             "n_excluded": 0,
@@ -3757,6 +4128,13 @@
             "n_benign": 85980,
             "n_adversarial": 9708,
             "auroc": 0.9999959907455409
+          },
+          "2": {
+            "n_used": 95688,
+            "n_excluded": 0,
+            "n_benign": 85980,
+            "n_adversarial": 9708,
+            "auroc": 0.9999476269047344
           },
           "5": {
             "n_used": 95688,
@@ -3827,6 +4205,13 @@
             "n_adversarial": 9708,
             "auroc": 0.9999652723328096
           },
+          "2": {
+            "n_used": 19569,
+            "n_excluded": 0,
+            "n_benign": 9861,
+            "n_adversarial": 9708,
+            "auroc": 0.9998885883788785
+          },
           "5": {
             "n_used": 19569,
             "n_excluded": 0,
@@ -3889,6 +4274,7 @@
   "config": {
     "t_grid": [
       1,
+      2,
       5,
       10,
       20,

@@ -1,9 +1,12 @@
 """Random Forest dataset assembly — streaming-native edition.
 
 Under the new schema each source folder stores ``rf_checkpoints.npy``
-([C_total, 24]) holding *multi-scale prefix* features computed at every
-``rf_checkpoint_stride`` packets per flow. The k-th checkpoint of a flow
-contains aggregated stats over packets ``[0:(k+1)·stride]``.
+([C_total, 24]) holding *multi-scale prefix* features computed at the
+optional ``rf_first_checkpoint`` packet index (default 2, set to 0 to
+disable) plus every ``rf_checkpoint_stride`` packets per flow. The k-th
+checkpoint of a flow contains aggregated stats over packets
+``[0:packet_idx_k]`` where ``packet_idx_k`` is captured per checkpoint
+on the dataset (see ``RFDataset.packet_idx``).
 
 This module expands the per-flow assembled index into a **per-checkpoint**
 training matrix: each row of ``RFDataset.X`` is one prefix view of one
@@ -28,6 +31,7 @@ from pathlib import Path
 
 import numpy as np
 
+from ...feature_extraction.tensor_builder import checkpoint_packet_indices
 from ..common.dataset import (
     ADVERSARIAL_LABEL_STR,
     BENIGN_LABEL_STR,
@@ -65,6 +69,9 @@ class RFDataset:
     sources: np.ndarray         # [N]    str      — duplicated per checkpoint
     label_str: np.ndarray       # [N]    str
     checkpoint_idx: np.ndarray  # [N]    int32    — 0..n_ckpt-1 within flow
+    packet_idx: np.ndarray = field(  # [N] int32  — absolute 1-based packet
+        default_factory=lambda: np.zeros(0, dtype=np.int32),  # index of each
+    )                                                          # checkpoint
     feature_names: list[str] = field(default_factory=list)
 
 
@@ -76,18 +83,31 @@ def _expand_source_checkpoints(
     label_str_per_flow: np.ndarray,
     source_name: str,
 ) -> tuple[
-    np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray,
+    np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray,
+    np.ndarray, np.ndarray,
 ]:
     """Expand the selected flows of one source into per-checkpoint rows.
 
     Reads ``rf_checkpoints.npy`` (small, eagerly loaded) and
     ``rf_checkpoint_offsets.npy`` (small) and slices each flow's
-    contiguous checkpoint block. Flows whose length is below the
-    pipeline's ``rf_checkpoint_stride`` produce zero checkpoints and are
-    silently skipped.
+    contiguous checkpoint block. Flows whose length produces zero
+    checkpoints under the source's cadence are silently skipped.
+
+    The source's ``metadata.json`` is consulted to capture the actual
+    packet index of each checkpoint (cadence is per-source by
+    construction and stays constant within a source folder).
     """
     rf_ckpts = np.load(folder / "rf_checkpoints.npy").astype(np.float32, copy=False)
     rf_offsets = np.load(folder / "rf_checkpoint_offsets.npy")
+
+    # Per-source cadence from metadata.json (default: legacy stride-only).
+    meta_path = folder / "metadata.json"
+    try:
+        meta = json.loads(meta_path.read_text())
+    except FileNotFoundError:
+        meta = {}
+    rf_stride = int(meta.get("rf_checkpoint_stride", 10))
+    rf_first = int(meta.get("rf_first_checkpoint", 0))
 
     Xs: list[np.ndarray] = []
     ys: list[np.ndarray] = []
@@ -95,6 +115,7 @@ def _expand_source_checkpoints(
     srcs: list[np.ndarray] = []
     labs: list[np.ndarray] = []
     cidx: list[np.ndarray] = []
+    pidx: list[np.ndarray] = []
 
     for fi, y_val, fid, lstr in zip(
         flow_local_idx, y_per_flow, flow_ids_per_flow, label_str_per_flow,
@@ -109,6 +130,11 @@ def _expand_source_checkpoints(
         srcs.append(np.full(n_ckpt, source_name, dtype=object))
         labs.append(np.full(n_ckpt, lstr, dtype=object))
         cidx.append(np.arange(n_ckpt, dtype=np.int32))
+        pidx.append(
+            checkpoint_packet_indices(n_ckpt, rf_first, rf_stride).astype(
+                np.int32, copy=False,
+            )
+        )
 
     if not Xs:
         return (
@@ -118,6 +144,7 @@ def _expand_source_checkpoints(
             np.zeros(0, dtype=object),
             np.zeros(0, dtype=object),
             np.zeros(0, dtype=np.int32),
+            np.zeros(0, dtype=np.int32),
         )
     return (
         np.concatenate(Xs, axis=0),
@@ -126,21 +153,24 @@ def _expand_source_checkpoints(
         np.concatenate(srcs, axis=0),
         np.concatenate(labs, axis=0),
         np.concatenate(cidx, axis=0),
+        np.concatenate(pidx, axis=0),
     )
 
 
 def load_source(folder: Path, source_name: str) -> tuple[
-    np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, list[str]
+    np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray,
+    list[str],
 ]:
     """Load one source folder. Returns ``(X, y, flow_ids, label_str,
-    checkpoint_idx, feature_names)`` expanded to per-checkpoint rows.
+    checkpoint_idx, packet_idx, feature_names)`` expanded to per-checkpoint
+    rows.
 
     Kept for backwards-compat callers; prefer ``assemble`` for new code.
     """
     y_pf, flow_ids_pf, label_str_pf, local_idx, feature_names = load_source_meta(
         folder, source_name,
     )
-    X, y, flow_ids, sources, label_str, cidx = _expand_source_checkpoints(
+    X, y, flow_ids, sources, label_str, cidx, pidx = _expand_source_checkpoints(
         folder=folder,
         flow_local_idx=local_idx,
         y_per_flow=y_pf,
@@ -148,7 +178,7 @@ def load_source(folder: Path, source_name: str) -> tuple[
         label_str_per_flow=label_str_pf,
         source_name=source_name,
     )
-    return X, y, flow_ids, label_str, cidx, feature_names
+    return X, y, flow_ids, label_str, cidx, pidx, feature_names
 
 
 def assemble(
@@ -186,11 +216,12 @@ def assemble(
     src_parts: list[np.ndarray] = []
     lab_parts: list[np.ndarray] = []
     ckpt_parts: list[np.ndarray] = []
+    pkt_parts: list[np.ndarray] = []
 
     for src in seen_order:
         folder = idx.source_folders[src]
         mask = idx.sources == src
-        X_s, y_s, flow_s, src_s, lab_s, cidx_s = _expand_source_checkpoints(
+        X_s, y_s, flow_s, src_s, lab_s, cidx_s, pidx_s = _expand_source_checkpoints(
             folder=folder,
             flow_local_idx=idx.local_idx[mask],
             y_per_flow=idx.y[mask],
@@ -204,6 +235,7 @@ def assemble(
         src_parts.append(src_s)
         lab_parts.append(lab_s)
         ckpt_parts.append(cidx_s)
+        pkt_parts.append(pidx_s)
         if not feature_names:
             meta = json.loads((folder / "metadata.json").read_text())
             feature_names = list(meta.get("rf_stat_names", []))
@@ -223,6 +255,9 @@ def assemble(
     checkpoint_idx = (
         np.concatenate(ckpt_parts, axis=0) if ckpt_parts else np.zeros(0, dtype=np.int32)
     )
+    packet_idx = (
+        np.concatenate(pkt_parts, axis=0) if pkt_parts else np.zeros(0, dtype=np.int32)
+    )
 
     return RFDataset(
         X=X,
@@ -231,6 +266,7 @@ def assemble(
         sources=sources,
         label_str=label_str,
         checkpoint_idx=checkpoint_idx,
+        packet_idx=packet_idx,
         feature_names=feature_names or [f"f{i}" for i in range(X.shape[1])],
     )
 

@@ -405,6 +405,7 @@ def time_filter_pcap(editcap: str, src: Path, dst: Path,
 
 def run_pipeline(pcap: Path, output_dir: Path,
                  rf_checkpoint_stride: int | None,
+                 rf_first_checkpoint: int | None,
                  extra_args: list, mean_std: Path | None = None,
                  outputs: tuple[str, ...] = ("rf", "tcn"),
                  ) -> subprocess.CompletedProcess:
@@ -417,6 +418,8 @@ def run_pipeline(pcap: Path, output_dir: Path,
     ]
     if rf_checkpoint_stride is not None:
         cmd += ["--rf-checkpoint-stride", str(rf_checkpoint_stride)]
+    if rf_first_checkpoint is not None:
+        cmd += ["--rf-first-checkpoint", str(rf_first_checkpoint)]
     if mean_std is not None:
         cmd += ["--mean-std", str(mean_std)]
     # outputs == ("rf", "tcn") is the pipeline's default — emit a flag only
@@ -636,6 +639,11 @@ def main():
         help="Override RF checkpoint stride (default: from pipeline.yaml)",
     )
     parser.add_argument(
+        "--rf-first-checkpoint", type=int, default=None,
+        help="Override RF early-checkpoint packet index "
+             "(default: from pipeline.yaml; 0 disables)",
+    )
+    parser.add_argument(
         "--include-benign", action="store_true",
         help="Also process the Monday benign baseline",
     )
@@ -836,6 +844,7 @@ def main():
                     pcap=pcap_to_process,
                     output_dir=attack.output_dir,
                     rf_checkpoint_stride=args.rf_checkpoint_stride,
+                    rf_first_checkpoint=args.rf_first_checkpoint,
                     extra_args=attack.extra_args,
                     mean_std=shared_mean_std,
                     outputs=selected_outputs,

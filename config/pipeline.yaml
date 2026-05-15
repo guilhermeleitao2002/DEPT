@@ -15,12 +15,24 @@
 # header representation, inspired by FlowPaint (SIGCOMM'26).
 
 # --------------------------
-# RF checkpoint stride
+# RF checkpoint cadence
 # --------------------------
-# Emit one row in rf_checkpoints.npy every K packets per flow. The k-th
-# checkpoint contains aggregated statistics over the first k·K packets of
-# the flow (growing-prefix semantics), matching how the RF will be queried
-# at inference time. K=10 mirrors the previous fixed-window N=10.
+# Two knobs control when an RF checkpoint row is emitted per flow:
+#
+#   rf_first_checkpoint  — the absolute packet index of an additional,
+#                           one-off early checkpoint (set to 0 to disable).
+#                           Covers short flows (PortScan averages ~2 packets)
+#                           that would otherwise never produce any RF
+#                           prediction. If this value is also a multiple of
+#                           rf_checkpoint_stride it is automatically merged
+#                           with the first regular checkpoint (no duplicate).
+#   rf_checkpoint_stride — emit a row every K packets per flow after that.
+#
+# Default {first=2, stride=10} produces checkpoints at packets {2, 10, 20,
+# 30, …}. Each checkpoint aggregates statistics over the growing prefix
+# (packets [0:n_packets_seen]), matching how the RF will be queried at
+# inference time.
+rf_first_checkpoint: 2
 rf_checkpoint_stride: 10
 
 # --------------------------

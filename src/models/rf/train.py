@@ -129,6 +129,7 @@ def train(config: dict, tensors_root: Path, output_dir: Path) -> dict:
         flow_ids=dataset.flow_ids.astype(str),
         label_str=dataset.label_str.astype(str),
         checkpoint_idx=dataset.checkpoint_idx,
+        packet_idx=dataset.packet_idx,
     )
     (output_dir / "feature_names.json").write_text(json.dumps(dataset.feature_names))
     (output_dir / "split_summary.json").write_text(json.dumps(summary, indent=2))
