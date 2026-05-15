@@ -39,6 +39,7 @@ from torch.utils.data import DataLoader  # noqa: E402
 from .dataset import FlowSequenceDataset, collate_padded  # noqa: E402
 from .model import TCN  # noqa: E402
 
+from ..common.dataset import load_source_meta  # noqa: E402
 from ..common.streaming_eval import (  # noqa: E402
     StreamingPredictions,
     plot_latency_accuracy,
@@ -120,21 +121,25 @@ def _collect_flow_predictions(
     model: torch.nn.Module,
     loader: DataLoader,
     device: torch.device,
-) -> tuple[np.ndarray, np.ndarray, np.ndarray, list[np.ndarray]]:
+) -> tuple[
+    np.ndarray, np.ndarray, np.ndarray, list[np.ndarray], list[np.ndarray],
+]:
     """Forward through ``loader`` and return per-flow predictions.
 
-    Returns ``(y_true, y_pred, y_prob, per_flow_streams)`` where:
+    Returns ``(y_true, y_pred, y_prob, per_flow_probs, per_flow_logits)``:
       * ``y_true``/``y_pred``/``y_prob`` are the per-flow last-timestep
         verdict for the flow-level summary metrics.
-      * ``per_flow_streams`` is a list of 1D ``np.float32`` arrays of
-        length ``L_i`` — the TCN's per-packet ``P(adversarial)`` for
-        each flow in dataloader order.
+      * ``per_flow_probs[i]`` is a 1D ``float32`` array of length ``L_i``
+        with the per-packet ``P(adversarial)`` for each flow.
+      * ``per_flow_logits[i]`` is the matching per-packet binary logit
+        ``logit_1 - logit_0`` (useful for downstream ensembles).
     """
     model.eval()
     y_true_chunks: list[np.ndarray] = []
     y_pred_chunks: list[np.ndarray] = []
     y_prob_chunks: list[np.ndarray] = []
-    streams: list[np.ndarray] = []
+    probs_streams: list[np.ndarray] = []
+    logits_streams: list[np.ndarray] = []
     use_amp = device.type == "cuda"
     amp_device = "cuda" if device.type == "cuda" else "cpu"
     for seq, labels, lengths, _mask in loader:
@@ -153,24 +158,124 @@ def _collect_flow_predictions(
         y_prob_chunks.append(probs.detach().cpu().numpy().astype(np.float32))
 
         # Per-packet streams (clip to each flow's real length).
-        per_pkt = torch.softmax(logits.float(), dim=2)[:, :, 1]  # [B, T]
-        per_pkt_cpu = per_pkt.detach().cpu().numpy().astype(np.float32)
+        logits_f = logits.float()
+        per_pkt_prob = torch.softmax(logits_f, dim=2)[:, :, 1]  # [B, T]
+        per_pkt_logit = logits_f[:, :, 1] - logits_f[:, :, 0]   # [B, T]
+        per_pkt_prob_cpu = per_pkt_prob.detach().cpu().numpy().astype(np.float32)
+        per_pkt_logit_cpu = per_pkt_logit.detach().cpu().numpy().astype(np.float32)
         for b in range(B):
             Lb = int(lengths[b].item())
-            streams.append(per_pkt_cpu[b, :Lb].copy())
+            probs_streams.append(per_pkt_prob_cpu[b, :Lb].copy())
+            logits_streams.append(per_pkt_logit_cpu[b, :Lb].copy())
     if not y_true_chunks:
         return (
             np.zeros(0, dtype=np.int64),
             np.zeros(0, dtype=np.int64),
             np.zeros(0, dtype=np.float32),
             [],
+            [],
         )
     return (
         np.concatenate(y_true_chunks),
         np.concatenate(y_pred_chunks),
         np.concatenate(y_prob_chunks),
-        streams,
+        probs_streams,
+        logits_streams,
     )
+
+
+def predict_streams(
+    output_dir: Path,
+    sample_indices: np.ndarray | None = None,
+) -> dict:
+    """Run the trained TCN forward over ``sample_indices`` flows.
+
+    Public helper used by the meta-learner. Loads the model + dataset
+    index, runs inference (no metric computation), and returns per-flow
+    streaming predictions ready to feed a downstream stacker.
+
+    ``sample_indices`` is a 1D array of row indices into the rows of
+    ``dataset_index.npz`` (i.e. the same index space ``used_test_idx``
+    lives in). Defaults to ``used_test_idx`` if not given.
+
+    Returns a dict with keys:
+      * ``flow_keys``    — list of ``(source: str, local_idx: int)`` per flow
+      * ``probs``        — list of [L_i] float32 per-packet P(adversarial)
+      * ``logits``       — list of [L_i] float32 per-packet binary logit
+      * ``packet_idx``   — list of [L_i] int64, ``arange(1, L_i+1)``
+      * ``labels``       — [N] int64
+      * ``sources``      — [N] object (str)
+      * ``lengths``      — [N] int64
+    """
+    cfg = json.loads((output_dir / "tcn_config.json").read_text())
+    model_cfg = cfg.get("model", {})
+    train_cfg = cfg.get("training", {})
+    device = _resolve_device(str(train_cfg.get("device", "auto")))
+
+    model = TCN(
+        num_features=int(model_cfg.get("num_features", 1090)),
+        channels=tuple(model_cfg.get("channels", (128, 128, 128))),
+        kernel_size=int(model_cfg.get("kernel_size", 3)),
+        dropout=float(model_cfg.get("dropout", 0.15)),
+        num_classes=int(model_cfg.get("num_classes", 2)),
+    ).to(device)
+    state = torch.load(output_dir / "tcn.pt", map_location=device)
+    model.load_state_dict(state)
+
+    idx = _load_dataset_index(output_dir / "dataset_index.npz")
+    if sample_indices is None:
+        sample_indices = idx["used_test_idx"]
+    sample_indices = np.asarray(sample_indices, dtype=np.int64)
+
+    ds = FlowSequenceDataset(
+        sources=idx["sources"],
+        local_idx=idx["local_idx"],
+        y=idx["y"],
+        sample_indices=sample_indices,
+        source_folders=idx["source_folders"],
+        max_length=train_cfg.get("max_length", None),
+    )
+    loader = DataLoader(
+        ds,
+        batch_size=int(train_cfg.get("batch_size", 32)),
+        shuffle=False,
+        num_workers=int(train_cfg.get("num_workers", 4)),
+        pin_memory=device.type == "cuda",
+        persistent_workers=int(train_cfg.get("num_workers", 4)) > 0,
+        collate_fn=collate_padded,
+    )
+
+    _y, _yp, _ypb, probs_streams, logits_streams = _collect_flow_predictions(
+        model, loader, device,
+    )
+
+    sources_n = idx["sources"][sample_indices].astype(object)
+    local_n = idx["local_idx"][sample_indices].astype(np.int64)
+    labels_n = idx["y"][sample_indices].astype(np.int64)
+    lengths_n = np.asarray([len(s) for s in probs_streams], dtype=np.int64)
+    packet_idx = [np.arange(1, L + 1, dtype=np.int64) for L in lengths_n]
+
+    # Derive (source, flow_id_str) keys so RF and TCN streams share a join
+    # key. Build a per-source local_idx -> flow_id_str lookup once.
+    src_to_lookup: dict[str, dict[int, str]] = {}
+    for src in set(sources_n.tolist()):
+        folder = idx["source_folders"][src]
+        _y, fids, _ls, locals_meta, _ = load_source_meta(folder, src)
+        src_to_lookup[src] = {int(li): str(fid) for li, fid in zip(locals_meta, fids)}
+    flow_keys = [
+        (str(s), src_to_lookup[str(s)][int(li)])
+        for s, li in zip(sources_n, local_n)
+    ]
+
+    return {
+        "flow_keys": flow_keys,
+        "probs": probs_streams,
+        "logits": logits_streams,
+        "packet_idx": packet_idx,
+        "labels": labels_n,
+        "sources": sources_n,
+        "lengths": lengths_n,
+    }
 
 
 def _plot_training_curves(curves: list[dict], output_path: Path) -> None:
@@ -248,8 +353,8 @@ def evaluate(output_dir: Path) -> dict:
         collate_fn=collate_padded,
     )
 
-    y_te, y_pred, y_prob, per_flow_streams = _collect_flow_predictions(
-        model, test_loader, device,
+    y_te, y_pred, y_prob, per_flow_streams, _per_flow_logits = (
+        _collect_flow_predictions(model, test_loader, device)
     )
 
     sources_te = idx["sources"][test_idx]

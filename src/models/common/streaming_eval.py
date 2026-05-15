@@ -312,9 +312,49 @@ def plot_latency_accuracy(
     plt.close(fig)
 
 
+def plot_latency_accuracy_comparison(
+    metrics_by_model: dict[str, dict],
+    output_path: Path,
+    title: str = "Latency vs Accuracy — model comparison",
+) -> None:
+    """Overlay AUROC@t curves for multiple models on one figure.
+
+    ``metrics_by_model`` maps a label (e.g. ``"RF"``, ``"TCN"``,
+    ``"Meta-Learner"``) to the model's full ``streaming_metrics()`` dict.
+    Plots only the ``overall`` curves — per-source comparisons would be
+    too dense to read.
+    """
+    fig, ax = plt.subplots(figsize=(7, 4.5))
+    for label, metrics in metrics_by_model.items():
+        t_grid = metrics["config"]["t_grid"]
+        finite_ts = [t for t in t_grid if isinstance(t, int)]
+        xs, ys = [], []
+        for t in finite_ts:
+            entry = metrics["overall"]["auroc_at"].get(str(t), {})
+            v = entry.get("auroc")
+            if v is None:
+                continue
+            xs.append(int(t))
+            ys.append(float(v))
+        if xs:
+            ax.plot(xs, ys, marker="o", linewidth=2, label=label)
+    ax.set_xscale("log")
+    ax.set_xlabel("Packet index t (log scale)")
+    ax.set_ylabel("AUROC at packet t (overall)")
+    ax.set_ylim(0.4, 1.02)
+    ax.set_title(title)
+    ax.grid(True, alpha=0.3)
+    ax.axhline(0.5, color="gray", linestyle=":", alpha=0.6, label="chance")
+    ax.legend(loc="lower right", fontsize=9)
+    fig.tight_layout()
+    fig.savefig(output_path, dpi=140)
+    plt.close(fig)
+
+
 __all__ = [
     "DEFAULT_T_GRID",
     "StreamingPredictions",
     "streaming_metrics",
     "plot_latency_accuracy",
+    "plot_latency_accuracy_comparison",
 ]

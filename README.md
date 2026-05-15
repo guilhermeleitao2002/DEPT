@@ -125,7 +125,7 @@ The complementarity is now much tighter: the TCN flags adversarial flows at a me
 | Random Forest base learner | ✅ |
 | TCN base learner | ✅ |
 | Streaming evaluation (AUROC@t, EDP) | ✅ |
-| Mini-Transformer meta-learner | ⏳ |
+| Mini-Transformer meta-learner | ✅ (training pending) |
 | Purification Transformer | ⏳ |
 | RL Adaptation Agent | ⏳ |
 
@@ -149,13 +149,15 @@ ADEPT/
 │   ├── packet_to_tensor/      # Pipeline runner and batch processor
 │   ├── adversarial_generation/# TANTGen driver
 │   ├── rf/                    # RF train + evaluate runner
-│   └── tcn/                   # TCN train + evaluate runner
+│   ├── tcn/                   # TCN train + evaluate runner
+│   └── metalearner/           # Meta-learner train + evaluate runner
 └── src/
     ├── feature_extraction/    # Pipeline internals
     └── models/
         ├── common/            # Shared dataset/split/streaming-eval logic
         ├── rf/                # RF dataset, train, evaluate
-        └── tcn/               # TCN model, dataset, train, evaluate
+        ├── tcn/               # TCN model, dataset, train, evaluate
+        └── metalearner/       # Mini-Transformer meta-learner (RF + TCN fusion)
 ```
 
 ## Requirements
@@ -181,6 +183,11 @@ python3 scripts/rf/run_rf.py
 
 # 4. Train + evaluate the TCN
 python3 scripts/tcn/run_tcn.py
+
+# 5. Train + evaluate the Mini-Transformer meta-learner (consumes the
+#    trained RF + TCN; trains on the seed=42 val split out-of-fold for
+#    both base learners, evaluates on the test split)
+python3 scripts/metalearner/run_metalearner.py
 ```
 
-Steps 3 and 4 share the same tensor artifacts and the same flow-level split (seed=42), so RF and TCN results are directly comparable.
+Steps 3, 4, and 5 share the same tensor artifacts and the same flow-level split (seed=42). RF and TCN results are directly comparable; the meta-learner consumes both as a stacker over their per-flow streams.
