@@ -26,6 +26,8 @@ from torch.utils.data import DataLoader
 
 from ..common.streaming_eval import StreamingPredictions, streaming_metrics
 from .dataset import (
+    SLOT_RF_LOGIT,
+    SLOT_TCN_LOGIT,
     MetaLearnerDataset,
     TokenCache,
     collate_padded,
@@ -68,25 +70,70 @@ def _per_packet_loss(
     labels: torch.Tensor,        # [B]
     lengths: torch.Tensor,       # [B]
     class_weight: torch.Tensor,  # [C]
-) -> torch.Tensor:
-    """Per-packet cross-entropy averaged within each flow, then across flows.
+    tokens: torch.Tensor | None = None,  # [B, T, 13] — needs SLOT_RF/TCN_LOGIT
+    aux_weight: float = 0.0,
+) -> tuple[torch.Tensor, dict]:
+    """Per-packet cross-entropy + optional 'beat the best base' aux loss.
 
-    Padding positions (those past ``lengths[i]``) are excluded from the
-    per-flow average so they don't pull the loss toward the padding
-    label (always 0).
+    Padding positions (past ``lengths[i]``) are excluded from both the CE
+    and the auxiliary loss so they don't pull the model toward the
+    padding-label (always 0).
+
+    The auxiliary loss is a per-packet ``ReLU(p_best_base - p_meta)`` on
+    the model's confidence in the *true* class. ``p_best_base`` is the
+    max of RF (when fresh — i.e. token slot is finite, not NaN) and TCN
+    confidences, so the meta-learner is explicitly punished when it
+    under-confidence-es the better base learner. Combined with the
+    primary CE, this prevents the degenerate "always predict TCN"
+    convergence observed without it.
+
+    Returns ``(total_loss, components)`` where ``components`` is a dict
+    with the per-component scalar values for logging.
     """
     B, T, C = logits.shape
     device = logits.device
     arange = torch.arange(T, device=device).unsqueeze(0).expand(B, T)
-    valid = arange < lengths.unsqueeze(1).to(device)  # [B, T] bool
+    valid = arange < lengths.unsqueeze(1).to(device)              # [B, T] bool
+    valid_f = valid.float()
+    flow_norm = lengths.to(device).clamp(min=1).float()           # [B]
+
+    # ---- Primary cross-entropy ----
     targets = labels.to(device).unsqueeze(1).expand(B, T).contiguous()
-    loss_flat = nn.functional.cross_entropy(
+    ce_flat = nn.functional.cross_entropy(
         logits.reshape(B * T, C), targets.reshape(B * T),
         weight=class_weight.to(device), reduction="none",
-    ).reshape(B, T)
-    loss_flat = loss_flat * valid.float()
-    per_flow = loss_flat.sum(dim=1) / lengths.to(device).clamp(min=1).float()
-    return per_flow.mean()
+    ).reshape(B, T) * valid_f
+    primary = (ce_flat.sum(dim=1) / flow_norm).mean()
+
+    components = {"primary": float(primary.detach().cpu()), "aux": 0.0}
+    if aux_weight <= 0.0 or tokens is None or C != 2:
+        return primary, components
+
+    # ---- Auxiliary 'beat the best base' loss ----
+    # Build per-packet "P(true class)" for RF, TCN, and meta.
+    rf_logit = tokens[..., SLOT_RF_LOGIT].to(device).float()      # [B, T]; NaN where unknown
+    tcn_logit = tokens[..., SLOT_TCN_LOGIT].to(device).float()    # [B, T]
+    rf_known = ~torch.isnan(rf_logit)
+    # Replace NaN with 0 to keep arithmetic finite — masked out below.
+    rf_logit_safe = torch.where(rf_known, rf_logit, torch.zeros_like(rf_logit))
+
+    p_rf_adv = torch.sigmoid(rf_logit_safe)
+    p_tcn_adv = torch.sigmoid(tcn_logit)
+    label_b1 = labels.to(device).float().unsqueeze(1).expand(B, T)  # [B, T] in {0, 1}
+    p_rf_target = torch.where(label_b1 > 0.5, p_rf_adv, 1.0 - p_rf_adv)
+    p_tcn_target = torch.where(label_b1 > 0.5, p_tcn_adv, 1.0 - p_tcn_adv)
+    p_best_base = torch.where(
+        rf_known, torch.maximum(p_rf_target, p_tcn_target), p_tcn_target,
+    )
+
+    probs = torch.softmax(logits.float(), dim=2)                  # [B, T, 2]
+    label_idx = labels.to(device).long().view(B, 1, 1).expand(B, T, 1)
+    p_meta_target = probs.gather(2, label_idx).squeeze(2)         # [B, T]
+
+    aux_per_pkt = nn.functional.relu(p_best_base - p_meta_target) * valid_f
+    aux_loss = (aux_per_pkt.sum(dim=1) / flow_norm).mean()
+    components["aux"] = float(aux_loss.detach().cpu())
+    return primary + aux_weight * aux_loss, components
 
 
 @torch.inference_mode()
@@ -250,6 +297,10 @@ def train(output_dir: Path, config: dict) -> dict:
     use_amp = bool(train_cfg.get("amp", True)) and device.type == "cuda"
     scaler = torch.amp.GradScaler("cuda", enabled=use_amp)
 
+    aux_weight = float(train_cfg.get("aux_weight", 0.0))
+    if aux_weight > 0.0:
+        log.info("auxiliary 'beat the best base' loss enabled with weight=%.3f", aux_weight)
+
     # ---- Training loop with early stopping ----
     best_auroc = -math.inf
     best_state: dict[str, torch.Tensor] = {}
@@ -262,6 +313,8 @@ def train(output_dir: Path, config: dict) -> dict:
     for epoch in range(1, epochs + 1):
         model.train()
         ep_loss = 0.0
+        ep_primary = 0.0
+        ep_aux = 0.0
         ep_n = 0
         for tokens, labels, lengths, mask in train_loader:
             tokens = tokens.to(device, non_blocking=True)
@@ -272,7 +325,10 @@ def train(output_dir: Path, config: dict) -> dict:
                 device_type=device.type, enabled=use_amp,
             ):
                 logits = model(tokens, key_padding_mask=mask)
-                loss = _per_packet_loss(logits, labels, lengths, class_weight)
+                loss, comp = _per_packet_loss(
+                    logits, labels, lengths, class_weight,
+                    tokens=tokens, aux_weight=aux_weight,
+                )
             if use_amp:
                 scaler.scale(loss).backward()
                 scaler.step(optimizer)
@@ -281,9 +337,13 @@ def train(output_dir: Path, config: dict) -> dict:
                 loss.backward()
                 optimizer.step()
             ep_loss += float(loss.detach().cpu()) * len(labels)
+            ep_primary += comp["primary"] * len(labels)
+            ep_aux += comp["aux"] * len(labels)
             ep_n += int(len(labels))
         scheduler.step()
         train_loss = ep_loss / max(1, ep_n)
+        train_primary = ep_primary / max(1, ep_n)
+        train_aux = ep_aux / max(1, ep_n)
 
         meta_val_auroc, meta_val_metrics = _streaming_auroc_at(
             model, val_cache, meta_val_idx, device,
@@ -293,14 +353,17 @@ def train(output_dir: Path, config: dict) -> dict:
         )
         edp = meta_val_metrics["overall"]["edp"].get("edp_median")
         log.info(
-            "epoch %d: train_loss=%.4f  meta_val_auroc@%d=%.4f  "
-            "meta_val_edp_median=%s  lr=%.2e",
-            epoch, train_loss, early_stop_t, meta_val_auroc, edp,
+            "epoch %d: train_loss=%.4f (ce=%.4f, aux=%.4f)  "
+            "meta_val_auroc@%d=%.4f  meta_val_edp_median=%s  lr=%.2e",
+            epoch, train_loss, train_primary, train_aux,
+            early_stop_t, meta_val_auroc, edp,
             optimizer.param_groups[0]["lr"],
         )
         curves.append({
             "epoch": epoch,
             "train_loss": train_loss,
+            "train_loss_primary": train_primary,
+            "train_loss_aux": train_aux,
             "meta_val_auroc_at": {str(early_stop_t): meta_val_auroc},
             "meta_val_edp_median": edp,
             "lr": optimizer.param_groups[0]["lr"],

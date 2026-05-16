@@ -471,8 +471,12 @@ class MetaLearnerDataset(Dataset):
     def __getitem__(self, i: int) -> tuple[torch.Tensor, int, int]:
         idx = int(self.sample_indices[i])
         start, length = (int(x) for x in self.cache.offsets[idx])
-        toks = np.asarray(
-            self.cache.tokens[start:start + length], dtype=np.float32,
+        # Copy the memmap slice — `np.load(..., mmap_mode='r')` returns a
+        # read-only view, which would yield a non-writable tensor. We never
+        # mutate the result in-place, but PyTorch warns anyway; the copy is
+        # cheap (a few KB per flow) and silences the warning at the source.
+        toks = np.array(
+            self.cache.tokens[start:start + length], dtype=np.float32, copy=True,
         )
         return torch.from_numpy(toks), int(self.cache.labels[idx]), int(length)
 

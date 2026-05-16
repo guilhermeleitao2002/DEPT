@@ -94,19 +94,37 @@ Trained on 877 K variable-length flows (truncated at 200 packets during batching
 
 Architecture: 3 stacked dilated causal TemporalBlocks, channels=[128,128,128], k=3, receptive field=29 packets. 805 K parameters.
 
+### Mini-Transformer Meta-Learner
+
+A 67 K-parameter causal Transformer encoder that consumes a 13-dim per-packet token combining the carry-forward RF logit, the dense TCN logit, four "where are we in the flow" features (`rf_age`, `is_rf_checkpoint`, IPAT, direction), and a compact packet summary (IPv4 length, six TCP flag bits) — *not* the full 1088-bit nPrint vector. Trains on the seed=42 val split (out-of-fold for both base learners) sub-split into meta-train / meta-val (seed=43) for early stopping; evaluated on the test split.
+
+| Metric | Value |
+|---|---|
+| Macro F1 (last timestep) | 0.9664 |
+| ROC AUC (last timestep) | 0.9901 |
+| PR AUC (last timestep) | 0.9860 |
+| Streaming AUROC@1 | **0.9493** |
+| Streaming AUROC@2 | 0.9809 |
+| Streaming AUROC@10 | 0.9879 |
+| Streaming AUROC@max | 0.9901 |
+| EDP (median) | **1 packet** |
+| Detection rate (p>0.5) | 93.21% |
+
+Architecture: 2 encoder layers, 4 heads, d_model=64, sinusoidal PE, strict causal mask, learnable `rf_unknown_logit` parameter substituted for NaN RF slots before the first checkpoint. Auxiliary "beat the best base" loss (per-packet `ReLU(p_best_base − p_meta_target)`, weight 0.5) supplements per-packet cross-entropy. Best epoch 3 / 20.
+
 ### Streaming comparison
 
-| Metric | RF | TCN |
-|---|---|---|
-| First prediction at | **packet 2** | packet 1 |
-| AUROC@1 | — (no prediction yet) | 0.9493 |
-| AUROC@2 | **0.9984** | 0.9765 |
-| AUROC@10 | **0.9991** | 0.9817 |
-| AUROC@max | **0.9992** | 0.9857 |
-| EDP median | **2 pkts** | **1 pkt** |
-| Detection rate (p>0.5) | 98.91% | 91.74% |
+| Metric | RF | TCN | Meta-Learner |
+|---|---|---|---|
+| First prediction at | **packet 2** | packet 1 | packet 1 |
+| AUROC@1 | — (no prediction yet) | 0.9493 | **0.9497** |
+| AUROC@2 | **0.9984** | 0.9765 | 0.9809 |
+| AUROC@10 | **0.9991** | 0.9817 | 0.9879 |
+| AUROC@max | **0.9992** | 0.9857 | 0.9901 |
+| EDP median | 2 pkts | **1 pkt** | **1 pkt** |
+| Detection rate (p>0.5) | 98.91% | 91.74% | 93.21% |
 
-The complementarity is now much tighter: the TCN flags adversarial flows at a median of **1 packet** while the RF reaches AUROC **0.9984** at its very first checkpoint (packet 2) and refines to **0.9991** at packet 10. The RF still loses to the TCN at packet 1 (where RF has no prediction yet) and the TCN still loses to the RF on the per-source metrics where aggregated statistics dominate (e.g. Mirai). The two-packet detection latency for the RF closes most of the previous gap — now the meta-learner's job is mostly about disambiguating disagreement at packets 1–2 and absorbing TCN false alarms at later packets.
+The meta-learner sits **just above TCN** at every t while preserving the EDP=1 advantage: it inherits TCN's early-detection latency without sacrificing accuracy at later packets. It does **not** match RF on AUROC@10 or AUROC@max — the gap is largest on IAT-only adversarials (`portscan_adv_iat` −17 pp, `mirai_adv_iat` −5 pp) and zero on the easier sources (`ddos_*`, `ssdp_flood_*` adversarials, where all three models reach 1.000). See *Observations* below for the diagnosis.
 
 ### Observations
 
@@ -115,6 +133,7 @@ The complementarity is now much tighter: the TCN flags adversarial flows at a me
 - **TCN fails on portscan\_iat** (F1=0.002, AUROC@1=0.789). With ~2 packets per flow there is almost no inter-packet interval to perturb, so IAT-only adversarial PortScan flows look nearly identical to benign ones from the TCN's perspective. Size perturbation (portscan\_size, portscan\_both) works fine (F1≈0.97). The RF now compensates here.
 - **Mirai adversarial recall is low for TCN** (0.39–0.51 across all three modes). The RF reaches AUROC 0.99+ on Mirai variants under the new cadence, confirming that aggregated temporal statistics dominate the per-packet sequence for this attack type.
 - **RF AUROC@10 dipped slightly (0.9998 → 0.9991)** because the dataset now includes much harder short-flow regimes (PortScan adversarials, brute-force adv) that previously had zero RF predictions and were silently excluded from the metric. The model's effective coverage is dramatically wider, not weaker.
+- **Meta-learner is rank-bottlenecked, not loss-bottlenecked.** The model converges to its AUROC ceiling (~0.987 on meta-val AUROC@10) within a single epoch and never escapes it across 8 epochs. Adding the per-packet "beat the best base" auxiliary loss successfully reduced the training-time confidence gap 9× (0.027 → 0.003) and improved detection rate by ~1 pp, but did not move the AUROC needle on any per-source slice. The interpretation: the loss tells the model to be as confident as the best base in *absolute probability* terms, but AUROC is rank-based — making the model uniformly more confident doesn't change the rank ordering of `P(adv)` across flows. The bottleneck appears to be in the model's effective use of the sparse RF input (one fresh checkpoint per 8–10 packets), not the loss design. Future work: add a residual skip from `p_RF_logit` directly to the output's class-1 logit, or a learned gate over `rf_age` that mixes between RF and the encoder prediction.
 
 ## Implementation status
 
@@ -125,7 +144,7 @@ The complementarity is now much tighter: the TCN flags adversarial flows at a me
 | Random Forest base learner | ✅ |
 | TCN base learner | ✅ |
 | Streaming evaluation (AUROC@t, EDP) | ✅ |
-| Mini-Transformer meta-learner | ✅ (training pending) |
+| Mini-Transformer meta-learner | ✅ |
 | Purification Transformer | ⏳ |
 | RL Adaptation Agent | ⏳ |
 

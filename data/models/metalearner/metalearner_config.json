@@ -1,0 +1,38 @@
+{
+  "model": {
+    "d_model": 64,
+    "n_layers": 2,
+    "n_heads": 4,
+    "dim_feedforward": 128,
+    "dropout": 0.1,
+    "num_classes": 2,
+    "max_seq_len": 200
+  },
+  "training": {
+    "device": "auto",
+    "epochs": 20,
+    "batch_size": 128,
+    "num_workers": 4,
+    "lr": 0.0003,
+    "weight_decay": 0.0001,
+    "amp": true,
+    "class_weight": "balanced",
+    "aux_weight": 0.5,
+    "early_stop_t": 10,
+    "early_stop_patience": 5,
+    "max_length": 200
+  },
+  "token": {
+    "pkt_len_norm": 1500.0,
+    "rf_age_clip": 30
+  },
+  "meta_split": {
+    "meta_val_frac": 0.15,
+    "seed": 43
+  },
+  "best_epoch": 3,
+  "best_meta_val_auroc_at": {
+    "10": 0.98718513091069
+  },
+  "n_parameters": 67971
+}

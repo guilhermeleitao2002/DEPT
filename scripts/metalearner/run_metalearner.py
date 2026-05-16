@@ -36,9 +36,20 @@ import json
 import logging
 import sys
 import time
+import warnings
 from pathlib import Path
 
 import yaml
+
+# Cosmetic PyTorch hint: nested-tensor optimisation can't apply because
+# the encoder uses pre-LN (norm_first=True), which we keep for AMP
+# stability. Suppressed here only — affects this script's process, not
+# the user's interpreter.
+warnings.filterwarnings(
+    "ignore",
+    message=r".*enable_nested_tensor is True, but self\.use_nested_tensor is False.*",
+    category=UserWarning,
+)
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO_ROOT))
