@@ -10,3 +10,7 @@ __pycache__/
 *.npz
 .ignore
 *.tex
+
+# Meta-learner per-split token caches (derived from rf.joblib + tcn.pt
+# at runtime; rebuilt automatically when either base learner changes).
+data/models/metalearner/cache/
