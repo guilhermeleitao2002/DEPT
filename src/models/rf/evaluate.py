@@ -49,6 +49,89 @@ log = logging.getLogger(__name__)
 ADV_MODE_SUFFIXES = ("_adv_both", "_adv_iat", "_adv_size")
 
 
+def predict_streams(
+    output_dir: Path,
+    sample_indices: np.ndarray | None = None,
+) -> dict:
+    """Run the trained RF over ``sample_indices`` checkpoint rows.
+
+    Public helper used by the meta-learner. Loads the trained classifier
+    + persisted dataset, runs ``predict_proba`` on the requested rows, and
+    groups the per-checkpoint outputs into per-flow streams.
+
+    ``sample_indices`` is a 1D array of row indices into ``dataset.npz``
+    (same index space as ``split.npz``'s ``train_idx``/``val_idx``/
+    ``test_idx``). Defaults to ``test_idx`` if not given.
+
+    Returns a dict with keys:
+      * ``flow_keys``  — list of ``(source: str, flow_id: str)`` per flow
+      * ``probs``      — list of [n_ckpt_i] float64 per-checkpoint P(adv)
+      * ``logits``     — list of [n_ckpt_i] float64 per-checkpoint logit
+      * ``packet_idx`` — list of [n_ckpt_i] int64 absolute packet indices
+      * ``labels``     — [N] int64 per-flow label
+      * ``sources``    — [N] object (str) per-flow source
+      * ``lengths``    — [N] int64 = packet_idx[i][-1] (last covered packet)
+    """
+    clf = joblib.load(output_dir / "rf.joblib")
+    split = np.load(output_dir / "split.npz")
+    data = np.load(output_dir / "dataset.npz", allow_pickle=False)
+
+    if sample_indices is None:
+        sample_indices = split["test_idx"]
+    sample_indices = np.asarray(sample_indices, dtype=np.int64)
+
+    X = data["X"][sample_indices]
+    y = data["y"][sample_indices]
+    sources = data["sources"][sample_indices]
+    flow_ids = data["flow_ids"][sample_indices]
+    ckpt_idx = data["checkpoint_idx"][sample_indices]
+    if "packet_idx" in data.files:
+        pkt_idx = data["packet_idx"][sample_indices]
+    else:
+        # Legacy datasets without packet_idx assume uniform stride=10.
+        pkt_idx = (ckpt_idx + 1) * 10
+
+    probs = clf.predict_proba(X)[:, 1]
+    p_clipped = np.clip(probs, 1e-6, 1 - 1e-6)
+    logits = np.log(p_clipped / (1 - p_clipped))
+
+    scoped = np.char.add(
+        np.char.add(sources.astype(str), "|"), flow_ids.astype(str),
+    )
+    flow_keys_str, inv = np.unique(scoped, return_inverse=True)
+
+    per_flow_probs: list[np.ndarray] = []
+    per_flow_logits: list[np.ndarray] = []
+    per_flow_pkt: list[np.ndarray] = []
+    per_flow_labels: list[int] = []
+    per_flow_sources: list[str] = []
+    per_flow_lengths: list[int] = []
+    flow_keys: list[tuple[str, str]] = []
+
+    for fk_idx in range(len(flow_keys_str)):
+        rows = np.where(inv == fk_idx)[0]
+        order = np.argsort(ckpt_idx[rows])
+        rows = rows[order]
+        per_flow_probs.append(probs[rows].astype(np.float64))
+        per_flow_logits.append(logits[rows].astype(np.float64))
+        per_flow_pkt.append(pkt_idx[rows].astype(np.int64))
+        per_flow_labels.append(int(y[rows][0]))
+        per_flow_sources.append(str(sources[rows][0]))
+        per_flow_lengths.append(int(per_flow_pkt[-1][-1]))
+        src, fid = flow_keys_str[fk_idx].split("|", 1)
+        flow_keys.append((src, fid))
+
+    return {
+        "flow_keys": flow_keys,
+        "probs": per_flow_probs,
+        "logits": per_flow_logits,
+        "packet_idx": per_flow_pkt,
+        "labels": np.asarray(per_flow_labels, dtype=np.int64),
+        "sources": np.asarray(per_flow_sources, dtype=object),
+        "lengths": np.asarray(per_flow_lengths, dtype=np.int64),
+    }
+
+
 def _base_source(adv_source: str) -> str | None:
     """Strip '_adv_<mode>' → base attack name (e.g. 'mirai_adv_both' → 'mirai')."""
     for suffix in ADV_MODE_SUFFIXES:
@@ -206,11 +289,18 @@ def evaluate(output_dir: Path) -> dict:
 
     # ---------- Streaming metrics ----------
     # Group the per-checkpoint predictions by flow into a per-flow stream
-    # ordered by ascending checkpoint_idx, then by packet index = (k+1)·stride.
-    rf_stride = 10  # packets per checkpoint (mirrors pipeline default)
+    # ordered by ascending checkpoint_idx. The absolute packet index of
+    # each checkpoint is captured during dataset assembly (cadence is per
+    # source in metadata.json) and stored in ``packet_idx``. For datasets
+    # built before that field existed we fall back to the legacy
+    # ``(ckpt_idx + 1) * stride`` formula with stride=10.
     if "flow_ids" in data.files and "checkpoint_idx" in data.files:
         flow_ids_te = data["flow_ids"][test_idx]
         ckpt_idx_te = data["checkpoint_idx"][test_idx]
+        if "packet_idx" in data.files:
+            pkt_idx_te = data["packet_idx"][test_idx]
+        else:
+            pkt_idx_te = (ckpt_idx_te + 1) * 10
         scoped = np.char.add(
             np.char.add(sources_te.astype(str), "|"),
             flow_ids_te.astype(str),
@@ -226,7 +316,7 @@ def evaluate(output_dir: Path) -> dict:
             order = np.argsort(ckpt_idx_te[rows])
             rows = rows[order]
             per_flow_probs.append(y_prob[rows].astype(np.float64))
-            per_flow_pkt.append((ckpt_idx_te[rows] + 1) * rf_stride)
+            per_flow_pkt.append(pkt_idx_te[rows].astype(np.int64))
             per_flow_label.append(int(y_te[rows][0]))
             per_flow_source.append(str(sources_te[rows][0]))
             per_flow_length.append(int(per_flow_pkt[-1][-1]))

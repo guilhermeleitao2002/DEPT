@@ -1,0 +1,59 @@
+# =====================================================================
+# ADEPT — Mini-Transformer Meta-Learner
+# =====================================================================
+# Trains on the seed=42 val split (out-of-fold for both base learners),
+# sub-split into meta-train/meta-val at seed=43 for early stopping.
+# Final test-set evaluation lives in the "test" cache.
+
+tensors_dir: data/tensors
+adversarial_dir: data/tensors/adversarial
+output_dir: data/models/metalearner
+
+# Source the trained base learners from these directories. They must
+# contain rf.joblib + dataset.npz + split.npz (RF) and tcn.pt +
+# dataset_index.npz + tcn_config.json (TCN).
+rf_model_dir: data/models/rf
+tcn_model_dir: data/models/tcn
+
+# Meta-train / meta-val sub-split of the val portion (seed=42 from
+# upstream is reused via val flow IDs; seed=43 here is for the
+# meta-train/meta-val partition).
+meta_split:
+  meta_val_frac: 0.15
+  seed: 43
+
+token:
+  pkt_len_norm: 1500.0
+  rf_age_clip: 30        # raw packets since last RF emission, clipped
+
+model:
+  d_model: 64
+  n_layers: 2
+  n_heads: 4
+  dim_feedforward: 128
+  dropout: 0.1
+  num_classes: 2
+  max_seq_len: 200
+
+training:
+  device: auto
+  epochs: 20                 # raised from 15 to give the aux signal room to land
+  batch_size: 128
+  num_workers: 4
+  lr: 3.0e-4
+  weight_decay: 1.0e-4
+  amp: true
+  class_weight: balanced
+  # Auxiliary "beat the best base" loss: per-packet ReLU(p_best_base -
+  # p_meta) on the model's confidence in the true class, where
+  # p_best_base = max(p_RF, p_TCN) when RF is fresh, else p_TCN.
+  # Empirically: this loss reduces the training confidence gap ~9x
+  # (0.027 -> 0.003 over 8 epochs) and improves detection rate by
+  # ~1 pp, but does NOT move test AUROC@t on any per-source slice — the
+  # model is rank-bottlenecked, not loss-bottlenecked (see README
+  # "Observations" section). Set to 0 to disable; left at 0.5 because
+  # the marginal detection-rate gain is free.
+  aux_weight: 0.5
+  early_stop_t: 10           # AUROC@10 on meta-val drives early stopping
+  early_stop_patience: 5     # raised from 3 — aux loss may need more exploration
+  max_length: 200            # truncate long flows for tokenisation

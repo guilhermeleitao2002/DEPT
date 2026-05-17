@@ -13,7 +13,10 @@ layout consumed by the streaming-native ADEPT ensemble:
        (start_idx, length) into flow_packets.npy per flow.
     3. rf_checkpoints.npy          [C_total, S=24]   float32
        Aggregated statistics over the growing prefix of each flow, emitted
-       every `rf_checkpoint_stride` packets (default 10).
+       at the optional `rf_first_checkpoint` packet index (default 2, set
+       to 0 to disable) and then every `rf_checkpoint_stride` packets
+       (default 10). With the defaults: checkpoints at packets {2, 10, 20,
+       30, …}.
     4. rf_checkpoint_offsets.npy   [N_flows, 2]      int64
        (start_idx, n_checkpoints) into rf_checkpoints.npy per flow.
 
@@ -167,6 +170,11 @@ def main():
         help="Emit an RF feature row every K packets per flow (override config)"
     )
     parser.add_argument(
+        "--rf-first-checkpoint", type=int, default=None,
+        help="Emit an extra early RF checkpoint at this absolute packet "
+             "index (default from config, typically 2; 0 disables it)."
+    )
+    parser.add_argument(
         "--mean-std", default=None,
         help="Path to existing mean_std.json (for test sets — use training stats)"
     )
@@ -212,6 +220,11 @@ def main():
         args.rf_checkpoint_stride
         if args.rf_checkpoint_stride is not None
         else int(cfg.get("rf_checkpoint_stride", 10))
+    )
+    rf_first_checkpoint = (
+        args.rf_first_checkpoint
+        if args.rf_first_checkpoint is not None
+        else int(cfg.get("rf_first_checkpoint", 2))
     )
     rf_base = cfg["rf_base_features"]
     rf_agg = cfg["rf_agg_functions"]
@@ -274,20 +287,31 @@ def main():
 
         sizes = [len(idx) for idx in flow_indices.values()]
         if sizes:
-            usable = sum(1 for s in sizes if s >= rf_checkpoint_stride)
+            min_ckpt_len = (
+                min(rf_first_checkpoint, rf_checkpoint_stride)
+                if rf_first_checkpoint > 0
+                else rf_checkpoint_stride
+            )
+            usable = sum(1 for s in sizes if s >= min_ckpt_len)
             print(f"      Flow sizes: min={min(sizes)}, "
                   f"median={np.median(sizes):.0f}, "
                   f"max={max(sizes)} — "
-                  f"{cyan(str(usable))}/{len(sizes)} have ≥{rf_checkpoint_stride} packets")
+                  f"{cyan(str(usable))}/{len(sizes)} have ≥{min_ckpt_len} packets")
 
+        cadence_str = (
+            f"first={rf_first_checkpoint}, stride={rf_checkpoint_stride}"
+            if rf_first_checkpoint > 0
+            else f"stride={rf_checkpoint_stride}"
+        )
         _step(3, 3, f"Building ragged tensors  "
-                    f"{dim(f'(rf_checkpoint_stride={rf_checkpoint_stride}, outputs={list(selected_outputs)})')}")
+                    f"{dim(f'(rf cadence: {cadence_str}, outputs={list(selected_outputs)})')}")
         result = build_tensors(
             nprint_bits=nprint_bits,
             meta_df=meta_df,
             flow_indices=flow_indices,
             output_dir=args.output_dir,
             rf_checkpoint_stride=rf_checkpoint_stride,
+            rf_first_checkpoint=rf_first_checkpoint,
             rf_base_features=rf_base,
             rf_agg_functions=rf_agg,
             standardize_columns=std_cols,
@@ -303,12 +327,18 @@ def main():
 
     else:
         _step(1, 2, f"Prescan  {dim(fname)}")
+        cadence_str = (
+            f"first={rf_first_checkpoint}, stride={rf_checkpoint_stride}"
+            if rf_first_checkpoint > 0
+            else f"stride={rf_checkpoint_stride}"
+        )
         _step(2, 2, f"Encoding + building ragged tensors  "
-                    f"{dim(f'(rf_checkpoint_stride={rf_checkpoint_stride}, outputs={list(selected_outputs)})')}")
+                    f"{dim(f'(rf cadence: {cadence_str}, outputs={list(selected_outputs)})')}")
         result = build_tensors_incremental(
             pcap_path=input_pcap,
             output_dir=args.output_dir,
             rf_checkpoint_stride=rf_checkpoint_stride,
+            rf_first_checkpoint=rf_first_checkpoint,
             rf_base_features=rf_base,
             rf_agg_functions=rf_agg,
             mean_std_path=mean_std_path,
@@ -341,6 +371,7 @@ def main():
         "identity_masking":         not args.no_mask,
         "mask_prefixes":            mask_prefixes,
         "rf_checkpoint_stride":     rf_checkpoint_stride,
+        "rf_first_checkpoint":      rf_first_checkpoint,
         "num_flows":                n_flows,
         "num_packets":              n_packets,
         "num_checkpoints":          n_ckpts,
@@ -368,12 +399,17 @@ def main():
     else:
         print(f" {cyan('flow_packets')}     {skipped}  "
               f"{dim('TCN / Transformer (per-flow ragged)')}")
+    rf_cadence = (
+        f"first={rf_first_checkpoint}, stride={rf_checkpoint_stride}"
+        if rf_first_checkpoint > 0
+        else f"stride={rf_checkpoint_stride}"
+    )
     if built_rf:
         print(f" {cyan('rf_checkpoints')}   [{n_ckpts}, {len(result['rf_stat_names'])}]  "
-              f"{dim(f'Random Forest (stride={rf_checkpoint_stride})')}")
+              f"{dim(f'Random Forest ({rf_cadence})')}")
     else:
         print(f" {cyan('rf_checkpoints')}   {skipped}  "
-              f"{dim(f'Random Forest (stride={rf_checkpoint_stride})')}")
+              f"{dim(f'Random Forest ({rf_cadence})')}")
     print(f" {cyan('Identity masking')} {masking_str}")
     print(f" {cyan('Output')}           {args.output_dir}")
     print(f"{bold('═' * W)}\n")

@@ -3,6 +3,9 @@
   "encoding": "nprint",
   "pipeline_mode": "batch",
   "schema": "ragged-per-flow-v1",
+  "outputs": [
+    "rf"
+  ],
   "nprint_bits": 1088,
   "identity_masking": true,
   "mask_prefixes": [
@@ -15,17 +18,10 @@
     "udp_dport"
   ],
   "rf_checkpoint_stride": 10,
+  "rf_first_checkpoint": 2,
   "num_flows": 158115,
   "num_packets": 9830521,
-  "num_checkpoints": 911622,
-  "flow_packets_shape": [
-    9830521,
-    1090
-  ],
-  "rf_checkpoints_shape": [
-    911622,
-    24
-  ],
+  "num_checkpoints": 1069702,
   "sequence_feature_count": 1090,
   "rf_stat_names": [
     "IPAT_mean",
@@ -58,5 +54,9 @@
       "mean": 26.744513662992706,
       "std": 539.9896285057356
     }
-  }
+  },
+  "rf_checkpoints_shape": [
+    1069702,
+    24
+  ]
 }

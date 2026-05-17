@@ -22,7 +22,8 @@ Pass 2 — main encoding pass:
       features.
     • Per-packet write directly into the memory-mapped ``flow_packets.npy``
       at the flow's pre-assigned slot.
-    • Every ``rf_checkpoint_stride`` packets per flow, emit a multi-scale
+    • At an optional ``rf_first_checkpoint`` packet index (default 2) plus
+      every ``rf_checkpoint_stride`` packets per flow, emit a multi-scale
       RF row into ``rf_checkpoints.npy``.
 
 Memory profile
@@ -48,7 +49,13 @@ from .pcap_parser import (
     NPRINT_COLUMNS,
     DEFAULT_MASK_PREFIXES,
 )
-from .tensor_builder import StreamingStats, _SUPPORTED_AGGS, _normalize_outputs
+from .tensor_builder import (
+    StreamingStats,
+    _SUPPORTED_AGGS,
+    _normalize_outputs,
+    count_rf_checkpoints,
+    is_rf_checkpoint_packet,
+)
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -173,6 +180,7 @@ def build_tensors_incremental(
     pcap_path: str,
     output_dir: str,
     rf_checkpoint_stride: int = 10,
+    rf_first_checkpoint: int = 2,
     rf_base_features: Optional[List[str]] = None,
     rf_agg_functions: Optional[List[str]] = None,
     mean_std_path: Optional[str] = None,
@@ -184,9 +192,10 @@ def build_tensors_incremental(
     Pass 1 (prescan): counts packets per flow, captures arrival order, and
     computes IPAT mean/std for z-score normalisation. Pass 2 (main): nPrint
     encoding per packet, per-flow state update, direct writes into the
-    pre-allocated memory-mapped ``flow_packets.npy``; every
-    ``rf_checkpoint_stride`` packets per flow a multi-scale RF row is
-    appended to ``rf_checkpoints.npy``.
+    pre-allocated memory-mapped ``flow_packets.npy``; at an optional
+    ``rf_first_checkpoint`` packet index plus every ``rf_checkpoint_stride``
+    packets per flow a multi-scale RF row is appended to
+    ``rf_checkpoints.npy``.
 
     Returns a dict with the same keys as ``tensor_builder.build_tensors``.
     """
@@ -204,6 +213,10 @@ def build_tensors_incremental(
     if rf_checkpoint_stride < 1:
         raise ValueError(
             f"rf_checkpoint_stride must be >=1, got {rf_checkpoint_stride}"
+        )
+    if rf_first_checkpoint < 0:
+        raise ValueError(
+            f"rf_first_checkpoint must be >=0, got {rf_first_checkpoint}"
         )
     unknown = [a for a in rf_agg_functions if a not in _SUPPORTED_AGGS]
     if unknown:
@@ -263,7 +276,7 @@ def build_tensors_incremental(
         L = int(flow_counts[fk])
         flow_packet_offsets[i, 0] = pkt_cursor
         flow_packet_offsets[i, 1] = L
-        n_ckpt = L // rf_checkpoint_stride
+        n_ckpt = count_rf_checkpoints(L, rf_first_checkpoint, rf_checkpoint_stride)
         rf_checkpoint_offsets[i, 0] = ckpt_cursor
         rf_checkpoint_offsets[i, 1] = n_ckpt
         flow_slot[fk] = i
@@ -288,6 +301,7 @@ def build_tensors_incremental(
             "num_packets": 0,
             "num_checkpoints": 0,
             "rf_checkpoint_stride": rf_checkpoint_stride,
+            "rf_first_checkpoint": rf_first_checkpoint,
             "outputs": list(outputs_norm),
         }
 
@@ -400,7 +414,9 @@ def build_tensors_incremental(
         state.pkt_idx += 1
         pkts_seen += 1
 
-        if build_rf and state.pkt_idx % rf_checkpoint_stride == 0:
+        if build_rf and is_rf_checkpoint_packet(
+            state.pkt_idx, rf_first_checkpoint, rf_checkpoint_stride
+        ):
             ckpt_slot = int(rf_checkpoint_offsets[slot, 0]) + state.ckpt_idx
             if state.ckpt_idx < int(rf_checkpoint_offsets[slot, 1]):
                 ckpt_mmap[ckpt_slot] = state.stats.emit(rf_agg_functions)
@@ -432,8 +448,13 @@ def build_tensors_incremental(
         print(f"    flow_packets    : {pkt_mmap.shape}   (P, F={n_seq_features})")
         print(f"    flow_offsets    : {flow_packet_offsets.shape}  (N_flows, 2)")
     if build_rf:
+        cadence = (
+            f"stride={rf_checkpoint_stride}, first={rf_first_checkpoint}"
+            if rf_first_checkpoint > 0
+            else f"stride={rf_checkpoint_stride}"
+        )
         print(f"    rf_checkpoints  : {ckpt_mmap.shape}  "
-              f"(C, S={n_rf_stats})  stride={rf_checkpoint_stride}")
+              f"(C, S={n_rf_stats})  {cadence}")
         print(f"    rf_ckpt_offsets : {rf_checkpoint_offsets.shape}  (N_flows, 2)")
 
     return {
@@ -451,5 +472,6 @@ def build_tensors_incremental(
         "num_packets": total_packets,
         "num_checkpoints": total_checkpoints,
         "rf_checkpoint_stride": rf_checkpoint_stride,
+        "rf_first_checkpoint": rf_first_checkpoint,
         "outputs": list(outputs_norm),
     }

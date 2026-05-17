@@ -12,9 +12,11 @@ support the new ensemble:
        (start_idx, length) into ``flow_packets.npy`` for each flow.
     3. rf_checkpoints.npy           [C_total, S=24]   float32
        Aggregated statistics over the **growing prefix** of each flow,
-       emitted every ``rf_checkpoint_stride`` packets (default 10). For a
-       flow of length L this gives ``floor(L / stride)`` checkpoints,
-       computed over packets [0:stride], [0:2*stride], …, [0:L_floor].
+       emitted at an optional ``rf_first_checkpoint`` packet index (default
+       2, set to 0 to disable) and then every ``rf_checkpoint_stride``
+       packets (default 10). With the defaults a flow of length L gets
+       checkpoints at packets {2, 10, 20, …} — i.e. one early one for
+       short-flow coverage (PortScan) plus the regular cadence after.
     4. rf_checkpoint_offsets.npy    [N_flows, 2]      int64
        (start_idx, n_checkpoints) into ``rf_checkpoints.npy``.
 
@@ -96,6 +98,53 @@ _SUPPORTED_AGGS = ("mean", "std", "min", "max")
 # ``flow_packets.npy``/``flow_offsets.npy`` pair (Transformer + TCN input);
 # "rf" governs ``rf_checkpoints.npy``/``rf_checkpoint_offsets.npy``.
 _SUPPORTED_OUTPUTS = ("rf", "tcn")
+
+
+def count_rf_checkpoints(flow_length: int, first: int, stride: int) -> int:
+    """Number of RF checkpoints a flow of ``flow_length`` packets produces.
+
+    ``first`` is the absolute packet index of an extra early checkpoint
+    (0 disables it). ``stride`` is the regular cadence after that. If
+    ``first`` is a positive multiple of ``stride`` it coincides with the
+    first regular checkpoint and contributes nothing extra.
+    """
+    n = flow_length // stride
+    if first > 0 and (first % stride) != 0 and flow_length >= first:
+        n += 1
+    return n
+
+
+def is_rf_checkpoint_packet(packet_index: int, first: int, stride: int) -> bool:
+    """True if a checkpoint should be emitted at 1-based ``packet_index``."""
+    if packet_index <= 0:
+        return False
+    if first > 0 and (first % stride) != 0 and packet_index == first:
+        return True
+    return packet_index % stride == 0
+
+
+def checkpoint_packet_indices(
+    n_checkpoints: int, first: int, stride: int,
+) -> np.ndarray:
+    """Absolute 1-based packet indices for the first ``n_checkpoints``.
+
+    Under the default cadence (first=2, stride=10) the sequence is
+    ``[2, 10, 20, 30, …]``. When ``first`` is 0 or coincides with
+    ``stride`` (mod-zero), the sequence is the regular ``[stride, 2*stride,
+    3*stride, …]``.
+    """
+    if n_checkpoints <= 0:
+        return np.empty(0, dtype=np.int64)
+    out = np.empty(n_checkpoints, dtype=np.int64)
+    has_early = first > 0 and (first % stride) != 0
+    if has_early:
+        out[0] = first
+        for k in range(1, n_checkpoints):
+            out[k] = k * stride
+    else:
+        for k in range(n_checkpoints):
+            out[k] = (k + 1) * stride
+    return out
 
 
 def _normalize_outputs(outputs: Optional[Iterable[str]]) -> Tuple[str, ...]:
@@ -192,6 +241,7 @@ def build_tensors(
     flow_indices: OrderedDict,
     output_dir: str,
     rf_checkpoint_stride: int = 10,
+    rf_first_checkpoint: int = 2,
     rf_base_features: Optional[List[str]] = None,
     rf_agg_functions: Optional[List[str]] = None,
     standardize_columns: Optional[List[str]] = None,
@@ -220,8 +270,14 @@ def build_tensors(
         Directory to write tensors into.
     rf_checkpoint_stride : int
         Emit a multi-scale RF feature row every ``stride`` packets. The
-        first checkpoint covers packets ``[0:stride]``, the next
+        first regular checkpoint covers packets ``[0:stride]``, the next
         ``[0:2*stride]``, etc.
+    rf_first_checkpoint : int
+        Optional extra checkpoint emitted once at this absolute (1-based)
+        packet index, for short-flow coverage. Default 2 → flows of
+        length ≥ 2 get a checkpoint at packet 2 in addition to the regular
+        every-``stride`` cadence. Set to 0 to disable. Automatically
+        deduplicated when it coincides with a multiple of ``stride``.
     rf_base_features : list[str]
         Metadata columns to aggregate for the RF input.
     rf_agg_functions : list[str]
@@ -254,6 +310,7 @@ def build_tensors(
         "num_packets"                 : int   — total packets across flows
         "num_checkpoints"             : int   — total RF checkpoint rows
         "rf_checkpoint_stride"        : int
+        "rf_first_checkpoint"         : int   — 0 if no early checkpoint
     """
     # Defaults
     if rf_base_features is None:
@@ -268,6 +325,10 @@ def build_tensors(
     if rf_checkpoint_stride < 1:
         raise ValueError(
             f"rf_checkpoint_stride must be >=1, got {rf_checkpoint_stride}"
+        )
+    if rf_first_checkpoint < 0:
+        raise ValueError(
+            f"rf_first_checkpoint must be >=0, got {rf_first_checkpoint}"
         )
 
     unknown = [a for a in rf_agg_functions if a not in _SUPPORTED_AGGS]
@@ -322,7 +383,7 @@ def build_tensors(
         L = int(len(flow_indices[fk]))
         flow_packet_offsets[i, 0] = pkt_cursor
         flow_packet_offsets[i, 1] = L
-        n_ckpt = L // rf_checkpoint_stride
+        n_ckpt = count_rf_checkpoints(L, rf_first_checkpoint, rf_checkpoint_stride)
         rf_checkpoint_offsets[i, 0] = ckpt_cursor
         rf_checkpoint_offsets[i, 1] = n_ckpt
         pkt_cursor += L
@@ -346,6 +407,7 @@ def build_tensors(
             "num_packets": 0,
             "num_checkpoints": 0,
             "rf_checkpoint_stride": rf_checkpoint_stride,
+            "rf_first_checkpoint": rf_first_checkpoint,
             "outputs": list(outputs_norm),
         }
 
@@ -415,7 +477,9 @@ def build_tensors(
             ckpt_local = 0
             for t in range(L):
                 stat.update(rf_meta_flow[t])
-                if (t + 1) % rf_checkpoint_stride == 0:
+                if is_rf_checkpoint_packet(
+                    t + 1, rf_first_checkpoint, rf_checkpoint_stride
+                ):
                     if ckpt_local < int(rf_checkpoint_offsets[i, 1]):
                         ckpt_mmap[ckpt_start + ckpt_local] = stat.emit(rf_agg_functions)
                     ckpt_local += 1
@@ -443,8 +507,13 @@ def build_tensors(
         print(f"    flow_offsets    : {flow_packet_offsets.shape}  "
               f"(N_flows, 2)")
     if build_rf:
+        cadence = (
+            f"stride={rf_checkpoint_stride}, first={rf_first_checkpoint}"
+            if rf_first_checkpoint > 0
+            else f"stride={rf_checkpoint_stride}"
+        )
         print(f"    rf_checkpoints  : {ckpt_mmap.shape}  "
-              f"(C, S={n_rf_stats})  stride={rf_checkpoint_stride}")
+              f"(C, S={n_rf_stats})  {cadence}")
         print(f"    rf_ckpt_offsets : {rf_checkpoint_offsets.shape}  "
               f"(N_flows, 2)")
 
@@ -463,5 +532,6 @@ def build_tensors(
         "num_packets": total_packets,
         "num_checkpoints": total_checkpoints,
         "rf_checkpoint_stride": rf_checkpoint_stride,
+        "rf_first_checkpoint": rf_first_checkpoint,
         "outputs": list(outputs_norm),
     }

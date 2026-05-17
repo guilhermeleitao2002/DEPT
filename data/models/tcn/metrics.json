@@ -931,6 +931,13 @@
         "n_adversarial": 45582,
         "auroc": 0.9492908622185707
       },
+      "2": {
+        "n_used": 131562,
+        "n_excluded": 0,
+        "n_benign": 85980,
+        "n_adversarial": 45582,
+        "auroc": 0.9765325645290233
+      },
       "5": {
         "n_used": 131562,
         "n_excluded": 0,
