@@ -40,6 +40,7 @@ from .dataset import FlowSequenceDataset, collate_padded  # noqa: E402
 from .model import TCN  # noqa: E402
 
 from ..common.dataset import load_source_meta  # noqa: E402
+from ..common.runtime import resolve_num_workers  # noqa: E402
 from ..common.streaming_eval import (  # noqa: E402
     StreamingPredictions,
     plot_latency_accuracy,
@@ -235,13 +236,14 @@ def predict_streams(
         source_folders=idx["source_folders"],
         max_length=train_cfg.get("max_length", None),
     )
+    num_workers = resolve_num_workers(train_cfg.get("num_workers", "auto"))
     loader = DataLoader(
         ds,
         batch_size=int(train_cfg.get("batch_size", 32)),
         shuffle=False,
-        num_workers=int(train_cfg.get("num_workers", 4)),
+        num_workers=num_workers,
         pin_memory=device.type == "cuda",
-        persistent_workers=int(train_cfg.get("num_workers", 4)) > 0,
+        persistent_workers=num_workers > 0,
         collate_fn=collate_padded,
     )
 
@@ -342,7 +344,7 @@ def evaluate(output_dir: Path) -> dict:
         max_length=train_cfg.get("max_length", None),
     )
     batch_size = int(train_cfg.get("batch_size", 32))
-    num_workers = int(train_cfg.get("num_workers", 4))
+    num_workers = resolve_num_workers(train_cfg.get("num_workers", "auto"))
     test_loader = DataLoader(
         test_ds,
         batch_size=batch_size,

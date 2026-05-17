@@ -24,6 +24,7 @@ import torch
 from torch import nn
 from torch.utils.data import DataLoader
 
+from ..common.runtime import resolve_num_workers
 from ..common.streaming_eval import StreamingPredictions, streaming_metrics
 from .dataset import (
     SLOT_RF_LOGIT,
@@ -262,14 +263,15 @@ def train(output_dir: Path, config: dict) -> dict:
     log.info("class weights: %s", class_weight.tolist())
 
     # ---- Datasets / loaders ----
+    num_workers = resolve_num_workers(train_cfg.get("num_workers", "auto"))
     train_ds = MetaLearnerDataset(val_cache, sample_indices=meta_train_idx)
     train_loader = DataLoader(
         train_ds,
         batch_size=int(train_cfg.get("batch_size", 128)),
         shuffle=True,
-        num_workers=int(train_cfg.get("num_workers", 4)),
+        num_workers=num_workers,
         pin_memory=device.type == "cuda",
-        persistent_workers=int(train_cfg.get("num_workers", 4)) > 0,
+        persistent_workers=num_workers > 0,
         collate_fn=collate_padded,
     )
 
@@ -348,7 +350,7 @@ def train(output_dir: Path, config: dict) -> dict:
         meta_val_auroc, meta_val_metrics = _streaming_auroc_at(
             model, val_cache, meta_val_idx, device,
             batch_size=int(train_cfg.get("batch_size", 128)),
-            num_workers=int(train_cfg.get("num_workers", 4)),
+            num_workers=num_workers,
             t_for_early_stop=early_stop_t,
         )
         edp = meta_val_metrics["overall"]["edp"].get("edp_median")

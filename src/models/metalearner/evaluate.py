@@ -26,6 +26,7 @@ from sklearn.metrics import (  # noqa: E402
 )
 from torch.utils.data import DataLoader  # noqa: E402
 
+from ..common.runtime import resolve_num_workers  # noqa: E402
 from ..common.streaming_eval import (  # noqa: E402
     StreamingPredictions,
     plot_latency_accuracy,
@@ -96,14 +97,15 @@ def evaluate(output_dir: Path, config: dict) -> dict:
         )
         cache = caches["test"]
 
+    num_workers = resolve_num_workers(train_cfg_saved.get("num_workers", "auto"))
     ds = MetaLearnerDataset(cache)
     loader = DataLoader(
         ds,
         batch_size=int(train_cfg_saved.get("batch_size", 128)),
         shuffle=False,
-        num_workers=int(train_cfg_saved.get("num_workers", 4)),
+        num_workers=num_workers,
         pin_memory=device.type == "cuda",
-        persistent_workers=int(train_cfg_saved.get("num_workers", 4)) > 0,
+        persistent_workers=num_workers > 0,
         collate_fn=collate_padded,
     )
 

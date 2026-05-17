@@ -34,6 +34,7 @@ from ..common.dataset import (
     flow_level_split,
     split_summary,
 )
+from ..common.runtime import resolve_num_workers
 from .dataset import compute_class_weights, make_dataloaders
 from .model import TCN
 
@@ -237,7 +238,7 @@ def train(
         val_idx=val_idx,
         test_idx=test_idx,
         batch_size=int(train_cfg.get("batch_size", 32)),
-        num_workers=int(train_cfg.get("num_workers", 4)),
+        num_workers=resolve_num_workers(train_cfg.get("num_workers", "auto")),
         pin_memory=device.type == "cuda",
         max_length=train_cfg.get("max_length", None),
     )

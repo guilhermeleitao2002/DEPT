@@ -36,10 +36,10 @@ model:
   max_seq_len: 200
 
 training:
-  device: auto
+  device: auto               # auto | cuda | cuda:0 | cuda:1 | cpu
   epochs: 20                 # raised from 15 to give the aux signal room to land
   batch_size: 128
-  num_workers: 4
+  num_workers: auto          # auto | <int> — auto = min(16, cpu_count // 2)
   lr: 3.0e-4
   weight_decay: 1.0e-4
   amp: true

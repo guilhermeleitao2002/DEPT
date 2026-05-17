@@ -77,11 +77,11 @@ model:
 # Variable-length per-flow sequences. Per-packet CE is averaged inside
 # each flow (so long flows don't dominate), then averaged across flows.
 training:
-  device: auto             # auto | cuda | cpu
+  device: auto             # auto | cuda | cuda:0 | cuda:1 | cpu
   epochs: 20
   batch_size: 32           # smaller than the old fixed-window batch (256)
                            # because flows can be hundreds of packets long
-  num_workers: 4
+  num_workers: auto        # auto | <int> — auto = min(16, cpu_count // 2)
   lr: 1.0e-3
   weight_decay: 1.0e-4
   scheduler: cosine        # cosine | plateau
