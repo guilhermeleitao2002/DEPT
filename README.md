@@ -181,9 +181,29 @@ ADEPT/
 
 ## Requirements
 
+System packages (Debian/Ubuntu):
+
+```bash
+sudo apt update
+sudo apt install -y \
+    python3 python3-pip python3-venv python3-dev \
+    build-essential \
+    git \
+    wireshark-common tshark \
+    tcpdump \
+    libpcap-dev
+```
+
+- `wireshark-common` / `tshark` provide `editcap`, used for CIC-IDS2017 time filtering.
+- `build-essential` + `python3-dev` cover any pip wheel that has to compile (also required by TANTGen's Cython build).
+- `libpcap-dev` + `tcpdump` are useful for raw PCAP debugging alongside scapy.
+
+For GPU training, NVIDIA drivers and a CUDA runtime compatible with the installed `torch` wheel are required; these are typically already provisioned on research servers, but verify with `nvidia-smi` and `python3 -c "import torch; print(torch.cuda.is_available(), torch.cuda.device_count())"` before running.
+
+Python packages:
+
 ```bash
 pip3 install -r requirements.txt
-sudo apt install wireshark-common -y   # editcap — CIC-IDS2017 time filtering
 ```
 
 For TANTGen adversarial generation, additional setup is needed (sibling repo install, Cython build); see [`scripts/adversarial_generation/README.md`](scripts/adversarial_generation/README.md).
