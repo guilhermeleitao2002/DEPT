@@ -27,6 +27,21 @@ import torch.nn.functional as F
 from sklearn.metrics import f1_score
 from torch.utils.data import DataLoader
 
+# torch.amp (unified) was added in PyTorch 2.0; fall back to torch.cuda.amp.
+# The old API doesn't accept device_type, so wrap it to swallow that kwarg.
+try:
+    _GradScaler = torch.amp.GradScaler
+    _autocast = torch.amp.autocast
+except AttributeError:
+    import contextlib
+
+    _GradScaler = torch.cuda.amp.GradScaler  # type: ignore[attr-defined]
+
+    @contextlib.contextmanager
+    def _autocast(device_type: str = "cuda", enabled: bool = True):  # type: ignore[misc]
+        with torch.cuda.amp.autocast(enabled=enabled):  # type: ignore[attr-defined]
+            yield
+
 from ..common.dataset import (
     AssembledIndex,
     Split,
@@ -101,7 +116,7 @@ def _train_one_epoch(
     model: nn.Module,
     loader: DataLoader,
     optimizer: torch.optim.Optimizer,
-    scaler: "torch.amp.GradScaler",
+    scaler: "torch.cuda.amp.GradScaler",
     class_weights: torch.Tensor,
     device: torch.device,
     use_amp: bool,
@@ -115,7 +130,7 @@ def _train_one_epoch(
         labels = labels.to(device, non_blocking=True)
         mask = mask.to(device, non_blocking=True)
         optimizer.zero_grad(set_to_none=True)
-        with torch.amp.autocast(device_type=amp_device, enabled=use_amp):
+        with _autocast(device_type=amp_device, enabled=use_amp):
             logits = model(seq)
             loss = _masked_per_packet_loss(logits, labels, mask, class_weights)
         if use_amp:
@@ -153,7 +168,7 @@ def _eval_one_epoch(
         seq = seq.to(device, non_blocking=True)
         labels_dev = labels.to(device, non_blocking=True)
         mask = mask.to(device, non_blocking=True)
-        with torch.amp.autocast(device_type=amp_device, enabled=use_amp):
+        with _autocast(device_type=amp_device, enabled=use_amp):
             logits = model(seq)
             loss = _masked_per_packet_loss(logits, labels_dev, mask, class_weights)
         total_loss += float(loss.detach().item())
@@ -272,7 +287,7 @@ def train(
         raise ValueError(f"unknown scheduler: {scheduler_kind}")
 
     class_weights_dev = class_weights.to(device)
-    scaler = torch.amp.GradScaler(enabled=use_amp)
+    scaler = _GradScaler(enabled=use_amp)
 
     # ---- 6. Training loop ----------------------------------------------------
     early_stop_patience = int(train_cfg.get("early_stop_patience", 3))
