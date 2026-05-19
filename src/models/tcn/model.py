@@ -23,7 +23,10 @@ from typing import Sequence
 
 import torch
 import torch.nn as nn
-from torch.nn.utils.parametrizations import weight_norm
+try:
+    from torch.nn.utils.parametrizations import weight_norm  # PyTorch >= 1.13
+except ImportError:
+    from torch.nn.utils import weight_norm  # type: ignore[no-redef]
 
 
 class Chomp1d(nn.Module):
