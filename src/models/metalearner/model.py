@@ -104,6 +104,7 @@ class _EncoderLayer(nn.Module):
         src: torch.Tensor,
         src_mask: torch.Tensor | None = None,
         src_key_padding_mask: torch.Tensor | None = None,
+        is_causal: bool = False,
     ) -> torch.Tensor:
         # Pre-norm (norm_first=True) residual blocks.
         x = src
