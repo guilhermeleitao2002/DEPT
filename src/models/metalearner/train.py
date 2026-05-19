@@ -19,10 +19,25 @@ import math
 from collections import Counter
 from pathlib import Path
 
+import contextlib
+
 import numpy as np
 import torch
 from torch import nn
 from torch.utils.data import DataLoader
+
+# torch.amp (unified) was added in PyTorch 2.0; fall back to torch.cuda.amp.
+# The old API doesn't accept device_type, so wrap it to swallow that kwarg.
+try:
+    _GradScaler = torch.amp.GradScaler
+    _autocast = torch.amp.autocast
+except AttributeError:
+    _GradScaler = torch.cuda.amp.GradScaler  # type: ignore[attr-defined]
+
+    @contextlib.contextmanager
+    def _autocast(device_type: str = "cuda", enabled: bool = True):  # type: ignore[misc]
+        with torch.cuda.amp.autocast(enabled=enabled):  # type: ignore[attr-defined]
+            yield
 
 from ..common.runtime import resolve_num_workers
 from ..common.streaming_eval import StreamingPredictions, streaming_metrics
@@ -297,7 +312,7 @@ def train(output_dir: Path, config: dict) -> dict:
     )
 
     use_amp = bool(train_cfg.get("amp", True)) and device.type == "cuda"
-    scaler = torch.amp.GradScaler("cuda", enabled=use_amp)
+    scaler = _GradScaler("cuda", enabled=use_amp)
 
     aux_weight = float(train_cfg.get("aux_weight", 0.0))
     if aux_weight > 0.0:
@@ -323,7 +338,7 @@ def train(output_dir: Path, config: dict) -> dict:
             labels = labels.to(device, non_blocking=True)
             mask = mask.to(device, non_blocking=True)
             optimizer.zero_grad(set_to_none=True)
-            with torch.amp.autocast(
+            with _autocast(
                 device_type=device.type, enabled=use_amp,
             ):
                 logits = model(tokens, key_padding_mask=mask)
