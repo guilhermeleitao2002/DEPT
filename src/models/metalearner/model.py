@@ -123,12 +123,12 @@ class MetaLearner(nn.Module):
 
     @staticmethod
     def _causal_mask(T: int, device: torch.device) -> torch.Tensor:
-        # Upper-triangular bool mask: ``True`` = position is masked (cannot
-        # attend). Bool form keeps the type consistent with
-        # ``src_key_padding_mask`` and silences PyTorch's mismatched-type
-        # warning.
+        # Float additive mask: -inf at positions that cannot attend, 0
+        # elsewhere. Float form avoids the bool-conversion warning in older
+        # PyTorch when the transformer fast path merges this mask with
+        # src_key_padding_mask internally.
         return torch.triu(
-            torch.ones(T, T, device=device, dtype=torch.bool), diagonal=1,
+            torch.full((T, T), float("-inf"), device=device), diagonal=1,
         )
 
     def forward(
