@@ -1,10 +1,11 @@
 {
-  "input": "/home/gleitao/Master Thesis/ADEPT/data/adversarial/ddos_kitsune/ddos_kitsune_adversarial_size.pcap",
+  "input": "/mnt/nas/inesc/gleitao/ADEPT/data/adversarial/ddos_kitsune/ddos_kitsune_adversarial_size.pcap",
   "encoding": "nprint",
   "pipeline_mode": "batch",
   "schema": "ragged-per-flow-v1",
   "outputs": [
-    "rf"
+    "rf",
+    "tcn"
   ],
   "nprint_bits": 1088,
   "identity_masking": true,
@@ -55,6 +56,10 @@
       "std": 539.9896285057356
     }
   },
+  "flow_packets_shape": [
+    255827,
+    1090
+  ],
   "rf_checkpoints_shape": [
     34773,
     24

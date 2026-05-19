@@ -12,7 +12,7 @@
     "device": "auto",
     "epochs": 20,
     "batch_size": 128,
-    "num_workers": 4,
+    "num_workers": "auto",
     "lr": 0.0003,
     "weight_decay": 0.0001,
     "amp": true,
@@ -30,9 +30,9 @@
     "meta_val_frac": 0.15,
     "seed": 43
   },
-  "best_epoch": 3,
+  "best_epoch": 2,
   "best_meta_val_auroc_at": {
-    "10": 0.98718513091069
+    "10": 0.9876708152208529
   },
   "n_parameters": 67971
 }

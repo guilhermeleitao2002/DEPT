@@ -1,9 +1,9 @@
 {
-  "best_epoch": 17,
-  "best_val_macro_f1": 0.9610915892434627,
+  "best_epoch": 19,
+  "best_val_macro_f1": 0.9603580589416056,
   "epochs_run": 20,
   "epochs_planned": 20,
-  "train_seconds": 7258.146968126297,
+  "train_seconds": 10763.278393745422,
   "device": "cuda",
   "amp": true,
   "n_parameters": 805762,
@@ -102,7 +102,7 @@
   },
   "config": {
     "tensors_dir": "data/tensors",
-    "adversarial_dir": "/home/gleitao/Master Thesis/ADEPT/data/tensors/adversarial",
+    "adversarial_dir": "/mnt/nas/inesc/gleitao/ADEPT/data/tensors/adversarial",
     "output_dir": "data/models/tcn",
     "benign_sources": [
       "brute_force",
@@ -141,7 +141,7 @@
     "device": "auto",
     "epochs": 20,
     "batch_size": 32,
-    "num_workers": 4,
+    "num_workers": "auto",
     "lr": 0.001,
     "weight_decay": 0.0001,
     "scheduler": "cosine",

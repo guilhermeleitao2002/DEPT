@@ -1,10 +1,11 @@
 {
-  "input": "/home/gleitao/Master Thesis/ADEPT/data/adversarial/brute_force/brute_force_adversarial_both.pcap",
+  "input": "/mnt/nas/inesc/gleitao/ADEPT/data/adversarial/brute_force/brute_force_adversarial_both.pcap",
   "encoding": "nprint",
   "pipeline_mode": "batch",
   "schema": "ragged-per-flow-v1",
   "outputs": [
-    "rf"
+    "rf",
+    "tcn"
   ],
   "nprint_bits": 1088,
   "identity_masking": true,
@@ -55,6 +56,10 @@
       "std": 539.9896285057356
     }
   },
+  "flow_packets_shape": [
+    2500,
+    1090
+  ],
   "rf_checkpoints_shape": [
     293,
     24
