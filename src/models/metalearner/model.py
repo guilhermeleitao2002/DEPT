@@ -68,6 +68,59 @@ class _SinusoidalPositionalEncoding(nn.Module):
         return x + self.pe[:, :T, :].to(dtype=x.dtype)
 
 
+class _EncoderLayer(nn.Module):
+    """Pre-norm transformer encoder layer with no fast-path dispatching.
+
+    Functionally identical to nn.TransformerEncoderLayer(norm_first=True,
+    batch_first=True) but does NOT inherit from it, so
+    nn.TransformerEncoder.forward() skips the isinstance check that would
+    invoke torch._transformer_encoder_layer_fwd — the fused C++ kernel that
+    emits mask-type warnings on older PyTorch regardless of mask dtype.
+    Sub-module names are kept identical so the state-dict layout matches.
+    """
+
+    def __init__(
+        self,
+        d_model: int,
+        nhead: int,
+        dim_feedforward: int,
+        dropout: float,
+    ) -> None:
+        super().__init__()
+        self.self_attn = nn.MultiheadAttention(
+            d_model, nhead, dropout=dropout, batch_first=True
+        )
+        self.linear1 = nn.Linear(d_model, dim_feedforward)
+        self.linear2 = nn.Linear(dim_feedforward, d_model)
+        self.norm1 = nn.LayerNorm(d_model)
+        self.norm2 = nn.LayerNorm(d_model)
+        self.dropout = nn.Dropout(dropout)
+        self.dropout1 = nn.Dropout(dropout)
+        self.dropout2 = nn.Dropout(dropout)
+        self.activation = nn.GELU()
+
+    def forward(
+        self,
+        src: torch.Tensor,
+        src_mask: torch.Tensor | None = None,
+        src_key_padding_mask: torch.Tensor | None = None,
+    ) -> torch.Tensor:
+        # Pre-norm (norm_first=True) residual blocks.
+        x = src
+        x2 = self.norm1(x)
+        x2, _ = self.self_attn(
+            x2, x2, x2,
+            attn_mask=src_mask,
+            key_padding_mask=src_key_padding_mask,
+        )
+        x = x + self.dropout1(x2)
+        x2 = self.norm2(x)
+        x2 = self.linear2(self.dropout(self.activation(self.linear1(x2))))
+        x = x + self.dropout2(x2)
+        return x
+
+
+
 class MetaLearner(nn.Module):
     """Causal Mini-Transformer for per-packet stacking of RF + TCN.
 
@@ -109,14 +162,11 @@ class MetaLearner(nn.Module):
         self.input_proj = nn.Linear(token_dim, d_model)
         self.pos_enc = _SinusoidalPositionalEncoding(d_model, max_len=max_seq_len)
 
-        encoder_layer = nn.TransformerEncoderLayer(
+        encoder_layer = _EncoderLayer(
             d_model=d_model,
             nhead=n_heads,
             dim_feedforward=dim_feedforward,
             dropout=dropout,
-            batch_first=True,
-            norm_first=True,
-            activation="gelu",
         )
         self.encoder = nn.TransformerEncoder(encoder_layer, num_layers=n_layers)
         self.head = nn.Linear(d_model, num_classes)
@@ -155,16 +205,11 @@ class MetaLearner(nn.Module):
         x = self.pos_enc(x)
         T = x.size(1)
         causal = self._causal_mask(T, x.device)
-        # Call each TransformerEncoderLayer directly rather than going through
-        # nn.TransformerEncoder.forward(), which in older PyTorch triggers a
-        # fused C++ kernel (_transformer_encoder_layer_fwd) during eval. That
-        # kernel internally re-casts the bool masks to match the AMP dtype and
-        # then warns about converting non-bool back to bool — unavoidably,
-        # regardless of what mask dtype we pass. Calling each layer's own
-        # forward() uses the Python path (MultiheadAttention.forward()) which
-        # handles masks cleanly. State-dict keys are unchanged (encoder.layers.N.*).
-        for layer in self.encoder.layers:
-            x = layer(x, src_mask=causal, src_key_padding_mask=key_padding_mask)
+        # _EncoderLayer is not a subclass of nn.TransformerEncoderLayer, so
+        # TransformerEncoder.forward() fails the isinstance check and takes the
+        # plain Python loop — no torch._transformer_encoder_layer_fwd, no
+        # mask-type warnings.
+        x = self.encoder(x, mask=causal, src_key_padding_mask=key_padding_mask)
         return self.head(x)                      # [B, T, num_classes]
 
 
