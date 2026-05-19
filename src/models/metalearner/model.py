@@ -123,12 +123,9 @@ class MetaLearner(nn.Module):
 
     @staticmethod
     def _causal_mask(T: int, device: torch.device) -> torch.Tensor:
-        # Float additive mask: -inf at positions that cannot attend, 0
-        # elsewhere. Float form avoids the bool-conversion warning in older
-        # PyTorch when the transformer fast path merges this mask with
-        # src_key_padding_mask internally.
+        # Upper-triangular bool mask: True = position is masked (cannot attend).
         return torch.triu(
-            torch.full((T, T), float("-inf"), device=device), diagonal=1,
+            torch.ones(T, T, device=device, dtype=torch.bool), diagonal=1,
         )
 
     def forward(
@@ -158,11 +155,16 @@ class MetaLearner(nn.Module):
         x = self.pos_enc(x)
         T = x.size(1)
         causal = self._causal_mask(T, x.device)
-        x = self.encoder(
-            x,
-            mask=causal,
-            src_key_padding_mask=key_padding_mask,
-        )
+        # Call each TransformerEncoderLayer directly rather than going through
+        # nn.TransformerEncoder.forward(), which in older PyTorch triggers a
+        # fused C++ kernel (_transformer_encoder_layer_fwd) during eval. That
+        # kernel internally re-casts the bool masks to match the AMP dtype and
+        # then warns about converting non-bool back to bool — unavoidably,
+        # regardless of what mask dtype we pass. Calling each layer's own
+        # forward() uses the Python path (MultiheadAttention.forward()) which
+        # handles masks cleanly. State-dict keys are unchanged (encoder.layers.N.*).
+        for layer in self.encoder.layers:
+            x = layer(x, src_mask=causal, src_key_padding_mask=key_padding_mask)
         return self.head(x)                      # [B, T, num_classes]
 
 
