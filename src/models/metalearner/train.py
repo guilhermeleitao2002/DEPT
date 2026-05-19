@@ -312,7 +312,7 @@ def train(output_dir: Path, config: dict) -> dict:
     )
 
     use_amp = bool(train_cfg.get("amp", True)) and device.type == "cuda"
-    scaler = _GradScaler("cuda", enabled=use_amp)
+    scaler = _GradScaler(enabled=use_amp)
 
     aux_weight = float(train_cfg.get("aux_weight", 0.0))
     if aux_weight > 0.0:
