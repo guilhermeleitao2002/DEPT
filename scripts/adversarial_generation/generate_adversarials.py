@@ -3,64 +3,79 @@
 ADEPT — TANTGen Adversarial Generation Driver
 =============================================
 
-Drives the TANTGen repository (sibling to ADEPT) to produce adversarial
-versions of attack packets for the 7 selected attacks (4 Kitsune + 3 CIC-IDS2017),
-across three perturbation modes (both, iat-only, size-only).
+Self-contained driver that operates the TANTGen repository (sibling to ADEPT)
+to produce adversarial versions of attack traffic for the 10 attacks ADEPT
+targets, across three perturbation modes (both, iat-only, size-only).
+
+Covers all three TANTGen families in one script:
+  - kitsune     : Mirai, SSDP_Flood
+  - cic-ids2017 : DDoS, PortScan, BruteForce
+  - cic-ddos2019: NTP_DDoS, DNS_DDoS, SSDP_DDoS, SYN_DDoS, LDAP_DDoS
+
+What this script does, end-to-end, with no manual pre-steps:
+  0. Global transformer PRETRAIN (one-time, shared across all attacks):
+     builds data/preprocessed/adversarial_train/pretrain/benign.csv from a
+     benign split, then trains the TANTGen base. Runs automatically if the
+     pretrain checkpoint is missing (the stock TANTGen scripts skip this and
+     silently train from scratch — see scripts/run_attack.py). Loud on failure.
+  For each attack × mode:
+  1. divide benign/malicious   2. subset split   3. feature extraction
+  4. surrogate NIDS training   5. per-attack evasion MARGIN templating
+  6. TANTGen finetune          7. apply to the full malicious PCAP
 
 Design notes
 ------------
+- ADEPT and TANTGen are sibling directories. INPUT data is read from the
+  TANTGen tree (data/original/...) — that is the single source of truth and
+  the only place the CIC-DDoS-2019 captures live. OUTPUT adversarial PCAPs are
+  written to ADEPT/data/adversarial/<key>/<key>_adversarial_<mode>.pcap, the
+  layout discovered by scripts/packet_to_tensor/process_all_attacks.py --tantgen.
 - TANTGen scripts hard-code relative paths (config-folders.yaml,
   src/TANTGen/configs/*.yaml, src/TANTGen/*_logs/). They are invoked with
-  cwd=TANTGEN_ROOT so those relative paths resolve.
-- All input PCAPs and label CSVs live under ADEPT/data/. We pass absolute
-  paths to TANTGen CLIs via their -i / -o / --dataset_path flags.
-- Final adversarial PCAPs are written to ADEPT/data/adversarial/<key>/.
-- Intermediate artifacts (per-attack benign/malicious splits, feature CSVs,
-  TANTGen checkpoints) stay inside the TANTGen repo under its own data/ and
-  src/TANTGen/*_logs/ trees, because several TANTGen modules load them from
-  paths baked into config-folders.yaml.
+  cwd=TANTGEN_ROOT so those relative paths resolve. Intermediate artifacts
+  (per-attack splits, feature CSVs, checkpoints) stay inside the TANTGen tree.
+- The per-attack evasion margin is templated into
+  src/TANTGen/configs/config-TANTGen-finetune.yaml (CIC = -4.0, Kitsune = 0.0),
+  mirroring scripts/run_attack.py's template_finetune_margin().
 
 Usage
 -----
-    # One-time: build a benign-pretrain CSV (uses first available Kitsune
-    # attack's benign split) then pretrain the transformer base.
-    python scripts/adversarial_generation/generate_adversarials.py --pretrain
-
-    # Generate adversarials for all 7 attacks across all 3 modes:
+    # Everything: pretrain (if needed) + all 10 attacks × 3 modes
     python scripts/adversarial_generation/generate_adversarials.py
 
-    # Only one attack, only one mode:
+    # One attack, one mode
     python scripts/adversarial_generation/generate_adversarials.py \\
         --only mirai --modes both
 
-    # Skip target-NIDS-related steps; only run what's needed for apply:
-    (default — target NIDS is never trained here, ADEPT doesn't need it)
+    # CIC-DDoS family only (heavy — see notes), in a batch
+    python scripts/adversarial_generation/generate_adversarials.py \\
+        --only ntp_ddos dns_ddos ssdp_ddos syn_ddos ldap_ddos
+
+    # Force a fresh global pretrain (then continue with all attacks)
+    python scripts/adversarial_generation/generate_adversarials.py --force-pretrain
+    # (or delete src/TANTGen/transformer_pretrained_logs/*.ckpt before a normal run)
+
+    # Inspect selection / resolved paths without running
+    python scripts/adversarial_generation/generate_adversarials.py --dry-run
 """
 
 import argparse
-import shutil
 import subprocess
 import sys
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 
 # -----------------------------------------------------------------------------
-# Paths
+# Paths — ADEPT and TANTGen are siblings under the same parent directory
 # -----------------------------------------------------------------------------
 SCRIPT_DIR = Path(__file__).resolve().parent
 ADEPT_ROOT = SCRIPT_DIR.parents[1]
 TANTGEN_ROOT = ADEPT_ROOT.parent / "Transformer-based_Adversarial_Network_Traffic_Generator"
 
-ADEPT_DATA = ADEPT_ROOT / "data"
-KITSUNE_PCAP = ADEPT_DATA / "Kitsune" / "pcap"
-KITSUNE_CSV = ADEPT_DATA / "Kitsune" / "csv"
-CIC_PCAP = ADEPT_DATA / "CIC-IDS-2017" / "pcap"
-CIC_CSV = ADEPT_DATA / "CIC-IDS-2017" / "csv" / "TrafficLabelling"
-FILTERED_CACHE = ADEPT_DATA / "tensors" / ".filtered"
-OUT_ROOT = ADEPT_DATA / "adversarial"
-
-# TANTGen-side paths (match config-folders.yaml conventions)
+# INPUT side (TANTGen tree) -----------------------------------------------------
+TG_ORIGINAL = TANTGEN_ROOT / "data" / "original"
+# divide_BM / split scripts write into these hard-coded (config-folders.yaml) dirs
 TG_ORIG_KITSUNE_MAL = TANTGEN_ROOT / "data/original/Kitsune/Malicious"
 TG_ORIG_KITSUNE_BEN = TANTGEN_ROOT / "data/original/Kitsune/Benign"
 TG_ORIG_KITSUNE_LAB = TANTGEN_ROOT / "data/original/Kitsune/Labels"
@@ -70,14 +85,21 @@ TG_SURR_TRAIN = TG_ADV_TRAIN / "surrogate_train"
 TG_ADV_TEST = TANTGEN_ROOT / "data/preprocessed/adversarial_test"
 TG_PRETRAIN_DIR = TG_ADV_TRAIN / "pretrain"
 
-# TANTGen uses sliding_window_size=64 by default; mirror the naming pattern
-# TANTGen uses for its finetuned checkpoint.
+FINETUNE_CONFIG = TANTGEN_ROOT / "src/TANTGen/configs/config-TANTGen-finetune.yaml"
+
+# TANTGen default sliding window; mirror its checkpoint naming pattern.
 SLIDING_WINDOW_SIZE = 64
+TG_PRETRAIN_CKPT = (
+    TANTGEN_ROOT / "src/TANTGen/transformer_pretrained_logs"
+    / f"TANTGen_pretrain_window{SLIDING_WINDOW_SIZE}.ckpt"
+)
 TG_FINETUNE_CKPT = (
-    TANTGEN_ROOT
-    / "src/TANTGen/TANTGen_logs"
+    TANTGEN_ROOT / "src/TANTGen/TANTGen_logs"
     / f"1#_final_TANTGen_window{SLIDING_WINDOW_SIZE}.ckpt"
 )
+
+# OUTPUT side (ADEPT tree) ------------------------------------------------------
+OUT_ROOT = ADEPT_ROOT / "data" / "adversarial"
 
 MODES = ("both", "iat", "size")
 
@@ -96,62 +118,74 @@ def cyan(s):   return _c("36", s)
 
 
 # -----------------------------------------------------------------------------
-# Attack definitions — 7 attacks selected for ADEPT
+# Attack registry — all 10 attacks (mirrors TANTGen scripts/attacks.yaml).
+# Input paths resolve under TANTGEN_ROOT/data/original. Split ratios feed the
+# Kitsune-style split (TANTGen surrogate is per-packet regardless of family);
+# margin feeds the finetune evasion objective.
 # -----------------------------------------------------------------------------
 @dataclass
 class Attack:
-    key: str               # short identifier
-    dataset: str           # "kitsune" or "cic"
-    tg_name: str           # attack_name passed to TANTGen scripts
-    pcap: Path             # raw input PCAP (ADEPT-side)
-    labels_csv: Path       # per-packet (Kitsune) or per-flow (CIC) labels
-    time_start: str = ""   # CIC only: editcap -A
-    time_end: str = ""     # CIC only: editcap -B
-    # Split ratios (same as TANTGen's run_*_kitsune.py defaults)
+    key: str                # ADEPT-side identifier + output dir / tensor source name
+    dataset: str            # "kitsune" or "cic"
+    tg_name: str            # attack_name passed to TANTGen scripts (== attacks.yaml id)
+    pcap: Path              # raw input PCAP (TANTGen tree)
+    labels_csv: Path        # per-packet (Kitsune) or per-flow (CIC) labels
+    margin: float           # finetune evasion margin (CIC -4.0, Kitsune 0.0)
+    # Kitsune-style split ratios
     train_nids_ratio: float = 0.6
     train_surrogate_b_ratio: float = 0.2
     train_adversarial_ratio: float = 0.6
     train_surrogate_m_ratio: float = 0.1
 
 
+_K = TG_ORIGINAL / "Kitsune"
+_C17 = TG_ORIGINAL / "CIC-IDS-2017"
+_C19 = TG_ORIGINAL / "CIC-DDoS-2019"
+
 ATTACKS = [
-    # Kitsune ------------------------------------------------------------------
+    # --- Kitsune --------------------------------------------------------------
     Attack("mirai", "kitsune", "Mirai",
-           KITSUNE_PCAP / "Mirai_pcap.pcap",
-           KITSUNE_CSV / "mirai_labels.csv"),
-    Attack("syn_dos", "kitsune", "SYN_DoS",
-           KITSUNE_PCAP / "SYN_DoS_pcap.pcap",
-           KITSUNE_CSV / "SYN_DoS_labels.csv"),
-    # Fuzzing was dropped: Kitsune's Fuzzing PCAP is snaplen-truncated to 200 B,
-    # leaving TANTGen no room to perturb either packet size or IAT meaningfully
-    # — all three modes degraded to no-ops (size variant was byte-identical to
-    # source). See scripts/adversarial_generation/README.md for details.
+           _K / "Mirai Botnet/Mirai.pcap",
+           _K / "Mirai Botnet/mirai_labels.csv",
+           margin=0.0,
+           train_nids_ratio=0.6, train_surrogate_b_ratio=0.2,
+           train_adversarial_ratio=0.6, train_surrogate_m_ratio=0.1),
     Attack("ssdp_flood", "kitsune", "SSDP_Flood",
-           KITSUNE_PCAP / "SSDP_Flood_pcap.pcap",
-           KITSUNE_CSV / "SSDP_Flood_labels.csv"),
-    # CIC-IDS2017 --------------------------------------------------------------
-    # For CIC, we reuse ADEPT's time-filtering convention to carve per-attack
-    # PCAPs out of the merged day captures (same windows as ADEPT's
-    # process_all_attacks.py). TANTGen sees a per-attack PCAP + the day's
-    # TrafficLabelling CSV.
+           _K / "SSDP Flood/SSDP_Flood_pcap.pcapng",
+           _K / "SSDP Flood/SSDP_Flood_labels.csv",
+           margin=0.0,
+           train_nids_ratio=0.8, train_surrogate_b_ratio=0.1,
+           train_adversarial_ratio=0.6, train_surrogate_m_ratio=0.2),
+    # --- CIC-IDS-2017 ---------------------------------------------------------
     Attack("ddos", "cic", "DDoS",
-           CIC_PCAP / "Friday-WorkingHours.pcap",
-           CIC_CSV / "Friday-WorkingHours-Afternoon-DDos.pcap_ISCX.csv",
-           time_start="2017-07-07 19:30:00", time_end="2017-07-07 21:05:00"),
-    Attack("dos_slow", "cic", "DoS_Slow",
-           CIC_PCAP / "Wednesday-workingHours.pcap",
-           CIC_CSV / "Wednesday-workingHours.pcap_ISCX.csv",
-           time_start="2017-07-05 13:40:00", time_end="2017-07-05 15:30:00"),
+           _C17 / "PCAPs/Friday-WorkingHours-Afternoon-DDoS.pcap",
+           _C17 / "CSVs/TrafficLabelling/Friday-WorkingHours-Afternoon-DDoS.pcap_ISCX.csv",
+           margin=-4.0),
     Attack("portscan", "cic", "PortScan",
-           CIC_PCAP / "Friday-WorkingHours.pcap",
-           CIC_CSV / "Friday-WorkingHours-Afternoon-PortScan.pcap_ISCX.csv",
-           time_start="2017-07-07 17:00:00", time_end="2017-07-07 19:30:00"),
+           _C17 / "PCAPs/Friday-WorkingHours-Afternoon-PortScan.pcap",
+           _C17 / "CSVs/TrafficLabelling/Friday-WorkingHours-Afternoon-PortScan.pcap_ISCX.csv",
+           margin=-4.0),
+    Attack("brute_force", "cic", "BruteForce",
+           _C17 / "PCAPs/Tuesday-WorkingHours.pcap",
+           _C17 / "CSVs/TrafficLabelling/Tuesday-WorkingHours.pcap_ISCX.csv",
+           margin=-4.0),
+    # --- CIC-DDoS-2019 --------------------------------------------------------
+    Attack("ntp_ddos", "cic", "NTP_DDoS",
+           _C19 / "PCAPs/NTP.pcap", _C19 / "CSVs/NTP.csv", margin=-4.0),
+    Attack("dns_ddos", "cic", "DNS_DDoS",
+           _C19 / "PCAPs/DNS.pcap", _C19 / "CSVs/DNS.csv", margin=-4.0),
+    Attack("ssdp_ddos", "cic", "SSDP_DDoS",
+           _C19 / "PCAPs/SSDP.pcap", _C19 / "CSVs/SSDP.csv", margin=-4.0),
+    Attack("syn_ddos", "cic", "SYN_DDoS",
+           _C19 / "PCAPs/Syn.pcap", _C19 / "CSVs/Syn.csv", margin=-4.0),
+    Attack("ldap_ddos", "cic", "LDAP_DDoS",
+           _C19 / "PCAPs/LDAP.pcap", _C19 / "CSVs/LDAP.csv", margin=-4.0),
 ]
 ATTACK_KEYS = [a.key for a in ATTACKS]
 
 
 # -----------------------------------------------------------------------------
-# Subprocess helpers
+# Subprocess helper
 # -----------------------------------------------------------------------------
 def run(cmd, cwd=None, check=True):
     """Run a command, streaming stdout/stderr. cwd defaults to TANTGEN_ROOT."""
@@ -161,62 +195,53 @@ def run(cmd, cwd=None, check=True):
     return subprocess.run(cmd, cwd=cwd, check=check)
 
 
-def which_or_die(name):
-    p = shutil.which(name)
-    if p is None:
-        sys.exit(f"{red('ERROR')}: '{name}' not found on PATH.")
-    return p
-
-
 # -----------------------------------------------------------------------------
-# Stage: prepare per-attack input PCAP
+# Per-attack evasion margin → config-TANTGen-finetune.yaml (in place)
 # -----------------------------------------------------------------------------
-def prepare_input_pcap(attack: Attack) -> Path:
-    """Return the path to a PCAP ready to feed into TANTGen's divide_BM.
+def template_finetune_margin(margin: float) -> None:
+    """Rewrite the `margin:` line in config-TANTGen-finetune.yaml in place.
 
-    Kitsune attacks use the raw PCAP unchanged. CIC attacks are time-filtered
-    via editcap; filtered PCAPs are cached in ADEPT's .filtered/ cache
-    (reuses entries already produced by ADEPT's packet-to-tensor pipeline).
+    TANTGen.py re-reads this config on its next invocation, so the next
+    finetune cycle picks up the per-attack margin. Ported from
+    scripts/run_attack.py:template_finetune_margin so this driver no longer
+    depends on the stock per-attack runner.
     """
-    if attack.dataset == "kitsune":
-        if not attack.pcap.exists():
-            sys.exit(f"{red('ERROR')}: missing PCAP {attack.pcap}")
-        return attack.pcap
-
-    # CIC: time-filter, reusing ADEPT's cache if present
-    FILTERED_CACHE.mkdir(parents=True, exist_ok=True)
-    filtered = FILTERED_CACHE / f"{attack.key}_filtered.pcap"
-    if filtered.exists() and filtered.stat().st_size > 0:
-        print(f"  {dim('Using cached filtered PCAP:')} {filtered.name}")
-        return filtered
-
-    editcap = which_or_die("editcap")
-    if not attack.pcap.exists():
-        sys.exit(f"{red('ERROR')}: missing PCAP {attack.pcap}")
-    print(f"  {dim('editcap:')} {attack.time_start} → {attack.time_end}")
-    run([editcap, "-A", attack.time_start, "-B", attack.time_end,
-         str(attack.pcap), str(filtered)], cwd=ADEPT_ROOT)
-    return filtered
+    if margin is None:
+        return
+    with open(FINETUNE_CONFIG) as f:
+        lines = f.readlines()
+    new_lines, found = [], False
+    for line in lines:
+        stripped = line.lstrip()
+        if stripped.startswith("margin:") or stripped.startswith("margin :"):
+            indent = line[: len(line) - len(stripped)]
+            new_lines.append(f"{indent}margin: {margin}\n")
+            found = True
+        else:
+            new_lines.append(line)
+    if not found:
+        new_lines.append(f"margin: {margin}\n")
+    with open(FINETUNE_CONFIG, "w") as f:
+        f.writelines(new_lines)
+    print(f"  {dim('Set finetune margin →')} {margin}")
 
 
 # -----------------------------------------------------------------------------
-# Stage: normalize Kitsune label CSV to the format TANTGen expects
+# Normalize Kitsune label CSV to the format TANTGen expects
 # -----------------------------------------------------------------------------
 def normalize_kitsune_labels(labels_csv: Path, attack_key: str) -> Path:
-    """TANTGen's Kitsune_divide_BM.py reads `pd.read_csv(labels_file)['x']`.
+    """TANTGen's Kitsune split reads `pd.read_csv(labels_file)['x']`.
 
-    Most Kitsune label CSVs already use an R-style `"","x"` header, but some
-    (e.g. Mirai) are headerless streams of 0/1. Produce a normalized copy
-    with an `x` column when needed and return its path.
+    Most Kitsune label CSVs already use an R-style `"","x"` header; some (e.g.
+    Mirai) are headerless 0/1 streams. Produce a normalized copy with an `x`
+    column when needed and return its path.
     """
     with open(labels_csv, "r") as f:
         first = f.readline().strip()
-    # Headered already → use as-is. Columns may be quoted ("x") or bare (x).
     cols = [c.strip().strip('"').strip("'") for c in first.split(",")]
     if "x" in cols:
         return labels_csv
 
-    # Headerless → emit a normalized copy next to the TANTGen labels folder
     TG_ORIG_KITSUNE_LAB.mkdir(parents=True, exist_ok=True)
     out = TG_ORIG_KITSUNE_LAB / f"{attack_key}_labels_normalized.csv"
     if out.exists():
@@ -237,10 +262,10 @@ def normalize_kitsune_labels(labels_csv: Path, attack_key: str) -> Path:
 # -----------------------------------------------------------------------------
 def kitsune_divide_bm_native(pcap_file: Path, labels_csv: Path,
                              malicious_pcap: Path, benign_pcap: Path) -> None:
-    """Split pcap/pcapng into benign/malicious PCAPs using a per-packet
-    label CSV. Forces output to Ethernet linktype so the result is a plain
-    .pcap that TANTGen's tshark-based split_dataset and its scapy readers
-    can both consume uniformly.
+    """Split pcap/pcapng into benign/malicious PCAPs using a per-packet label
+    CSV. Forces Ethernet linktype so the result is a plain .pcap that TANTGen's
+    tshark-based split and its scapy readers can both consume uniformly.
+    (TANTGen's Kitsune_divide_BM.py breaks on Mirai's Raw linktype.)
     """
     import pandas as pd
     from scapy.all import PcapReader, PcapWriter, Ether, IP, IPv6
@@ -256,13 +281,10 @@ def kitsune_divide_bm_native(pcap_file: Path, labels_csv: Path,
             total = i + 1
             if i >= len(labels):
                 break
-            # Force Ethernet framing: wrap bare IP packets so the writer
-            # (linktype=1) can serialize them consistently.
             if not pkt.haslayer(Ether):
                 if pkt.haslayer(IP) or pkt.haslayer(IPv6):
                     pkt = Ether() / pkt
                 else:
-                    # Unhandled link-layer — skip quietly (rare in Kitsune)
                     continue
             if labels[i] == 1:
                 writer_mal.write(pkt)
@@ -280,11 +302,26 @@ def kitsune_divide_bm_native(pcap_file: Path, labels_csv: Path,
 
 
 # -----------------------------------------------------------------------------
-# Stage: divide benign / malicious
+# Stage: validate input PCAP (no time-filtering — divide-by-label isolates the
+# per-attack traffic, so the raw per-attack/day capture is used directly)
+# -----------------------------------------------------------------------------
+def prepare_input_pcap(attack: Attack) -> Path:
+    if not attack.pcap.exists():
+        sys.exit(f"{red('ERROR')}: missing input PCAP for '{attack.key}': {attack.pcap}")
+    if not attack.labels_csv.exists():
+        sys.exit(f"{red('ERROR')}: missing labels for '{attack.key}': {attack.labels_csv}")
+    return attack.pcap
+
+
+def _effective_tg_name(attack: Attack) -> str:
+    """Name used in TANTGen's subset folders (CIC gets a '_kitsune' suffix)."""
+    return attack.tg_name if attack.dataset == "kitsune" else f"{attack.tg_name}_kitsune"
+
+
+# -----------------------------------------------------------------------------
+# Stage: divide benign / malicious  → TANTGen data/original/Kitsune/{Mal,Ben}
 # -----------------------------------------------------------------------------
 def divide_bm(attack: Attack, input_pcap: Path):
-    """Split the input PCAP into benign and malicious PCAPs + (CIC only)
-    a per-packet labels CSV. Outputs go to TANTGen's data/original/ tree."""
     TG_ORIG_KITSUNE_MAL.mkdir(parents=True, exist_ok=True)
     TG_ORIG_KITSUNE_BEN.mkdir(parents=True, exist_ok=True)
     TG_ORIG_KITSUNE_LAB.mkdir(parents=True, exist_ok=True)
@@ -294,18 +331,18 @@ def divide_bm(attack: Attack, input_pcap: Path):
 
     if malicious.exists() and benign.exists():
         print(f"  {dim('Benign/malicious split already present; skipping divide_BM.')}")
-        return benign, malicious, None
+        if attack.dataset == "kitsune":
+            return benign, malicious, None
+        out_labels = TG_ORIG_KITSUNE_LAB / f"{attack.tg_name}_labels.csv"
+        return benign, malicious, (out_labels if out_labels.exists() else None)
 
     if attack.dataset == "kitsune":
         labels = normalize_kitsune_labels(attack.labels_csv, attack.key)
-        # TANTGen's Kitsune_divide_BM.py uses scapy PcapWriter, which breaks on
-        # PCAPs with unusual/mixed link-layer types (e.g. Mirai's Raw linktype).
-        # Do the split natively with RawPcapReader/Writer to pass packets
-        # byte-for-byte and preserve the source linktype.
         kitsune_divide_bm_native(input_pcap, labels, malicious, benign)
         return benign, malicious, None
 
-    # CIC path additionally emits a per-packet labels CSV
+    # CIC: emits a per-packet labels CSV. CIC_IDS_divide_BM.py streams the pcap
+    # via PcapReader (safe on the multi-GB CIC-DDoS captures).
     out_labels = TG_ORIG_KITSUNE_LAB / f"{attack.tg_name}_labels.csv"
     run([sys.executable, "src/Feature_Extraction/Split/CIC_IDS_divide_BM.py",
          "-i", str(input_pcap),
@@ -317,19 +354,16 @@ def divide_bm(attack: Attack, input_pcap: Path):
 
 
 # -----------------------------------------------------------------------------
-# Stage: subset splits
+# Stage: subset splits (target_train / adversarial_train / surrogate_train / test)
 # -----------------------------------------------------------------------------
-def split_subsets(attack: Attack, benign: Path, malicious: Path, cic_labels: Path | None):
-    """Partition benign+malicious into target_train / adversarial_train /
-    surrogate_train / adversarial_test subsets."""
-    # Expected-produced files (used for skip-logic)
-    surrogate_all = TG_SURR_TRAIN / f"{_effective_tg_name(attack)}_all.pcap"
-    adv_train_mal = TG_ADV_TRAIN / f"{_effective_tg_name(attack)}_malicious.pcap"
+def split_subsets(attack: Attack, benign: Path, malicious: Path, cic_labels):
+    name = _effective_tg_name(attack)
+    surrogate_all = TG_SURR_TRAIN / f"{name}_all.pcap"
+    adv_train_mal = TG_ADV_TRAIN / f"{name}_malicious.pcap"
     if surrogate_all.exists() and adv_train_mal.exists():
         print(f"  {dim('Subset splits already present; skipping split_dataset.')}")
         return
 
-    # TANTGen's split scripts write to these hardcoded relative dirs
     for d in (TG_TARGET_TRAIN, TG_ADV_TRAIN, TG_SURR_TRAIN, TG_ADV_TEST):
         d.mkdir(parents=True, exist_ok=True)
 
@@ -345,9 +379,11 @@ def split_subsets(attack: Attack, benign: Path, malicious: Path, cic_labels: Pat
              "--train_adversarial_ratio", str(attack.train_adversarial_ratio),
              "--train_surrogate_m_ratio", str(attack.train_surrogate_m_ratio)])
     else:
-        # CIC uses "_kitsune" suffix in TANTGen's run_kitsune_on_CICIDS_pipeline
+        if cic_labels is None:
+            sys.exit(f"{red('ERROR')}: CIC split needs a per-packet labels CSV "
+                     f"for '{attack.key}' but none was produced by divide_BM.")
         run([sys.executable, "src/Feature_Extraction/Split/CIC_IDS_split_4Kitsune.py",
-             "-a", f"{attack.tg_name}_kitsune",
+             "-a", name,
              "-b", str(benign),
              "-m", str(malicious),
              "-l", str(cic_labels),
@@ -358,13 +394,8 @@ def split_subsets(attack: Attack, benign: Path, malicious: Path, cic_labels: Pat
              "--train_surrogate_m_ratio", str(attack.train_surrogate_m_ratio)])
 
 
-def _effective_tg_name(attack: Attack) -> str:
-    """Name used in TANTGen's subset folders (CIC gets a '_kitsune' suffix)."""
-    return attack.tg_name if attack.dataset == "kitsune" else f"{attack.tg_name}_kitsune"
-
-
 # -----------------------------------------------------------------------------
-# Stage: feature extraction (for surrogate + adversarial training)
+# Stage: feature extraction / surrogate / finetune / apply
 # -----------------------------------------------------------------------------
 def extract_features(pcap: Path, out_csv: Path):
     if out_csv.exists():
@@ -375,18 +406,12 @@ def extract_features(pcap: Path, out_csv: Path):
          "-i", str(pcap), "-o", str(out_csv)])
 
 
-# -----------------------------------------------------------------------------
-# Stage: surrogate NIDS training
-# -----------------------------------------------------------------------------
 def train_surrogate(features_csv: Path, labels_csv: Path):
     run([sys.executable, "-m", "src.TANTGen.TANTGen_NIDS",
          "--dataset_path", str(features_csv),
          "--dataset_labels_path", str(labels_csv)])
 
 
-# -----------------------------------------------------------------------------
-# Stage: TANTGen finetune (per-mode) + apply to full malicious PCAP
-# -----------------------------------------------------------------------------
 def train_tantgen(features_csv: Path, mode: str):
     cmd = [sys.executable, "-m", "src.TANTGen.TANTGen",
            "--dataset_path", str(features_csv)]
@@ -394,7 +419,7 @@ def train_tantgen(features_csv: Path, mode: str):
         cmd.append("-iat")
     elif mode == "size":
         cmd.append("-size")
-    # mode == "both": no flag, default behavior
+    # mode == "both": no flag, default (perturb both size and IAT)
     run(cmd)
 
 
@@ -408,12 +433,10 @@ def apply_tantgen(malicious_pcap: Path, out_pcap: Path):
 # -----------------------------------------------------------------------------
 # Stage: global pretrain (one-time, shared across attacks)
 # -----------------------------------------------------------------------------
-def build_pretrain_benign_csv():
+def build_pretrain_benign_csv() -> Path:
     """Populate data/preprocessed/adversarial_train/pretrain/benign.csv by
-    extracting features from the first available per-attack benign PCAP.
-
-    TANTGen pretrains on benign traffic; any sufficiently large benign PCAP
-    works. We prefer Kitsune benign because no time-filtering is involved.
+    extracting features from an existing benign split. Prefers the largest
+    Kitsune benign PCAP on disk (more benign traffic = a better base manifold).
     """
     TG_PRETRAIN_DIR.mkdir(parents=True, exist_ok=True)
     out_csv = TG_PRETRAIN_DIR / "benign.csv"
@@ -421,12 +444,12 @@ def build_pretrain_benign_csv():
         print(f"  {dim('Pretrain benign CSV already exists:')} {out_csv}")
         return out_csv
 
-    # Use the first Kitsune attack whose benign split is on disk.
-    candidates = sorted(TG_ORIG_KITSUNE_BEN.glob("*_benign.pcap"))
+    candidates = sorted(TG_ORIG_KITSUNE_BEN.glob("*_benign.pcap"),
+                        key=lambda p: p.stat().st_size, reverse=True)
     if not candidates:
-        sys.exit(f"{red('ERROR')}: no benign PCAP found under {TG_ORIG_KITSUNE_BEN}. "
-                 f"Run the driver on at least one attack first (to produce a "
-                 f"benign split), then rerun with --pretrain.")
+        sys.exit(f"{red('ERROR')}: no benign PCAP under {TG_ORIG_KITSUNE_BEN}. "
+                 f"ensure_pretrain() should have produced one — check the first "
+                 f"Kitsune attack's divide step.")
     source = candidates[0]
     print(f"  {dim('Extracting benign features for pretrain from:')} {source.name}")
     run([sys.executable, "src/Feature_Extraction/dataloader.py",
@@ -434,20 +457,55 @@ def build_pretrain_benign_csv():
     return out_csv
 
 
-def pretrain_tantgen():
+def ensure_pretrain(force: bool = False) -> None:
+    """Guarantee a TANTGen pretrain checkpoint exists before per-attack work.
+
+    The stock TANTGen pipeline never builds benign.csv and ignores the
+    pretrain subprocess's exit code, so finetuning silently falls back to
+    random init. Here we (a) make sure a benign split exists (dividing the
+    first Kitsune attack if necessary), (b) build benign.csv, (c) run the
+    pretrain with check=True so any failure is loud.
+    """
+    print("=" * 79)
+    print(bold(" Global TANTGen pretrain (one-time, shared across all attacks)"))
+    print("=" * 79)
+
+    if TG_PRETRAIN_CKPT.exists() and not force:
+        print(f"  {green('✓')} Pretrain checkpoint present: "
+              f"{dim(str(TG_PRETRAIN_CKPT.relative_to(TANTGEN_ROOT)))} — skipping.")
+        return
+
+    # (a) need at least one benign split to extract benign.csv from
+    if not any(TG_ORIG_KITSUNE_BEN.glob("*_benign.pcap")):
+        seed = next((a for a in ATTACKS if a.dataset == "kitsune"), None)
+        if seed is None:
+            sys.exit(f"{red('ERROR')}: no Kitsune attack available to seed the "
+                     f"benign pretrain corpus.")
+        print(f"  {dim('No benign split on disk; dividing')} {bold(seed.key)} "
+              f"{dim('to seed the pretrain corpus...')}")
+        divide_bm(seed, prepare_input_pcap(seed))
+
+    # (b) build benign.csv  (c) pretrain (loud on failure)
     build_pretrain_benign_csv()
-    run([sys.executable, "-m", "src.TANTGen.TANTGen_pretrain"])
+    run([sys.executable, "-m", "src.TANTGen.TANTGen_pretrain"], check=True)
+
+    if not TG_PRETRAIN_CKPT.exists():
+        sys.exit(f"{red('ERROR')}: pretrain finished but no checkpoint at "
+                 f"{TG_PRETRAIN_CKPT}. Check src/TANTGen/configs/"
+                 f"config-TANTGen-general.yaml (save_path_pretrain / "
+                 f"model_name_pretrain / sliding_window_size).")
+    print(f"  {green('✓')} Pretrain checkpoint written.")
 
 
 # -----------------------------------------------------------------------------
 # Per-attack orchestration
 # -----------------------------------------------------------------------------
-def process_attack(attack: Attack, modes: tuple[str, ...], force: bool):
-    print(f"\n{dim('─' * 76)}")
-    print(f" {bold(cyan(f'[{attack.key}]'))}  {bold(attack.tg_name)}  {dim('(' + attack.dataset + ')')}")
-    print(f"{dim('─' * 76)}")
+def process_attack(attack: Attack, modes, force: bool):
+    print(f"\n{dim('─' * 79)}")
+    print(f" {bold(cyan(f'[{attack.key}]'))}  {bold(attack.tg_name)}  "
+          f"{dim('(' + attack.dataset + f', margin={attack.margin})')}")
+    print(f"{dim('─' * 79)}")
 
-    # Short-circuit: if all requested modes' outputs exist and --force not set
     out_dir = OUT_ROOT / attack.key
     out_paths = {m: out_dir / f"{attack.key}_adversarial_{m}.pcap" for m in modes}
     if not force and all(p.exists() and p.stat().st_size > 0 for p in out_paths.values()):
@@ -455,38 +513,35 @@ def process_attack(attack: Attack, modes: tuple[str, ...], force: bool):
               f"Use --force to rebuild.")
         return
 
-    # 1. Input PCAP
+    # 1. validate input → 2. divide → 3. subset split
     input_pcap = prepare_input_pcap(attack)
-
-    # 2. Divide BM
     benign, malicious, cic_labels = divide_bm(attack, input_pcap)
-
-    # 3. Subset splits
     split_subsets(attack, benign, malicious, cic_labels)
 
-    # 4. Feature extraction (surrogate + adversarial train)
+    # 4. features (surrogate + adversarial-train malicious)
     name = _effective_tg_name(attack)
-    surrogate_pcap = TG_SURR_TRAIN / f"{name}_all.pcap"
     surrogate_feats = TG_SURR_TRAIN / f"{name}_all_features.csv"
     surrogate_labels = TG_SURR_TRAIN / f"{name}_labels.csv"
     adv_train_mal = TG_ADV_TRAIN / f"{name}_malicious.pcap"
     adv_train_feats = TG_ADV_TRAIN / f"{name}_malicious_features.csv"
 
-    extract_features(surrogate_pcap, surrogate_feats)
+    extract_features(TG_SURR_TRAIN / f"{name}_all.pcap", surrogate_feats)
     extract_features(adv_train_mal, adv_train_feats)
 
-    # 5. Surrogate NIDS
+    # 5. surrogate NIDS
     train_surrogate(surrogate_feats, surrogate_labels)
 
-    # 6. For each mode: train TANTGen, apply to FULL malicious PCAP
-    #    "Full malicious" = the divide_BM output (all attack packets), NOT the
-    #    smaller adversarial_test split that stock TANTGen uses.
+    # 6. per-attack evasion margin (persists across this attack's mode loop)
+    template_finetune_margin(attack.margin)
+
+    # 7. per mode: finetune TANTGen, then apply to the FULL malicious PCAP
+    #    (divide_BM output — all attack packets, not the smaller test split).
     for mode in modes:
         out_pcap = out_paths[mode]
         if not force and out_pcap.exists() and out_pcap.stat().st_size > 0:
             print(f"\n  {yellow(f'[{mode}] already produced:')} {out_pcap.name}  (skipping)")
             continue
-        print(f"\n  {bold(cyan(f'[mode={mode}]'))} train + apply")
+        print(f"\n  {bold(cyan(f'[mode={mode}]'))} finetune + apply")
         train_tantgen(adv_train_feats, mode)
         apply_tantgen(malicious, out_pcap)
         print(f"  {green('✓')} {out_pcap.relative_to(ADEPT_ROOT)}")
@@ -497,7 +552,7 @@ def process_attack(attack: Attack, modes: tuple[str, ...], force: bool):
 # -----------------------------------------------------------------------------
 def main():
     parser = argparse.ArgumentParser(
-        description="Generate TANTGen adversarial PCAPs for ADEPT.",
+        description="Generate TANTGen adversarial PCAPs for ADEPT (all 10 attacks, 3 families).",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=f"Attack keys: {', '.join(ATTACK_KEYS)}  |  Modes: {', '.join(MODES)}",
     )
@@ -509,25 +564,54 @@ def main():
                         help="Perturbation modes to run (default: all three).")
     parser.add_argument("--force", action="store_true",
                         help="Rebuild adversarial PCAPs even if present.")
-    parser.add_argument("--pretrain", action="store_true",
-                        help="Run (or re-run) the one-time global pretrain "
-                             "step and exit. Requires at least one attack's "
-                             "benign split to already exist under "
-                             "TANTGen/data/original/Kitsune/Benign/.")
+    parser.add_argument("--skip-pretrain", action="store_true",
+                        help="Do not run the global pretrain step. Finetuning then "
+                             "falls back to random init (stock TANTGen behavior).")
+    parser.add_argument("--force-pretrain", action="store_true",
+                        help="Re-run the global pretrain even if a checkpoint exists.")
     parser.add_argument("--dry-run", action="store_true",
-                        help="List selection and exit.")
+                        help="List selection + resolved paths and exit.")
     args = parser.parse_args()
 
     if not TANTGEN_ROOT.exists():
         sys.exit(f"{red('ERROR')}: TANTGen repo not found at {TANTGEN_ROOT}")
 
-    # Ensure all directories TANTGen writes into exist. Several TANTGen
-    # modules use pandas.to_json / torch.save with relative paths and crash
-    # if a parent directory is missing.
+    # Validate keys
+    for flag, vals in (("--only", args.only), ("--exclude", args.exclude)):
+        if vals:
+            unknown = set(vals) - set(ATTACK_KEYS)
+            if unknown:
+                parser.error(f"Unknown attack keys for {flag}: {sorted(unknown)}. "
+                             f"Choose from: {', '.join(ATTACK_KEYS)}")
+
+    excluded = set(args.exclude) if args.exclude else set()
+    selected = [a for a in ATTACKS
+                if (not args.only or a.key in args.only) and a.key not in excluded]
+
+    print(f"\n{bold('ADEPT × TANTGen — Adversarial Generation')}")
+    print(f"  TANTGen:  {TANTGEN_ROOT}")
+    print(f"  Output:   {OUT_ROOT}")
+    print(f"  Attacks:  {', '.join(a.key for a in selected) or '(none)'}")
+    print(f"  Modes:    {', '.join(args.modes)}")
+    print(f"  Pretrain: {'skip' if args.skip_pretrain else ('force' if args.force_pretrain else 'auto')}\n")
+
+    if args.dry_run:
+        print(f"  Pretrain checkpoint: "
+              f"{'present' if TG_PRETRAIN_CKPT.exists() else 'MISSING (will pretrain)'}"
+              f"  [{TG_PRETRAIN_CKPT}]")
+        for a in selected:
+            print(f"\n  • {bold(a.key)}  ({a.dataset}, margin={a.margin})")
+            print(f"      pcap   : {a.pcap}  {'' if a.pcap.exists() else red('[MISSING]')}")
+            print(f"      labels : {a.labels_csv}  {'' if a.labels_csv.exists() else red('[MISSING]')}")
+            print(f"      out    : {OUT_ROOT / a.key}/{a.key}_adversarial_<mode>.pcap")
+        print()
+        return
+
+    # Ensure every directory TANTGen writes into exists (several modules use
+    # relative paths and crash on a missing parent dir).
     for d in (
         TG_ORIG_KITSUNE_MAL, TG_ORIG_KITSUNE_BEN, TG_ORIG_KITSUNE_LAB,
-        TG_TARGET_TRAIN, TG_ADV_TRAIN, TG_SURR_TRAIN, TG_ADV_TEST,
-        TG_PRETRAIN_DIR,
+        TG_TARGET_TRAIN, TG_ADV_TRAIN, TG_SURR_TRAIN, TG_ADV_TEST, TG_PRETRAIN_DIR,
         TANTGEN_ROOT / "src/TANTGen/models",
         TANTGEN_ROOT / "src/TANTGen/transformer_pretrained_logs",
         TANTGEN_ROOT / "src/TANTGen/transformer_nids_logs",
@@ -537,56 +621,28 @@ def main():
     ):
         d.mkdir(parents=True, exist_ok=True)
 
-    if args.pretrain:
-        print(f"{bold('Running TANTGen global pretrain')}  {dim('(one-time)')}")
-        pretrain_tantgen()
-        return
+    # Global pretrain (one-time) before any per-attack finetuning.
+    if not args.skip_pretrain:
+        ensure_pretrain(force=args.force_pretrain)
+    elif not TG_PRETRAIN_CKPT.exists():
+        print(f"{yellow('WARNING')}: --skip-pretrain set and no pretrain checkpoint "
+              f"present — finetuning will train from random init.\n")
 
-    # Attack selection
-    if args.only:
-        unknown = set(args.only) - set(ATTACK_KEYS)
-        if unknown:
-            parser.error(f"Unknown attack keys: {unknown}")
-    if args.exclude:
-        unknown = set(args.exclude) - set(ATTACK_KEYS)
-        if unknown:
-            parser.error(f"Unknown attack keys: {unknown}")
-
-    selected = [
-        a for a in ATTACKS
-        if (not args.only or a.key in args.only)
-        and a.key not in (set(args.exclude) if args.exclude else set())
-    ]
     if not selected:
-        sys.exit("Nothing to do. Check --only / --exclude.")
-
-    print(f"\n{bold('ADEPT × TANTGen — Adversarial Generation')}")
-    print(f"  TANTGen:  {TANTGEN_ROOT}")
-    print(f"  Output:   {OUT_ROOT}")
-    print(f"  Attacks:  {', '.join(a.key for a in selected)}")
-    print(f"  Modes:    {', '.join(args.modes)}\n")
-
-    if args.dry_run:
-        for a in selected:
-            print(f"  • {a.key:<12} {a.dataset:<8} "
-                  f"→ {OUT_ROOT / a.key}/{a.key}_adversarial_<mode>.pcap")
+        print(f"{yellow('No attacks selected')} — check --only / --exclude. "
+              f"Pretrain step (if any) is done; nothing else to do.")
         return
-
-    # Guard: pretrain checkpoint must exist before per-attack processing.
-    pretrain_ckpts = list((TANTGEN_ROOT / "src/TANTGen/transformer_pretrained_logs").glob("**/*.ckpt"))
-    if not pretrain_ckpts:
-        print(f"{yellow('WARNING')}: no pretrain checkpoint found under "
-              f"src/TANTGen/transformer_pretrained_logs/. You likely need to "
-              f"run `--pretrain` first (after at least one attack has produced "
-              f"a benign split). Continuing anyway — TANTGen.py will fail if "
-              f"it can't load a base model.\n")
 
     total_start = time.time()
+    failures = []
     for attack in selected:
+        t0 = time.time()
         try:
             process_attack(attack, tuple(args.modes), args.force)
+            print(f"  {dim(f'[{attack.key}] done in {time.time() - t0:.1f}s')}")
         except subprocess.CalledProcessError as e:
             print(f"  {red(bold('✗ FAILED'))} on {attack.key} (exit {e.returncode})")
+            failures.append(attack.key)
         except KeyboardInterrupt:
             print(f"\n{yellow(bold('Interrupted.'))}")
             break
@@ -594,6 +650,9 @@ def main():
     elapsed = time.time() - total_start
     print(f"\n{bold('Done.')}  Total: {elapsed:.1f}s ({elapsed/60:.1f} min)")
     print(f"Outputs under: {cyan(str(OUT_ROOT))}")
+    if failures:
+        print(f"{red('Failed attacks:')} {', '.join(failures)}")
+        sys.exit(1)
 
 
 if __name__ == "__main__":
