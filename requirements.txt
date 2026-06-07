@@ -10,3 +10,4 @@ torch>=2.1
 tensorboard
 pytorch-lightning
 imblearn
+psutil
