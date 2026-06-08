@@ -60,6 +60,7 @@ Usage
 """
 
 import argparse
+import shutil
 import subprocess
 import sys
 import time
@@ -430,6 +431,42 @@ def apply_tantgen(malicious_pcap: Path, out_pcap: Path):
          "-o", str(out_pcap)])
 
 
+def cap_malicious(malicious: Path, max_packets: int) -> Path:
+    """Return a malicious PCAP capped to the first `max_packets` packets.
+
+    apply_TANTGen_to_pcap re-reads and rewrites every packet with scapy, so the
+    huge CIC-DDoS captures (e.g. NTP's malicious split is ~75M packets) take many
+    hours and yield far more adversarial traffic than ADEPT needs (it would also
+    choke phase-2 tensorisation). Truncating to the first N packets — timestamps
+    preserved, via tcpdump/editcap — keeps apply to minutes and ADEPT's
+    adversarial pool balanced. Captures below a size threshold (all the Kitsune /
+    CIC-IDS sets) pass through unchanged. N <= 0 disables capping entirely.
+    """
+    if not max_packets or max_packets <= 0:
+        return malicious
+    # Only bother for captures large enough to plausibly exceed the cap; this
+    # skips a no-op copy for the small Kitsune / CIC-IDS malicious sets.
+    SIZE_THRESHOLD = 400 * 1024 * 1024  # 400 MB
+    if malicious.stat().st_size < SIZE_THRESHOLD:
+        return malicious
+    capped = malicious.with_name(f"{malicious.stem}_first{max_packets}.pcap")
+    if capped.exists() and capped.stat().st_size > 0:
+        print(f"  {dim('Using cached capped malicious PCAP:')} {capped.name}")
+        return capped
+    tcpdump, editcap = shutil.which("tcpdump"), shutil.which("editcap")
+    print(f"  {dim(f'Capping {malicious.name} -> first {max_packets:,} packets')} ({capped.name})")
+    if tcpdump:  # -c N stops after N packets (fast even on a 38 GB capture)
+        run([tcpdump, "-r", str(malicious), "-w", str(capped), "-c", str(max_packets)],
+            cwd=ADEPT_ROOT)
+    elif editcap:
+        run([editcap, "-r", str(malicious), str(capped), f"1-{max_packets}"], cwd=ADEPT_ROOT)
+    else:
+        sys.exit(f"{red('ERROR')}: need tcpdump or editcap to cap {malicious.name} "
+                 f"(sudo apt install tcpdump wireshark-common), or pass "
+                 f"--max-malicious-packets 0 to process ALL packets (hours for CIC-DDoS).")
+    return capped
+
+
 # -----------------------------------------------------------------------------
 # Stage: global pretrain (one-time, shared across attacks)
 # -----------------------------------------------------------------------------
@@ -500,7 +537,7 @@ def ensure_pretrain(force: bool = False) -> None:
 # -----------------------------------------------------------------------------
 # Per-attack orchestration
 # -----------------------------------------------------------------------------
-def process_attack(attack: Attack, modes, force: bool):
+def process_attack(attack: Attack, modes, force: bool, max_malicious_packets: int):
     print(f"\n{dim('─' * 79)}")
     print(f" {bold(cyan(f'[{attack.key}]'))}  {bold(attack.tg_name)}  "
           f"{dim('(' + attack.dataset + f', margin={attack.margin})')}")
@@ -534,8 +571,12 @@ def process_attack(attack: Attack, modes, force: bool):
     # 6. per-attack evasion margin (persists across this attack's mode loop)
     template_finetune_margin(attack.margin)
 
-    # 7. per mode: finetune TANTGen, then apply to the FULL malicious PCAP
-    #    (divide_BM output — all attack packets, not the smaller test split).
+    # Cap the malicious set fed to apply: CIC-DDoS floods have tens of millions
+    # of packets and apply rewrites every one with scapy (hours). Capping keeps
+    # apply to minutes and ADEPT's adversarial pool balanced.
+    apply_src = cap_malicious(malicious, max_malicious_packets)
+
+    # 7. per mode: finetune TANTGen, then apply to the (capped) malicious PCAP.
     for mode in modes:
         out_pcap = out_paths[mode]
         if not force and out_pcap.exists() and out_pcap.stat().st_size > 0:
@@ -543,7 +584,7 @@ def process_attack(attack: Attack, modes, force: bool):
             continue
         print(f"\n  {bold(cyan(f'[mode={mode}]'))} finetune + apply")
         train_tantgen(adv_train_feats, mode)
-        apply_tantgen(malicious, out_pcap)
+        apply_tantgen(apply_src, out_pcap)
         print(f"  {green('✓')} {out_pcap.relative_to(ADEPT_ROOT)}")
 
 
@@ -564,6 +605,12 @@ def main():
                         help="Perturbation modes to run (default: all three).")
     parser.add_argument("--force", action="store_true",
                         help="Rebuild adversarial PCAPs even if present.")
+    parser.add_argument("--max-malicious-packets", type=int, default=1_000_000, metavar="N",
+                        help="Cap each attack's malicious PCAP to the first N packets before "
+                             "applying TANTGen (default 1,000,000). Keeps the huge CIC-DDoS "
+                             "floods tractable and ADEPT's dataset balanced; captures under "
+                             "~400 MB pass through unchanged. 0 = no cap (process all packets; "
+                             "hours for CIC-DDoS).")
     parser.add_argument("--skip-pretrain", action="store_true",
                         help="Do not run the global pretrain step. Finetuning then "
                              "falls back to random init (stock TANTGen behavior).")
@@ -638,7 +685,7 @@ def main():
     for attack in selected:
         t0 = time.time()
         try:
-            process_attack(attack, tuple(args.modes), args.force)
+            process_attack(attack, tuple(args.modes), args.force, args.max_malicious_packets)
             print(f"  {dim(f'[{attack.key}] done in {time.time() - t0:.1f}s')}")
         except subprocess.CalledProcessError as e:
             print(f"  {red(bold('✗ FAILED'))} on {attack.key} (exit {e.returncode})")
