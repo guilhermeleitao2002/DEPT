@@ -33,6 +33,8 @@ A flow with L packets contributes ⌊L/10⌋ checkpoint rows — one per prefix 
 
 ## Results (test split — 229 K checkpoints, 43 K flows)
 
+> Measured on the original five-source dataset, **before the CIC-DDoS-2019 expansion** (the five reflection floods `ntp_ddos`/`dns_ddos`/`ssdp_ddos`/`syn_ddos`/`ldap_ddos` and their adversarials). Re-run `run_rf.py` after `process_all_attacks.py --tantgen` to refresh these on the ten-source set.
+
 ### Overall
 
 | Metric | Value |

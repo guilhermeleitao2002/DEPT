@@ -34,7 +34,7 @@ python3 scripts/adversarial_generation/generate_adversarials.py
 
 ## Attack set
 
-ADEPT currently consumes **6 adversarial sources** under `--tantgen`, three perturbation modes each (`both` = IAT + size, `iat` = timing only, `size` = payload padding only) — i.e. **18 PCAPs total**. Five sources pair with a matching benign source; `ddos_kitsune` is adversarial-only:
+ADEPT currently consumes **11 adversarial sources** under `--tantgen`, three perturbation modes each (`both` = IAT + size, `iat` = timing only, `size` = payload padding only) — i.e. **33 PCAPs total**. Ten sources pair with a matching benign source; `ddos_kitsune` is adversarial-only:
 
 | Attack | Dataset | Notes |
 |---|---|---|
@@ -43,13 +43,18 @@ ADEPT currently consumes **6 adversarial sources** under `--tantgen`, three pert
 | `ddos` | CIC-IDS2017 | Friday afternoon DDoS window |
 | `portscan` | CIC-IDS2017 | Friday afternoon recon scan |
 | `brute_force` | CIC-IDS2017 | Tuesday FTP-Patator + SSH-Patator combined window |
+| `ntp_ddos` | CIC-DDoS-2019 | NTP monlist amplification flood (UDP) |
+| `dns_ddos` | CIC-DDoS-2019 | DNS amplification flood (UDP) |
+| `ssdp_ddos` | CIC-DDoS-2019 | SSDP/UPnP amplification flood (UDP) |
+| `syn_ddos` | CIC-DDoS-2019 | TCP SYN flood (distinct from the Kitsune `syn_dos`) |
+| `ldap_ddos` | CIC-DDoS-2019 | CLDAP amplification flood (UDP) |
 | `ddos_kitsune` | adversarial-only | Kitsune-trained TANTGen perturbing the CIC DDoS benign manifold; no separate benign source — augments the adversarial pool only |
 
-`data/adversarial/brute_force_kitsune/` and `data/adversarial/portscan_kitsune/` are also on disk but intentionally left out of `TANTGEN_KEYS` in `scripts/packet_to_tensor/process_all_attacks.py`; they are skipped by `build_adversarial_attacks()` until explicitly opted in.
+`data/adversarial/brute_force_kitsune/` and `data/adversarial/portscan_kitsune/` may also appear on disk but are intentionally left out of `TANTGEN_KEYS` in `scripts/packet_to_tensor/process_all_attacks.py`; they are skipped by `build_adversarial_attacks()` until explicitly opted in.
 
-CIC attacks reuse the same time windows as `process_all_attacks.py`, so the malicious PCAPs ADEPT trains on match the ones TANTGen perturbed.
+CIC-IDS2017 attacks reuse the same time windows as `process_all_attacks.py`, so the malicious PCAPs ADEPT trains on match the ones TANTGen perturbed. The CIC-DDoS-2019 floods have no clean time window: the generator caps its malicious input to the first 1,000,000 packets (`--max-malicious-packets`) and `process_all_attacks.py` packet-caps the matching benign capture to the same first 1,000,000 packets, so the benign and adversarial sides remain paired and balanced.
 
-> The `generate_adversarials.py` script's built-in `ATTACKS` list still reflects the older 6-attack TANTGen scope (`mirai`, `syn_dos`, `ssdp_flood`, `ddos`, `dos_slow`, `portscan`). The PCAPs actually consumed by ADEPT are whatever lives under `data/adversarial/<attack>/<attack>_adversarial_<mode>.pcap` — the table above is the source of truth for that on-disk set, including `brute_force` (which was produced outside the current generator script).
+> The `generate_adversarials.py` script's built-in `ATTACKS` list covers all 10 attacks across three families (Kitsune: `mirai`, `ssdp_flood`; CIC-IDS2017: `ddos`, `portscan`, `brute_force`; CIC-DDoS-2019: `ntp_ddos`, `dns_ddos`, `ssdp_ddos`, `syn_ddos`, `ldap_ddos`). The PCAPs actually consumed by ADEPT are whatever lives under `data/adversarial/<attack>/<attack>_adversarial_<mode>.pcap`; the table above is the source of truth for that on-disk set, including `ddos_kitsune` (adversarial-only).
 
 ## CLI — `generate_adversarials.py`
 

@@ -49,13 +49,14 @@ Labels are derived entirely from the source dataset — no ground-truth CSV is n
 |---|---|---|
 | Kitsune (any attack capture) | `0` | `benign` |
 | CIC-IDS2017 (any attack capture) | `0` | `benign` |
+| CIC-DDoS-2019 (any reflection-flood capture) | `0` | `benign` |
 | TANTGen adversarial PCAP | `1` | `adversarial` |
 
 Under ADEPT's defense framing, the upstream NIDS is responsible for the raw-dataset attacks. ADEPT's job is specifically to catch TANTGen-style perturbations that evade the upstream model.
 
 ## Dataset statistics
 
-Results from `process_all_attacks.py --tantgen` on WSL2. Identity masking on; `rf_checkpoint_stride=10`.
+Results from `process_all_attacks.py --tantgen` on WSL2, **before the CIC-DDoS-2019 expansion**. Identity masking on; `rf_checkpoint_stride=10`.
 
 | Source | Flows | Packets |
 |---|---:|---:|
@@ -73,6 +74,8 @@ Results from `process_all_attacks.py --tantgen` on WSL2. Identity masking on; `r
 
 Total processing time: ~100 min on a desktop Linux machine (WSL2).
 
+The CIC-DDoS-2019 expansion adds five benign + adversarial (×3 modes) pairs — `ntp_ddos`, `dns_ddos`, `ssdp_ddos`, `syn_ddos`, `ldap_ddos`. Each benign source is the first 1,000,000 packets of the raw capture (`data/CIC-DDoS-2019/PCAPs/{NTP,DNS,SSDP,Syn,LDAP}.pcap`), packet-capped because these floods have no clean attack time window. Counts for these sources are produced by the next `--tantgen` run.
+
 ## Design decisions
 
 | Decision | Rationale |
@@ -83,3 +86,4 @@ Total processing time: ~100 min on a desktop Linux machine (WSL2).
 | Per-flow IPAT (not global IAT) | Each flow has its own timing context; global IAT mixes unrelated flows. |
 | Canonical 5-tuple flow ID | Order-independent — forward and reverse packets belong to the same flow. |
 | Identity masking (IPs, ports, IP ID zeroed) | Prevents models from memorising source/destination addresses instead of behavioral patterns. |
+| CIC-IDS2017 time-filtered, CIC-DDoS-2019 packet-capped | CIC-IDS2017 attacks sit in a known window of a workday capture, so `editcap -A/-B` isolates them. The CIC-DDoS-2019 floods are attack-dominated from the first seconds and run to tens of GB with no clean boundary, so the first 1,000,000 packets (`tcpdump -c N`, fast even on a 37 GB file) are sliced instead — the same scale the generator caps its malicious input to, keeping the benign/adversarial pools balanced. |

@@ -28,14 +28,22 @@ Datasets:
     15. Web Attacks       — HTTP Brute Force + XSS + SQL Injection (Thursday 13:15-14:45 UTC)
     16. Infiltration      — Malware download + C&C beaconing (Thursday 18:15-18:40 UTC)
 
-  Benign baseline:
-    17. Monday benign     — Enterprise benign manifold (sampled, CIC-IDS2017)
+  CIC-DDoS-2019 (reflection/amplification floods — packet-capped, see below):
+    17. NTP DDoS          — NTP monlist amplification flood (UDP)
+    18. DNS DDoS          — DNS amplification flood (UDP)
+    19. SSDP DDoS         — SSDP/UPnP amplification flood (UDP)
+    20. SYN DDoS          — TCP SYN flood
+    21. LDAP DDoS         — CLDAP amplification flood (UDP)
 
-The --tantgen flag restricts processing to the 5 raw-dataset benign attacks
+  Benign baseline:
+    22. Monday benign     — Enterprise benign manifold (sampled, CIC-IDS2017)
+
+The --tantgen flag restricts processing to the raw-dataset benign attacks
 for which TANTGen-generated adversarial PCAPs exist on disk (mirai,
-ssdp_flood, ddos, portscan, brute_force), and additionally processes the
-matching adversarial PCAPs (plus the adversarial-only ddos_kitsune variant)
-found under
+ssdp_flood, ddos, portscan, brute_force, and the five CIC-DDoS-2019 floods
+ntp_ddos, dns_ddos, ssdp_ddos, syn_ddos, ldap_ddos), and additionally
+processes the matching adversarial PCAPs (plus the adversarial-only
+ddos_kitsune variant) found under
 data/adversarial/<attack>/<attack>_adversarial_<mode>.pcap
 (modes: both / iat / size; output: data/tensors/adversarial/<attack>_adv_<mode>/).
 Adversarial directories not listed in TANTGEN_KEYS (e.g. brute_force_kitsune,
@@ -47,7 +55,14 @@ upstream NIDS is expected to catch the raw-dataset attacks, so the only
 novel threat ADEPT learns to flag is the TANTGen-generated perturbation.
 
 CIC-IDS2017 PCAPs are time-filtered with editcap before processing to
-reduce size and isolate attack windows.
+reduce size and isolate attack windows. The CIC-DDoS-2019 captures have no
+clean benign/attack time boundary (they are attack-dominated from the first
+seconds and run to tens of GB), so instead of time-filtering they are
+*packet-capped* to their first `max_packets` packets (default 1,000,000 via
+tcpdump/editcap) — the same scale the adversarial generator caps its
+malicious input to, keeping the benign and adversarial pools balanced and
+tensorisation tractable. This first-N slice is ~98% attack traffic, so it is
+a faithful unperturbed counterpart to the TANTGen-perturbed adversarial PCAP.
 
 Usage
 -----
@@ -72,7 +87,7 @@ Usage
     # Process with benign baseline:
     python3 scripts/packet_to_tensor/process_all_attacks.py --include-benign
 
-    # Restrict to the 5 attacks whose TANTGen adversarial PCAPs exist on disk
+    # Restrict to the 10 attacks whose TANTGen adversarial PCAPs exist on disk
     # and also tensorise those matching adversarial PCAPs under data/adversarial/:
     python3 scripts/packet_to_tensor/process_all_attacks.py --tantgen
 
@@ -122,6 +137,7 @@ KITSUNE_PCAP = DATA_DIR / "Kitsune" / "pcap"
 KITSUNE_CSV = DATA_DIR / "Kitsune" / "csv"
 CIC_PCAP = DATA_DIR / "CIC-IDS-2017" / "pcap"
 CIC_CSV = DATA_DIR / "CIC-IDS-2017" / "csv" / "TrafficLabelling"
+CIC_DDOS_PCAP = DATA_DIR / "CIC-DDoS-2019" / "PCAPs"
 TENSOR_DIR = DATA_DIR / "tensors"
 ADVERSARIAL_DIR = DATA_DIR / "adversarial"
 ADVERSARIAL_MODES = ("both", "iat", "size")
@@ -145,6 +161,12 @@ class Attack:
     # CIC-IDS2017 time-filtering (editcap -A / -B)
     time_start: str = ""            # e.g. "2017-07-05 09:20:00"
     time_end: str = ""              # e.g. "2017-07-05 12:00:00"
+    # CIC-DDoS-2019 packet-count capping (tcpdump -c / editcap 1-N). Used
+    # when there is no clean attack time window: the source PCAP is sliced
+    # to its first `max_packets` packets before processing. 0 = no cap.
+    # Mutually exclusive with time_start (a PCAP is either time-filtered or
+    # packet-capped, never both).
+    max_packets: int = 0
     extra_args: list = field(default_factory=list)
 
 
@@ -306,6 +328,54 @@ ATTACKS = [
         time_start="2017-07-06 18:15:00",
         time_end="2017-07-06 19:50:00",
     ),
+    # --- CIC-DDoS-2019 -----------------------------------------------------
+    # Reflection/amplification floods. These captures are attack-dominated
+    # from the first seconds (no benign warm-up worth isolating) and run to
+    # tens of GB, so there is no editcap time window — instead each is
+    # packet-capped to its first `max_packets` packets, matching the scale
+    # the adversarial generator caps its malicious input to (1,000,000). The
+    # capped slice is the unperturbed benign counterpart of the matching
+    # TANTGen adversarial PCAP under data/adversarial/<key>/.
+    Attack(
+        key="ntp_ddos",
+        name="NTP DDoS (CIC-DDoS-2019)",
+        dataset="cic-ddos2019",
+        pcap_path=CIC_DDOS_PCAP / "NTP.pcap",
+        output_dir=TENSOR_DIR / "ntp_ddos",
+        max_packets=1_000_000,
+    ),
+    Attack(
+        key="dns_ddos",
+        name="DNS DDoS (CIC-DDoS-2019)",
+        dataset="cic-ddos2019",
+        pcap_path=CIC_DDOS_PCAP / "DNS.pcap",
+        output_dir=TENSOR_DIR / "dns_ddos",
+        max_packets=1_000_000,
+    ),
+    Attack(
+        key="ssdp_ddos",
+        name="SSDP DDoS (CIC-DDoS-2019)",
+        dataset="cic-ddos2019",
+        pcap_path=CIC_DDOS_PCAP / "SSDP.pcap",
+        output_dir=TENSOR_DIR / "ssdp_ddos",
+        max_packets=1_000_000,
+    ),
+    Attack(
+        key="syn_ddos",
+        name="SYN DDoS (CIC-DDoS-2019)",
+        dataset="cic-ddos2019",
+        pcap_path=CIC_DDOS_PCAP / "Syn.pcap",
+        output_dir=TENSOR_DIR / "syn_ddos",
+        max_packets=1_000_000,
+    ),
+    Attack(
+        key="ldap_ddos",
+        name="LDAP DDoS (CIC-DDoS-2019)",
+        dataset="cic-ddos2019",
+        pcap_path=CIC_DDOS_PCAP / "LDAP.pcap",
+        output_dir=TENSOR_DIR / "ldap_ddos",
+        max_packets=1_000_000,
+    ),
     # --- Benign baseline ---------------------------------------------------
     Attack(
         key="monday_benign",
@@ -329,6 +399,9 @@ BENIGN_KEYS = {"monday_benign"}
 # model was trained against a Kitsune capture but the adversarial PCAPs
 # perturb the same CIC DDoS benign manifold, so they augment the
 # adversarial pool without introducing a new benign source.
+# The five CIC-DDoS-2019 floods (ntp_ddos, dns_ddos, ssdp_ddos, syn_ddos,
+# ldap_ddos) each pair a packet-capped benign Attack (above) with a matching
+# adversarial subdir.
 # Additional kitsune variants (brute_force_kitsune, portscan_kitsune) live
 # on disk under data/adversarial/ but are intentionally left out of this
 # set for now; the discovery in build_adversarial_attacks() filters them.
@@ -336,6 +409,8 @@ TANTGEN_KEYS = {
     "mirai", "ssdp_flood",                  # Kitsune (benign + adversarial)
     "ddos", "portscan", "brute_force",      # CIC-IDS-2017 (benign + adversarial)
     "ddos_kitsune",                          # Adversarial-only (paired with ddos benign)
+    "ntp_ddos", "dns_ddos", "ssdp_ddos",    # CIC-DDoS-2019 (benign + adversarial)
+    "syn_ddos", "ldap_ddos",                 # CIC-DDoS-2019 (benign + adversarial)
 }
 
 
@@ -403,6 +478,37 @@ def time_filter_pcap(editcap: str, src: Path, dst: Path,
           + (f"  {yellow('⚠  empty — check time window')}" if size_mb < 1 else ""))
 
 
+def cap_pcap_packets(src: Path, dst: Path, n: int) -> None:
+    """Slice the first `n` packets of a PCAP into `dst`.
+
+    Used for the CIC-DDoS-2019 captures, which have no clean attack time
+    window and run to tens of GB. ``tcpdump -c N`` stops reading after N
+    packets, so this is fast even on a 37 GB capture; ``editcap 1-N`` is the
+    fallback (reads the whole file). Timestamps are preserved.
+    """
+    tcpdump, editcap = shutil.which("tcpdump"), shutil.which("editcap")
+    print(f"  {dim('cap:')} first {n:,} packets")
+    print(f"  {dim('src:')} {src.name} → {dim('dst:')} {dst.name}")
+    if tcpdump:
+        subprocess.run([tcpdump, "-r", str(src), "-w", str(dst), "-c", str(n)],
+                       check=True)
+    elif editcap:
+        subprocess.run([editcap, "-r", str(src), str(dst), f"1-{n}"], check=True)
+    else:
+        print(f"{red(bold('ERROR:'))} need tcpdump or editcap to packet-cap "
+              f"{src.name}. Install with:")
+        print(f"       {bold('sudo apt install tcpdump wireshark-common')}")
+        sys.exit(1)
+    size_mb = dst.stat().st_size / (1024 * 1024)
+    print(f"  {dim('Capped PCAP:')} {dim(f'{size_mb:.1f} MB')}")
+
+
+def needs_prefilter(attack: "Attack") -> bool:
+    """True if the attack's PCAP must be sliced (time-filtered or packet-
+    capped) before the packet-to-tensor pipeline runs on it."""
+    return bool(attack.time_start) or attack.max_packets > 0
+
+
 def run_pipeline(pcap: Path, output_dir: Path,
                  rf_checkpoint_stride: int | None,
                  rf_first_checkpoint: int | None,
@@ -448,16 +554,18 @@ def collect_shared_fit_pcaps(selected: list[Attack]) -> list[Path]:
     z-scoring on adversarial windows lands far in the tails of a
     benign-only fit.
 
-    For CIC attacks we prefer the cached time-filtered PCAP (under
-    TENSOR_DIR/.filtered/) when present and fall back to the full day
-    capture otherwise. Paths are deduplicated so two selected attacks that
-    share a source PCAP (e.g. ddos and portscan both on Friday) only
-    contribute once.
+    For CIC attacks we prefer the cached pre-filtered PCAP (time-filtered or
+    packet-capped, under TENSOR_DIR/.filtered/) when present and fall back to
+    the full capture otherwise. Fitting the standardizer on the full
+    multi-GB CIC-DDoS capture would be both slow and unrepresentative of the
+    capped slice actually tensorised, so the cached cap is strongly
+    preferred. Paths are deduplicated so two selected attacks that share a
+    source PCAP (e.g. ddos and portscan both on Friday) only contribute once.
     """
     paths: list[Path] = []
     seen: set[Path] = set()
     for atk in selected:
-        if atk.time_start:
+        if needs_prefilter(atk):
             cached = TENSOR_DIR / ".filtered" / f"{atk.key}_filtered.pcap"
             if cached.exists() and cached.stat().st_size > 0:
                 p = cached
@@ -616,11 +724,12 @@ def main():
     )
     only_exclude.add_argument(
         "--tantgen", action="store_true",
-        help=f"Restrict to the 5 raw-dataset benign attacks for which "
+        help=f"Restrict to the raw-dataset benign attacks for which "
              f"TANTGen adversarial PCAPs exist on disk (mirai, ssdp_flood, "
-             f"ddos, portscan, brute_force) and tensorise the matching "
-             f"adversarial PCAPs plus the adversarial-only ddos_kitsune "
-             f"variant under "
+             f"ddos, portscan, brute_force, and the CIC-DDoS-2019 floods "
+             f"ntp_ddos, dns_ddos, ssdp_ddos, syn_ddos, ldap_ddos) and "
+             f"tensorise the matching adversarial PCAPs plus the "
+             f"adversarial-only ddos_kitsune variant under "
              f"data/adversarial/<attack>/<attack>_adversarial_<mode>.pcap "
              f"(output: data/tensors/adversarial/<attack>_adv_<mode>/). "
              f"Other on-disk kitsune variants (brute_force_kitsune, "
@@ -649,7 +758,8 @@ def main():
     )
     parser.add_argument(
         "--keep-filtered", action="store_true",
-        help="Keep time-filtered PCAPs in data/tensors/.filtered/ after processing "
+        help="Keep sliced PCAPs (time-filtered CIC-IDS2017 / packet-capped "
+             "CIC-DDoS-2019) in data/tensors/.filtered/ after processing "
              "(by default they are deleted to save disk space)",
     )
     parser.add_argument(
@@ -735,7 +845,12 @@ def main():
     print(f"\n{bold('ADEPT Batch Processing')} — {cyan(str(len(selected)))} attack(s) selected"
           f"  {dim(f'(outputs={list(selected_outputs)})')}\n")
     for i, a in enumerate(selected, 1):
-        tag = dim(" [time-filtered]") if a.time_start else ""
+        if a.time_start:
+            tag = dim(" [time-filtered]")
+        elif a.max_packets:
+            tag = dim(f" [first {a.max_packets:,} pkts]")
+        else:
+            tag = ""
         print(f"  {dim(str(i) + '.')} {a.name} {dim('(' + a.dataset + ')')}{tag}")
     print()
 
@@ -750,23 +865,32 @@ def main():
             else:
                 status = green("WILL PROCESS")
             cached_info = ""
-            if a.time_start:
+            if needs_prefilter(a):
                 cached_pcap = TENSOR_DIR / ".filtered" / f"{a.key}_filtered.pcap"
                 if cached_pcap.exists() and cached_pcap.stat().st_size > 0:
                     size_mb = cached_pcap.stat().st_size / (1024 * 1024)
-                    cached_info = f"  {dim(f'(filtered PCAP cached: {size_mb:.1f} MB)')}"
+                    cached_info = f"  {dim(f'(cached: {size_mb:.1f} MB)')}"
             print(f"  [{status}] {bold(a.name)}")
             print(f"    PCAP:   {a.pcap_path}")
             print(f"    Output: {a.output_dir}")
             if a.time_start:
                 print(f"    Filter: {a.time_start} → {a.time_end}{cached_info}")
+            elif a.max_packets:
+                print(f"    Cap:    first {a.max_packets:,} packets{cached_info}")
             print()
         sys.exit(0)
 
-    # Check editcap availability if any CIC attacks are selected
+    # Check slicing-tool availability up front: editcap for time-filtered CIC
+    # attacks, tcpdump/editcap for packet-capped CIC-DDoS attacks.
     editcap = None
     if any(a.time_start for a in selected):
         editcap = find_editcap()
+    if any(a.max_packets for a in selected) and not (
+            shutil.which("tcpdump") or shutil.which("editcap")):
+        print(f"{red(bold('ERROR:'))} packet-capped attacks selected but neither "
+              f"tcpdump nor editcap is available. Install with:")
+        print(f"       {bold('sudo apt install tcpdump wireshark-common')}")
+        sys.exit(1)
 
     # Fit shared IPAT standardizer once over the SELECTED attacks' PCAPs
     # (benign + adversarial) so every per-attack run uses the same z-score
@@ -816,25 +940,31 @@ def main():
             t0 = time.time()
             pcap_to_process = attack.pcap_path
 
-            # Pre-compute filtered PCAP path (needed by both try and finally)
+            # Pre-compute pre-filtered PCAP path (needed by both try and finally)
             filtered_pcap = None
-            if attack.time_start:
+            if needs_prefilter(attack):
                 filtered_dir = TENSOR_DIR / ".filtered"
                 filtered_dir.mkdir(parents=True, exist_ok=True)
                 filtered_pcap = filtered_dir / f"{attack.key}_filtered.pcap"
 
             try:
-                # Time-filter CIC-IDS2017 PCAPs (skip if a cached copy already exists)
-                if attack.time_start:
+                # Slice the source PCAP (time-filter CIC-IDS2017, or packet-cap
+                # CIC-DDoS-2019) before processing; reuse a cached copy if present.
+                if needs_prefilter(attack):
                     if filtered_pcap.exists() and filtered_pcap.stat().st_size > 0:
                         size_mb = filtered_pcap.stat().st_size / (1024 * 1024)
-                        print(f"  {dim('Step 0:')} Using cached filtered PCAP "
+                        print(f"  {dim('Step 0:')} Using cached sliced PCAP "
                               f"{dim(f'({size_mb:.1f} MB)')}")
-                    else:
+                    elif attack.time_start:
                         print(f"  {dim('Step 0:')} Time-filtering PCAP...")
                         time_filter_pcap(
                             editcap, attack.pcap_path, filtered_pcap,
                             attack.time_start, attack.time_end,
+                        )
+                    else:
+                        print(f"  {dim('Step 0:')} Packet-capping PCAP...")
+                        cap_pcap_packets(
+                            attack.pcap_path, filtered_pcap, attack.max_packets,
                         )
                     pcap_to_process = filtered_pcap
 
@@ -874,12 +1004,12 @@ def main():
                 results.append((attack.name, "FAILED", None))
 
             finally:
-                # Clean up filtered PCAP unless --keep-filtered was set
+                # Clean up the sliced PCAP unless --keep-filtered was set
                 if (filtered_pcap is not None
                         and filtered_pcap.exists()
                         and not args.keep_filtered):
                     filtered_pcap.unlink()
-                    print(f"  {dim('Cleaned up filtered PCAP')}")
+                    print(f"  {dim('Cleaned up sliced PCAP')}")
 
     except KeyboardInterrupt:
         print(f"\n{yellow(bold('Interrupted — stopping early.'))}\n")

@@ -14,10 +14,19 @@ tensors_dir: data/tensors
 adversarial_dir: data/tensors/adversarial   # auto-discovered: every subdir with metadata.json
 output_dir: data/models/rf
 
-# Benign pool — restricted to the 5 attacks for which TANTGen adversarial
-# PCAPs exist on disk (brute_force, ddos, mirai, portscan, ssdp_flood).
+# Benign pool — restricted to the 10 attacks for which TANTGen adversarial
+# PCAPs exist on disk: the 5 original sources (brute_force, ddos, mirai,
+# portscan, ssdp_flood) plus the 5 CIC-DDoS-2019 reflection floods
+# (dns_ddos, ldap_ddos, ntp_ddos, ssdp_ddos, syn_ddos). The CIC-DDoS
+# benign tensors are built from the first 1,000,000 packets of each raw
+# capture (packet-capped by process_all_attacks.py, since these floods
+# have no clean attack time window) — the unperturbed counterpart of the
+# matching adversarial source. ddos_kitsune is adversarial-only and pairs
+# with the ddos benign manifold, so it has no entry here.
 # Excluded sources and reasons:
 #   dos_slow, syn_dos  — no TANTGen adversarial PCAP on disk for this set
+#                        (syn_dos is the Kitsune SYN DoS — distinct from the
+#                        CIC-DDoS-2019 syn_ddos flood, which IS included)
 #   active_wiretap, arp_mitm, brute_force_ftp, brute_force_ssh,
 #   infiltration, os_scan, ssl_renegotiation, video_injection, web_attacks
 #                      — no TANTGen adversarial counterpart; including them
@@ -28,6 +37,11 @@ benign_sources:
   - mirai
   - portscan
   - ssdp_flood
+  - dns_ddos
+  - ldap_ddos
+  - ntp_ddos
+  - ssdp_ddos
+  - syn_ddos
 
 # Adversarial pool — every subdirectory of adversarial_dir/ that contains
 # metadata.json is loaded automatically, except those listed below.
@@ -39,7 +53,10 @@ benign_sources:
 #   from attack sets no longer part of this configuration.
 # - brute_force_kitsune / portscan_kitsune *_adv_* : defensive guard against
 #   tensors that would only exist if process_all_attacks.py's TANTGEN_KEYS
-#   filter were bypassed. Currently only ddos_kitsune is opted in.
+#   filter were bypassed. The opted-in adversarial sources are the 5
+#   originals (mirai, ssdp_flood, ddos, portscan, brute_force), ddos_kitsune,
+#   and the 5 CIC-DDoS-2019 floods (ntp_ddos, dns_ddos, ssdp_ddos, syn_ddos,
+#   ldap_ddos); these kitsune variants are not.
 adversarial_exclude:
   # - portscan_adv_both
   # - portscan_adv_iat

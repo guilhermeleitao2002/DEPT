@@ -47,6 +47,8 @@ Best epoch: 17/20, val macro-F1 = 0.9611. Training time: 121 min on RTX 4060 Ti.
 
 ## Results (test split — 131 K flows)
 
+> Measured on the original five-source dataset, **before the CIC-DDoS-2019 expansion** (the five reflection floods `ntp_ddos`/`dns_ddos`/`ssdp_ddos`/`syn_ddos`/`ldap_ddos` and their adversarials). Re-run `run_tcn.py` after `process_all_attacks.py --tantgen` to refresh these on the ten-source set.
+
 ### Overall
 
 | Metric | Value |

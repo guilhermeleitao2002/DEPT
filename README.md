@@ -45,7 +45,9 @@ Paired with **TANTGen** (sibling repo), which generates the adversarial PCAPs th
 
 ## Dataset
 
-Five benign traffic sources (Kitsune / CIC-IDS2017 captures) are paired with TANTGen adversarial variants across three perturbation modes: **both** (timing + size), **iat** (timing only), **size** (payload/size only).
+Ten benign traffic sources (Kitsune / CIC-IDS2017 / CIC-DDoS-2019 captures) are paired with TANTGen adversarial variants across three perturbation modes: **both** (timing + size), **iat** (timing only), **size** (payload/size only). The original five sources are joined by the five CIC-DDoS-2019 reflection/amplification floods (NTP, DNS, SSDP, SYN, LDAP), each built from the first 1,000,000 packets of its raw capture (these floods are attack-dominated from the first seconds and have no clean time window, so `process_all_attacks.py` packet-caps them instead of time-filtering — the same scale the generator caps its malicious input to). Counterpart `ddos_kitsune` is adversarial-only (it perturbs the CIC DDoS benign manifold).
+
+The original five sources, as measured before the CIC-DDoS-2019 expansion:
 
 | Source | Flows | Packets |
 |---|---:|---:|
@@ -61,9 +63,13 @@ Five benign traffic sources (Kitsune / CIC-IDS2017 captures) are paired with TAN
 | PortScan adversarial (×3 modes) | 15,839 each | ~31,885 each |
 | SSDP Flood adversarial (×3 modes) | 64,722 each | ~287,921 each |
 
-Under ADEPT's label convention, every Kitsune/CIC-IDS2017 flow is **benign** (the upstream NIDS already handles the raw-dataset attacks) and every TANTGen-generated flow is **adversarial**. ADEPT's specific job is to catch novel TANTGen-style perturbations.
+The five CIC-DDoS-2019 sources (`ntp_ddos`, `dns_ddos`, `ssdp_ddos`, `syn_ddos`, `ldap_ddos`) add a benign + adversarial (×3 modes) pair each; their flow/packet counts are produced by the next `process_all_attacks.py --tantgen` run and the base-learner metrics below predate them.
+
+Under ADEPT's label convention, every Kitsune/CIC-IDS2017/CIC-DDoS-2019 flow is **benign** (the upstream NIDS already handles the raw-dataset attacks) and every TANTGen-generated flow is **adversarial**. ADEPT's specific job is to catch novel TANTGen-style perturbations.
 
 ## Base learner results
+
+> The metrics below were measured on the original five-source dataset and **predate the CIC-DDoS-2019 expansion**. They will be refreshed after the next end-to-end run (`process_all_attacks.py --tantgen` → `run_rf.py` → `run_tcn.py` → `run_metalearner.py`) tensorises and trains on the ten-source set.
 
 ### Random Forest
 
@@ -159,6 +165,7 @@ ADEPT/
 ├── data/
 │   ├── Kitsune/               # Raw Kitsune captures
 │   ├── CIC-IDS-2017/          # Raw CIC-IDS2017 captures
+│   ├── CIC-DDoS-2019/         # Raw CIC-DDoS2019 reflection-flood captures (PCAPs/, CSVs/)
 │   ├── adversarial/           # TANTGen-generated adversarial PCAPs
 │   ├── tensors/               # Pipeline output — ragged per-flow tensors
 │   └── models/
@@ -195,6 +202,7 @@ sudo apt install -y \
 ```
 
 - `wireshark-common` / `tshark` provide `editcap`, used for CIC-IDS2017 time filtering.
+- `tcpdump` (with `editcap` as a fallback) packet-caps the large CIC-DDoS-2019 captures to their first 1,000,000 packets — `tcpdump -c N` stops reading after N packets, so this is fast even on the 37 GB NTP capture.
 - `build-essential` + `python3-dev` cover any pip wheel that has to compile (also required by TANTGen's Cython build).
 - `libpcap-dev` + `tcpdump` are useful for raw PCAP debugging alongside scapy.
 

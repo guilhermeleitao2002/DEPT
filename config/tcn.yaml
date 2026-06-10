@@ -12,15 +12,23 @@ tensors_dir: data/tensors
 adversarial_dir: data/tensors/adversarial   # auto-discovered: every subdir with metadata.json
 output_dir: data/models/tcn
 
-# Benign pool — restricted to the 5 attacks for which TANTGen adversarial
-# PCAPs exist on disk (brute_force, ddos, mirai, portscan, ssdp_flood).
-# Same as rf.yaml; see that file for the exclusion rationale.
+# Benign pool — the 10 attacks for which TANTGen adversarial PCAPs exist on
+# disk: the 5 original sources (brute_force, ddos, mirai, portscan,
+# ssdp_flood) plus the 5 CIC-DDoS-2019 reflection floods (dns_ddos,
+# ldap_ddos, ntp_ddos, ssdp_ddos, syn_ddos, the latter built from the first
+# 1,000,000 packets of each raw capture). Same as rf.yaml; see that file for
+# the full rationale.
 benign_sources:
   - brute_force
   - ddos
   - mirai
   - portscan
   - ssdp_flood
+  - dns_ddos
+  - ldap_ddos
+  - ntp_ddos
+  - ssdp_ddos
+  - syn_ddos
 
 # Adversarial pool — every subdirectory of adversarial_dir/ that contains
 # metadata.json is loaded automatically, except those listed below. Same
