@@ -330,21 +330,26 @@ def divide_bm(attack: Attack, input_pcap: Path):
     malicious = TG_ORIG_KITSUNE_MAL / f"{attack.tg_name}_malicious.pcap"
     benign = TG_ORIG_KITSUNE_BEN / f"{attack.tg_name}_benign.pcap"
 
-    if malicious.exists() and benign.exists():
-        print(f"  {dim('Benign/malicious split already present; skipping divide_BM.')}")
-        if attack.dataset == "kitsune":
-            return benign, malicious, None
-        out_labels = TG_ORIG_KITSUNE_LAB / f"{attack.tg_name}_labels.csv"
-        return benign, malicious, (out_labels if out_labels.exists() else None)
-
     if attack.dataset == "kitsune":
+        if malicious.exists() and benign.exists():
+            print(f"  {dim('Benign/malicious split already present; skipping divide_BM.')}")
+            return benign, malicious, None
         labels = normalize_kitsune_labels(attack.labels_csv, attack.key)
         kitsune_divide_bm_native(input_pcap, labels, malicious, benign)
         return benign, malicious, None
 
-    # CIC: emits a per-packet labels CSV. CIC_IDS_divide_BM.py streams the pcap
-    # via PcapReader (safe on the multi-GB CIC-DDoS captures).
+    # CIC: CIC_IDS_divide_BM.py writes the per-packet labels CSV LAST, so its
+    # absence means an earlier divide was interrupted and the malicious/benign
+    # PCAPs are likely partial. Require all THREE before skipping; otherwise
+    # re-divide (the script opens the PCAPs with append=False and overwrites
+    # them cleanly) — checking only the two PCAPs would skip a needed re-divide
+    # and leave split_subsets() with no labels CSV.
     out_labels = TG_ORIG_KITSUNE_LAB / f"{attack.tg_name}_labels.csv"
+    if malicious.exists() and benign.exists() and out_labels.exists():
+        print(f"  {dim('Benign/malicious split + labels already present; skipping divide_BM.')}")
+        return benign, malicious, out_labels
+    if malicious.exists() or benign.exists():
+        print(f"  {yellow('Incomplete prior divide (labels CSV missing) — re-dividing.')}")
     run([sys.executable, "src/Feature_Extraction/Split/CIC_IDS_divide_BM.py",
          "-i", str(input_pcap),
          "-l", str(attack.labels_csv),
