@@ -1,0 +1,67 @@
+{
+  "input": "/mnt/nas/inesc/gleitao/ADEPT/data/tensors/.filtered/syn_ddos_filtered.pcap",
+  "encoding": "nprint",
+  "pipeline_mode": "batch",
+  "schema": "ragged-per-flow-v1",
+  "outputs": [
+    "rf",
+    "tcn"
+  ],
+  "nprint_bits": 1088,
+  "identity_masking": true,
+  "mask_prefixes": [
+    "ipv4_src",
+    "ipv4_dst",
+    "ipv4_id",
+    "tcp_sprt",
+    "tcp_dprt",
+    "udp_sport",
+    "udp_dport"
+  ],
+  "rf_checkpoint_stride": 10,
+  "rf_first_checkpoint": 2,
+  "num_flows": 323104,
+  "num_packets": 1000000,
+  "num_checkpoints": 331737,
+  "sequence_feature_count": 1090,
+  "rf_stat_names": [
+    "IPAT_mean",
+    "IPAT_std",
+    "IPAT_min",
+    "IPAT_max",
+    "Packet_Size_mean",
+    "Packet_Size_std",
+    "Packet_Size_min",
+    "Packet_Size_max",
+    "Payload_Length_mean",
+    "Payload_Length_std",
+    "Payload_Length_min",
+    "Payload_Length_max",
+    "Payload_Entropy_mean",
+    "Payload_Entropy_std",
+    "Payload_Entropy_min",
+    "Payload_Entropy_max",
+    "TCP_Flags_mean",
+    "TCP_Flags_std",
+    "TCP_Flags_min",
+    "TCP_Flags_max",
+    "Direction_mean",
+    "Direction_std",
+    "Direction_min",
+    "Direction_max"
+  ],
+  "normalization_stats": {
+    "IPAT": {
+      "mean": 26.744513662992706,
+      "std": 539.9896285057356
+    }
+  },
+  "flow_packets_shape": [
+    1000000,
+    1090
+  ],
+  "rf_checkpoints_shape": [
+    331737,
+    24
+  ]
+}
