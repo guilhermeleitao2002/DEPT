@@ -29,13 +29,15 @@ ADEPT defends ML-based Network Intrusion Detection Systems (NIDS) against advers
                └───────────────┬───────────────┘
                                 ▼
                     ┌───────────────────────┐
-                    │   Meta-Learner        │  ── Phase 4 (planned)
+                    │   Meta-Learner        │  ── flags adversarial flows
                     │  (Mini-Transformer)   │
                     └───────────┬───────────┘
+                                │ if adversarial
                                 ▼
                     ┌───────────────────────┐
-                    │  Purification         │  ── Phase 5 (planned)
-                    │  Transformer          │
+                    │  Reconstructor        │  ── purifies (denoises) the flow,
+                    │  (Purification        │     then feeds the protected NIDS;
+                    │   Transformer)        │     realizes purified PCAP (Ψ)
                     └───────────────────────┘
 ```
 
@@ -141,6 +143,16 @@ The meta-learner sits **just above TCN** at every t while preserving the EDP=1 a
 - **RF AUROC@10 dipped slightly (0.9998 → 0.9991)** because the dataset now includes much harder short-flow regimes (PortScan adversarials, brute-force adv) that previously had zero RF predictions and were silently excluded from the metric. The model's effective coverage is dramatically wider, not weaker.
 - **Meta-learner is rank-bottlenecked, not loss-bottlenecked.** The model converges to its AUROC ceiling (~0.987 on meta-val AUROC@10) within a single epoch and never escapes it across 8 epochs. Adding the per-packet "beat the best base" auxiliary loss successfully reduced the training-time confidence gap 9× (0.027 → 0.003) and improved detection rate by ~1 pp, but did not move the AUROC needle on any per-source slice. The interpretation: the loss tells the model to be as confident as the best base in *absolute probability* terms, but AUROC is rank-based — making the model uniformly more confident doesn't change the rank ordering of `P(adv)` across flows. The bottleneck appears to be in the model's effective use of the sparse RF input (one fresh checkpoint per 8–10 packets), not the loss design. Future work: add a residual skip from `p_RF_logit` directly to the output's class-1 logit, or a learned gate over `rf_age` that mixes between RF and the encoder prediction.
 
+## Purification results
+
+The reconstructor is evaluated on the held-out test pairs (seed=42, never seen by any base learner) with three metric groups, reported overall and per `<base>_adv_<mode>`:
+
+- **Reconstruction quality** — MSE on the perturbed dimensions, *before* (adv vs clean) vs *after* (recon vs clean). A large before→after drop means the denoiser removed the perturbation rather than copying its input.
+- **Purification gain** — the reconstruction (rounded back to valid nPrint) is fed through the trained TCN alongside the adversarial and clean flows; gain = `P(adv | adversarial) − P(adv | reconstructed)`, with the residual gap to the clean floor `P(adv | clean)` showing how close the purifier lands.
+- **Protocol-compliance rate** — a feature-space TCP/IP invariant check on the rounded reconstruction (always on), plus a `tshark` check on the *realized* purified packets (the reconstructed length/timing overlaid back onto the original adversarial PCAP packets — ADEPT operates in traffic-space Ψ, not just feature-space).
+
+> Numbers will be filled in here after the first full `run_reconstructor.py` on the ten-source set. See [`scripts/reconstructor/README.md`](scripts/reconstructor/README.md) for the architecture and metric definitions.
+
 ## Implementation status
 
 | Component | Status |
@@ -151,7 +163,7 @@ The meta-learner sits **just above TCN** at every t while preserving the EDP=1 a
 | TCN base learner | ✅ |
 | Streaming evaluation (AUROC@t, EDP) | ✅ |
 | Mini-Transformer meta-learner | ✅ |
-| Purification Transformer | ⏳ |
+| Purification (Reconstructor) Transformer | ✅ |
 | RL Adaptation Agent | ⏳ |
 
 ## Repository layout
@@ -161,7 +173,9 @@ ADEPT/
 ├── config/
 │   ├── pipeline.yaml          # Packet-to-Tensor parameters
 │   ├── rf.yaml                # Random Forest hyperparameters and split config
-│   └── tcn.yaml               # TCN architecture and training config
+│   ├── tcn.yaml               # TCN architecture and training config
+│   ├── metalearner.yaml       # Meta-learner architecture and training config
+│   └── reconstructor.yaml     # Purification transformer config (+ realization)
 ├── data/
 │   ├── Kitsune/               # Raw Kitsune captures
 │   ├── CIC-IDS-2017/          # Raw CIC-IDS2017 captures
@@ -170,20 +184,25 @@ ADEPT/
 │   ├── tensors/               # Pipeline output — ragged per-flow tensors
 │   └── models/
 │       ├── rf/                # RF model, metrics, plots
-│       └── tcn/               # TCN model, metrics, plots
+│       ├── tcn/               # TCN model, metrics, plots
+│       ├── metalearner/       # Meta-learner model, caches, metrics, plots
+│       └── reconstructor/     # Purifier model, metrics, plots, realized/*.pcap
 ├── scripts/
 │   ├── packet_to_tensor/      # Pipeline runner and batch processor
 │   ├── adversarial_generation/# TANTGen driver
 │   ├── rf/                    # RF train + evaluate runner
 │   ├── tcn/                   # TCN train + evaluate runner
-│   └── metalearner/           # Meta-learner train + evaluate runner
+│   ├── metalearner/           # Meta-learner train + evaluate runner
+│   └── reconstructor/         # Reconstructor train + evaluate runner
 └── src/
     ├── feature_extraction/    # Pipeline internals
     └── models/
         ├── common/            # Shared dataset/split/streaming-eval logic
         ├── rf/                # RF dataset, train, evaluate
         ├── tcn/               # TCN model, dataset, train, evaluate
-        └── metalearner/       # Mini-Transformer meta-learner (RF + TCN fusion)
+        ├── metalearner/       # Mini-Transformer meta-learner (RF + TCN fusion)
+        └── reconstructor/     # Purification transformer (model, dataset,
+                                #   train, realize, evaluate)
 ```
 
 ## Requirements
@@ -235,6 +254,12 @@ python3 scripts/tcn/run_tcn.py
 #    trained RF + TCN; trains on the seed=42 val split out-of-fold for
 #    both base learners, evaluates on the test split)
 python3 scripts/metalearner/run_metalearner.py
+
+# 6. Train + evaluate the Reconstructor (purification) transformer. Learns
+#    matched (adversarial → clean) pairs; the held-out test set is scored by
+#    purification gain (through the trained TCN) and protocol-compliance rate
+#    (tshark on the realized purified PCAPs).
+python3 scripts/reconstructor/run_reconstructor.py
 ```
 
-Steps 3, 4, and 5 share the same tensor artifacts and the same flow-level split (seed=42). RF and TCN results are directly comparable; the meta-learner consumes both as a stacker over their per-flow streams.
+Steps 3, 4, and 5 share the same tensor artifacts and the same flow-level split (seed=42). RF and TCN results are directly comparable; the meta-learner consumes both as a stacker over their per-flow streams. Step 6 (the reconstructor) reuses the same split — its test pairs are held out from every base learner — and uses the trained TCN from step 4 as the protected NIDS for its purification-gain metric.
