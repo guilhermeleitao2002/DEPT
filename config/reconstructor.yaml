@@ -1,0 +1,100 @@
+# =====================================================================
+# ADEPT — Reconstructor (Purification) Transformer
+# =====================================================================
+# A small causal (decoder-only) residual denoiser. When the ensemble flags
+# a flow as adversarial, the reconstructor maps it back onto the clean-traffic
+# manifold, undoing TANTGen's timing (IPAT) and size (IPv4 length) perturbations.
+#
+# Trained on matched (adversarial → clean) flow pairs, paired by 5-tuple over
+# the same data the other models use. Uses the seed=42 flow-level split so the
+# test pairs are held out.
+
+tensors_dir: data/tensors
+adversarial_dir: data/tensors/adversarial   # auto-discovered: every subdir with metadata.json
+output_dir: data/models/reconstructor
+
+# Source the trained TCN from here — used as the "protected NIDS" for the
+# purification-gain metric (P(adv) on adversarial vs reconstructed vs clean).
+tcn_model_dir: data/models/tcn
+
+# Adversarial sources with no clean base folder are skipped automatically
+# (e.g. ddos_kitsune_adv_* perturbs the CIC DDoS benign manifold and has no
+# clean "ddos_kitsune" counterpart). List any further sources to exclude here;
+# this mirrors the carry-over excludes in tcn.yaml / rf.yaml.
+adversarial_exclude:
+  - ddos_kitsune_adv_both
+  - ddos_kitsune_adv_iat
+  - ddos_kitsune_adv_size
+  - dos_slow_adv_both
+  - dos_slow_adv_iat
+  - dos_slow_adv_size
+  - syn_dos_adv_both
+  - syn_dos_adv_iat
+  - syn_dos_adv_size
+  - fuzzing_adv_both
+  - fuzzing_adv_iat
+  - fuzzing_adv_size
+  - brute_force_kitsune_adv_both
+  - brute_force_kitsune_adv_iat
+  - brute_force_kitsune_adv_size
+  - portscan_kitsune_adv_both
+  - portscan_kitsune_adv_iat
+  - portscan_kitsune_adv_size
+
+# Drop matched pairs shorter than this many packets (one IPAT interval is the
+# minimum signal a timing perturbation can carry).
+min_len: 2
+
+# Flow-atomic split, stratified by adversarial source. Same seed as the other
+# models so the held-out test pairs never leak into any base learner's train set.
+split:
+  train_frac: 0.70
+  val_frac: 0.15
+  test_frac: 0.15
+  seed: 42
+
+# ---- Reconstructor architecture ----
+# Small by design (fast, real-time denoising): causal Transformer encoder with a
+# residual head, so the identity map is the easy default (Δ≈0) and capacity goes
+# to the localized timing/length correction. Causal ⇒ KV-cacheable for streaming.
+model:
+  num_features: 1090       # 1088 nPrint bits + IPAT (z-score) + Direction
+  d_model: 128
+  n_layers: 3
+  n_heads: 4
+  dim_feedforward: 256
+  dropout: 0.1
+  max_seq_len: 200
+
+# ---- Training ----
+# Per-element smooth-L1 between reconstruction and the clean target, averaged
+# within each flow (long flows don't dominate) and masked over padding.
+training:
+  device: auto             # auto | cuda | cuda:0 | cuda:1 | cpu
+  epochs: 20
+  batch_size: 32
+  num_workers: auto        # auto | <int> — auto = min(16, cpu_count // 2)
+  lr: 3.0e-4
+  weight_decay: 1.0e-4
+  scheduler: cosine        # cosine | plateau
+  early_stop_patience: 3
+  amp: true
+  max_length: 200          # truncate flows at 200 packets to bound padded batch size
+  seed: 42
+  # Loss focus. "none" (default) is the pure objective: reconstruct the clean
+  # flow with uniform weight over all dims — the model is never told which dims
+  # the attack perturbs. "perturbation" up-weights dims where clean != adv by
+  # perturb_weight (a white-box footprint ABLATION; leave off for the main run).
+  loss_emphasis: none      # none | perturbation
+  perturb_weight: 0.0      # only used when loss_emphasis: perturbation (e.g. 20)
+
+# ---- Traffic-space realization + protocol compliance ----
+# Maps the purified length/timing back onto the original adversarial PCAP packets
+# and validates them with tshark. Best-effort: if the PCAPs or tshark are absent,
+# realization is skipped and the always-on feature-space invariant check still runs.
+realize:
+  adversarial_pcap_dir: data/adversarial   # original TANTGen PCAPs (phase 1 output)
+  write_pcap: true                          # write realized purified PCAPs
+  tshark_sample: 300                        # max test flows per source to realize
+  max_pcap_packets: 100000                  # cap packets read per source PCAP (memory/time)
+  roundtrip: false                          # (reserved) re-tensorise realized PCAP → TCN
