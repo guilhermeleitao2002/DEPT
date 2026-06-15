@@ -10,7 +10,7 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$REPO_ROOT"
 
 START_PHASE=1
-END_PHASE=5
+END_PHASE=6
 SKIP_ADV=0
 
 usage() {
@@ -23,6 +23,7 @@ Phases (in order):
   3. Random Forest train + evaluate     scripts/rf/run_rf.py
   4. TCN train + evaluate               scripts/tcn/run_tcn.py
   5. Meta-Learner train + evaluate      scripts/metalearner/run_metalearner.py
+  6. Reconstructor train + evaluate     scripts/reconstructor/run_reconstructor.py
 
 Each phase is timed; per-phase and total wall-clock are printed in a summary
 at the end. Live output is also mirrored to
@@ -30,10 +31,10 @@ at the end. Live output is also mirrored to
 The script aborts on the first failing phase (set -euo pipefail).
 
 Usage:
-  ./run_pipeline.sh                 # all 5 phases
+  ./run_pipeline.sh                 # all 6 phases
   ./run_pipeline.sh --skip-adv      # skip phase 1 (PCAPs already present)
-  ./run_pipeline.sh --from N        # start at phase N  (1..5)
-  ./run_pipeline.sh --to   N        # stop  after phase N (1..5)
+  ./run_pipeline.sh --from N        # start at phase N  (1..6)
+  ./run_pipeline.sh --to   N        # stop  after phase N (1..6)
 
 Env overrides:
   PYTHON=python3   # interpreter to use (default: python3)
@@ -57,6 +58,7 @@ PHASE_NAMES=(
     [3]="random_forest"
     [4]="tcn"
     [5]="metalearner"
+    [6]="reconstructor"
 )
 PHASE_CMDS=(
     [1]="$PYTHON scripts/adversarial_generation/generate_adversarials.py"
@@ -64,6 +66,7 @@ PHASE_CMDS=(
     [3]="$PYTHON scripts/rf/run_rf.py"
     [4]="$PYTHON scripts/tcn/run_tcn.py"
     [5]="$PYTHON scripts/metalearner/run_metalearner.py"
+    [6]="$PYTHON scripts/reconstructor/run_reconstructor.py"
 )
 
 declare -A DURATIONS
@@ -71,7 +74,7 @@ declare -A DURATIONS
 SEP="==============================================================================="
 
 section() {
-    printf '\n%s\n PHASE %d/5 — %s\n%s\n' "$SEP" "$1" "$2" "$SEP"
+    printf '\n%s\n PHASE %d/6 — %s\n%s\n' "$SEP" "$1" "$2" "$SEP"
 }
 
 format_duration() {
@@ -85,7 +88,7 @@ mkdir -p "$LOG_DIR"
 
 OVERALL_START=$(date +%s)
 
-for i in 1 2 3 4 5; do
+for i in 1 2 3 4 5 6; do
     if (( i < START_PHASE || i > END_PHASE )); then continue; fi
     if [[ $i -eq 1 && $SKIP_ADV -eq 1 ]]; then continue; fi
 
@@ -117,7 +120,7 @@ done
 OVERALL=$(( $(date +%s) - OVERALL_START ))
 
 printf '\n%s\n PIPELINE SUMMARY\n%s\n' "$SEP" "$SEP"
-for i in 1 2 3 4 5; do
+for i in 1 2 3 4 5 6; do
     if [[ -n "${DURATIONS[$i]:-}" ]]; then
         printf '  phase %d  %-22s  %s\n' "$i" "${PHASE_NAMES[$i]}" "$(format_duration "${DURATIONS[$i]}")"
     fi
