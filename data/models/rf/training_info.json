@@ -1,8 +1,8 @@
 {
   "best_params": {
-    "n_estimators": 400,
-    "max_depth": 40,
-    "min_samples_leaf": 1
+    "n_estimators": 200,
+    "max_depth": 20,
+    "min_samples_leaf": 5
   },
   "grid_results": [
     {
@@ -11,8 +11,8 @@
         "max_depth": null,
         "min_samples_leaf": 1
       },
-      "val_macro_f1": 0.9075254879281445,
-      "fit_seconds": 67.16964602470398
+      "val_macro_f1": 0.7615562386003265,
+      "fit_seconds": 285.56747174263
     },
     {
       "params": {
@@ -20,8 +20,8 @@
         "max_depth": null,
         "min_samples_leaf": 2
       },
-      "val_macro_f1": 0.9069877847604808,
-      "fit_seconds": 66.56241512298584
+      "val_macro_f1": 0.7818814189413472,
+      "fit_seconds": 261.9758267402649
     },
     {
       "params": {
@@ -29,8 +29,8 @@
         "max_depth": null,
         "min_samples_leaf": 5
       },
-      "val_macro_f1": 0.9067640349788317,
-      "fit_seconds": 68.2061517238617
+      "val_macro_f1": 0.8009752105691307,
+      "fit_seconds": 268.18869805336
     },
     {
       "params": {
@@ -38,8 +38,8 @@
         "max_depth": 20,
         "min_samples_leaf": 1
       },
-      "val_macro_f1": 0.9045762254537854,
-      "fit_seconds": 66.73486399650574
+      "val_macro_f1": 0.8418384251714129,
+      "fit_seconds": 243.75403547286987
     },
     {
       "params": {
@@ -47,8 +47,8 @@
         "max_depth": 20,
         "min_samples_leaf": 2
       },
-      "val_macro_f1": 0.9043758639002735,
-      "fit_seconds": 66.01664161682129
+      "val_macro_f1": 0.841992853049467,
+      "fit_seconds": 258.8718500137329
     },
     {
       "params": {
@@ -56,8 +56,8 @@
         "max_depth": 20,
         "min_samples_leaf": 5
       },
-      "val_macro_f1": 0.9036904249326524,
-      "fit_seconds": 66.18722176551819
+      "val_macro_f1": 0.8473843373354577,
+      "fit_seconds": 238.61173677444458
     },
     {
       "params": {
@@ -65,8 +65,8 @@
         "max_depth": 40,
         "min_samples_leaf": 1
       },
-      "val_macro_f1": 0.9072037194189079,
-      "fit_seconds": 68.05472922325134
+      "val_macro_f1": 0.8181076335805033,
+      "fit_seconds": 269.26545691490173
     },
     {
       "params": {
@@ -74,8 +74,8 @@
         "max_depth": 40,
         "min_samples_leaf": 2
       },
-      "val_macro_f1": 0.9072068182527233,
-      "fit_seconds": 67.70418167114258
+      "val_macro_f1": 0.8240707962504275,
+      "fit_seconds": 247.2143747806549
     },
     {
       "params": {
@@ -83,8 +83,8 @@
         "max_depth": 40,
         "min_samples_leaf": 5
       },
-      "val_macro_f1": 0.9070245624873994,
-      "fit_seconds": 67.25952744483948
+      "val_macro_f1": 0.8295494876092988,
+      "fit_seconds": 267.5917477607727
     },
     {
       "params": {
@@ -92,8 +92,8 @@
         "max_depth": null,
         "min_samples_leaf": 1
       },
-      "val_macro_f1": 0.9088199522937015,
-      "fit_seconds": 129.06251215934753
+      "val_macro_f1": 0.7601511166384735,
+      "fit_seconds": 510.3505561351776
     },
     {
       "params": {
@@ -101,8 +101,8 @@
         "max_depth": null,
         "min_samples_leaf": 2
       },
-      "val_macro_f1": 0.9070498474664904,
-      "fit_seconds": 127.47362995147705
+      "val_macro_f1": 0.7826532960650081,
+      "fit_seconds": 476.1701445579529
     },
     {
       "params": {
@@ -110,8 +110,8 @@
         "max_depth": null,
         "min_samples_leaf": 5
       },
-      "val_macro_f1": 0.907405034299521,
-      "fit_seconds": 127.62960863113403
+      "val_macro_f1": 0.8019002488419799,
+      "fit_seconds": 498.0458598136902
     },
     {
       "params": {
@@ -119,8 +119,8 @@
         "max_depth": 20,
         "min_samples_leaf": 1
       },
-      "val_macro_f1": 0.9044845646704578,
-      "fit_seconds": 125.35428261756897
+      "val_macro_f1": 0.8418288031180219,
+      "fit_seconds": 437.9688503742218
     },
     {
       "params": {
@@ -128,8 +128,8 @@
         "max_depth": 20,
         "min_samples_leaf": 2
       },
-      "val_macro_f1": 0.904595100929614,
-      "fit_seconds": 125.79890584945679
+      "val_macro_f1": 0.8419753257963747,
+      "fit_seconds": 441.4434394836426
     },
     {
       "params": {
@@ -137,8 +137,8 @@
         "max_depth": 20,
         "min_samples_leaf": 5
       },
-      "val_macro_f1": 0.9041572573111211,
-      "fit_seconds": 125.6147232055664
+      "val_macro_f1": 0.847367680158609,
+      "fit_seconds": 443.9819703102112
     },
     {
       "params": {
@@ -146,8 +146,8 @@
         "max_depth": 40,
         "min_samples_leaf": 1
       },
-      "val_macro_f1": 0.986273996082563,
-      "fit_seconds": 125.86605072021484
+      "val_macro_f1": 0.8182173129297741,
+      "fit_seconds": 473.11597633361816
     },
     {
       "params": {
@@ -155,8 +155,8 @@
         "max_depth": 40,
         "min_samples_leaf": 2
       },
-      "val_macro_f1": 0.9075691002422894,
-      "fit_seconds": 126.13199400901794
+      "val_macro_f1": 0.8246485419855583,
+      "fit_seconds": 473.4742622375488
     },
     {
       "params": {
@@ -164,8 +164,8 @@
         "max_depth": 40,
         "min_samples_leaf": 5
       },
-      "val_macro_f1": 0.9074179486094814,
-      "fit_seconds": 125.69348359107971
+      "val_macro_f1": 0.8340548337427708,
+      "fit_seconds": 464.9455351829529
     }
   ],
   "defaults": {
@@ -186,7 +186,12 @@
       "ddos",
       "mirai",
       "portscan",
-      "ssdp_flood"
+      "ssdp_flood",
+      "dns_ddos",
+      "ldap_ddos",
+      "ntp_ddos",
+      "ssdp_ddos",
+      "syn_ddos"
     ],
     "adversarial_exclude": [
       "dos_slow_adv_both",

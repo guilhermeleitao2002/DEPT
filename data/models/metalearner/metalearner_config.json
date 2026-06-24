@@ -30,9 +30,9 @@
     "meta_val_frac": 0.15,
     "seed": 43
   },
-  "best_epoch": 2,
+  "best_epoch": 6,
   "best_meta_val_auroc_at": {
-    "10": 0.9876708152208529
+    "10": 0.8430038864964697
   },
   "n_parameters": 67971
 }
