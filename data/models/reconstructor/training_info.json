@@ -1,11 +1,11 @@
 {
   "best_epoch": 19,
-  "best_val_loss": 0.0007391185845443985,
+  "best_val_loss": 0.0002895160289451192,
   "epochs_run": 20,
   "epochs_planned": 20,
-  "train_seconds": 98.4923186302185,
-  "device": "cpu",
-  "amp": false,
+  "train_seconds": 26557.42036652565,
+  "device": "cuda",
+  "amp": true,
   "n_parameters": 677698,
   "n_pairs": 1986705,
   "pair_skipped": {
@@ -20,7 +20,7 @@
     "unmatched_adv": 4628163
   },
   "loss_emphasis": "none",
-  "max_flows_per_split": 2000,
+  "max_flows_per_split": null,
   "split_summary": {
     "train": {
       "n_pairs": 1390695,
@@ -163,12 +163,11 @@
     "realize": {
       "adversarial_pcap_dir": "/mnt/nas/inesc/gleitao/ADEPT/data/adversarial",
       "write_pcap": true,
-      "tshark_sample": 25,
-      "max_pcap_packets": 20000,
+      "tshark_sample": 300,
+      "max_pcap_packets": 100000,
       "roundtrip": false
     },
-    "_repo_root": "/mnt/nas/inesc/gleitao/ADEPT",
-    "_max_flows": 2000
+    "_repo_root": "/mnt/nas/inesc/gleitao/ADEPT"
   },
   "training_config": {
     "device": "auto",
