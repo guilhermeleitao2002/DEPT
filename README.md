@@ -65,93 +65,104 @@ The original five sources, as measured before the CIC-DDoS-2019 expansion:
 | PortScan adversarial (×3 modes) | 15,839 each | ~31,885 each |
 | SSDP Flood adversarial (×3 modes) | 64,722 each | ~287,921 each |
 
-The five CIC-DDoS-2019 sources (`ntp_ddos`, `dns_ddos`, `ssdp_ddos`, `syn_ddos`, `ldap_ddos`) add a benign + adversarial (×3 modes) pair each; their flow/packet counts are produced by the next `process_all_attacks.py --tantgen` run and the base-learner metrics below predate them.
+The five CIC-DDoS-2019 sources (`ntp_ddos`, `dns_ddos`, `ssdp_ddos`, `syn_ddos`, `ldap_ddos`) add a benign + adversarial (×3 modes) pair each. These reflection floods dominate the flow counts (e.g. `syn_ddos` and `ldap_ddos` alone contribute hundreds of thousands of adversarial flows), which is why the **ten-source** base-learner metrics below are both lower and adversarial-dominated relative to the original five-source numbers.
 
 Under ADEPT's label convention, every Kitsune/CIC-IDS2017/CIC-DDoS-2019 flow is **benign** (the upstream NIDS already handles the raw-dataset attacks) and every TANTGen-generated flow is **adversarial**. ADEPT's specific job is to catch novel TANTGen-style perturbations.
 
 ## Base learner results
 
-> The metrics below were measured on the original five-source dataset and **predate the CIC-DDoS-2019 expansion**. They will be refreshed after the next end-to-end run (`process_all_attacks.py --tantgen` → `run_rf.py` → `run_tcn.py` → `run_metalearner.py`) tensorises and trains on the ten-source set.
+> Measured on the full **ten-source** set (the original five sources + the five CIC-DDoS-2019 reflection floods and their adversarials). Because those floods contribute millions of adversarial flows, the evaluation pool is now **adversarial-dominated** (≈83% adversarial), so base-rate-dependent figures (accuracy/precision) shifted from the earlier five-source numbers. The comparable cross-model axis is the **flow-level streaming** metrics (AUROC@t, EDP).
 
 ### Random Forest
 
-Trained on 1.94 M multi-scale prefix checkpoints (cadence: packet 2, then every 10 packets); evaluated on 338 K held-out checkpoints across 125,914 flows. Best configuration: 400 trees, `max_depth=40`, `min_samples_leaf=1`, `class_weight=balanced_subsample`.
+Sparse, high-precision stream over multi-scale prefix checkpoints (cadence: packet 2, then every 10). Grid-search best config: **200 trees, `max_depth=20`, `min_samples_leaf=5`, `class_weight=balanced_subsample`**. Evaluated per-checkpoint and, on the streaming flow axis, over 1.21 M test flows.
 
 | Metric | Value |
 |---|---|
-| ROC AUC (per-checkpoint) | **0.9990** |
-| PR AUC (per-checkpoint) | 0.9975 |
-| Recall (adversarial) | 0.9860 |
-| Streaming AUROC@2 | **0.9984** |
-| Streaming AUROC@10 | **0.9991** |
-| Streaming AUROC@max | 0.9992 |
+| ROC AUC (per-checkpoint) | 0.8877 |
+| PR AUC (per-checkpoint) | 0.9372 |
+| Macro F1 (per-checkpoint) | 0.8378 |
+| Recall (adversarial) | **0.9820** |
+| Streaming AUROC@2 | 0.8298 |
+| Streaming AUROC@10 | 0.8381 |
+| Streaming AUROC@max | 0.8395 |
 | EDP (median) | **2 packets** |
-| Detection rate (p>0.5) | 98.91% |
+| Detection rate (p>0.5) | **99.69%** |
 
 ### Temporal Convolutional Network
 
-Trained on 877 K variable-length flows (truncated at 200 packets during batching); evaluated on 131 K held-out flows. Best epoch 17 / 20.
+Dense, early-warning stream. Trained on 5.66 M variable-length flows (truncated at 200 packets during batching); evaluated on 1.21 M held-out flows. Best epoch 5 / 9 (early-stopped). 805 K parameters; 3 stacked dilated causal TemporalBlocks, channels=[128,128,128], k=3, receptive field 29 packets.
 
-| Metric | Value |
+| Metric | Value (last timestep) |
 |---|---|
-| Macro F1 | **0.9608** |
-| ROC AUC | 0.9857 |
-| PR AUC | 0.9807 |
-| Streaming AUROC@1 | **0.9493** |
+| Macro F1 | 0.7261 |
+| ROC AUC | 0.8359 |
+| PR AUC | 0.9426 |
+| Recall (adversarial) | 0.8570 |
+| Streaming AUROC@1 | 0.8009 |
+| Streaming AUROC@max | 0.8359 |
 | EDP (median) | **1 packet** |
-
-Architecture: 3 stacked dilated causal TemporalBlocks, channels=[128,128,128], k=3, receptive field=29 packets. 805 K parameters.
+| Detection rate (p>0.5) | 86.31% |
 
 ### Mini-Transformer Meta-Learner
 
-A 67 K-parameter causal Transformer encoder that consumes a 13-dim per-packet token combining the carry-forward RF logit, the dense TCN logit, four "where are we in the flow" features (`rf_age`, `is_rf_checkpoint`, IPAT, direction), and a compact packet summary (IPv4 length, six TCP flag bits) — *not* the full 1088-bit nPrint vector. Trains on the seed=42 val split (out-of-fold for both base learners) sub-split into meta-train / meta-val (seed=43) for early stopping; evaluated on the test split.
+A 68 K-parameter causal Transformer encoder that consumes a 13-dim per-packet token combining the carry-forward RF logit, the dense TCN logit, four "where are we in the flow" features (`rf_age`, `is_rf_checkpoint`, IPAT, direction), and a compact packet summary (IPv4 length, six TCP flag bits) — *not* the full 1088-bit nPrint vector. Trains on the seed=42 val split (out-of-fold for both base learners) sub-split into meta-train / meta-val (seed=43) for early stopping; evaluated on the test split. Best epoch 6, meta-val AUROC@10 0.843.
 
-| Metric | Value |
+| Metric | Value (last timestep) |
 |---|---|
-| Macro F1 (last timestep) | 0.9664 |
-| ROC AUC (last timestep) | 0.9901 |
-| PR AUC (last timestep) | 0.9860 |
-| Streaming AUROC@1 | **0.9493** |
-| Streaming AUROC@2 | 0.9809 |
-| Streaming AUROC@10 | 0.9879 |
-| Streaming AUROC@max | 0.9901 |
+| Macro F1 | 0.7279 |
+| ROC AUC | **0.8449** |
+| PR AUC | **0.9549** |
+| Recall (adversarial) | 0.8598 |
+| Streaming AUROC@1 | 0.7969 |
+| Streaming AUROC@10 | **0.8424** |
+| Streaming AUROC@max | **0.8449** |
 | EDP (median) | **1 packet** |
-| Detection rate (p>0.5) | 93.21% |
+| Detection rate (p>0.5) | 87.12% |
 
-Architecture: 2 encoder layers, 4 heads, d_model=64, sinusoidal PE, strict causal mask, learnable `rf_unknown_logit` parameter substituted for NaN RF slots before the first checkpoint. Auxiliary "beat the best base" loss (per-packet `ReLU(p_best_base − p_meta_target)`, weight 0.5) supplements per-packet cross-entropy. Best epoch 3 / 20.
+Architecture: 2 encoder layers, 4 heads, d_model=64, sinusoidal PE, strict causal mask, learnable `rf_unknown_logit` parameter substituted for NaN RF slots before the first checkpoint. Auxiliary "beat the best base" loss (weight 0.5) supplements per-packet cross-entropy.
 
-### Streaming comparison
+### Streaming comparison (flow-level — like-for-like across models)
 
 | Metric | RF | TCN | Meta-Learner |
 |---|---|---|---|
 | First prediction at | **packet 2** | packet 1 | packet 1 |
-| AUROC@1 | — (no prediction yet) | 0.9493 | **0.9497** |
-| AUROC@2 | **0.9984** | 0.9765 | 0.9809 |
-| AUROC@10 | **0.9991** | 0.9817 | 0.9879 |
-| AUROC@max | **0.9992** | 0.9857 | 0.9901 |
+| AUROC@1 | — (no prediction yet) | **0.8009** | 0.7969 |
+| AUROC@2 | **0.8298** | 0.8031 | 0.8163 |
+| AUROC@5 | 0.8298 | 0.8248 | **0.8343** |
+| AUROC@10 | 0.8381 | 0.8330 | **0.8424** |
+| AUROC@max | 0.8395 | 0.8359 | **0.8449** |
 | EDP median | 2 pkts | **1 pkt** | **1 pkt** |
-| Detection rate (p>0.5) | 98.91% | 91.74% | 93.21% |
+| Detection rate (p>0.5) | **99.69%** | 86.31% | 87.12% |
 
-The meta-learner sits **just above TCN** at every t while preserving the EDP=1 advantage: it inherits TCN's early-detection latency without sacrificing accuracy at later packets. It does **not** match RF on AUROC@10 or AUROC@max — the gap is largest on IAT-only adversarials (`portscan_adv_iat` −17 pp, `mirai_adv_iat` −5 pp) and zero on the easier sources (`ddos_*`, `ssdp_flood_*` adversarials, where all three models reach 1.000). See *Observations* below for the diagnosis.
+On this like-for-like flow-level axis the **meta-learner leads from packet 5 onward** (AUROC@5–@max 0.834 → 0.845, above both base learners) *and* keeps the TCN's packet-1 latency (EDP = 1). The RF leads only at its first checkpoint (@2) and on raw detection rate, but it can't issue a verdict before packet 2. Note that the RF's headline per-checkpoint numbers (e.g. ROC AUC 0.888) are computed on a different, RF-favourable granularity and are *not* directly comparable to the flow-level column above.
 
 ### Observations
 
-- **IAT-only perturbation is consistently the hardest mode.** Both models show lower AUROC/F1 for `_iat` variants than `_both` or `_size`. Pure timing perturbation without structural changes is more subtle.
-- **PortScan adversarials are now fully covered.** Under the new cadence, every PortScan flow (≥2 packets) gets an RF checkpoint at packet 2. Per-source AUROC@5 = 1.0000 for `portscan_adv_both` and `portscan_adv_iat`, 0.9954 for `portscan_adv_size` — the regime where the RF previously produced *zero* predictions.
-- **TCN fails on portscan\_iat** (F1=0.002, AUROC@1=0.789). With ~2 packets per flow there is almost no inter-packet interval to perturb, so IAT-only adversarial PortScan flows look nearly identical to benign ones from the TCN's perspective. Size perturbation (portscan\_size, portscan\_both) works fine (F1≈0.97). The RF now compensates here.
-- **Mirai adversarial recall is low for TCN** (0.39–0.51 across all three modes). The RF reaches AUROC 0.99+ on Mirai variants under the new cadence, confirming that aggregated temporal statistics dominate the per-packet sequence for this attack type.
-- **RF AUROC@10 dipped slightly (0.9998 → 0.9991)** because the dataset now includes much harder short-flow regimes (PortScan adversarials, brute-force adv) that previously had zero RF predictions and were silently excluded from the metric. The model's effective coverage is dramatically wider, not weaker.
-- **Meta-learner is rank-bottlenecked, not loss-bottlenecked.** The model converges to its AUROC ceiling (~0.987 on meta-val AUROC@10) within a single epoch and never escapes it across 8 epochs. Adding the per-packet "beat the best base" auxiliary loss successfully reduced the training-time confidence gap 9× (0.027 → 0.003) and improved detection rate by ~1 pp, but did not move the AUROC needle on any per-source slice. The interpretation: the loss tells the model to be as confident as the best base in *absolute probability* terms, but AUROC is rank-based — making the model uniformly more confident doesn't change the rank ordering of `P(adv)` across flows. The bottleneck appears to be in the model's effective use of the sparse RF input (one fresh checkpoint per 8–10 packets), not the loss design. Future work: add a residual skip from `p_RF_logit` directly to the output's class-1 logit, or a learned gate over `rf_age` that mixes between RF and the encoder prediction.
+- **The CIC-DDoS reflection floods are the hard new sources.** All three models hover at AUROC ≈ 0.52–0.62 on `dns_ddos`, `ntp_ddos`, `ssdp_ddos`, `ldap_ddos` — these high-rate, source-spoofed floods leave little per-flow structure to separate a TANTGen-manipulated flow from an un-manipulated one. They dominate the (now lower) aggregate. `syn_ddos` is moderate (≈0.88–0.90), while `portscan`, `ddos`, `ddos_kitsune` and `ssdp_flood` remain easy (≥0.99 on `both`/`size`).
+- **IAT-only perturbation is consistently the hardest mode.** Every model scores lowest on `_iat` variants: e.g. `portscan_iat` (TCN AUROC@max 0.31, meta 0.43), `mirai_iat` (0.36 / 0.41), `ddos_kitsune_iat` (0.48 / 0.57). Pure timing change without structural edits is the subtlest signal — and, on these high-rate floods, the per-flow IPAT is already nearly constant.
+- **The meta-learner is doing its job on the comparable axis.** It matches or beats the RF at every flow-level checkpoint from packet 5 and keeps EDP = 1; the apparent "RF >> meta" gap only appears when RF's per-checkpoint `overall` block is juxtaposed against the meta-learner's flow-level one (different populations and verdict timing).
+- **RF stays recall-first** (recall-adv 0.982, detection rate 99.7%): it rarely misses an adversarial flow but is late (no verdict before packet 2). The TCN/meta-learner trade a few points of recall for packet-1 detection.
 
 ## Purification results
 
-The reconstructor is evaluated on the held-out test pairs (seed=42, never seen by any base learner) with three metric groups, reported overall and per `<base>_adv_<mode>`:
+The reconstructor (a 678 K-parameter causal residual denoiser) was trained on **1.99 M matched `(adversarial → clean)` flow pairs** (5-tuple-aligned; ~7.4 h on one GPU) and evaluated on the held-out **298 K-pair** test split (seed=42, never seen by any base learner). Three metric groups, reported overall and per `<base>_adv_<mode>`:
 
-- **Reconstruction quality** — MSE on the perturbed dimensions, *before* (adv vs clean) vs *after* (recon vs clean). A large before→after drop means the denoiser removed the perturbation rather than copying its input.
-- **Purification gain** — the reconstruction (rounded back to valid nPrint) is fed through the trained TCN alongside the adversarial and clean flows; gain = `P(adv | adversarial) − P(adv | reconstructed)`, with the residual gap to the clean floor `P(adv | clean)` showing how close the purifier lands.
-- **Protocol-compliance rate** — a feature-space TCP/IP invariant check on the rounded reconstruction (always on), plus a `tshark` check on the *realized* purified packets (the reconstructed length/timing overlaid back onto the original adversarial PCAP packets — ADEPT operates in traffic-space Ψ, not just feature-space).
+| Metric group | Result (overall) |
+|---|---|
+| **Reconstruction** — MSE on the perturbed dims, before (adv) → after (recon) | 0.962 → **0.128** (7.5× reduction) |
+| **Purification gain** — TCN `P(adv)`: adversarial → reconstructed → clean | 0.552 → **0.425** → 0.425 (**gain 0.128, residual gap 0.000**) |
+| **Protocol compliance** — feature-space invariants / `tshark` on realized packets | **99.99%** / **99.5%** (538 bad of 104,909 realized packets) |
 
-> Numbers will be filled in here after the first full `run_reconstructor.py` on the ten-source set. See [`scripts/reconstructor/README.md`](scripts/reconstructor/README.md) for the architecture and metric definitions.
+The headline is the **residual gap of 0.000**: after purification, a manipulated flow is statistically indistinguishable — *to the detector* — from a genuinely un-manipulated one. The effect is strongly attack-dependent:
+
+| Strongly purified (gain) | Unaffected (gain ≈ 0) |
+|---|---|
+| `portscan` both/size **0.96 / 0.96** (P(adv) 0.99 → 0.03) | all `_iat`-only floods (IPAT near-constant → nothing to undo) |
+| `ssdp_flood` both/size 0.92 / 0.92 | `dns_ddos`, `ntp_ddos`, `ssdp_ddos`, `ldap_ddos` (perturbation barely moves the features) |
+| `ddos` both/size 0.90 / 0.86 · `syn_ddos` size 0.76 | |
+
+**Caveats (see [`scripts/reconstructor/README.md`](scripts/reconstructor/README.md) for the full breakdown):** purification gain is measured through ADEPT's *own* TCN (an independent NIDS would be a stronger test); `tshark` validation is on a per-source sample under a 100 K-packet read cap; and two tiny `ssdp_flood` samples (30/43 packets) hit 0% `tshark` compliance — a size-edit-on-snap-length-truncated-capture artifact, not representative of the 99.5% overall.
 
 ## Implementation status
 

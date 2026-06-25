@@ -43,71 +43,86 @@ Total receptive field: **29 packets**. Every output at position `t` depends only
 - **Batching**: variable-length flows padded to the batch-maximum length; a padding mask suppresses gradient at padded positions. Flows truncated at 200 packets before batching to bound the padded tensor size.
 - **Split**: flow-atomic, source-stratified — same `seed=42` and same split logic as the RF, so the two models are evaluated on exactly the same held-out flows.
 
-Best epoch: 17/20, val macro-F1 = 0.9611. Training time: 121 min on RTX 4060 Ti.
+Best epoch: 5/9 (early-stopped). Val macro-F1 = 0.7264. Training time: ~17.6 h on one GPU (5.66 M training flows).
 
-## Results (test split — 131 K flows)
+## Results (test split — 1.21 M flows)
 
-> Measured on the original five-source dataset, **before the CIC-DDoS-2019 expansion** (the five reflection floods `ntp_ddos`/`dns_ddos`/`ssdp_ddos`/`syn_ddos`/`ldap_ddos` and their adversarials). Re-run `run_tcn.py` after `process_all_attacks.py --tantgen` to refresh these on the ten-source set.
+> Measured on the full **ten-source** set (adversarial-dominated; the flow-level streaming metrics are the cross-model-comparable axis).
 
-### Overall
+### Overall (last timestep)
 
 | Metric | Value |
 |---|---|
-| Macro F1 | **0.9608** |
-| ROC AUC | 0.9857 |
-| PR AUC | 0.9807 |
-| Accuracy | 0.9652 |
-| Precision (adversarial) | 0.9893 |
-| Recall (adversarial) | 0.9094 |
+| Macro F1 | 0.7261 |
+| ROC AUC | 0.8359 |
+| PR AUC | 0.9426 |
+| Accuracy | 0.8225 |
+| Precision (adversarial) | 0.9225 |
+| Recall (adversarial) | 0.8570 |
 
 ### Streaming metrics (overall)
 
 | AUROC@t | Value |
 |---|---|
-| @1 | **0.9493** |
-| @5 | 0.9815 |
-| @10 | 0.9817 |
-| @20 | 0.9851 |
-| @max | 0.9857 |
+| @1 | **0.8009** |
+| @5 | 0.8248 |
+| @10 | 0.8330 |
+| @20 | 0.8359 |
+| @max | 0.8359 |
 
 | EDP | Value |
 |---|---|
 | Median | **1 packet** |
 | IQR | [1, 1] |
-| Detection rate | 91.7% |
+| Detection rate | 86.3% |
 
 ### Per-adversarial-source (balanced benign subsample, K=10)
 
 | Source | precision | recall | F1 | ROC AUC | n_adv |
 |---|---|---|---|---|---|
-| brute_force both * | 0.889 | 0.667 | 0.762 | 0.903 | 12 |
-| brute_force iat * | 0.857 | 0.500 | 0.632 | 0.869 | 12 |
-| brute_force size * | 1.000 | 0.417 | 0.588 | 0.862 | 12 |
-| ddos both | 0.962 | 1.000 | 0.981 | 1.000 | 151 |
-| ddos iat | 0.947 | 0.828 | 0.883 | 0.977 | 151 |
-| ddos size | 0.956 | 1.000 | 0.977 | 1.000 | 151 |
-| ddos_kitsune both | 0.951 | 1.000 | 0.975 | 1.000 | 2,373 |
-| ddos_kitsune iat | 0.934 | 0.719 | 0.812 | 0.971 | 2,373 |
-| ddos_kitsune size | 0.951 | 1.000 | 0.975 | 1.000 | 2,373 |
-| mirai both | 0.900 | 0.486 | 0.631 | 0.972 | 574 |
-| mirai iat | 0.876 | 0.396 | 0.545 | 0.965 | 574 |
-| mirai size | 0.910 | 0.509 | 0.653 | 0.975 | 574 |
-| portscan both | 0.946 | 0.988 | 0.967 | 0.998 | 2,376 |
-| portscan iat | 0.024 | 0.001 | 0.002 | 0.789 | 2,376 |
-| portscan size | 0.946 | 0.988 | 0.966 | 0.998 | 2,376 |
-| ssdp_flood both | 0.956 | 1.000 | 0.977 | 1.000 | 9,708 |
-| ssdp_flood iat | 0.956 | 0.994 | 0.974 | 0.999 | 9,708 |
-| ssdp_flood size | 0.956 | 1.000 | 0.977 | 1.000 | 9,708 |
+| brute_force both * | 0.127 | 0.583 | 0.209 | 0.701 | 12 |
+| brute_force iat * | 0.043 | 0.167 | 0.069 | 0.429 | 12 |
+| brute_force size * | 0.062 | 0.250 | 0.100 | 0.470 | 12 |
+| ddos both | 0.226 | 1.000 | 0.368 | 1.000 | 151 |
+| ddos iat | 0.181 | 0.775 | 0.294 | 0.863 | 151 |
+| ddos size | 0.219 | 1.000 | 0.360 | 1.000 | 151 |
+| ddos_kitsune both | 0.229 | 1.000 | 0.373 | 1.000 | 2,373 |
+| ddos_kitsune iat | 0.044 | 0.159 | 0.069 | 0.483 | 2,373 |
+| ddos_kitsune size | 0.227 | 0.999 | 0.370 | 0.999 | 2,373 |
+| dns_ddos both | 0.046 | 0.164 | 0.072 | 0.669 | 1,019 |
+| dns_ddos iat | 0.046 | 0.162 | 0.072 | 0.668 | 1,019 |
+| dns_ddos size | 0.045 | 0.161 | 0.070 | 0.669 | 1,019 |
+| ldap_ddos both | 0.508 | 0.997 | 0.673 | 0.837 | 74,710 |
+| ldap_ddos iat | 0.508 | 0.997 | 0.673 | 0.837 | 74,710 |
+| ldap_ddos size | 0.508 | 0.997 | 0.673 | 0.837 | 74,710 |
+| mirai both | 0.084 | 0.328 | 0.134 | 0.558 | 574 |
+| mirai iat | 0.000 | 0.000 | 0.000 | 0.360 | 574 |
+| mirai size | 0.095 | 0.364 | 0.151 | 0.582 | 574 |
+| ntp_ddos both | 0.000 | 0.001 | 0.000 | 0.614 | 2,103 |
+| ntp_ddos iat | 0.000 | 0.000 | 0.000 | 0.616 | 2,103 |
+| ntp_ddos size | 0.001 | 0.002 | 0.001 | 0.614 | 2,103 |
+| portscan both | 0.223 | 0.988 | 0.363 | 0.992 | 2,376 |
+| portscan iat | 0.000 | 0.000 | 0.000 | 0.320 | 2,376 |
+| portscan size | 0.224 | 0.984 | 0.365 | 0.990 | 2,376 |
+| ssdp_ddos both | 0.000 | 0.000 | 0.000 | 0.550 | 40,446 |
+| ssdp_ddos iat | 0.000 | 0.000 | 0.000 | 0.551 | 40,446 |
+| ssdp_ddos size | 0.000 | 0.000 | 0.000 | 0.551 | 40,446 |
+| ssdp_flood both | 0.227 | 1.000 | 0.369 | 1.000 | 9,708 |
+| ssdp_flood iat | 0.203 | 0.871 | 0.329 | 0.946 | 9,708 |
+| ssdp_flood size | 0.225 | 1.000 | 0.368 | 1.000 | 9,708 |
+| syn_ddos both | 0.733 | 0.987 | 0.841 | 0.836 | 200,483 |
+| syn_ddos iat | 0.733 | 0.987 | 0.841 | 0.836 | 200,483 |
+| syn_ddos size | 0.735 | 1.000 | 0.847 | 1.000 | 200,483 |
 
-\* Low support (n\_adv < 50) — treat as indicative only.
+\* Low support (n\_adv < 50) — treat as indicative only. Precision is computed against a balanced benign subsample, so absolute values are low; ROC AUC is the robust per-source signal.
 
 ## Observations
 
-- **EDP median = 1 packet.** The TCN flags 91.7% of adversarial flows before the RF even makes its first prediction. This is the core production advantage of the streaming design.
-- **IAT-only perturbation is consistently harder.** All `_iat` variants show lower recall and ROC AUC than the corresponding `_both` and `_size` variants. Timing perturbation without structural changes produces less visible signal in the per-packet feature space.
-- **portscan\_iat is a near-total failure** (F1=0.002, AUROC@1=0.789). PortScan flows average ~2 packets — there is effectively one inter-packet interval. TANTGen's IAT perturbation on a 2-packet flow changes a single timing value, which is indistinguishable from natural timing variability at the per-packet level. The `_both` and `_size` variants, which also perturb packet sizes and headers, remain detectable (F1≈0.97).
-- **Mirai adversarial recall is low** (0.40–0.51 across all modes). The RF reaches AUROC 0.85–0.999 on Mirai variants, suggesting that the aggregated statistical view is more informative than the raw per-packet sequence for this attack type. This makes Mirai a candidate where RF confirmation is particularly valuable.
-- **AUROC is stable after packet 10.** The jump from AUROC@1 (0.949) to AUROC@10 (0.982) is large; subsequent gains (→0.986 at max) are marginal. Most of the TCN's discriminative information is present within the first 10 packets of adversarial flows.
+- **EDP median = 1 packet.** The TCN flags 86% of adversarial flows from the very first packet — before the RF's packet-2 checkpoint. This packet-1 latency is the core advantage the meta-learner inherits.
+- **IAT-only perturbation is consistently the hardest mode**, and on short flows it collapses entirely: `portscan_iat` (ROC AUC 0.320, F1 0.000), `mirai_iat` (0.360, 0.000), `ddos_kitsune_iat` (0.483). With ~2 packets there is effectively one inter-packet interval, so a pure timing change is indistinguishable from natural variability — while the `_both`/`_size` variants of the same attacks stay detectable (ROC AUC ≈ 0.99).
+- **The CIC-DDoS reflection floods are the new hard sources.** `dns_ddos`/`ntp_ddos`/`ssdp_ddos` sit at ROC AUC ≈ 0.55–0.67 across all modes; `ldap_ddos` (0.837) and `syn_ddos` (0.836–1.000) fare better. These spoofed, near-constant-timing floods are where the per-packet view has least to grip.
+- **Mirai/ntp/ssdp adversarial recall is low for the TCN.** The RF's aggregated prefix statistics are more informative than the raw per-packet sequence for these floods, which is exactly the complementarity the meta-learner is designed to exploit.
+- **AUROC is roughly flat after packet 5** (0.825 → 0.836 at max): most of the TCN's discriminative signal is present within the first few packets of a flow.
 
 ## Output files (`data/models/tcn/`)
 
