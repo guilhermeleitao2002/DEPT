@@ -5,11 +5,11 @@ __pycache__/
 *.pyc
 *.pyo
 *.npy
-*.log
 *.joblib
 *.npz
 .ignore
 venv/*
+logs/*
 
 # Meta-learner per-split token caches (derived from rf.joblib + tcn.pt
 # at runtime; rebuilt automatically when either base learner changes).
