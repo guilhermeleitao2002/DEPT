@@ -1,0 +1,88 @@
+% #############################################################################
+% This is Chapter 5
+% !TEX root = ../main.tex
+% #############################################################################
+% Change the Name of the Chapter i the following line
+\fancychapter{Evaluation}
+% The following line allows to ref this chapter
+\label{chap:evaluation}
+
+% NOTE: skeleton + bullet-point to-be content only (no prose yet).
+
+% #############################################################################
+\section{Research Questions}\label{sec:eval-rqs}
+\begin{itemize}
+    \item RQ1 --- Ensemble robustness: does heterogeneous stacking measurably limit gradient-attack transfer vs.\ a single-architecture baseline?
+    \item RQ2 --- Purification effectiveness: does the reconstructor close the detection gap while staying protocol-compliant?
+    \item RQ3 --- Adaptability: does the adaptive (RL) component let the defense keep up with an evolving attacker better than a static baseline? (phrased generically --- no metric committed)
+    \item RQ4 --- Latency/overhead: does the full pipeline (incl.\ Transformer purification) stay within a real-time-NIDS-compatible latency budget?
+\end{itemize}
+
+% #############################################################################
+\section{Experimental Setup}\label{sec:eval-setup}
+\subsection{Datasets and Threat Generation}\label{subsec:eval-datasets}
+\begin{itemize}
+    \item 10 benign sources $\times$ 3 TANTGen perturbation modes (\texttt{both}/\texttt{iat}/\texttt{size}); flow/packet counts table.
+    \item TANTGen as the red-team generator, treated as a black box by ADEPT.
+\end{itemize}
+\subsection{Implementation Environment}\label{subsec:eval-environment}
+\begin{itemize}
+    \item Hardware (e.g.\ 2$\times$ Xeon Gold 5320, 192\,GB RAM, 4$\times$ RTX A4000) --- confirm against the actual run.
+    \item Software stack recap (cross-ref \Cref{sec:sol-tools}).
+\end{itemize}
+
+% #############################################################################
+\section{Metrics}\label{sec:eval-metrics}
+\begin{itemize}
+    \item Classification \& robustness: Macro F1, ROC/PR AUC, Recall(adversarial), Attack Success Rate (ASR).
+    \item Streaming-specific: AUROC@t (per checkpoint $t$), EDP (Earliest Detection Packet, median).
+    \item Purification: MSE before/after, purification gain ($\Delta P(\text{adv})$ through the protected NIDS), residual gap, feature-space invariant compliance, \texttt{tshark} protocol compliance.
+    \item Adaptation: placeholder for adaptation metrics vs.\ a static baseline (to be defined with the agent).
+    \item Efficiency: throughput (pps), inference latency (ms) with purification-overhead breakout, GPU/CPU utilization.
+\end{itemize}
+
+% #############################################################################
+\section{Base Learner Results}\label{sec:eval-base}
+\begin{itemize}
+    \item RF table (ROC AUC 0.888, PR AUC 0.937, Macro F1 0.838, Recall-adv 0.982, EDP 2, DR 99.69\%).
+    \item TCN table (ROC AUC 0.836, PR AUC 0.943, Macro F1 0.726, Recall-adv 0.857, EDP 1, DR 86.31\%).
+    \item Per-source breakdown: easy sources (\texttt{portscan}, \texttt{ddos}, \texttt{ddos\_kitsune}, \texttt{ssdp\_flood} $\geq$0.99 on \texttt{both}/\texttt{size}) vs.\ hard reflection floods (DNS/NTP/SSDP/LDAP $\approx$0.52--0.62) vs.\ moderate (\texttt{syn\_ddos} $\approx$0.88--0.90).
+    \item Cross-mode breakdown: \texttt{iat}-only consistently hardest (e.g.\ \texttt{portscan\_iat} TCN AUROC@max 0.31).
+\end{itemize}
+
+% #############################################################################
+\section{Meta-Learner Results}\label{sec:eval-meta}
+\begin{itemize}
+    \item Streaming comparison table (RF vs.\ TCN vs.\ Meta; AUROC@1/2/5/10/max, EDP, detection rate).
+    \item Discuss the ``RF wins per-checkpoint but Meta wins flow-level from packet~5'' nuance to preempt the ``why is RF AUC higher'' question.
+    \item Ablation note on the auxiliary loss (confidence-gap reduction without AUROC movement).
+\end{itemize}
+
+% #############################################################################
+\section{Purification Results}\label{sec:eval-purification}
+\begin{itemize}
+    \item Reconstruction / purification-gain / compliance table; strongly-purified vs.\ unaffected-source breakdown.
+    \item Caveats (own-TCN-as-oracle limitation; tshark sample cap; the two tiny \texttt{ssdp\_flood} samples hitting 0\% compliance due to snap-length truncation --- explain, don't hide).
+    \item Optional: a qualitative before/after example (one packet trace) if space/figures allow.
+\end{itemize}
+
+% #############################################################################
+\section{Reinforcement Learning Adaptation Results}\label{sec:eval-rl}
+\begin{itemize}
+    \item Placeholder section: results of the adaptive component vs.\ a static baseline --- to be defined once the agent exists. No specific experiments, curves, or numbers committed here.
+\end{itemize}
+
+% #############################################################################
+\section{End-to-End System Evaluation}\label{sec:eval-e2e}
+\begin{itemize}
+    \item Full-pipeline Attack Success Rate before vs.\ after ADEPT, across all 10$\times$3 source/mode combinations --- the headline table.
+    \item Latency/throughput results (RQ4): purification-overhead breakout; whether the system meets a stated real-time budget; resource utilization.
+\end{itemize}
+
+% #############################################################################
+\section{Discussion and Limitations}\label{sec:eval-discussion}
+\begin{itemize}
+    \item Honest accounting: hard reflection floods and \texttt{iat}-only perturbations remain weak points for detection \emph{and} purification (the feature signal is genuinely thin, not a modeling failure).
+    \item Purification measured through ADEPT's own TCN --- flag as a limitation (independent-NIDS validation is future work).
+    \item Any limitations of the adaptive component --- to be filled once it is designed.
+\end{itemize}

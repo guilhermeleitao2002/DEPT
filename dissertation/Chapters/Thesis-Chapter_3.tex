@@ -1,0 +1,48 @@
+% #############################################################################
+% This is Chapter 3
+% !TEX root = ../main.tex
+% #############################################################################
+% Change the Name of the Chapter i the following line
+\fancychapter{Related Work}
+% The following line allows to ref this chapter
+\label{chap:related}
+
+% NOTE: skeleton + bullet-point to-be content only (no prose yet).
+
+% #############################################################################
+\section{Adversarial Attacks against ML-based NIDS}\label{sec:rel-attacks}
+\begin{itemize}
+    \item Feature-space attacks (gradient-based: FGSM/PGD); the Tiki-Taka result (35.7\% evasion against SOTA DL NIDS) as the ``why CNN-only is risky'' data point.
+    \item Traffic-space / realizable attacks: GPMT, PANTS (SMT-solver realizability), DeepRed (GAN C2 traffic), and \textbf{TANTGen} (direct sibling --- Transformer, black-box, protocol-compliant; treated in depth, as it is this thesis's actual attacker).
+\end{itemize}
+
+% #############################################################################
+\section{Training-time Defenses}\label{sec:rel-training-time}
+\begin{itemize}
+    \item Statistical sanitization / poisoning defense (Antidote; bagging as a form of certified robustness).
+    \item Federated/split-learning defenses (FedTGE, AlignIns, CrowdGuard) --- brief, lower relevance.
+    \item Backdoor unlearning (SEAM, BayBFed, PBP) --- brief.
+    \item Realizable adversarial training (PANTS, DeepRed) --- the IFM-aware training line ADEPT's dataset construction follows in spirit (training on realizable adversarials, not synthetic feature perturbations).
+\end{itemize}
+
+% #############################################################################
+\section{Inference-time / Purification Defenses}\label{sec:rel-inference-time}
+\begin{itemize}
+    \item Certified robustness (CertTA randomized smoothing; LipsLev edit-distance Lipschitz bounds).
+    \item Generative/reconstruction defenses: Defense-GAN (origin of ``project onto the benign manifold''), AdvPurRec (diffusion), GTAE-IDS (Transformer autoencoder), DiffuseDef (latent diffusion), CausalDiff, ADBM --- position ADEPT's reconstructor against each (causal decoder-only, residual/$\Delta\!\approx\!0$-by-default, \emph{not} diffusion-based --- a deliberate latency/simplicity trade-off).
+    \item Constraint-based detection (NIDS-CBAD) as a lightweight alternative ADEPT does not adopt, and why.
+\end{itemize}
+
+% #############################################################################
+\section{Reinforcement Learning for Adaptive Defense}\label{sec:rel-rl}
+\begin{itemize}
+    \item Survey prior RL-for-defense work at a high level (e.g.\ ARCS, PRO, Slot, CAMP) --- literature only, no claims about ADEPT's own mechanism.
+    \item Identified gap: no prior framework couples generative \emph{purification} with \emph{RL-driven continuous adaptation} in one closed loop --- ADEPT positions itself in that gap.
+\end{itemize}
+
+% #############################################################################
+\section{Positioning of ADEPT and Gap Analysis}\label{sec:rel-positioning}
+\begin{itemize}
+    \item Comparison table of surveyed defenses (phase, scope, techniques) with ADEPT's actual measured row (not aspirational).
+    \item Of the surveyed works, none combine (a) realizable black-box training data, (b) heterogeneous-architecture ensembling for transferability resistance, (c) generative purification, and (d) online RL adaptation --- ADEPT's contribution is the combination, evaluated end-to-end on a 10-source corpus rather than a single dataset.
+\end{itemize}

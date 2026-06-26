@@ -1,0 +1,70 @@
+% #############################################################################
+% This is Chapter 2
+% !TEX root = ../main.tex
+% #############################################################################
+% Change the Name of the Chapter i the following line
+\fancychapter{Background}
+% The following line allows to ref this chapter
+\label{chap:back}
+
+% NOTE: skeleton + bullet-point to-be content only (no prose yet).
+
+% #############################################################################
+\section{Machine Learning for NIDS}\label{sec:bg-ml-nids}
+\subsection{Learning Paradigms}\label{subsec:bg-paradigms}
+\begin{itemize}
+    \item Supervised (RF/TCN/meta-learner case), unsupervised (Kitsune autoencoders), semi-supervised, reinforcement learning --- when each is appropriate; ADEPT uses three of the four.
+\end{itemize}
+\subsection{Feature Engineering and Representation}\label{subsec:bg-features}
+\begin{itemize}
+    \item Static vs.\ dynamic features; packet- vs.\ flow-level granularity (traffic-space vs.\ feature-space).
+    \item nPrint bit-level encoding --- why bit-level beats hand-crafted headers for cross-protocol generality; identity-field masking (src/dst IP, ports, IP~ID) to prevent overfitting to flow identity instead of behavior.
+    \item Multi-rate aggregation: per-packet sequence (TCN) vs.\ prefix-checkpoint statistics at packet 2/10/20/\dots\ (RF), motivated by PortScan's $\sim$2-packet average flow length.
+\end{itemize}
+\subsection{Model Architectures Relevant to ADEPT}\label{subsec:bg-architectures}
+\begin{itemize}
+    \item Random Forests: bagging, discrete non-differentiable boundaries.
+    \item 1D-CNN / Temporal Convolutional Networks: causal dilated convolutions; receptive-field math (29 packets for 3 blocks at dilation $\{2,4,8\}$).
+    \item Transformers: self-attention for sequence modeling; decoder-only vs.\ encoder-only trade-offs; KV-caching for streaming inference latency.
+\end{itemize}
+
+% #############################################################################
+\section{Adversarial Machine Learning}\label{sec:bg-aml}
+\subsection{Threat Taxonomy}\label{subsec:bg-threat-taxonomy}
+\begin{itemize}
+    \item Attacker knowledge: white-/gray-/black-box. Attacker goal: poisoning vs.\ evasion.
+    \item The Inverse Feature Mapping (IFM) problem --- why network AML is harder than image AML.
+\end{itemize}
+\subsection{Defense Paradigms}\label{subsec:bg-defense-paradigms}
+\begin{itemize}
+    \item Adversarial training, input transformation/purification, defensive distillation, certified robustness (randomized smoothing, Lipschitz bounds) --- strengths/limits of each for traffic data.
+\end{itemize}
+\subsection{Realizability and Protocol Constraints}\label{subsec:bg-realizability}
+\begin{itemize}
+    \item Why a ``valid feature vector'' $\neq$ a ``valid packet''; checksum/flag/length consistency.
+    \item The realization step (feature-space $\rightarrow$ traffic-space) as a first-class design concern, not an afterthought.
+\end{itemize}
+
+% #############################################################################
+\section{Ensemble Learning for Robustness}\label{sec:bg-ensembles}
+\subsection{Bagging, Boosting, Stacking}\label{subsec:bg-ensemble-types}
+\begin{itemize}
+    \item Mechanics of each; why stacking with an attention meta-learner suits heterogeneous base learners better than averaging/voting.
+\end{itemize}
+\subsection{Gradient Masking and Transferability}\label{subsec:bg-gradient-masking}
+\begin{itemize}
+    \item Argument for why a non-differentiable RF degrades the transferability of a white-box-crafted PGD/FGSM perturbation optimized against a differentiable model.
+\end{itemize}
+
+% #############################################################################
+\section{Reinforcement Learning Fundamentals}\label{sec:bg-rl}
+\begin{itemize}
+    \item Generic RL primer at the level needed to motivate an adaptive defense: agent/environment, state/action/reward, policy --- kept general, no ADEPT-specific instantiation here.
+    \item Concept of RL for adaptive/online defense (literature surveyed in \Cref{chap:related}); no commitment to a specific algorithm or formulation.
+\end{itemize}
+
+% #############################################################################
+\section{Summary}\label{sec:bg-summary}
+\begin{itemize}
+    \item Bridge: representation, ensembling, purification, and RL are the four pillars composed in ADEPT (\Cref{chap:solution}).
+\end{itemize}

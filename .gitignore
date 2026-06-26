@@ -9,7 +9,6 @@ __pycache__/
 *.joblib
 *.npz
 .ignore
-*.tex
 venv/*
 
 # Meta-learner per-split token caches (derived from rf.joblib + tcn.pt

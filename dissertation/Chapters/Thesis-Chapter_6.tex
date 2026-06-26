@@ -1,0 +1,40 @@
+% #############################################################################
+% This is Chapter 6
+% !TEX root = ../main.tex
+% #############################################################################
+% Change the Name of the Chapter i the following line
+\fancychapter{Conclusion}
+% The following line allows to ref this chapter
+\label{chap:conclusion}
+
+% NOTE: skeleton + bullet-point to-be content only (no prose yet).
+
+% #############################################################################
+\section{Summary of Contributions}\label{sec:concl-summary}
+\begin{itemize}
+    \item Recap the five contributions from \Cref{sec:intro-contributions} in completed tense, each cross-referencing the chapter/table that substantiates it.
+\end{itemize}
+
+% #############################################################################
+\section{Answers to Research Questions}\label{sec:concl-rqs}
+\begin{itemize}
+    \item One paragraph per RQ (\Cref{sec:eval-rqs}), each closing with the evidence (table/figure ref) that answers it.
+\end{itemize}
+
+% #############################################################################
+\section{System Limitations}\label{sec:concl-limitations}
+\begin{itemize}
+    \item Hard reflection-flood sources and IAT-only perturbations (real, measured limitation).
+    \item Purification evaluated through an own-TCN oracle, not an independent NIDS.
+    \item Any limitation specific to the adaptive component --- to be filled in later.
+    \item Feature-space scope: nPrint + IPAT + Direction; no payload/DPI features (relevant given the TLS/QUIC encryption trend).
+\end{itemize}
+
+% #############################################################################
+\section{Future Work}\label{sec:concl-future}
+\begin{itemize}
+    \item Independent-NIDS purification validation (closing the own-oracle limitation).
+    \item Maturing/extending the adaptive (RL) component.
+    \item Feature-space expansion / payload-aware representations for encrypted-traffic robustness.
+    \item Real-time deployment study at line rate (100\,Gbps+) beyond the simulated latency benchmark.
+\end{itemize}
