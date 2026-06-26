@@ -16,6 +16,5 @@ venv/*
 # at runtime; rebuilt automatically when either base learner changes).
 data/models/metalearner/cache/
 
-# Dissertation papers
-dissertation/*
+# Dissertation paper
 dissertacao_ines_pissarra.pdf
