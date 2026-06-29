@@ -10,6 +10,7 @@ __pycache__/
 .ignore
 venv/*
 logs/*
+.vscode/*
 
 # Meta-learner per-split token caches (derived from rf.joblib + tcn.pt
 # at runtime; rebuilt automatically when either base learner changes).
