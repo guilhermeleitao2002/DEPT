@@ -87,32 +87,63 @@ def _canonical_key(pkt) -> str:
     return f"{ip_lo}|{ip_hi}|{p_lo}|{p_hi}|{proto}"
 
 
+# Application-layer text protocols whose grammar a raw byte resize corrupts.
+_L7_TEXT_PORTS = (1900,)  # SSDP (M-SEARCH/NOTIFY over UDP)
+_L7_TEXT_PREFIXES = (b"M-SEARCH", b"NOTIFY ", b"HTTP/", b"GET ", b"POST ",
+                     b"HEAD ", b"OPTIONS ", b"PUT ", b"DELETE ")
+
+
+def _is_l7_text(l4, app: bytes) -> bool:
+    """True if the payload is an application-layer text protocol (SSDP/HTTP).
+
+    Such payloads (e.g. ``M-SEARCH * HTTP/1.1``) carry a parsed grammar; a raw
+    trim/zero-pad keeps IP/UDP lengths and checksums valid but makes tshark's
+    L7 dissector throw ``_ws.malformed`` — so a byte-overlay resize cannot
+    faithfully realize them. Detected by SSDP port or an HTTP-style start line.
+    """
+    try:
+        ports = (int(getattr(l4, "dport", -1)), int(getattr(l4, "sport", -1)))
+    except Exception:
+        ports = ()
+    if any(p in _L7_TEXT_PORTS for p in ports):
+        return True
+    return app[:10].upper().startswith(_L7_TEXT_PREFIXES)
+
+
 def _apply_size(pkt, target_total: int):
     """Trim/pad application payload so the IPv4 total length equals target.
 
-    Returns ``(pkt, edited)`` — ``edited`` is ``True`` only when the payload
-    length was actually changed (so callers can tell a real size edit from a
-    no-op, e.g. ``iat``-mode flows where the target equals the original).
+    Returns ``(pkt, edited, unrealizable)``:
+
+    * ``edited``        — ``True`` only when the payload length actually changed
+      (so callers distinguish a real size edit from a no-op, e.g. ``iat`` flows).
+    * ``unrealizable``  — ``True`` when an edit was required but the payload is an
+      application-layer text protocol (:func:`_is_l7_text`); a raw byte resize
+      would corrupt its grammar, so the packet can't be faithfully realized and
+      should be excluded from the wire-validity pool rather than scored as a
+      purifier failure. (The rebuild is skipped — the packet will be dropped.)
     """
     from scapy.all import IP, TCP, UDP, Raw
 
     if not pkt.haslayer(IP):
-        return pkt, False
+        return pkt, False, False
     ip = pkt[IP]
     ihl = (int(ip.ihl) * 4) if ip.ihl else 20
     if not (ihl <= target_total <= 65535):
-        return pkt, False
+        return pkt, False, False
     if pkt.haslayer(TCP):
         l4 = pkt[TCP]
     elif pkt.haslayer(UDP):
         l4 = pkt[UDP]
     else:
-        return pkt, False
+        return pkt, False, False
     app = bytes(l4.payload)
     header_total = len(bytes(ip)) - len(app)
     target_app = target_total - header_total
     if target_app < 0 or target_app == len(app):
-        return pkt, False
+        return pkt, False, False
+    if _is_l7_text(l4, app):
+        return pkt, True, True
     new_app = (app[:target_app] if target_app < len(app)
                else app + b"\x00" * (target_app - len(app)))
     l4.remove_payload()
@@ -130,7 +161,7 @@ def _apply_size(pkt, target_total: int):
             del pkt[UDP].len
         except Exception:
             pass
-    return pkt.__class__(bytes(pkt)), True
+    return pkt.__class__(bytes(pkt)), True, False
 
 
 def realize_source(
@@ -160,7 +191,7 @@ def realize_source(
     stats = {"target_flows": len(flow_recon), "realized_flows": 0,
              "miss_len": 0, "unmatched": 0, "packets": 0,
              "pcap_packets_read": 0, "pcap_packets_kept": 0, "capped": False,
-             "unrealizable_truncated": 0}
+             "unrealizable_l7": 0}
     if not Path(adv_pcap).exists():
         stats["error"] = f"pcap not found: {adv_pcap}"
         return [], stats
@@ -169,7 +200,7 @@ def realize_source(
     # reconstructed flow (filter-on-read), so memory is bounded by the realized
     # flows rather than the whole capture.
     target_keys = set(flow_recon)
-    rows: list[tuple[float, str, object, bool]] = []
+    rows: list[tuple[float, str, object]] = []
     n_scanned = 0
     try:
         with PcapReader(str(adv_pcap)) as reader:
@@ -177,15 +208,7 @@ def realize_source(
                 n_scanned += 1
                 key = _canonical_key(pkt)
                 if key in target_keys:
-                    # Capture-truncated? The pcap record's original (wire)
-                    # length exceeds the captured bytes (snaplen). Such a
-                    # packet's true payload was never stored, so a size edit
-                    # can't be faithfully realized.
-                    orig = getattr(pkt, "original", None)
-                    caplen = len(orig) if orig is not None else len(pkt)
-                    wirelen = getattr(pkt, "wirelen", None)
-                    truncated = bool(wirelen is not None and wirelen > caplen)
-                    rows.append((float(pkt.time), key, pkt, truncated))
+                    rows.append((float(pkt.time), key, pkt))
                 if 0 < max_pcap_packets <= n_scanned:
                     stats["capped"] = True
                     break
@@ -218,16 +241,14 @@ def realize_source(
         new_ts = t0 + np.cumsum(np.concatenate([[0.0], ipat[1:]]))
         for i, pos in enumerate(positions):
             pkt = rows[pos][2]
-            truncated = rows[pos][3]
             try:
-                pkt, edited = _apply_size(pkt, int(total_len[i]))
-                # A capture-truncated packet whose size we just edited cannot
-                # be faithfully realized — its real payload bytes were never
-                # stored (snaplen). Drop it from the wire-validity pool and
-                # count it separately, rather than letting it score as a
-                # purifier failure. (iat-mode no-ops keep edited=False.)
-                if edited and truncated:
-                    stats["unrealizable_truncated"] += 1
+                pkt, edited, unrealizable = _apply_size(pkt, int(total_len[i]))
+                # A size edit on an application-layer text protocol (SSDP/HTTP)
+                # can't be faithfully realized by raw byte-overlay — drop it
+                # from the wire-validity pool and count it separately, rather
+                # than scoring it as a purifier failure. (iat no-ops: edited=False.)
+                if edited and unrealizable:
+                    stats["unrealizable_l7"] += 1
                     continue
                 pkt.time = float(new_ts[i])
             except Exception:

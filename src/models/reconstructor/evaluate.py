@@ -302,7 +302,7 @@ def _run_realization(config, realize_pool, pairs, output_dir, realize_cfg, metri
         return {"skipped": "tshark not found on PATH"}
 
     summary = {"per_source": {}, "tshark_n_packets": 0, "tshark_n_bad": 0,
-               "unrealizable_truncated": 0}
+               "unrealizable_l7": 0}
     for gname, flow_recon in sorted(realize_pool.items()):
         # gname = "<base>_adv_<mode>"; locate the original adversarial PCAP.
         base, mode = gname.rsplit("_adv_", 1)
@@ -311,14 +311,15 @@ def _run_realization(config, realize_pool, pairs, output_dir, realize_cfg, metri
         packets, rstats = rz.realize_source(
             adv_pcap, flow_recon, mean_std[0], mean_std[1], max_pcap_packets=max_pcap)
         entry = {"realize": rstats}
-        # Capture-truncated, size-edited packets are excluded from the realized
-        # PCAP (unrealizable by construction); record the count alongside the
-        # compliance rate so it reads as "N excluded", not "N failures".
-        trunc = int(rstats.get("unrealizable_truncated", 0))
-        summary["unrealizable_truncated"] += trunc
+        # Size-edited application-layer text packets (SSDP/HTTP) are excluded
+        # from the realized PCAP (can't be faithfully resized by byte-overlay);
+        # record the count alongside the rate so it reads "N excluded", not
+        # "N failures".
+        n_l7 = int(rstats.get("unrealizable_l7", 0))
+        summary["unrealizable_l7"] += n_l7
         if gname in metrics["per_source"]:
             metrics["per_source"][gname]["protocol_compliance"][
-                "n_unrealizable_truncated"] = trunc
+                "n_unrealizable_l7"] = n_l7
         if packets:
             out_pcap = realized_dir / f"{gname}.pcap"
             if rz.write_pcap(packets, out_pcap):
@@ -340,8 +341,8 @@ def _run_realization(config, realize_pool, pairs, output_dir, realize_cfg, metri
         metrics["overall"]["protocol_compliance"]["tshark_rate"] = \
             summary["tshark_compliance_rate"]
     if metrics["overall"]["protocol_compliance"] is not None:
-        metrics["overall"]["protocol_compliance"]["n_unrealizable_truncated"] = \
-            summary["unrealizable_truncated"]
+        metrics["overall"]["protocol_compliance"]["n_unrealizable_l7"] = \
+            summary["unrealizable_l7"]
     return summary
 
 
