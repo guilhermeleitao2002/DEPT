@@ -88,26 +88,31 @@ def _canonical_key(pkt) -> str:
 
 
 def _apply_size(pkt, target_total: int):
-    """Trim/pad application payload so the IPv4 total length equals target."""
+    """Trim/pad application payload so the IPv4 total length equals target.
+
+    Returns ``(pkt, edited)`` — ``edited`` is ``True`` only when the payload
+    length was actually changed (so callers can tell a real size edit from a
+    no-op, e.g. ``iat``-mode flows where the target equals the original).
+    """
     from scapy.all import IP, TCP, UDP, Raw
 
     if not pkt.haslayer(IP):
-        return pkt
+        return pkt, False
     ip = pkt[IP]
     ihl = (int(ip.ihl) * 4) if ip.ihl else 20
     if not (ihl <= target_total <= 65535):
-        return pkt
+        return pkt, False
     if pkt.haslayer(TCP):
         l4 = pkt[TCP]
     elif pkt.haslayer(UDP):
         l4 = pkt[UDP]
     else:
-        return pkt
+        return pkt, False
     app = bytes(l4.payload)
     header_total = len(bytes(ip)) - len(app)
     target_app = target_total - header_total
     if target_app < 0 or target_app == len(app):
-        return pkt
+        return pkt, False
     new_app = (app[:target_app] if target_app < len(app)
                else app + b"\x00" * (target_app - len(app)))
     l4.remove_payload()
@@ -125,7 +130,7 @@ def _apply_size(pkt, target_total: int):
             del pkt[UDP].len
         except Exception:
             pass
-    return pkt.__class__(bytes(pkt))
+    return pkt.__class__(bytes(pkt)), True
 
 
 def realize_source(
@@ -154,7 +159,8 @@ def realize_source(
 
     stats = {"target_flows": len(flow_recon), "realized_flows": 0,
              "miss_len": 0, "unmatched": 0, "packets": 0,
-             "pcap_packets_read": 0, "pcap_packets_kept": 0, "capped": False}
+             "pcap_packets_read": 0, "pcap_packets_kept": 0, "capped": False,
+             "unrealizable_truncated": 0}
     if not Path(adv_pcap).exists():
         stats["error"] = f"pcap not found: {adv_pcap}"
         return [], stats
@@ -163,7 +169,7 @@ def realize_source(
     # reconstructed flow (filter-on-read), so memory is bounded by the realized
     # flows rather than the whole capture.
     target_keys = set(flow_recon)
-    rows: list[tuple[float, str, object]] = []
+    rows: list[tuple[float, str, object, bool]] = []
     n_scanned = 0
     try:
         with PcapReader(str(adv_pcap)) as reader:
@@ -171,7 +177,15 @@ def realize_source(
                 n_scanned += 1
                 key = _canonical_key(pkt)
                 if key in target_keys:
-                    rows.append((float(pkt.time), key, pkt))
+                    # Capture-truncated? The pcap record's original (wire)
+                    # length exceeds the captured bytes (snaplen). Such a
+                    # packet's true payload was never stored, so a size edit
+                    # can't be faithfully realized.
+                    orig = getattr(pkt, "original", None)
+                    caplen = len(orig) if orig is not None else len(pkt)
+                    wirelen = getattr(pkt, "wirelen", None)
+                    truncated = bool(wirelen is not None and wirelen > caplen)
+                    rows.append((float(pkt.time), key, pkt, truncated))
                 if 0 < max_pcap_packets <= n_scanned:
                     stats["capped"] = True
                     break
@@ -204,8 +218,17 @@ def realize_source(
         new_ts = t0 + np.cumsum(np.concatenate([[0.0], ipat[1:]]))
         for i, pos in enumerate(positions):
             pkt = rows[pos][2]
+            truncated = rows[pos][3]
             try:
-                pkt = _apply_size(pkt, int(total_len[i]))
+                pkt, edited = _apply_size(pkt, int(total_len[i]))
+                # A capture-truncated packet whose size we just edited cannot
+                # be faithfully realized — its real payload bytes were never
+                # stored (snaplen). Drop it from the wire-validity pool and
+                # count it separately, rather than letting it score as a
+                # purifier failure. (iat-mode no-ops keep edited=False.)
+                if edited and truncated:
+                    stats["unrealizable_truncated"] += 1
+                    continue
                 pkt.time = float(new_ts[i])
             except Exception:
                 continue
