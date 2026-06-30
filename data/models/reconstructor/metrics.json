@@ -19,8 +19,8 @@
       "detection_rate_recon": 0.3501154377911113
     },
     "protocol_compliance": {
-      "tshark_rate": 0.947291377290243,
-      "n_unrealizable_truncated": 0
+      "tshark_rate": 0.997569059114527,
+      "n_unrealizable_l7": 85379
     }
   },
   "per_source": {
@@ -44,7 +44,7 @@
         "detection_rate_recon": 0.09090909090909091
       },
       "protocol_compliance": {
-        "n_unrealizable_truncated": 0,
+        "n_unrealizable_l7": 0,
         "tshark_rate": 1.0
       }
     },
@@ -68,7 +68,7 @@
         "detection_rate_recon": 0.0
       },
       "protocol_compliance": {
-        "n_unrealizable_truncated": 0,
+        "n_unrealizable_l7": 0,
         "tshark_rate": 1.0
       }
     },
@@ -92,7 +92,7 @@
         "detection_rate_recon": 0.0
       },
       "protocol_compliance": {
-        "n_unrealizable_truncated": 0,
+        "n_unrealizable_l7": 0,
         "tshark_rate": 1.0
       }
     },
@@ -116,8 +116,8 @@
         "detection_rate_recon": 0.006622516556291391
       },
       "protocol_compliance": {
-        "n_unrealizable_truncated": 0,
-        "tshark_rate": 0.9528936742934051
+        "n_unrealizable_l7": 161,
+        "tshark_rate": 0.9464150943396227
       }
     },
     "ddos_adv_iat": {
@@ -140,8 +140,8 @@
         "detection_rate_recon": 0.0
       },
       "protocol_compliance": {
-        "n_unrealizable_truncated": 0,
-        "tshark_rate": 0.9584450402144772
+        "n_unrealizable_l7": 136,
+        "tshark_rate": 0.9542772861356932
       }
     },
     "ddos_adv_size": {
@@ -164,8 +164,8 @@
         "detection_rate_recon": 0.052980132450331126
       },
       "protocol_compliance": {
-        "n_unrealizable_truncated": 0,
-        "tshark_rate": 0.9433701657458563
+        "n_unrealizable_l7": 155,
+        "tshark_rate": 0.94276875483372
       }
     },
     "dns_ddos_adv_both": {
@@ -188,7 +188,7 @@
         "detection_rate_recon": 0.1626746506986028
       },
       "protocol_compliance": {
-        "n_unrealizable_truncated": 0,
+        "n_unrealizable_l7": 0,
         "tshark_rate": 0.9984717127931533
       }
     },
@@ -212,7 +212,7 @@
         "detection_rate_recon": 0.16367265469061876
       },
       "protocol_compliance": {
-        "n_unrealizable_truncated": 0,
+        "n_unrealizable_l7": 0,
         "tshark_rate": 0.99599967344273
       }
     },
@@ -236,8 +236,8 @@
         "detection_rate_recon": 0.16167664670658682
       },
       "protocol_compliance": {
-        "n_unrealizable_truncated": 0,
-        "tshark_rate": 0.9963145471862189
+        "n_unrealizable_l7": 8,
+        "tshark_rate": 0.9963419516033295
       }
     },
     "ldap_ddos_adv_both": {
@@ -260,7 +260,7 @@
         "detection_rate_recon": 0.9969475338491296
       },
       "protocol_compliance": {
-        "n_unrealizable_truncated": 0,
+        "n_unrealizable_l7": 0,
         "tshark_rate": 1.0
       }
     },
@@ -284,7 +284,7 @@
         "detection_rate_recon": 0.996161750483559
       },
       "protocol_compliance": {
-        "n_unrealizable_truncated": 0,
+        "n_unrealizable_l7": 0,
         "tshark_rate": 1.0
       }
     },
@@ -308,7 +308,7 @@
         "detection_rate_recon": 0.9963128626692457
       },
       "protocol_compliance": {
-        "n_unrealizable_truncated": 0,
+        "n_unrealizable_l7": 0,
         "tshark_rate": 1.0
       }
     },
@@ -332,7 +332,7 @@
         "detection_rate_recon": 0.00398406374501992
       },
       "protocol_compliance": {
-        "n_unrealizable_truncated": 0,
+        "n_unrealizable_l7": 0,
         "tshark_rate": 0.9854096520763187
       }
     },
@@ -356,7 +356,7 @@
         "detection_rate_recon": 0.0
       },
       "protocol_compliance": {
-        "n_unrealizable_truncated": 0,
+        "n_unrealizable_l7": 0,
         "tshark_rate": 0.9818799546998868
       }
     },
@@ -380,7 +380,7 @@
         "detection_rate_recon": 0.0
       },
       "protocol_compliance": {
-        "n_unrealizable_truncated": 0,
+        "n_unrealizable_l7": 0,
         "tshark_rate": 0.9884925201380897
       }
     },
@@ -404,8 +404,8 @@
         "detection_rate_recon": 0.0009564801530368245
       },
       "protocol_compliance": {
-        "n_unrealizable_truncated": 0,
-        "tshark_rate": 0.9983020110980555
+        "n_unrealizable_l7": 2,
+        "tshark_rate": 0.9983019880324117
       }
     },
     "ntp_ddos_adv_iat": {
@@ -428,7 +428,7 @@
         "detection_rate_recon": 0.00047824007651841227
       },
       "protocol_compliance": {
-        "n_unrealizable_truncated": 0,
+        "n_unrealizable_l7": 0,
         "tshark_rate": 0.9964235243689262
       }
     },
@@ -452,7 +452,7 @@
         "detection_rate_recon": 0.0009564801530368245
       },
       "protocol_compliance": {
-        "n_unrealizable_truncated": 0,
+        "n_unrealizable_l7": 0,
         "tshark_rate": 0.9928895209314728
       }
     },
@@ -476,7 +476,7 @@
         "detection_rate_recon": 0.0
       },
       "protocol_compliance": {
-        "n_unrealizable_truncated": 0,
+        "n_unrealizable_l7": 8,
         "tshark_rate": 1.0
       }
     },
@@ -500,7 +500,7 @@
         "detection_rate_recon": 0.0
       },
       "protocol_compliance": {
-        "n_unrealizable_truncated": 0,
+        "n_unrealizable_l7": 8,
         "tshark_rate": 1.0
       }
     },
@@ -524,8 +524,8 @@
         "detection_rate_recon": 0.0
       },
       "protocol_compliance": {
-        "n_unrealizable_truncated": 0,
-        "tshark_rate": 0.999791013584117
+        "n_unrealizable_l7": 8,
+        "tshark_rate": 0.9997906635963995
       }
     },
     "ssdp_ddos_adv_both": {
@@ -548,7 +548,7 @@
         "detection_rate_recon": 0.00027212230660762435
       },
       "protocol_compliance": {
-        "n_unrealizable_truncated": 0,
+        "n_unrealizable_l7": 0,
         "tshark_rate": 0.9991358910956901
       }
     },
@@ -572,7 +572,7 @@
         "detection_rate_recon": 0.00017316874056848823
       },
       "protocol_compliance": {
-        "n_unrealizable_truncated": 0,
+        "n_unrealizable_l7": 0,
         "tshark_rate": 0.9990897895807678
       }
     },
@@ -596,7 +596,7 @@
         "detection_rate_recon": 0.0002968606981174084
       },
       "protocol_compliance": {
-        "n_unrealizable_truncated": 0,
+        "n_unrealizable_l7": 0,
         "tshark_rate": 0.9987110319717224
       }
     },
@@ -620,8 +620,8 @@
         "detection_rate_recon": 0.0
       },
       "protocol_compliance": {
-        "n_unrealizable_truncated": 0,
-        "tshark_rate": 0.0008751596575050853
+        "n_unrealizable_l7": 42267,
+        "tshark_rate": 1.0
       }
     },
     "ssdp_flood_adv_iat": {
@@ -644,7 +644,7 @@
         "detection_rate_recon": 0.0036992710260036993
       },
       "protocol_compliance": {
-        "n_unrealizable_truncated": 0,
+        "n_unrealizable_l7": 0,
         "tshark_rate": 0.9996004512550531
       }
     },
@@ -668,8 +668,8 @@
         "detection_rate_recon": 0.0
       },
       "protocol_compliance": {
-        "n_unrealizable_truncated": 0,
-        "tshark_rate": 0.00042215863783479524
+        "n_unrealizable_l7": 42626,
+        "tshark_rate": 1.0
       }
     },
     "syn_ddos_adv_both": {
@@ -691,7 +691,7 @@
         "detection_rate_recon": 0.14988835132117603
       },
       "protocol_compliance": {
-        "n_unrealizable_truncated": 0,
+        "n_unrealizable_l7": 0,
         "tshark_rate": 1.0
       }
     },
@@ -715,7 +715,7 @@
         "detection_rate_recon": 0.15109787867510235
       },
       "protocol_compliance": {
-        "n_unrealizable_truncated": 0,
+        "n_unrealizable_l7": 0,
         "tshark_rate": 1.0
       }
     },
@@ -739,7 +739,7 @@
         "detection_rate_recon": 0.1502605135839226
       },
       "protocol_compliance": {
-        "n_unrealizable_truncated": 0,
+        "n_unrealizable_l7": 0,
         "tshark_rate": 1.0
       }
     }
@@ -759,7 +759,7 @@
           "pcap_packets_read": 2500,
           "pcap_packets_kept": 317,
           "capped": false,
-          "unrealizable_truncated": 0
+          "unrealizable_l7": 0
         },
         "tshark": {
           "n_packets": 317,
@@ -777,7 +777,7 @@
           "pcap_packets_read": 2500,
           "pcap_packets_kept": 296,
           "capped": false,
-          "unrealizable_truncated": 0
+          "unrealizable_l7": 0
         },
         "tshark": {
           "n_packets": 296,
@@ -795,7 +795,7 @@
           "pcap_packets_read": 2500,
           "pcap_packets_kept": 277,
           "capped": false,
-          "unrealizable_truncated": 0
+          "unrealizable_l7": 0
         },
         "tshark": {
           "n_packets": 277,
@@ -809,16 +809,16 @@
           "realized_flows": 151,
           "miss_len": 0,
           "unmatched": 0,
-          "packets": 1486,
+          "packets": 1325,
           "pcap_packets_read": 9741,
           "pcap_packets_kept": 1486,
           "capped": false,
-          "unrealizable_truncated": 0
+          "unrealizable_l7": 161
         },
         "tshark": {
-          "n_packets": 1486,
-          "n_bad": 70,
-          "compliance_rate": 0.9528936742934051
+          "n_packets": 1325,
+          "n_bad": 71,
+          "compliance_rate": 0.9464150943396227
         }
       },
       "ddos_adv_iat": {
@@ -827,16 +827,16 @@
           "realized_flows": 151,
           "miss_len": 0,
           "unmatched": 0,
-          "packets": 1492,
+          "packets": 1356,
           "pcap_packets_read": 9741,
           "pcap_packets_kept": 1492,
           "capped": false,
-          "unrealizable_truncated": 0
+          "unrealizable_l7": 136
         },
         "tshark": {
-          "n_packets": 1492,
+          "n_packets": 1356,
           "n_bad": 62,
-          "compliance_rate": 0.9584450402144772
+          "compliance_rate": 0.9542772861356932
         }
       },
       "ddos_adv_size": {
@@ -845,16 +845,16 @@
           "realized_flows": 151,
           "miss_len": 0,
           "unmatched": 0,
-          "packets": 1448,
+          "packets": 1293,
           "pcap_packets_read": 9741,
           "pcap_packets_kept": 1448,
           "capped": false,
-          "unrealizable_truncated": 0
+          "unrealizable_l7": 155
         },
         "tshark": {
-          "n_packets": 1448,
-          "n_bad": 82,
-          "compliance_rate": 0.9433701657458563
+          "n_packets": 1293,
+          "n_bad": 74,
+          "compliance_rate": 0.94276875483372
         }
       },
       "dns_ddos_adv_both": {
@@ -867,7 +867,7 @@
           "pcap_packets_read": 1000000,
           "pcap_packets_kept": 145666,
           "capped": false,
-          "unrealizable_truncated": 0
+          "unrealizable_l7": 0
         },
         "tshark": {
           "n_packets": 143952,
@@ -885,7 +885,7 @@
           "pcap_packets_read": 1000000,
           "pcap_packets_kept": 148550,
           "capped": false,
-          "unrealizable_truncated": 0
+          "unrealizable_l7": 0
         },
         "tshark": {
           "n_packets": 146988,
@@ -899,16 +899,16 @@
           "realized_flows": 998,
           "miss_len": 4,
           "unmatched": 0,
-          "packets": 144894,
+          "packets": 144886,
           "pcap_packets_read": 1000000,
           "pcap_packets_kept": 146398,
           "capped": false,
-          "unrealizable_truncated": 0
+          "unrealizable_l7": 8
         },
         "tshark": {
-          "n_packets": 144894,
-          "n_bad": 534,
-          "compliance_rate": 0.9963145471862189
+          "n_packets": 144886,
+          "n_bad": 530,
+          "compliance_rate": 0.9963419516033295
         }
       },
       "ldap_ddos_adv_both": {
@@ -921,7 +921,7 @@
           "pcap_packets_read": 1000000,
           "pcap_packets_kept": 66454,
           "capped": false,
-          "unrealizable_truncated": 0
+          "unrealizable_l7": 0
         },
         "tshark": {
           "n_packets": 66348,
@@ -939,7 +939,7 @@
           "pcap_packets_read": 1000000,
           "pcap_packets_kept": 66562,
           "capped": false,
-          "unrealizable_truncated": 0
+          "unrealizable_l7": 0
         },
         "tshark": {
           "n_packets": 66434,
@@ -957,7 +957,7 @@
           "pcap_packets_read": 1000000,
           "pcap_packets_kept": 66438,
           "capped": false,
-          "unrealizable_truncated": 0
+          "unrealizable_l7": 0
         },
         "tshark": {
           "n_packets": 66316,
@@ -975,7 +975,7 @@
           "pcap_packets_read": 192755,
           "pcap_packets_kept": 5927,
           "capped": false,
-          "unrealizable_truncated": 0
+          "unrealizable_l7": 0
         },
         "tshark": {
           "n_packets": 891,
@@ -993,7 +993,7 @@
           "pcap_packets_read": 192755,
           "pcap_packets_kept": 1195,
           "capped": false,
-          "unrealizable_truncated": 0
+          "unrealizable_l7": 0
         },
         "tshark": {
           "n_packets": 883,
@@ -1011,7 +1011,7 @@
           "pcap_packets_read": 192755,
           "pcap_packets_kept": 3256,
           "capped": false,
-          "unrealizable_truncated": 0
+          "unrealizable_l7": 0
         },
         "tshark": {
           "n_packets": 869,
@@ -1025,16 +1025,16 @@
           "realized_flows": 2088,
           "miss_len": 3,
           "unmatched": 0,
-          "packets": 147233,
+          "packets": 147231,
           "pcap_packets_read": 1000000,
           "pcap_packets_kept": 147757,
           "capped": false,
-          "unrealizable_truncated": 0
+          "unrealizable_l7": 2
         },
         "tshark": {
-          "n_packets": 147233,
+          "n_packets": 147231,
           "n_bad": 250,
-          "compliance_rate": 0.9983020110980555
+          "compliance_rate": 0.9983019880324117
         }
       },
       "ntp_ddos_adv_iat": {
@@ -1047,7 +1047,7 @@
           "pcap_packets_read": 1000000,
           "pcap_packets_kept": 150491,
           "capped": false,
-          "unrealizable_truncated": 0
+          "unrealizable_l7": 0
         },
         "tshark": {
           "n_packets": 149309,
@@ -1065,7 +1065,7 @@
           "pcap_packets_read": 1000000,
           "pcap_packets_kept": 147115,
           "capped": false,
-          "unrealizable_truncated": 0
+          "unrealizable_l7": 0
         },
         "tshark": {
           "n_packets": 146263,
@@ -1079,14 +1079,14 @@
           "realized_flows": 2376,
           "miss_len": 0,
           "unmatched": 0,
-          "packets": 4773,
+          "packets": 4765,
           "pcap_packets_read": 31885,
           "pcap_packets_kept": 4773,
           "capped": false,
-          "unrealizable_truncated": 0
+          "unrealizable_l7": 8
         },
         "tshark": {
-          "n_packets": 4773,
+          "n_packets": 4765,
           "n_bad": 0,
           "compliance_rate": 1.0
         }
@@ -1097,14 +1097,14 @@
           "realized_flows": 2376,
           "miss_len": 0,
           "unmatched": 0,
-          "packets": 4781,
+          "packets": 4773,
           "pcap_packets_read": 31885,
           "pcap_packets_kept": 4781,
           "capped": false,
-          "unrealizable_truncated": 0
+          "unrealizable_l7": 8
         },
         "tshark": {
-          "n_packets": 4781,
+          "n_packets": 4773,
           "n_bad": 0,
           "compliance_rate": 1.0
         }
@@ -1115,16 +1115,16 @@
           "realized_flows": 2376,
           "miss_len": 0,
           "unmatched": 0,
-          "packets": 4785,
+          "packets": 4777,
           "pcap_packets_read": 31885,
           "pcap_packets_kept": 4785,
           "capped": false,
-          "unrealizable_truncated": 0
+          "unrealizable_l7": 8
         },
         "tshark": {
-          "n_packets": 4785,
+          "n_packets": 4777,
           "n_bad": 1,
-          "compliance_rate": 0.999791013584117
+          "compliance_rate": 0.9997906635963995
         }
       },
       "ssdp_ddos_adv_both": {
@@ -1137,7 +1137,7 @@
           "pcap_packets_read": 1000000,
           "pcap_packets_kept": 150548,
           "capped": false,
-          "unrealizable_truncated": 0
+          "unrealizable_l7": 0
         },
         "tshark": {
           "n_packets": 150444,
@@ -1155,7 +1155,7 @@
           "pcap_packets_read": 1000000,
           "pcap_packets_kept": 149524,
           "capped": false,
-          "unrealizable_truncated": 0
+          "unrealizable_l7": 0
         },
         "tshark": {
           "n_packets": 149416,
@@ -1173,7 +1173,7 @@
           "pcap_packets_read": 1000000,
           "pcap_packets_kept": 150614,
           "capped": false,
-          "unrealizable_truncated": 0
+          "unrealizable_l7": 0
         },
         "tshark": {
           "n_packets": 150508,
@@ -1187,16 +1187,16 @@
           "realized_flows": 9191,
           "miss_len": 0,
           "unmatched": 0,
-          "packets": 42278,
+          "packets": 11,
           "pcap_packets_read": 287921,
           "pcap_packets_kept": 42278,
           "capped": false,
-          "unrealizable_truncated": 0
+          "unrealizable_l7": 42267
         },
         "tshark": {
-          "n_packets": 42278,
-          "n_bad": 42241,
-          "compliance_rate": 0.0008751596575050853
+          "n_packets": 11,
+          "n_bad": 0,
+          "compliance_rate": 1.0
         }
       },
       "ssdp_flood_adv_iat": {
@@ -1209,7 +1209,7 @@
           "pcap_packets_read": 287921,
           "pcap_packets_kept": 42548,
           "capped": false,
-          "unrealizable_truncated": 0
+          "unrealizable_l7": 0
         },
         "tshark": {
           "n_packets": 42548,
@@ -1223,16 +1223,16 @@
           "realized_flows": 9191,
           "miss_len": 0,
           "unmatched": 0,
-          "packets": 42638,
+          "packets": 12,
           "pcap_packets_read": 287921,
           "pcap_packets_kept": 42638,
           "capped": false,
-          "unrealizable_truncated": 0
+          "unrealizable_l7": 42626
         },
         "tshark": {
-          "n_packets": 42638,
-          "n_bad": 42620,
-          "compliance_rate": 0.00042215863783479524
+          "n_packets": 12,
+          "n_bad": 0,
+          "compliance_rate": 1.0
         }
       },
       "syn_ddos_adv_both": {
@@ -1245,7 +1245,7 @@
           "pcap_packets_read": 4963410,
           "pcap_packets_kept": 318396,
           "capped": false,
-          "unrealizable_truncated": 0
+          "unrealizable_l7": 0
         },
         "tshark": {
           "n_packets": 2040,
@@ -1263,7 +1263,7 @@
           "pcap_packets_read": 4963410,
           "pcap_packets_kept": 320368,
           "capped": false,
-          "unrealizable_truncated": 0
+          "unrealizable_l7": 0
         },
         "tshark": {
           "n_packets": 1988,
@@ -1281,7 +1281,7 @@
           "pcap_packets_read": 4963410,
           "pcap_packets_kept": 319544,
           "capped": false,
-          "unrealizable_truncated": 0
+          "unrealizable_l7": 0
         },
         "tshark": {
           "n_packets": 2042,
@@ -1290,9 +1290,9 @@
         }
       }
     },
-    "tshark_n_packets": 1683937,
-    "tshark_n_bad": 88758,
-    "unrealizable_truncated": 0,
-    "tshark_compliance_rate": 0.947291377290243
+    "tshark_n_packets": 1598558,
+    "tshark_n_bad": 3886,
+    "unrealizable_l7": 85379,
+    "tshark_compliance_rate": 0.997569059114527
   }
 }
