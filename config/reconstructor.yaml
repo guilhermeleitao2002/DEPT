@@ -91,10 +91,9 @@ training:
 # ---- Traffic-space realization + protocol compliance ----
 # Maps the purified length/timing back onto the original adversarial PCAP packets
 # and validates them with tshark. Best-effort: if the PCAPs or tshark are absent,
-# realization is skipped and the always-on feature-space invariant check still runs.
+# realization (and thus the protocol-compliance check) is skipped.
 realize:
   adversarial_pcap_dir: data/adversarial   # original TANTGen PCAPs (phase 1 output)
-  write_pcap: true                          # write realized purified PCAPs
-  tshark_sample: 300                        # max test flows per source to realize
-  max_pcap_packets: 100000                  # cap packets read per source PCAP (memory/time)
+  write_pcap: true                          # write realized purified PCAPs (every reconstructed flow)
+  max_pcap_packets: 0                        # cap packets *scanned* per source PCAP (time guard); 0 = unlimited (full coverage)
   roundtrip: false                          # (reserved) re-tensorise realized PCAP → TCN

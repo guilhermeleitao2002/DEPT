@@ -10,10 +10,9 @@ Three metric groups (matching the thesis's §5.3), reported overall and per
      sequences through the trained TCN and report the per-flow last-timestep
      ``P(adversarial)``. ``gain = P(adv|adv) − P(adv|recon)``; ideally the
      reconstruction lands near the clean floor ``P(adv|clean)``.
-  3. **Protocol-compliance rate** — a feature-space TCP/IP invariant check on
-     the rounded reconstruction (always on), plus a ``tshark`` check on the
-     *realized* purified packets (best-effort; needs the adversarial PCAPs and
-     the tshark binary).
+  3. **Protocol-compliance rate** — a ``tshark`` check on the *realized*
+     purified packets (best-effort; needs the adversarial PCAPs and the
+     tshark binary).
 """
 from __future__ import annotations
 
@@ -121,7 +120,6 @@ def _new_group() -> dict:
         "sse_all_before": 0.0, "sse_all_after": 0.0, "n_all": 0,
         "p_adv_adv": 0.0, "p_adv_recon": 0.0, "p_adv_clean": 0.0,
         "det_adv": 0, "det_recon": 0, "n_flows": 0,
-        "compl_checked": 0, "compl_valid": 0,
     }
 
 
@@ -145,10 +143,9 @@ def _finalize_group(g: dict) -> dict:
             "detection_rate_adv": g["det_adv"] / nf,
             "detection_rate_recon": g["det_recon"] / nf,
         },
-        "protocol_compliance": {
-            "feature_space_checked": int(g["compl_checked"]),
-            "feature_space_rate": (g["compl_valid"] / g["compl_checked"]) if g["compl_checked"] else None,
-        },
+        # tshark_rate (traffic-space realized-packet compliance) is filled in
+        # later by the realization pass when PCAPs + tshark are available.
+        "protocol_compliance": {},
     }
     if g["n_pert"] and out["reconstruction"]["perturbed_mse_before"]:
         before = out["reconstruction"]["perturbed_mse_before"]
@@ -197,8 +194,7 @@ def evaluate(config: dict, output_dir: Path) -> dict:
                     config.get("tcn_model_dir"))
 
     realize_cfg = dict(config.get("realize", {}))
-    tshark_sample = int(realize_cfg.get("tshark_sample", 300))
-    do_realize = bool(realize_cfg.get("write_pcap", True)) and tshark_sample > 0
+    do_realize = bool(realize_cfg.get("write_pcap", True))
 
     groups: dict[str, dict] = defaultdict(_new_group)
     overall = _new_group()
@@ -247,8 +243,6 @@ def evaluate(config: dict, output_dir: Path) -> dict:
             sse_aa = float(((r - c) ** 2).sum())
             n_all = int(a.size)
 
-            n_chk, n_val = rz.nprint_ipv4_invariants(rr)
-
             for tgt in (groups[gname], overall):
                 tgt["sse_pert_before"] += sse_pb
                 tgt["sse_pert_after"] += sse_pa
@@ -256,8 +250,6 @@ def evaluate(config: dict, output_dir: Path) -> dict:
                 tgt["sse_all_before"] += sse_ab
                 tgt["sse_all_after"] += sse_aa
                 tgt["n_all"] += n_all
-                tgt["compl_checked"] += n_chk
-                tgt["compl_valid"] += n_val
                 tgt["n_flows"] += 1
                 if tcn is not None:
                     tgt["p_adv_adv"] += float(p_adv[b])
@@ -266,7 +258,7 @@ def evaluate(config: dict, output_dir: Path) -> dict:
                     tgt["det_adv"] += int(p_adv[b] >= 0.5)
                     tgt["det_recon"] += int(p_recon[b] >= 0.5)
 
-            if do_realize and len(realize_pool[gname]) < tshark_sample:
+            if do_realize:
                 fid = str(pairs.flow_id[row])
                 tl = rz.decode_total_len_batch(rr)
                 realize_pool[gname][fid] = (tl, rr[:, _IPAT_COL].astype(np.float32))
@@ -284,7 +276,7 @@ def evaluate(config: dict, output_dir: Path) -> dict:
         metrics["realization"] = _run_realization(
             config, realize_pool, pairs, output_dir, realize_cfg, metrics)
     else:
-        metrics["realization"] = {"skipped": "write_pcap disabled or tshark_sample=0"}
+        metrics["realization"] = {"skipped": "write_pcap disabled"}
 
     (output_dir / "metrics.json").write_text(json.dumps(metrics, indent=2, default=str))
 
@@ -298,12 +290,12 @@ def evaluate(config: dict, output_dir: Path) -> dict:
 
 
 def _run_realization(config, realize_pool, pairs, output_dir, realize_cfg, metrics):
-    """Realize sampled flows per source → PCAP → tshark compliance."""
+    """Realize every reconstructed flow per source → PCAP → tshark compliance."""
     pcap_dir = Path(config.get("realize", {}).get(
         "adversarial_pcap_dir", "data/adversarial"))
     if not pcap_dir.is_absolute():
         pcap_dir = Path(config.get("_repo_root", ".")) / pcap_dir
-    max_pcap = int(realize_cfg.get("max_pcap_packets", 100_000))
+    max_pcap = int(realize_cfg.get("max_pcap_packets", 0))
     realized_dir = output_dir / "realized"
 
     if not rz.tshark_available():

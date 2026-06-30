@@ -36,8 +36,6 @@ import numpy as np
 log = logging.getLogger(__name__)
 
 # nPrint IPv4 header bit offsets (MSB-first), matching pcap_parser's layout.
-_IDX_IPV4_VER = (0, 4)
-_IDX_IPV4_IHL = (4, 8)
 _IDX_IPV4_TL = (16, 32)
 _IDX_IPAT = 1088
 _WEIGHTS16 = (1 << np.arange(15, -1, -1)).astype(np.float64)
@@ -63,33 +61,6 @@ def decode_total_len_batch(seq: np.ndarray) -> np.ndarray:
     """Vectorised :func:`decode_total_len` over a ``[L, F]`` flow → ``[L]`` int."""
     bits = np.maximum(_round_tristate(seq[:, _IDX_IPV4_TL[0]:_IDX_IPV4_TL[1]]), 0.0)
     return (bits.astype(np.float64) @ _WEIGHTS16).astype(np.int64)
-
-
-# ──────────────────────────────────────────────────────────────────────────────
-# Feature-space protocol invariants (always-on; no PCAP / tshark needed)
-# ──────────────────────────────────────────────────────────────────────────────
-
-def nprint_ipv4_invariants(seq: np.ndarray) -> tuple[int, int]:
-    """Check TCP/IP invariants on rounded nPrint rows of one flow.
-
-    Returns ``(n_checked, n_valid)`` over the IPv4 packets in the flow.
-    Non-IPv4 rows (IPv4 region all −1) are not checked. A packet is valid iff
-    ``version == 4``, ``5 ≤ IHL ≤ 15`` and ``IHL*4 ≤ total_len ≤ 65535``.
-    """
-    rounded = _round_tristate(np.asarray(seq, dtype=np.float32))
-    w4 = (1 << np.arange(3, -1, -1)).astype(np.float64)
-    n_checked = n_valid = 0
-    for row in rounded:
-        ver_bits = row[_IDX_IPV4_VER[0]:_IDX_IPV4_VER[1]]
-        if np.all(ver_bits < 0):           # IPv4 layer absent → skip
-            continue
-        n_checked += 1
-        version = int(np.maximum(ver_bits, 0.0) @ w4)
-        ihl = int(np.maximum(row[_IDX_IPV4_IHL[0]:_IDX_IPV4_IHL[1]], 0.0) @ w4)
-        total_len = int(_decode_bits(row[_IDX_IPV4_TL[0]:_IDX_IPV4_TL[1]], _WEIGHTS16))
-        if version == 4 and 5 <= ihl <= 15 and ihl * 4 <= total_len <= 65535:
-            n_valid += 1
-    return n_checked, n_valid
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -162,7 +133,7 @@ def realize_source(
     flow_recon: dict[str, tuple[np.ndarray, np.ndarray]],
     ipat_mean: float,
     ipat_std: float,
-    max_pcap_packets: int = 100_000,
+    max_pcap_packets: int = 0,
 ) -> tuple[list, dict]:
     """Realize purified packets for the flows in ``flow_recon``.
 
@@ -171,29 +142,44 @@ def realize_source(
     length and z-scored IPAT per packet (kept compact to bound memory).
     Returns ``(realized_packets, stats)``; packets are sorted by their
     (re-timed) timestamp, ready for ``wrpcap``.
+
+    The source PCAP is streamed in a single pass, retaining only packets whose
+    canonical 5-tuple belongs to a reconstructed flow — so resident memory
+    scales with the realized flows, not with the (potentially multi-GB) source
+    capture. ``max_pcap_packets`` bounds how many packets are *scanned* from the
+    file (a time guard); ``<= 0`` means unlimited — scan the whole file, the
+    right setting for full per-source coverage.
     """
     from scapy.all import PcapReader
 
     stats = {"target_flows": len(flow_recon), "realized_flows": 0,
              "miss_len": 0, "unmatched": 0, "packets": 0,
-             "pcap_packets_read": 0, "capped": False}
+             "pcap_packets_read": 0, "pcap_packets_kept": 0, "capped": False}
     if not Path(adv_pcap).exists():
         stats["error"] = f"pcap not found: {adv_pcap}"
         return [], stats
 
-    # Pass: read (timestamp, key, packet) up to the cap.
+    # Single streaming pass: scan the PCAP but keep only packets belonging to a
+    # reconstructed flow (filter-on-read), so memory is bounded by the realized
+    # flows rather than the whole capture.
+    target_keys = set(flow_recon)
     rows: list[tuple[float, str, object]] = []
+    n_scanned = 0
     try:
         with PcapReader(str(adv_pcap)) as reader:
             for pkt in reader:
-                rows.append((float(pkt.time), _canonical_key(pkt), pkt))
-                if len(rows) >= max_pcap_packets:
+                n_scanned += 1
+                key = _canonical_key(pkt)
+                if key in target_keys:
+                    rows.append((float(pkt.time), key, pkt))
+                if 0 < max_pcap_packets <= n_scanned:
                     stats["capped"] = True
                     break
     except Exception as e:  # pragma: no cover - defensive
         stats["error"] = f"pcap read failed: {e}"
         return [], stats
-    stats["pcap_packets_read"] = len(rows)
+    stats["pcap_packets_read"] = n_scanned
+    stats["pcap_packets_kept"] = len(rows)
 
     # Stable sort by timestamp (mergesort-equivalent: Python sort is stable).
     order = sorted(range(len(rows)), key=lambda i: rows[i][0])
@@ -296,7 +282,6 @@ def tshark_compliance(pcap_path: Path) -> dict:
 __all__ = [
     "decode_total_len",
     "decode_total_len_batch",
-    "nprint_ipv4_invariants",
     "realize_source",
     "write_pcap",
     "tshark_available",

@@ -152,7 +152,7 @@ The reconstructor (a 678 K-parameter causal residual denoiser) was trained on **
 |---|---|
 | **Reconstruction** — MSE on the perturbed dims, before (adv) → after (recon) | 0.962 → **0.128** (7.5× reduction) |
 | **Purification gain** — TCN `P(adv)`: adversarial → reconstructed → clean | 0.552 → **0.425** → 0.425 (**gain 0.128, residual gap 0.000**) |
-| **Protocol compliance** — feature-space invariants / `tshark` on realized packets | **99.99%** / **99.5%** (538 bad of 104,909 realized packets) |
+| **Protocol compliance** — `tshark` on realized packets | **99.5%** (538 bad of 104,909 realized packets) |
 
 The headline is the **residual gap of 0.000**: after purification, a manipulated flow is statistically indistinguishable — *to the detector* — from a genuinely un-manipulated one. The effect is strongly attack-dependent:
 
@@ -162,7 +162,7 @@ The headline is the **residual gap of 0.000**: after purification, a manipulated
 | `ssdp_flood` both/size 0.92 / 0.92 | `dns_ddos`, `ntp_ddos`, `ssdp_ddos`, `ldap_ddos` (perturbation barely moves the features) |
 | `ddos` both/size 0.90 / 0.86 · `syn_ddos` size 0.76 | |
 
-**Caveats (see [`scripts/reconstructor/README.md`](scripts/reconstructor/README.md) for the full breakdown):** purification gain is measured through ADEPT's *own* TCN (an independent NIDS would be a stronger test); `tshark` validation is on a per-source sample under a 100 K-packet read cap; and two tiny `ssdp_flood` samples (30/43 packets) hit 0% `tshark` compliance — a size-edit-on-snap-length-truncated-capture artifact, not representative of the 99.5% overall.
+**Caveats (see [`scripts/reconstructor/README.md`](scripts/reconstructor/README.md) for the full breakdown):** purification gain is measured through ADEPT's *own* TCN (an independent NIDS would be a stronger test); `tshark` validation covers every reconstructed flow, bounded only by a 100 K-packet read cap per source PCAP; and two tiny `ssdp_flood` samples (30/43 packets) hit 0% `tshark` compliance — a size-edit-on-snap-length-truncated-capture artifact, not representative of the 99.5% overall.
 
 ## Implementation status
 

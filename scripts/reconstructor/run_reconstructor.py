@@ -9,8 +9,7 @@ test pairs with three metric groups:
 
   * Reconstruction quality — MSE on perturbed dims, before vs after.
   * Purification gain       — TCN P(adversarial) on adv / recon / clean.
-  * Protocol compliance     — feature-space TCP/IP invariants + tshark on the
-                              realized purified packets.
+  * Protocol compliance     — tshark on the realized purified packets.
 
 Usage
 -----
@@ -125,14 +124,13 @@ def _print_recon_metrics(metrics: dict) -> None:
 
     comp = ov["protocol_compliance"]
     print(f"\n {bold('Protocol compliance')}")
-    print(f"   {cyan('feature-space')} {_fmt(comp.get('feature_space_rate'))}   "
-          f"{cyan('tshark')} {_fmt(comp.get('tshark_rate'))}")
+    print(f"   {cyan('tshark')} {_fmt(comp.get('tshark_rate'))}")
 
     per = metrics.get("per_source", {})
     if per:
         print(f"\n {bold('Per-source')}  {dim('(' + str(len(per)) + ' variant(s))')}")
         hdr = (f"   {'variant':<24} {'mse_before':>11} {'mse_after':>11} "
-               f"{'P_adv':>7} {'P_recon':>8} {'gain':>7} {'compl':>7}")
+               f"{'P_adv':>7} {'P_recon':>8} {'gain':>7} {'tshark':>7}")
         print(cyan(hdr))
         for name in sorted(per.keys()):
             s = per[name]
@@ -144,7 +142,7 @@ def _print_recon_metrics(metrics: dict) -> None:
                   f"{_fmt(p.get('p_adv_on_adv'), 3):>7} "
                   f"{_fmt(p.get('p_adv_on_recon'), 3):>8} "
                   f"{_fmt(p.get('gain'), 3):>7} "
-                  f"{_fmt(c.get('feature_space_rate'), 3):>7}")
+                  f"{_fmt(c.get('tshark_rate'), 3):>7}")
 
 
 def main() -> int:
@@ -185,11 +183,12 @@ def main() -> int:
     if args.max_flows:
         cfg["_max_flows"] = int(args.max_flows)
         # Smoke mode: still exercise the realization + tshark path, but cap the
-        # per-source PCAP parse and flow sample so the run stays quick.
-        cfg["realize"]["max_pcap_packets"] = min(
-            int(cfg["realize"].get("max_pcap_packets", 100000)), 20000)
-        cfg["realize"]["tshark_sample"] = min(
-            int(cfg["realize"].get("tshark_sample", 300)), 25)
+        # per-source PCAP scan so the run stays quick (flow count is already
+        # bounded by --max-flows). Honour a smaller configured cap if present,
+        # but treat 0/unlimited as the 20 K smoke cap.
+        cfg_cap = int(cfg["realize"].get("max_pcap_packets", 0))
+        cfg["realize"]["max_pcap_packets"] = (
+            min(cfg_cap, 20000) if cfg_cap > 0 else 20000)
 
     _section(f"ADEPT — Reconstructor  {dim('(mode: ' + args.mode + ')')}")
     _row("Config", str(cfg_path))
