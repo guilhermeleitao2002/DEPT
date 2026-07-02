@@ -38,8 +38,7 @@ A **residual head** makes the identity map the easy default (the head is zero-in
 ## Training
 
 - **Loss**: per-element **smooth-L1** between the reconstruction and the clean target, averaged within each flow (so long flows don't dominate) and masked over padding.
-- **Pure by default** (`loss_emphasis: none`): uniform weight over all 1090 dims — the model is supervised only to "reconstruct the clean flow" and is **never told which dimensions the attack perturbs**. With `reduction=mean` every dim's gradient is scaled equally, and on a residual head the unperturbed dims have residual-target `Δ=0`, so the learning signal concentrates on the perturbed dims without any weighting.
-- **Footprint ablation** (`loss_emphasis: perturbation`, off by default): up-weights dims where `clean != adv` by `perturb_weight`. A white-box experiment ("does knowing the perturbation footprint help?"), not part of the main run.
+- **Attack-agnostic**: uniform weight over all 1090 dims — the model is supervised only to "reconstruct the clean flow" and is **never told which dimensions the attack perturbs**. With `reduction=mean` every dim's gradient is scaled equally, and on a residual head the unperturbed dims have residual-target `Δ=0`, so the learning signal concentrates on the perturbed dims without any weighting.
 - **Split**: flow-atomic, source-stratified, same `seed=42` as the base learners, so the held-out test pairs never leak into any model's training set.
 - **Early stopping** on the validation reconstruction loss (lower is better).
 
@@ -110,7 +109,7 @@ The residual gap of 0.000 means the purified flow is, to the detector, indisting
 - **Purification is strong exactly where the attack is structural.** `portscan`, `ssdp_flood`, `ddos` and `syn_ddos_size` — attacks that add real packet-size/padding signal the detector keys on — see P(adv) collapse from ~1.0 to <0.15 (gains 0.76–0.96).
 - **It is a near-no-op where there is nothing to undo.** For the high-rate CIC-DDoS floods (`dns_ddos`, `ldap_ddos`, `ntp_ddos`, `ssdp_ddos`) and all `_iat`-only variants, `mse_before ≈ 0` — the adversarial and clean flows already differ only in the near-constant IPAT — so gain ≈ 0. The model correctly leaves these almost unchanged (residual gap stays 0).
 - **Protocol validity holds once SSDP/HTTP text is set aside.** Realized-packet `tshark` compliance is **99.8%** (3,886 bad / 1.60 M realizable). A size edit on an application-layer **text** protocol (SSDP/HTTP `M-SEARCH`) corrupts its L7 grammar — tshark flags `_ws.malformed` although IP/UDP lengths and checksums stay valid — so such packets can't be byte-overlay-realized; the **85,379** of them (almost all `ssdp_flood` both/size; small counts in `ddos`/`portscan`/`dns_ddos`) are excluded and counted as `l7`, not failures. Among the remaining realizable packets most sources are ≥ 99%, with `ddos` the lowest (~94–95%, size-edit checksum/length corner cases). These are realization edge cases, not failures of the purifier itself.
-- **Headline caveat:** purification gain is judged by ADEPT's own TCN, so "residual gap 0" means the manipulation signature is gone *relative to this detector*; confirming it against an independent NIDS, and chaining realize → re-tensorize → detect (the off-by-default `roundtrip`), are the natural next steps.
+- **Headline caveat:** purification gain is judged by ADEPT's own TCN, so "residual gap 0" means the manipulation signature is gone *relative to this detector*; confirming it against an independent NIDS, and chaining realize → re-tensorize → detect, are the natural next steps.
 
 ## Output files (`data/models/reconstructor/`)
 

@@ -16,7 +16,9 @@ Usage
     python scripts/reconstructor/run_reconstructor.py
     python scripts/reconstructor/run_reconstructor.py --mode train
     python scripts/reconstructor/run_reconstructor.py --mode eval
-    python scripts/reconstructor/run_reconstructor.py --max-flows 2000   # smoke
+
+Reads config/reconstructor.yaml and force-overwrites every artifact under
+<output_dir>.
 
 Outputs (under <output_dir> from reconstructor.yaml)
 ----------------------------------------------------
@@ -34,7 +36,6 @@ Outputs (under <output_dir> from reconstructor.yaml)
 from __future__ import annotations
 
 import argparse
-import json
 import logging
 import sys
 import time
@@ -150,22 +151,15 @@ def main() -> int:
         description="ADEPT reconstructor — train + evaluate the purification transformer",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    parser.add_argument("--config", default="config/reconstructor.yaml")
     parser.add_argument("--mode", choices=["train", "eval", "both"], default="both")
-    parser.add_argument("--max-flows", type=int, default=None,
-                        help="Cap pairs per split (smoke-test knob; full split if omitted)")
-    parser.add_argument("--log-level", default="WARNING",
-                        help="Python logging level (default: WARNING)")
-    parser.add_argument("--json", action="store_true",
-                        help="Also print overall metrics as JSON at the end")
     args = parser.parse_args()
 
     logging.basicConfig(
-        level=getattr(logging, args.log_level.upper()),
+        level="WARNING",
         format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
     )
 
-    cfg_path = _resolve(args.config, REPO_ROOT)
+    cfg_path = _resolve("config/reconstructor.yaml", REPO_ROOT)
     if not cfg_path.exists():
         print(f"{red(bold('ERROR:'))} config not found: {cfg_path}")
         return 1
@@ -180,24 +174,12 @@ def main() -> int:
     cfg["realize"]["adversarial_pcap_dir"] = str(_resolve(
         cfg["realize"].get("adversarial_pcap_dir", "data/adversarial"), REPO_ROOT))
     cfg["_repo_root"] = str(REPO_ROOT)
-    if args.max_flows:
-        cfg["_max_flows"] = int(args.max_flows)
-        # Smoke mode: still exercise the realization + tshark path, but cap the
-        # per-source PCAP scan so the run stays quick (flow count is already
-        # bounded by --max-flows). Honour a smaller configured cap if present,
-        # but treat 0/unlimited as the 20 K smoke cap.
-        cfg_cap = int(cfg["realize"].get("max_pcap_packets", 0))
-        cfg["realize"]["max_pcap_packets"] = (
-            min(cfg_cap, 20000) if cfg_cap > 0 else 20000)
 
     _section(f"ADEPT — Reconstructor  {dim('(mode: ' + args.mode + ')')}")
     _row("Config", str(cfg_path))
     _row("Tensors dir", str(tensors_root))
     _row("TCN model dir", cfg["tcn_model_dir"])
     _row("Output dir", str(output_dir))
-    _row("Loss emphasis", str(cfg.get("training", {}).get("loss_emphasis", "none")))
-    if args.max_flows:
-        _row("Smoke test", yellow(f"--max-flows={args.max_flows}"))
     print(f"{bold('═' * W)}")
 
     total_steps = 2 if args.mode == "both" else 1
@@ -207,7 +189,7 @@ def main() -> int:
         _step(1, total_steps, "Training reconstructor (causal residual denoiser)")
         t = time.time()
         try:
-            info = rc_train.train(cfg, tensors_root, output_dir, max_flows=args.max_flows)
+            info = rc_train.train(cfg, tensors_root, output_dir)
         except Exception as e:
             print(f"  {red(bold('✗ FAILED'))} {e}")
             raise
@@ -245,8 +227,6 @@ def main() -> int:
     print(f" {cyan('Artifacts')}  {output_dir}")
     print(f"{bold('═' * W)}\n")
 
-    if args.json and metrics is not None:
-        print(json.dumps(metrics["overall"], indent=2, default=str))
     return 0
 
 

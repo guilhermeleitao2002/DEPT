@@ -81,12 +81,6 @@ training:
   amp: true
   max_length: 200          # truncate flows at 200 packets to bound padded batch size
   seed: 42
-  # Loss focus. "none" (default) is the pure objective: reconstruct the clean
-  # flow with uniform weight over all dims — the model is never told which dims
-  # the attack perturbs. "perturbation" up-weights dims where clean != adv by
-  # perturb_weight (a white-box footprint ABLATION; leave off for the main run).
-  loss_emphasis: none      # none | perturbation
-  perturb_weight: 0.0      # only used when loss_emphasis: perturbation (e.g. 20)
 
 # ---- Traffic-space realization + protocol compliance ----
 # Maps the purified length/timing back onto the original adversarial PCAP packets
@@ -94,6 +88,3 @@ training:
 # realization (and thus the protocol-compliance check) is skipped.
 realize:
   adversarial_pcap_dir: data/adversarial   # original TANTGen PCAPs (phase 1 output)
-  write_pcap: true                          # write realized purified PCAPs (every reconstructed flow)
-  max_pcap_packets: 0                        # cap packets *scanned* per source PCAP (time guard); 0 = unlimited (full coverage)
-  roundtrip: false                          # (reserved) re-tensorise realized PCAP → TCN

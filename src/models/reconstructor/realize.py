@@ -169,7 +169,6 @@ def realize_source(
     flow_recon: dict[str, tuple[np.ndarray, np.ndarray]],
     ipat_mean: float,
     ipat_std: float,
-    max_pcap_packets: int = 0,
 ) -> tuple[list, dict]:
     """Realize purified packets for the flows in ``flow_recon``.
 
@@ -182,15 +181,13 @@ def realize_source(
     The source PCAP is streamed in a single pass, retaining only packets whose
     canonical 5-tuple belongs to a reconstructed flow — so resident memory
     scales with the realized flows, not with the (potentially multi-GB) source
-    capture. ``max_pcap_packets`` bounds how many packets are *scanned* from the
-    file (a time guard); ``<= 0`` means unlimited — scan the whole file, the
-    right setting for full per-source coverage.
+    capture.
     """
     from scapy.all import PcapReader
 
     stats = {"target_flows": len(flow_recon), "realized_flows": 0,
              "miss_len": 0, "unmatched": 0, "packets": 0,
-             "pcap_packets_read": 0, "pcap_packets_kept": 0, "capped": False,
+             "pcap_packets_read": 0, "pcap_packets_kept": 0,
              "unrealizable_l7": 0}
     if not Path(adv_pcap).exists():
         stats["error"] = f"pcap not found: {adv_pcap}"
@@ -209,9 +206,6 @@ def realize_source(
                 key = _canonical_key(pkt)
                 if key in target_keys:
                     rows.append((float(pkt.time), key, pkt))
-                if 0 < max_pcap_packets <= n_scanned:
-                    stats["capped"] = True
-                    break
     except Exception as e:  # pragma: no cover - defensive
         stats["error"] = f"pcap read failed: {e}"
         return [], stats
