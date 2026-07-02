@@ -10,8 +10,11 @@ TANTGen itself is documented in its own repository — this README only covers t
 ADEPT/data/adversarial/<attack>/<attack>_adversarial_{both,iat,size}.pcap
 ```
 
-The driver auto-skips outputs already on disk; pass `--force` to rebuild,
-`--only <key>` / `--modes <m>` to scope a subset.
+There are no command-line options. Every run regenerates the full set — all 10
+attacks × 3 modes — re-running finetune + apply and overwriting the final
+adversarial PCAPs. (The one-time global pretrain and the deterministic
+intermediate artifacts — benign/malicious splits, feature CSVs — are reused if
+already on disk.)
 
 ## Quick start
 
@@ -25,16 +28,14 @@ pip3 install --user captum
 ( cd ../Transformer-based_Adversarial_Network_Traffic_Generator/src/Kitsune/Feature_Extraction \
   && python3 setup.py build_ext --inplace )
 
-# 1. Pretrain TANTGen base (one-time, after at least one attack split exists)
-python3 scripts/adversarial_generation/generate_adversarials.py --pretrain
-
-# 2. Generate adversarial PCAPs
+# 1. Generate adversarial PCAPs. The one-time TANTGen pretrain runs first
+#    automatically if its checkpoint is missing, then all 10 attacks × 3 modes.
 python3 scripts/adversarial_generation/generate_adversarials.py
 ```
 
 ## Attack set
 
-ADEPT currently consumes **11 adversarial sources** under `--tantgen`, three perturbation modes each (`both` = IAT + size, `iat` = timing only, `size` = payload padding only) — i.e. **33 PCAPs total**. Ten sources pair with a matching benign source; `ddos_kitsune` is adversarial-only:
+ADEPT currently consumes **11 adversarial sources** (the `TANTGEN_KEYS` set in `scripts/packet_to_tensor/process_all_attacks.py`), three perturbation modes each (`both` = IAT + size, `iat` = timing only, `size` = payload padding only) — i.e. **33 PCAPs total**. Ten sources pair with a matching benign source; `ddos_kitsune` is adversarial-only:
 
 | Attack | Dataset | Notes |
 |---|---|---|
@@ -52,28 +53,19 @@ ADEPT currently consumes **11 adversarial sources** under `--tantgen`, three per
 
 `data/adversarial/brute_force_kitsune/` and `data/adversarial/portscan_kitsune/` may also appear on disk but are intentionally left out of `TANTGEN_KEYS` in `scripts/packet_to_tensor/process_all_attacks.py`; they are skipped by `build_adversarial_attacks()` until explicitly opted in.
 
-CIC-IDS2017 attacks reuse the same time windows as `process_all_attacks.py`, so the malicious PCAPs ADEPT trains on match the ones TANTGen perturbed. The CIC-DDoS-2019 floods have no clean time window: the generator caps its malicious input to the first 1,000,000 packets (`--max-malicious-packets`) and `process_all_attacks.py` packet-caps the matching benign capture to the same first 1,000,000 packets, so the benign and adversarial sides remain paired and balanced.
+CIC-IDS2017 attacks reuse the same time windows as `process_all_attacks.py`, so the malicious PCAPs ADEPT trains on match the ones TANTGen perturbed. The CIC-DDoS-2019 floods have no clean time window: the generator caps its malicious input to the first 1,000,000 packets (the hardcoded `MAX_MALICIOUS_PACKETS`) and `process_all_attacks.py` packet-caps the matching benign capture to the same first 1,000,000 packets, so the benign and adversarial sides remain paired and balanced.
 
 > The `generate_adversarials.py` script's built-in `ATTACKS` list covers all 10 attacks across three families (Kitsune: `mirai`, `ssdp_flood`; CIC-IDS2017: `ddos`, `portscan`, `brute_force`; CIC-DDoS-2019: `ntp_ddos`, `dns_ddos`, `ssdp_ddos`, `syn_ddos`, `ldap_ddos`). The PCAPs actually consumed by ADEPT are whatever lives under `data/adversarial/<attack>/<attack>_adversarial_<mode>.pcap`; the table above is the source of truth for that on-disk set, including `ddos_kitsune` (adversarial-only).
 
-## CLI — `generate_adversarials.py`
+## How it runs
 
-| Flag | Purpose |
-|---|---|
-| `--only KEY [KEY...]` | Restrict to these attack keys. |
-| `--exclude KEY [KEY...]` | Skip these attack keys. |
-| `--modes {both,iat,size}` | Perturbation modes (default: all three). |
-| `--force` | Rebuild adversarial PCAPs even if present. |
-| `--pretrain` | Run the one-time TANTGen pretrain step and exit. Requires at least one attack's benign split to already exist. |
-| `--dry-run` | List the selection and exit. |
-
-The driver runs each attack through TANTGen's standard pipeline (split → surrogate → finetune → apply) and lands the final adversarial PCAP under `ADEPT/data/adversarial/<key>/`. All intermediate artifacts (benign/malicious splits, feature CSVs, checkpoints) stay inside the TANTGen repo because TANTGen modules load them from paths baked into its `config-folders.yaml`. Most stages are skip-on-exists, so re-runs only redo what's needed.
+`generate_adversarials.py` takes no arguments — the ADEPT core pipeline has one fixed configuration baked into the script (the `ATTACKS` registry, the three modes, per-attack evasion margins, split ratios, and the 1,000,000-packet malicious cap `MAX_MALICIOUS_PACKETS`). It runs each attack through TANTGen's standard pipeline (split → surrogate → finetune → apply) and lands the final adversarial PCAP under `ADEPT/data/adversarial/<key>/`. All intermediate artifacts (benign/malicious splits, feature CSVs, checkpoints) stay inside the TANTGen repo because TANTGen modules load them from paths baked into its `config-folders.yaml`. The deterministic intermediate stages and the one-time pretrain are skip-on-exists; the final finetune + apply always re-run, overwriting the adversarial PCAPs.
 
 ## End-to-end retraining flow
 
 ```bash
 # 1. (If sources or driver changed) regenerate adversarial PCAPs
-python3 scripts/adversarial_generation/generate_adversarials.py [--force]
+python3 scripts/adversarial_generation/generate_adversarials.py
 
 # 2. Build tensors with a shared standardizer (benign + adversarial in one pass)
 python3 scripts/packet_to_tensor/process_all_attacks.py
