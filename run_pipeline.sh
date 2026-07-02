@@ -19,7 +19,7 @@ run_pipeline.sh — Run the full ADEPT pipeline end-to-end.
 
 Phases (in order):
   1. Adversarial generation (TANTGen)   scripts/adversarial_generation/generate_adversarials.py
-  2. Packet-to-Tensor                   scripts/packet_to_tensor/process_all_attacks.py --tantgen
+  2. Packet-to-Tensor                   scripts/packet_to_tensor/process_all_attacks.py
   3. Random Forest train + evaluate     scripts/rf/run_rf.py
   4. TCN train + evaluate               scripts/tcn/run_tcn.py
   5. Meta-Learner train + evaluate      scripts/metalearner/run_metalearner.py
@@ -62,7 +62,7 @@ PHASE_NAMES=(
 )
 PHASE_CMDS=(
     [1]="$PYTHON scripts/adversarial_generation/generate_adversarials.py"
-    [2]="$PYTHON scripts/packet_to_tensor/process_all_attacks.py --tantgen"
+    [2]="$PYTHON scripts/packet_to_tensor/process_all_attacks.py"
     [3]="$PYTHON scripts/rf/run_rf.py"
     [4]="$PYTHON scripts/tcn/run_tcn.py"
     [5]="$PYTHON scripts/metalearner/run_metalearner.py"

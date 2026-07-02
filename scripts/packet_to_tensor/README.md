@@ -56,7 +56,7 @@ Under ADEPT's defense framing, the upstream NIDS is responsible for the raw-data
 
 ## Dataset statistics
 
-Results from `process_all_attacks.py --tantgen` on WSL2, **before the CIC-DDoS-2019 expansion**. Identity masking on; `rf_checkpoint_stride=10`.
+Results from `process_all_attacks.py` on WSL2, **before the CIC-DDoS-2019 expansion**. Identity masking on; `rf_checkpoint_stride=10`.
 
 | Source | Flows | Packets |
 |---|---:|---:|
@@ -74,7 +74,7 @@ Results from `process_all_attacks.py --tantgen` on WSL2, **before the CIC-DDoS-2
 
 Total processing time: ~100 min on a desktop Linux machine (WSL2).
 
-The CIC-DDoS-2019 expansion adds five benign + adversarial (×3 modes) pairs — `ntp_ddos`, `dns_ddos`, `ssdp_ddos`, `syn_ddos`, `ldap_ddos`. Each benign source is the first 1,000,000 packets of the raw capture (`data/CIC-DDoS-2019/PCAPs/{NTP,DNS,SSDP,Syn,LDAP}.pcap`), packet-capped because these floods have no clean attack time window. Counts for these sources are produced by the next `--tantgen` run.
+The CIC-DDoS-2019 expansion adds five benign + adversarial (×3 modes) pairs — `ntp_ddos`, `dns_ddos`, `ssdp_ddos`, `syn_ddos`, `ldap_ddos`. Each benign source is the first 1,000,000 packets of the raw capture (`data/CIC-DDoS-2019/PCAPs/{NTP,DNS,SSDP,Syn,LDAP}.pcap`), packet-capped because these floods have no clean attack time window. Counts for these sources are produced by the next `process_all_attacks.py` run.
 
 ## Design decisions
 

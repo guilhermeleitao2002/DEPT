@@ -29,7 +29,7 @@ Design notes
   TANTGen tree (data/original/...) — that is the single source of truth and
   the only place the CIC-DDoS-2019 captures live. OUTPUT adversarial PCAPs are
   written to ADEPT/data/adversarial/<key>/<key>_adversarial_<mode>.pcap, the
-  layout discovered by scripts/packet_to_tensor/process_all_attacks.py --tantgen.
+  layout discovered by scripts/packet_to_tensor/process_all_attacks.py.
 - TANTGen scripts hard-code relative paths (config-folders.yaml,
   src/TANTGen/configs/*.yaml, src/TANTGen/*_logs/). They are invoked with
   cwd=TANTGEN_ROOT so those relative paths resolve. Intermediate artifacts

@@ -89,7 +89,7 @@ split:
 # Prevents the much larger benign pool from dominating training.
 benign_cap_ratio: 3.0
 
-# Safety net — should never fire since attach_labels.py writes only
+# Safety net — should never fire since process_all_attacks.py writes only
 # "benign" or "adversarial" label_str values.
 drop_unknown: true
 

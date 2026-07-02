@@ -199,7 +199,7 @@ def assemble_index(
     if not adv_names:
         raise FileNotFoundError(
             f"no adversarial sources under {adversarial_dir}. "
-            f"Run scripts/packet_to_tensor/process_all_attacks.py --tantgen first.")
+            f"Run scripts/packet_to_tensor/process_all_attacks.py first.")
     exclude = set(adversarial_exclude)
     for src in adv_names:
         if src in exclude:
