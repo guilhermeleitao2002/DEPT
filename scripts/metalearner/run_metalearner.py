@@ -14,7 +14,6 @@ Usage
     python scripts/metalearner/run_metalearner.py
     python scripts/metalearner/run_metalearner.py --mode train
     python scripts/metalearner/run_metalearner.py --mode eval
-    python scripts/metalearner/run_metalearner.py --max-flows 2000   # smoke
 
 Outputs (under <output_dir> from metalearner.yaml)
 --------------------------------------------------
@@ -56,6 +55,10 @@ sys.path.insert(0, str(REPO_ROOT))
 
 from src.models.metalearner import evaluate as ml_eval  # noqa: E402
 from src.models.metalearner import train as ml_train    # noqa: E402
+
+
+# The meta-learner is driven entirely by this config.
+CONFIG_PATH = "config/metalearner.yaml"
 
 
 _USE_COLOR = sys.stdout.isatty()
@@ -101,20 +104,15 @@ def main() -> int:
     parser = argparse.ArgumentParser(
         description="ADEPT meta-learner — train + evaluate the mini-Transformer",
     )
-    parser.add_argument("--config", default="config/metalearner.yaml")
     parser.add_argument("--mode", choices=["train", "eval", "both"], default="both")
-    parser.add_argument("--log-level", default="WARNING",
-                        help="Python logging level (e.g. INFO, DEBUG)")
-    parser.add_argument("--max-flows", type=int, default=None,
-                        help="(Reserved) cap meta-train flows for smoke runs")
     args = parser.parse_args()
 
     logging.basicConfig(
-        level=getattr(logging, args.log_level.upper()),
+        level=logging.WARNING,
         format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
     )
 
-    cfg_path = _resolve(args.config, REPO_ROOT)
+    cfg_path = _resolve(CONFIG_PATH, REPO_ROOT)
     cfg = yaml.safe_load(cfg_path.read_text())
     output_dir = _resolve(cfg["output_dir"], REPO_ROOT)
     cfg["output_dir"] = str(output_dir)

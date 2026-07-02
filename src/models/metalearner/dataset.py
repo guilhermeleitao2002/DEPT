@@ -399,7 +399,6 @@ def prepare_split_caches(
     rf_age_clip: int = DEFAULT_RF_AGE_CLIP,
     pkt_len_norm: float = DEFAULT_PKT_LEN_NORM,
     max_length: int | None = None,
-    force: bool = False,
 ) -> dict[str, TokenCache]:
     """Build (or reuse) the per-split token caches.
 
@@ -413,9 +412,7 @@ def prepare_split_caches(
     cache_root.mkdir(parents=True, exist_ok=True)
     key = _cache_key(rf_dir, tcn_dir)
     key_path = cache_root / "cache_key.txt"
-    stale = force or (
-        not key_path.exists() or key_path.read_text().strip() != key
-    )
+    stale = not key_path.exists() or key_path.read_text().strip() != key
 
     out: dict[str, TokenCache] = {}
     for split_name, args in splits.items():
