@@ -63,13 +63,6 @@ def _resolve_device(device_cfg: str) -> torch.device:
     return torch.device(device_cfg)
 
 
-def _maybe_subsample(idx: np.ndarray, max_n: int | None, rng: np.random.Generator) -> np.ndarray:
-    if max_n is None or max_n <= 0 or len(idx) <= max_n:
-        return idx
-    pick = rng.choice(len(idx), size=int(max_n), replace=False)
-    return np.sort(idx[pick]).astype(np.int64)
-
-
 def _masked_per_packet_loss(
     logits: torch.Tensor,
     labels: torch.Tensor,
@@ -194,7 +187,6 @@ def train(
     config: dict,
     tensors_root: Path,
     output_dir: Path,
-    max_flows: int | None = None,
 ) -> dict:
     """Train + persist artifacts. Returns a small status dict."""
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -202,7 +194,6 @@ def train(
     seed = int(config["split"]["seed"])
     torch.manual_seed(seed)
     np.random.seed(seed)
-    rng = np.random.default_rng(seed)
 
     train_cfg = dict(config.get("training", {}))
     model_cfg = dict(config.get("model", {}))
@@ -234,9 +225,9 @@ def train(
     summary = split_summary(idx.sources, idx.y, split)
     log.info("split summary:\n%s", json.dumps(summary, indent=2))
 
-    train_idx = _maybe_subsample(split.train_idx, max_flows, rng)
-    val_idx = _maybe_subsample(split.val_idx, max_flows, rng)
-    test_idx = _maybe_subsample(split.test_idx, max_flows, rng)
+    train_idx = split.train_idx
+    val_idx = split.val_idx
+    test_idx = split.test_idx
 
     # ---- 3. Class weights (flow-level frequencies) ---------------------------
     class_weight_mode = str(train_cfg.get("class_weight", "balanced"))
@@ -391,7 +382,6 @@ def train(
             "device": str(device),
             "amp": bool(use_amp),
             "n_parameters": int(n_params),
-            "max_flows_per_split": int(max_flows) if max_flows else None,
             "split_summary": summary,
             "config": {k: v for k, v in config.items() if k not in {"training", "model"}},
             "training_config": train_cfg,
