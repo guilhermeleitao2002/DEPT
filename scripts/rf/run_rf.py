@@ -12,7 +12,7 @@ generated subfolder auto-discovered under `adversarial_dir`.
 
 Usage
 -----
-    # Train + evaluate with default config/rf.yaml:
+    # Train + evaluate (default):
     python scripts/rf/run_rf.py
 
     # Train only:
@@ -21,8 +21,7 @@ Usage
     # Evaluate an already-trained artifact:
     python scripts/rf/run_rf.py --mode eval
 
-    # Custom config:
-    python scripts/rf/run_rf.py --config config/rf.yaml
+Reads config/rf.yaml and force-overwrites every artifact under <output_dir>.
 
 Outputs (under <output_dir> from rf.yaml)
 -----------------------------------------
@@ -406,20 +405,15 @@ def main() -> int:
         description="Train and/or evaluate the ADEPT Random Forest base learner.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    parser.add_argument("--config", default="config/rf.yaml", help="Path to rf.yaml")
     parser.add_argument("--mode", choices=["train", "eval", "both"], default="both")
-    parser.add_argument("--log-level", default="WARNING",
-                        help="Python logging level (default: WARNING — keeps terminal clean)")
-    parser.add_argument("--json", action="store_true",
-                        help="Also print overall metrics as JSON at the end")
     args = parser.parse_args()
 
     logging.basicConfig(
-        level=args.log_level,
+        level="WARNING",
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
     )
 
-    config_path = _resolve(args.config, REPO_ROOT)
+    config_path = _resolve("config/rf.yaml", REPO_ROOT)
     if not config_path.exists():
         print(f"{red(bold('ERROR:'))} config not found: {config_path}")
         return 1
@@ -515,9 +509,6 @@ def main() -> int:
 
     _print_artifacts(output_dir)
     print(f"{bold('=' * W)}\n")
-
-    if args.json and metrics is not None:
-        print(json.dumps(metrics["overall"], indent=2))
 
     return 0
 

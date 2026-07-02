@@ -18,10 +18,9 @@ The split is computed in **per-flow** space first (using the shared
 ``flow_level_split``) and then expanded to per-checkpoint rows so all
 prefix views of the same flow land in the same split — no leakage.
 
-Public API mirrors the previous module: ``RFDataset``, ``Split``,
-``assemble``, ``flow_level_split``, ``split_summary``, ``load_source``,
-``discover_adversarial_sources``, ``cap_benign``, plus the label string
-constants.
+Public API: ``RFDataset``, ``Split``, ``assemble``, ``flow_level_split``,
+``split_summary``, ``discover_adversarial_sources``, ``cap_benign``, plus
+the label string constants.
 """
 from __future__ import annotations
 
@@ -42,7 +41,6 @@ from ..common.dataset import (
     cap_benign,
     discover_adversarial_sources,
     flow_level_split as _common_flow_level_split,
-    load_source_meta,
 )
 
 
@@ -56,7 +54,6 @@ __all__ = [
     "cap_benign",
     "discover_adversarial_sources",
     "flow_level_split",
-    "load_source",
     "split_summary",
 ]
 
@@ -200,30 +197,6 @@ def _expand_source_checkpoints(
     pidx = pidx.astype(np.int32)
 
     return X, y, flows, srcs, labs, cidx, pidx
-
-
-def load_source(folder: Path, source_name: str) -> tuple[
-    np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray,
-    list[str],
-]:
-    """Load one source folder. Returns ``(X, y, flow_ids, label_str,
-    checkpoint_idx, packet_idx, feature_names)`` expanded to per-checkpoint
-    rows.
-
-    Kept for backwards-compat callers; prefer ``assemble`` for new code.
-    """
-    y_pf, flow_ids_pf, label_str_pf, local_idx, feature_names = load_source_meta(
-        folder, source_name,
-    )
-    X, y, flow_ids, sources, label_str, cidx, pidx = _expand_source_checkpoints(
-        folder=folder,
-        flow_local_idx=local_idx,
-        y_per_flow=y_pf,
-        flow_ids_per_flow=flow_ids_pf,
-        label_str_per_flow=label_str_pf,
-        source_name=source_name,
-    )
-    return X, y, flow_ids, label_str, cidx, pidx, feature_names
 
 
 def assemble(
