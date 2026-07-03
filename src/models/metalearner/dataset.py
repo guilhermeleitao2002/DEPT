@@ -33,7 +33,6 @@ file mtimes + sizes; mismatch triggers a rebuild.
 from __future__ import annotations
 
 import json
-import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
@@ -187,11 +186,10 @@ def build_flow_tokens(
             end = min(end, L)
             tokens[start:end, SLOT_RF_LOGIT] = rf_logits[k]
             tokens[start, SLOT_IS_RF_CKPT] = 1.0
-        # rf_age: raw packets since last RF emission, clipped.
+        # rf_age: raw packets since last RF emission, clipped. The
+        # pre-first-checkpoint window keeps the clip-max sentinel; from each
+        # checkpoint onward age increments after every packet.
         ages = np.full(L, rf_age_clip, dtype=np.float32)
-        # Pre-first-checkpoint window keeps the clip-max sentinel.
-        first_pkt = int(rf_pkts[0])
-        # From packet (first_pkt-1) onward, age increments after each packet.
         for k, p in enumerate(rf_pkts):
             start = int(p) - 1
             end = int(rf_pkts[k + 1]) - 1 if k + 1 < len(rf_pkts) else L
@@ -399,7 +397,6 @@ def prepare_split_caches(
     rf_age_clip: int = DEFAULT_RF_AGE_CLIP,
     pkt_len_norm: float = DEFAULT_PKT_LEN_NORM,
     max_length: int | None = None,
-    force: bool = False,
 ) -> dict[str, TokenCache]:
     """Build (or reuse) the per-split token caches.
 
@@ -413,9 +410,7 @@ def prepare_split_caches(
     cache_root.mkdir(parents=True, exist_ok=True)
     key = _cache_key(rf_dir, tcn_dir)
     key_path = cache_root / "cache_key.txt"
-    stale = force or (
-        not key_path.exists() or key_path.read_text().strip() != key
-    )
+    stale = not key_path.exists() or key_path.read_text().strip() != key
 
     out: dict[str, TokenCache] = {}
     for split_name, args in splits.items():

@@ -46,7 +46,7 @@ Under `data/models/metalearner/`:
 2. `MetaLearnerDataset` memmaps the cache and serves variable-length token
    sequences via `collate_padded`.
 3. The training loop trains on a 0.85/0.15 sub-split of val (seed=43); meta-val
-   streaming AUROC@10 drives early stopping (patience=3).
+   streaming AUROC@10 drives early stopping (patience=5).
 4. Final evaluation runs on the untouched test split and produces the standard
    streaming-eval artefacts plus a three-way comparison plot.
 

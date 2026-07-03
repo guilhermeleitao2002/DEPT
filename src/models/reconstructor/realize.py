@@ -28,7 +28,6 @@ from __future__ import annotations
 import logging
 import shutil
 import subprocess
-import tempfile
 from pathlib import Path
 
 import numpy as np
@@ -46,19 +45,8 @@ def _round_tristate(x: np.ndarray) -> np.ndarray:
     return np.clip(np.round(x), -1.0, 1.0)
 
 
-def _decode_bits(bits: np.ndarray, weights: np.ndarray) -> float:
-    """Decode an MSB-first bit slice to an unsigned int (−1 clamped to 0)."""
-    cleaned = np.maximum(_round_tristate(bits), 0.0)
-    return float(cleaned @ weights)
-
-
-def decode_total_len(seq_row: np.ndarray) -> int:
-    """Reconstructed IPv4 total length (bytes) from one purified packet row."""
-    return int(_decode_bits(seq_row[_IDX_IPV4_TL[0]:_IDX_IPV4_TL[1]], _WEIGHTS16))
-
-
 def decode_total_len_batch(seq: np.ndarray) -> np.ndarray:
-    """Vectorised :func:`decode_total_len` over a ``[L, F]`` flow → ``[L]`` int."""
+    """Reconstructed IPv4 total length (bytes) per packet of a ``[L, F]`` flow → ``[L]`` int."""
     bits = np.maximum(_round_tristate(seq[:, _IDX_IPV4_TL[0]:_IDX_IPV4_TL[1]]), 0.0)
     return (bits.astype(np.float64) @ _WEIGHTS16).astype(np.int64)
 
@@ -169,7 +157,6 @@ def realize_source(
     flow_recon: dict[str, tuple[np.ndarray, np.ndarray]],
     ipat_mean: float,
     ipat_std: float,
-    max_pcap_packets: int = 0,
 ) -> tuple[list, dict]:
     """Realize purified packets for the flows in ``flow_recon``.
 
@@ -182,15 +169,13 @@ def realize_source(
     The source PCAP is streamed in a single pass, retaining only packets whose
     canonical 5-tuple belongs to a reconstructed flow — so resident memory
     scales with the realized flows, not with the (potentially multi-GB) source
-    capture. ``max_pcap_packets`` bounds how many packets are *scanned* from the
-    file (a time guard); ``<= 0`` means unlimited — scan the whole file, the
-    right setting for full per-source coverage.
+    capture.
     """
     from scapy.all import PcapReader
 
     stats = {"target_flows": len(flow_recon), "realized_flows": 0,
              "miss_len": 0, "unmatched": 0, "packets": 0,
-             "pcap_packets_read": 0, "pcap_packets_kept": 0, "capped": False,
+             "pcap_packets_read": 0, "pcap_packets_kept": 0,
              "unrealizable_l7": 0}
     if not Path(adv_pcap).exists():
         stats["error"] = f"pcap not found: {adv_pcap}"
@@ -209,9 +194,6 @@ def realize_source(
                 key = _canonical_key(pkt)
                 if key in target_keys:
                     rows.append((float(pkt.time), key, pkt))
-                if 0 < max_pcap_packets <= n_scanned:
-                    stats["capped"] = True
-                    break
     except Exception as e:  # pragma: no cover - defensive
         stats["error"] = f"pcap read failed: {e}"
         return [], stats
@@ -324,7 +306,6 @@ def tshark_compliance(pcap_path: Path) -> dict:
 
 
 __all__ = [
-    "decode_total_len",
     "decode_total_len_batch",
     "realize_source",
     "write_pcap",

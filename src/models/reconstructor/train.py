@@ -5,11 +5,9 @@ pairs. The loss is a per-element **smooth-L1** between the reconstruction and
 the clean target, averaged within each flow (so long flows don't dominate) and
 masked over right-side padding — the same flow-balancing used by the TCN.
 
-By default the loss is **uniform** over all 1090 feature dimensions
-(``loss_emphasis: none``): the model is supervised only to "reconstruct the
-clean flow" and is never told which dimensions TANTGen perturbed. An optional
-``loss_emphasis: perturbation`` knob up-weights the dims where ``clean != adv``
-(a white-box footprint ablation; off by default).
+The loss is **uniform** over all 1090 feature dimensions: the model is
+supervised only to "reconstruct the clean flow" and is never told which
+dimensions TANTGen perturbed.
 
 Best-epoch tracking uses the validation reconstruction loss (lower is better).
 """
@@ -24,9 +22,7 @@ from pathlib import Path
 
 import numpy as np
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
-from torch.utils.data import DataLoader
 
 # torch.amp (unified) was added in PyTorch 2.0; fall back to torch.cuda.amp.
 try:
@@ -61,49 +57,30 @@ def _resolve_device(device_cfg: str) -> torch.device:
     return torch.device(device_cfg)
 
 
-def _maybe_subsample(idx: np.ndarray, max_n: int | None,
-                     rng: np.random.Generator) -> np.ndarray:
-    if max_n is None or max_n <= 0 or len(idx) <= max_n:
-        return idx
-    pick = rng.choice(len(idx), size=int(max_n), replace=False)
-    return np.sort(idx[pick]).astype(np.int64)
-
-
 def _recon_loss(
     recon: torch.Tensor,
     clean: torch.Tensor,
-    adv: torch.Tensor,
     mask: torch.Tensor,
-    emphasis: str = "none",
-    perturb_weight: float = 0.0,
 ) -> torch.Tensor:
-    """Masked, flow-balanced, (optionally) perturbation-weighted smooth-L1.
+    """Masked, flow-balanced smooth-L1 between reconstruction and clean target.
 
     Args:
-        recon/clean/adv: ``[B, T, F]`` reconstruction, target, input.
+        recon/clean: ``[B, T, F]`` reconstruction and target.
         mask: ``[B, T]`` bool — True at valid timesteps.
-        emphasis: ``"none"`` (uniform) or ``"perturbation"`` (up-weight the
-            dims where ``clean != adv`` by ``perturb_weight``).
+
+    The per-element smooth-L1 is averaged uniformly over all ``F`` dims, then
+    over valid packets within each flow (so long flows don't dominate), then
+    over flows.
     """
     sl1 = F.smooth_l1_loss(recon, clean, reduction="none")  # [B, T, F]
-    if emphasis == "perturbation" and perturb_weight > 0.0:
-        w = 1.0 + perturb_weight * (adv != clean).to(sl1.dtype)
-    elif emphasis in ("none", "perturbation"):
-        w = torch.ones_like(sl1)
-    else:
-        raise ValueError(f"unknown loss_emphasis: {emphasis}")
-
-    num = (sl1 * w).sum(dim=2)                       # [B, T]
-    den = w.sum(dim=2).clamp(min=1.0)                # [B, T]
-    per_packet = num / den                           # weighted mean per-dim
+    per_packet = sl1.mean(dim=2)                     # [B, T]
     per_packet = per_packet * mask.to(per_packet.dtype)
     valid = mask.to(per_packet.dtype).sum(dim=1).clamp(min=1)
     per_flow = per_packet.sum(dim=1) / valid
     return per_flow.mean()
 
 
-def _train_one_epoch(model, loader, optimizer, scaler, device, use_amp,
-                     emphasis, perturb_weight) -> float:
+def _train_one_epoch(model, loader, optimizer, scaler, device, use_amp) -> float:
     model.train()
     total_loss = 0.0
     n_batches = 0
@@ -115,7 +92,7 @@ def _train_one_epoch(model, loader, optimizer, scaler, device, use_amp,
         optimizer.zero_grad(set_to_none=True)
         with _autocast(device_type=amp_device, enabled=use_amp):
             recon = model(adv, key_padding_mask=~mask)
-            loss = _recon_loss(recon, clean, adv, mask, emphasis, perturb_weight)
+            loss = _recon_loss(recon, clean, mask)
         if use_amp:
             scaler.scale(loss).backward()
             scaler.step(optimizer)
@@ -129,8 +106,7 @@ def _train_one_epoch(model, loader, optimizer, scaler, device, use_amp,
 
 
 @torch.inference_mode()
-def _eval_one_epoch(model, loader, device, use_amp,
-                    emphasis, perturb_weight) -> float:
+def _eval_one_epoch(model, loader, device, use_amp) -> float:
     model.eval()
     total_loss = 0.0
     n_batches = 0
@@ -141,7 +117,7 @@ def _eval_one_epoch(model, loader, device, use_amp,
         mask = mask.to(device, non_blocking=True)
         with _autocast(device_type=amp_device, enabled=use_amp):
             recon = model(adv, key_padding_mask=~mask)
-            loss = _recon_loss(recon, clean, adv, mask, emphasis, perturb_weight)
+            loss = _recon_loss(recon, clean, mask)
         total_loss += float(loss.detach().item())
         n_batches += 1
     return total_loss / max(n_batches, 1)
@@ -151,7 +127,6 @@ def train(
     config: dict,
     tensors_root: Path,
     output_dir: Path,
-    max_flows: int | None = None,
 ) -> dict:
     """Train + persist artifacts. Returns a small status dict."""
     output_dir = Path(output_dir)
@@ -160,15 +135,12 @@ def train(
     seed = int(config["split"]["seed"])
     torch.manual_seed(seed)
     np.random.seed(seed)
-    rng = np.random.default_rng(seed)
 
     train_cfg = dict(config.get("training", {}))
     model_cfg = dict(config.get("model", {}))
 
     device = _resolve_device(str(train_cfg.get("device", "auto")))
     use_amp = bool(train_cfg.get("amp", True)) and device.type == "cuda"
-    emphasis = str(train_cfg.get("loss_emphasis", "none"))
-    perturb_weight = float(train_cfg.get("perturb_weight", 0.0))
 
     # ---- 1. Build matched (adv → clean) pair index ---------------------------
     pairs = build_pair_index(
@@ -191,9 +163,9 @@ def train(
     )
     summary = pair_split_summary(pairs, split.train_idx, split.val_idx, split.test_idx)
 
-    train_idx = _maybe_subsample(split.train_idx, max_flows, rng)
-    val_idx = _maybe_subsample(split.val_idx, max_flows, rng)
-    test_idx = _maybe_subsample(split.test_idx, max_flows, rng)
+    train_idx = split.train_idx
+    val_idx = split.val_idx
+    test_idx = split.test_idx
 
     # ---- 3. DataLoaders ------------------------------------------------------
     train_loader, val_loader, _test_loader = make_pair_dataloaders(
@@ -247,11 +219,8 @@ def train(
         t0 = time.time()
         train_loss = _train_one_epoch(
             model, train_loader, optimizer, scaler, device, use_amp,
-            emphasis, perturb_weight,
         )
-        val_loss = _eval_one_epoch(
-            model, val_loader, device, use_amp, emphasis, perturb_weight,
-        )
+        val_loss = _eval_one_epoch(model, val_loader, device, use_amp)
         if scheduler_kind == "plateau":
             scheduler.step(val_loss)
         else:
@@ -317,8 +286,6 @@ def train(
             "n_parameters": int(n_params),
             "n_pairs": int(len(pairs)),
             "pair_skipped": pairs.skipped,
-            "loss_emphasis": emphasis,
-            "max_flows_per_split": int(max_flows) if max_flows else None,
             "split_summary": summary,
             "config": {k: v for k, v in config.items() if k not in {"training", "model"}},
             "training_config": train_cfg,

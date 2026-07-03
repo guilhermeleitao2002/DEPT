@@ -89,7 +89,7 @@ def build_pair_index(
     if not adv_names:
         raise FileNotFoundError(
             f"no adversarial sources under {adversarial_dir}. "
-            f"Run scripts/packet_to_tensor/process_all_attacks.py --tantgen first.")
+            f"Run scripts/packet_to_tensor/process_all_attacks.py first.")
 
     a_src, a_loc, c_src, c_loc = [], [], [], []
     lens, bases, modes, fids = [], [], [], []

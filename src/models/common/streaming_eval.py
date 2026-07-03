@@ -74,7 +74,6 @@ def _auroc_at_t(
     per_flow_packet_idx: Sequence[np.ndarray],
     labels: np.ndarray,
     t: int | str,
-    per_flow_lengths: np.ndarray | None = None,
 ) -> dict:
     """Flow-level AUROC at packet ``t`` (or "max" — use each flow's last)."""
     probs_at_t: list[float] = []
@@ -191,7 +190,6 @@ def streaming_metrics(
     for t in t_grid_list:
         overall["auroc_at"][str(t)] = _auroc_at_t(
             preds.probs, preds.packet_idx, preds.labels, t,
-            per_flow_lengths=preds.lengths,
         )
 
     # Per-adversarial-source slicing.
@@ -224,16 +222,12 @@ def streaming_metrics(
             sub_probs = [preds.probs[i] for i in idx]
             sub_pkt = [preds.packet_idx[i] for i in idx]
             sub_labels = preds.labels[idx]
-            sub_lengths = preds.lengths[idx]
             out: dict = {
                 "n_flows": int(len(idx)),
                 "n_benign": int((sub_labels == 0).sum()),
                 "n_adversarial": int((sub_labels == 1).sum()),
                 "auroc_at": {
-                    str(t): _auroc_at_t(
-                        sub_probs, sub_pkt, sub_labels, t,
-                        per_flow_lengths=sub_lengths,
-                    )
+                    str(t): _auroc_at_t(sub_probs, sub_pkt, sub_labels, t)
                     for t in t_grid_list
                 },
                 "edp": _edp_summary(

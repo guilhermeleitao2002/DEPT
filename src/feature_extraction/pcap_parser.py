@@ -120,97 +120,6 @@ def _bytes_to_bits(raw_bytes: bytes, max_bytes: int, fill: int = -1) -> List[int
     return bits[:total_bits]
 
 
-def _encode_packet(pkt) -> tuple:
-    """
-    Encode a single Scapy packet into:
-    1. nPrint bit vector (1088 ints)
-    2. Metadata dict (Timestamp, IPs, ports, etc.)
-
-    Returns (bits_list, metadata_dict).
-    """
-    timestamp = float(pkt.time)
-    framelen = len(pkt)
-
-    # --- Defaults ---
-    src_ip = "-1"
-    dst_ip = "-1"
-    src_port = -1
-    dst_port = -1
-    protocol = -1
-    tcp_flags = 0
-    payload_len = 0
-    payload_entropy = 0.0
-
-    # --- IPv4 layer ---
-    if pkt.haslayer(IP):
-        ip_layer = pkt[IP]
-        protocol = ip_layer.proto
-        src_ip = ip_layer.src
-        dst_ip = ip_layer.dst
-
-        # Extract raw IPv4 header bytes (variable length: ip_hl * 4)
-        ip_hdr_len = ip_layer.ihl * 4
-        ip_raw = bytes(ip_layer)[:ip_hdr_len]
-        ipv4_bits = _bytes_to_bits(ip_raw, _IPV4_MAX_BYTES)
-
-        # Payload
-        payload_bytes = bytes(ip_layer.payload)
-        payload_len = len(payload_bytes)
-        payload_entropy = _shannon_entropy(payload_bytes)
-    else:
-        ipv4_bits = _bytes_to_bits(None, _IPV4_MAX_BYTES)
-
-    # --- TCP layer ---
-    if pkt.haslayer(TCP):
-        tcp_layer = pkt[TCP]
-        src_port = tcp_layer.sport
-        dst_port = tcp_layer.dport
-        tcp_flags = int(tcp_layer.flags)
-
-        tcp_hdr_len = tcp_layer.dataofs * 4
-        # Extract raw TCP header bytes from the TCP layer
-        tcp_raw = bytes(tcp_layer)[:tcp_hdr_len]
-        tcp_bits = _bytes_to_bits(tcp_raw, _TCP_MAX_BYTES)
-    else:
-        tcp_bits = _bytes_to_bits(None, _TCP_MAX_BYTES)
-
-    # --- UDP layer ---
-    if pkt.haslayer(UDP):
-        udp_layer = pkt[UDP]
-        src_port = udp_layer.sport
-        dst_port = udp_layer.dport
-
-        udp_raw = bytes(udp_layer)[:_UDP_BYTES]
-        udp_bits = _bytes_to_bits(udp_raw, _UDP_BYTES)
-    else:
-        udp_bits = _bytes_to_bits(None, _UDP_BYTES)
-
-    # --- ICMP layer ---
-    if pkt.haslayer(ICMP):
-        icmp_raw = bytes(pkt[ICMP])[:_ICMP_BYTES]
-        icmp_bits = _bytes_to_bits(icmp_raw, _ICMP_BYTES)
-    else:
-        icmp_bits = _bytes_to_bits(None, _ICMP_BYTES)
-
-    # Combine all layers
-    bits = ipv4_bits + tcp_bits + udp_bits + icmp_bits
-
-    metadata = {
-        "Timestamp": timestamp,
-        "Source_IP": src_ip,
-        "Destination_IP": dst_ip,
-        "Source_Port": src_port,
-        "Destination_Port": dst_port,
-        "Protocol": protocol,
-        "Packet_Size": framelen,
-        "Payload_Length": payload_len,
-        "Payload_Entropy": payload_entropy,
-        "TCP_Flags": tcp_flags,
-    }
-
-    return bits, metadata
-
-
 def _shannon_entropy(data: bytes) -> float:
     """Shannon entropy (bits) of a byte sequence."""
     if not data:
@@ -230,8 +139,8 @@ def _scan_raw_packet(pkt) -> tuple:
     """
     Phase 1 (main process): extract raw header bytes and metadata from a packet.
 
-    Identical to _encode_packet but defers the bit expansion — the expensive
-    _bytes_to_bits inner loops are moved to _encode_raw_chunk (worker processes).
+    Defers the bit expansion — the expensive _bytes_to_bits inner loops are
+    moved to _encode_raw_chunk (worker processes).
 
     Returns
     -------
@@ -328,35 +237,6 @@ DEFAULT_MASK_PREFIXES = [
     "tcp_sprt", "tcp_dprt",    # TCP ports
     "udp_sport", "udp_dport",  # UDP ports
 ]
-
-
-def apply_masking(
-    df: pd.DataFrame,
-    mask_prefixes: Optional[List[str]] = None,
-) -> pd.DataFrame:
-    """
-    Zero out nPrint columns matching the given prefixes.
-
-    This prevents the model from learning identity shortcuts
-    (e.g., correlating evasion with a specific source IP).
-    """
-    if mask_prefixes is None:
-        mask_prefixes = DEFAULT_MASK_PREFIXES
-
-    cols_to_mask = []
-    for col in df.columns:
-        for prefix in mask_prefixes:
-            # Match "ipv4_src_0", "ipv4_src_1", ... but not "ipv4_srcXYZ"
-            # nPrint columns are: prefix + "_" + digit
-            if col.startswith(prefix + "_") and col[len(prefix) + 1:].isdigit():
-                cols_to_mask.append(col)
-                break
-
-    if cols_to_mask:
-        df = df.copy()
-        df[cols_to_mask] = 0
-
-    return df
 
 
 # ──────────────────────────────────────────────────────────────────────────────

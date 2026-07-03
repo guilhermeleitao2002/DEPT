@@ -8,7 +8,7 @@ The RF is the **sparse, high-precision stream**: it waits for a full 10-packet p
 
 ## Input
 
-`rf_checkpoints.npy` — `[C_total, 24]` float32. Each row is a 24-dimensional prefix statistics vector at one 10-packet milestone of one flow:
+`rf_checkpoints.npy` — `[C_total, 24]` float32. Each row is a 24-dimensional prefix statistics vector at one checkpoint of one flow (packets 2, 10, 20, 30, … under the default cadence):
 
 | Features | Description |
 |---|---|

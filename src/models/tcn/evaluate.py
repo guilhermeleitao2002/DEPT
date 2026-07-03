@@ -3,13 +3,13 @@
 Under the streaming-native schema the TCN emits per-packet logits, so the
 flow-level test verdict here is taken at each flow's **final valid
 timestep** — i.e., the model's prediction after seeing the whole flow.
-This produces the same per-flow ``metrics.json`` schema RF used to write
+This produces the same per-flow ``metrics.json`` schema as RF
 (``overall``, ``per_adversarial_source`` with ``vs_*`` slicings,
-``per_label_str``), so existing summary tooling keeps working.
+``per_label_str``), so shared summary tooling works across both.
 
-The richer streaming metrics (AUROC@t, EDP) are computed in
-``src/models/common/streaming_eval.py`` and will be folded into this
-file in Phase 4 of the streaming retrofit.
+The richer streaming metrics (AUROC@t, EDP) are computed here too via
+``src/models/common/streaming_eval.py`` and written to
+``streaming_metrics.json``.
 """
 from __future__ import annotations
 

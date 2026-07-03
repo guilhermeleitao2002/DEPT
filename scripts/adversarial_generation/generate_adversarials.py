@@ -29,7 +29,7 @@ Design notes
   TANTGen tree (data/original/...) — that is the single source of truth and
   the only place the CIC-DDoS-2019 captures live. OUTPUT adversarial PCAPs are
   written to ADEPT/data/adversarial/<key>/<key>_adversarial_<mode>.pcap, the
-  layout discovered by scripts/packet_to_tensor/process_all_attacks.py --tantgen.
+  layout discovered by scripts/packet_to_tensor/process_all_attacks.py.
 - TANTGen scripts hard-code relative paths (config-folders.yaml,
   src/TANTGen/configs/*.yaml, src/TANTGen/*_logs/). They are invoked with
   cwd=TANTGEN_ROOT so those relative paths resolve. Intermediate artifacts
@@ -40,26 +40,15 @@ Design notes
 
 Usage
 -----
-    # Everything: pretrain (if needed) + all 10 attacks × 3 modes
+There are no command-line options: the ADEPT core pipeline has one fixed
+configuration. Running the script always does the whole job — the one-time
+global pretrain (built only if its checkpoint is missing), then all 10 attacks
+× 3 perturbation modes — and always re-runs finetune + apply, overwriting the
+final adversarial PCAPs under data/adversarial/<key>/.
+
     python scripts/adversarial_generation/generate_adversarials.py
-
-    # One attack, one mode
-    python scripts/adversarial_generation/generate_adversarials.py \\
-        --only mirai --modes both
-
-    # CIC-DDoS family only (heavy — see notes), in a batch
-    python scripts/adversarial_generation/generate_adversarials.py \\
-        --only ntp_ddos dns_ddos ssdp_ddos syn_ddos ldap_ddos
-
-    # Force a fresh global pretrain (then continue with all attacks)
-    python scripts/adversarial_generation/generate_adversarials.py --force-pretrain
-    # (or delete src/TANTGen/transformer_pretrained_logs/*.ckpt before a normal run)
-
-    # Inspect selection / resolved paths without running
-    python scripts/adversarial_generation/generate_adversarials.py --dry-run
 """
 
-import argparse
 import shutil
 import subprocess
 import sys
@@ -103,6 +92,12 @@ TG_FINETUNE_CKPT = (
 OUT_ROOT = ADEPT_ROOT / "data" / "adversarial"
 
 MODES = ("both", "iat", "size")
+
+# Cap each attack's malicious PCAP to the first N packets before applying
+# TANTGen. Keeps the huge CIC-DDoS floods tractable (apply rewrites every packet
+# with scapy) and ADEPT's adversarial pool balanced; captures under ~400 MB (all
+# the Kitsune / CIC-IDS sets) pass through unchanged.
+MAX_MALICIOUS_PACKETS = 1_000_000
 
 
 # -----------------------------------------------------------------------------
@@ -182,7 +177,6 @@ ATTACKS = [
     Attack("ldap_ddos", "cic", "LDAP_DDoS",
            _C19 / "PCAPs/LDAP.pcap", _C19 / "CSVs/LDAP.csv", margin=-4.0),
 ]
-ATTACK_KEYS = [a.key for a in ATTACKS]
 
 
 # -----------------------------------------------------------------------------
@@ -436,8 +430,8 @@ def apply_tantgen(malicious_pcap: Path, out_pcap: Path):
          "-o", str(out_pcap)])
 
 
-def cap_malicious(malicious: Path, max_packets: int) -> Path:
-    """Return a malicious PCAP capped to the first `max_packets` packets.
+def cap_malicious(malicious: Path) -> Path:
+    """Return a malicious PCAP capped to the first MAX_MALICIOUS_PACKETS packets.
 
     apply_TANTGen_to_pcap re-reads and rewrites every packet with scapy, so the
     huge CIC-DDoS captures (e.g. NTP's malicious split is ~75M packets) take many
@@ -445,30 +439,27 @@ def cap_malicious(malicious: Path, max_packets: int) -> Path:
     choke phase-2 tensorisation). Truncating to the first N packets — timestamps
     preserved, via tcpdump/editcap — keeps apply to minutes and ADEPT's
     adversarial pool balanced. Captures below a size threshold (all the Kitsune /
-    CIC-IDS sets) pass through unchanged. N <= 0 disables capping entirely.
+    CIC-IDS sets) pass through unchanged.
     """
-    if not max_packets or max_packets <= 0:
-        return malicious
     # Only bother for captures large enough to plausibly exceed the cap; this
     # skips a no-op copy for the small Kitsune / CIC-IDS malicious sets.
     SIZE_THRESHOLD = 400 * 1024 * 1024  # 400 MB
     if malicious.stat().st_size < SIZE_THRESHOLD:
         return malicious
-    capped = malicious.with_name(f"{malicious.stem}_first{max_packets}.pcap")
+    capped = malicious.with_name(f"{malicious.stem}_first{MAX_MALICIOUS_PACKETS}.pcap")
     if capped.exists() and capped.stat().st_size > 0:
         print(f"  {dim('Using cached capped malicious PCAP:')} {capped.name}")
         return capped
     tcpdump, editcap = shutil.which("tcpdump"), shutil.which("editcap")
-    print(f"  {dim(f'Capping {malicious.name} -> first {max_packets:,} packets')} ({capped.name})")
+    print(f"  {dim(f'Capping {malicious.name} -> first {MAX_MALICIOUS_PACKETS:,} packets')} ({capped.name})")
     if tcpdump:  # -c N stops after N packets (fast even on a 38 GB capture)
-        run([tcpdump, "-r", str(malicious), "-w", str(capped), "-c", str(max_packets)],
+        run([tcpdump, "-r", str(malicious), "-w", str(capped), "-c", str(MAX_MALICIOUS_PACKETS)],
             cwd=ADEPT_ROOT)
     elif editcap:
-        run([editcap, "-r", str(malicious), str(capped), f"1-{max_packets}"], cwd=ADEPT_ROOT)
+        run([editcap, "-r", str(malicious), str(capped), f"1-{MAX_MALICIOUS_PACKETS}"], cwd=ADEPT_ROOT)
     else:
         sys.exit(f"{red('ERROR')}: need tcpdump or editcap to cap {malicious.name} "
-                 f"(sudo apt install tcpdump wireshark-common), or pass "
-                 f"--max-malicious-packets 0 to process ALL packets (hours for CIC-DDoS).")
+                 f"(sudo apt install tcpdump wireshark-common).")
     return capped
 
 
@@ -499,7 +490,7 @@ def build_pretrain_benign_csv() -> Path:
     return out_csv
 
 
-def ensure_pretrain(force: bool = False) -> None:
+def ensure_pretrain() -> None:
     """Guarantee a TANTGen pretrain checkpoint exists before per-attack work.
 
     The stock TANTGen pipeline never builds benign.csv and ignores the
@@ -512,7 +503,7 @@ def ensure_pretrain(force: bool = False) -> None:
     print(bold(" Global TANTGen pretrain (one-time, shared across all attacks)"))
     print("=" * 79)
 
-    if TG_PRETRAIN_CKPT.exists() and not force:
+    if TG_PRETRAIN_CKPT.exists():
         print(f"  {green('✓')} Pretrain checkpoint present: "
               f"{dim(str(TG_PRETRAIN_CKPT.relative_to(TANTGEN_ROOT)))} — skipping.")
         return
@@ -542,18 +533,14 @@ def ensure_pretrain(force: bool = False) -> None:
 # -----------------------------------------------------------------------------
 # Per-attack orchestration
 # -----------------------------------------------------------------------------
-def process_attack(attack: Attack, modes, force: bool, max_malicious_packets: int):
+def process_attack(attack: Attack):
     print(f"\n{dim('─' * 79)}")
     print(f" {bold(cyan(f'[{attack.key}]'))}  {bold(attack.tg_name)}  "
           f"{dim('(' + attack.dataset + f', margin={attack.margin})')}")
     print(f"{dim('─' * 79)}")
 
     out_dir = OUT_ROOT / attack.key
-    out_paths = {m: out_dir / f"{attack.key}_adversarial_{m}.pcap" for m in modes}
-    if not force and all(p.exists() and p.stat().st_size > 0 for p in out_paths.values()):
-        print(f"  {yellow('All requested adversarial PCAPs already exist; skipping.')} "
-              f"Use --force to rebuild.")
-        return
+    out_paths = {m: out_dir / f"{attack.key}_adversarial_{m}.pcap" for m in MODES}
 
     # 1. validate input → 2. divide → 3. subset split
     input_pcap = prepare_input_pcap(attack)
@@ -579,14 +566,11 @@ def process_attack(attack: Attack, modes, force: bool, max_malicious_packets: in
     # Cap the malicious set fed to apply: CIC-DDoS floods have tens of millions
     # of packets and apply rewrites every one with scapy (hours). Capping keeps
     # apply to minutes and ADEPT's adversarial pool balanced.
-    apply_src = cap_malicious(malicious, max_malicious_packets)
+    apply_src = cap_malicious(malicious)
 
     # 7. per mode: finetune TANTGen, then apply to the (capped) malicious PCAP.
-    for mode in modes:
+    for mode in MODES:
         out_pcap = out_paths[mode]
-        if not force and out_pcap.exists() and out_pcap.stat().st_size > 0:
-            print(f"\n  {yellow(f'[{mode}] already produced:')} {out_pcap.name}  (skipping)")
-            continue
         print(f"\n  {bold(cyan(f'[mode={mode}]'))} finetune + apply")
         train_tantgen(adv_train_feats, mode)
         apply_tantgen(apply_src, out_pcap)
@@ -597,67 +581,14 @@ def process_attack(attack: Attack, modes, force: bool, max_malicious_packets: in
 # Main
 # -----------------------------------------------------------------------------
 def main():
-    parser = argparse.ArgumentParser(
-        description="Generate TANTGen adversarial PCAPs for ADEPT (all 10 attacks, 3 families).",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog=f"Attack keys: {', '.join(ATTACK_KEYS)}  |  Modes: {', '.join(MODES)}",
-    )
-    parser.add_argument("--only", nargs="+", metavar="KEY",
-                        help="Restrict to these attack keys.")
-    parser.add_argument("--exclude", nargs="+", metavar="KEY",
-                        help="Skip these attack keys.")
-    parser.add_argument("--modes", nargs="+", choices=MODES, default=list(MODES),
-                        help="Perturbation modes to run (default: all three).")
-    parser.add_argument("--force", action="store_true",
-                        help="Rebuild adversarial PCAPs even if present.")
-    parser.add_argument("--max-malicious-packets", type=int, default=1_000_000, metavar="N",
-                        help="Cap each attack's malicious PCAP to the first N packets before "
-                             "applying TANTGen (default 1,000,000). Keeps the huge CIC-DDoS "
-                             "floods tractable and ADEPT's dataset balanced; captures under "
-                             "~400 MB pass through unchanged. 0 = no cap (process all packets; "
-                             "hours for CIC-DDoS).")
-    parser.add_argument("--skip-pretrain", action="store_true",
-                        help="Do not run the global pretrain step. Finetuning then "
-                             "falls back to random init (stock TANTGen behavior).")
-    parser.add_argument("--force-pretrain", action="store_true",
-                        help="Re-run the global pretrain even if a checkpoint exists.")
-    parser.add_argument("--dry-run", action="store_true",
-                        help="List selection + resolved paths and exit.")
-    args = parser.parse_args()
-
     if not TANTGEN_ROOT.exists():
         sys.exit(f"{red('ERROR')}: TANTGen repo not found at {TANTGEN_ROOT}")
-
-    # Validate keys
-    for flag, vals in (("--only", args.only), ("--exclude", args.exclude)):
-        if vals:
-            unknown = set(vals) - set(ATTACK_KEYS)
-            if unknown:
-                parser.error(f"Unknown attack keys for {flag}: {sorted(unknown)}. "
-                             f"Choose from: {', '.join(ATTACK_KEYS)}")
-
-    excluded = set(args.exclude) if args.exclude else set()
-    selected = [a for a in ATTACKS
-                if (not args.only or a.key in args.only) and a.key not in excluded]
 
     print(f"\n{bold('ADEPT × TANTGen — Adversarial Generation')}")
     print(f"  TANTGen:  {TANTGEN_ROOT}")
     print(f"  Output:   {OUT_ROOT}")
-    print(f"  Attacks:  {', '.join(a.key for a in selected) or '(none)'}")
-    print(f"  Modes:    {', '.join(args.modes)}")
-    print(f"  Pretrain: {'skip' if args.skip_pretrain else ('force' if args.force_pretrain else 'auto')}\n")
-
-    if args.dry_run:
-        print(f"  Pretrain checkpoint: "
-              f"{'present' if TG_PRETRAIN_CKPT.exists() else 'MISSING (will pretrain)'}"
-              f"  [{TG_PRETRAIN_CKPT}]")
-        for a in selected:
-            print(f"\n  • {bold(a.key)}  ({a.dataset}, margin={a.margin})")
-            print(f"      pcap   : {a.pcap}  {'' if a.pcap.exists() else red('[MISSING]')}")
-            print(f"      labels : {a.labels_csv}  {'' if a.labels_csv.exists() else red('[MISSING]')}")
-            print(f"      out    : {OUT_ROOT / a.key}/{a.key}_adversarial_<mode>.pcap")
-        print()
-        return
+    print(f"  Attacks:  {', '.join(a.key for a in ATTACKS)}")
+    print(f"  Modes:    {', '.join(MODES)}\n")
 
     # Ensure every directory TANTGen writes into exists (several modules use
     # relative paths and crash on a missing parent dir).
@@ -674,23 +605,14 @@ def main():
         d.mkdir(parents=True, exist_ok=True)
 
     # Global pretrain (one-time) before any per-attack finetuning.
-    if not args.skip_pretrain:
-        ensure_pretrain(force=args.force_pretrain)
-    elif not TG_PRETRAIN_CKPT.exists():
-        print(f"{yellow('WARNING')}: --skip-pretrain set and no pretrain checkpoint "
-              f"present — finetuning will train from random init.\n")
-
-    if not selected:
-        print(f"{yellow('No attacks selected')} — check --only / --exclude. "
-              f"Pretrain step (if any) is done; nothing else to do.")
-        return
+    ensure_pretrain()
 
     total_start = time.time()
     failures = []
-    for attack in selected:
+    for attack in ATTACKS:
         t0 = time.time()
         try:
-            process_attack(attack, tuple(args.modes), args.force, args.max_malicious_packets)
+            process_attack(attack)
             print(f"  {dim(f'[{attack.key}] done in {time.time() - t0:.1f}s')}")
         except subprocess.CalledProcessError as e:
             print(f"  {red(bold('✗ FAILED'))} on {attack.key} (exit {e.returncode})")

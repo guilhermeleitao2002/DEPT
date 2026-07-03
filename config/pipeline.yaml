@@ -80,8 +80,3 @@ mean_std_filename: mean_std.json
 
 standardize_columns:
   - IPAT
-
-# --------------------------
-# I/O defaults
-# --------------------------
-default_output_dir: data/processed/

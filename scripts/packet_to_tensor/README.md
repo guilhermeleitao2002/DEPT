@@ -10,7 +10,7 @@ For each processed source, the pipeline writes a self-contained directory under 
 |---|---|---|
 | `flow_packets.npy` | `[P_total, 1090]` float32 (memmap) | All packets of all flows in arrival order. Each row is one packet. |
 | `flow_offsets.npy` | `[N_flows, 2]` int64 | `(start_idx, length)` into `flow_packets.npy` per flow. |
-| `rf_checkpoints.npy` | `[C_total, 24]` float32 | Multi-scale prefix statistics: one row per 10-packet prefix milestone (t=10, 20, 30, …) per flow. |
+| `rf_checkpoints.npy` | `[C_total, 24]` float32 | Multi-scale prefix statistics: one row per prefix milestone per flow. Default cadence (`rf_first_checkpoint=2`, `rf_checkpoint_stride=10`) emits at packets 2, 10, 20, 30, … — the early packet-2 row gives short flows (e.g. PortScan) an RF verdict. |
 | `rf_checkpoint_offsets.npy` | `[N_flows, 2]` int64 | `(start_idx, n_checkpoints)` into `rf_checkpoints.npy` per flow. |
 | `flow_labels.csv` | `[N_flows]` rows | `flow_idx, label, label_str` — one row per flow. |
 | `metadata.json` | JSON | Source metadata: schema version, `n_flows`, `total_packets`, `num_checkpoints`, encoding config. |
@@ -39,7 +39,7 @@ High-entropy identity fields (source/destination IP, IP ID, source/destination p
 
 ## RF prefix statistics (S=24)
 
-At every 10-packet prefix milestone, four aggregations (mean, std, min, max) are computed for each of six base features: `IPAT`, `Packet_Size`, `Payload_Length`, `Payload_Entropy`, `TCP_Flags`, `Direction`. These are computed incrementally via Welford's online algorithm — O(1) memory per flow regardless of flow length.
+At every prefix milestone (packets 2, 10, 20, 30, … under the default cadence), four aggregations (mean, std, min, max) are computed for each of six base features: `IPAT`, `Packet_Size`, `Payload_Length`, `Payload_Entropy`, `TCP_Flags`, `Direction`. These are computed incrementally via Welford's online algorithm — O(1) memory per flow regardless of flow length.
 
 ## Label convention
 
@@ -56,7 +56,7 @@ Under ADEPT's defense framing, the upstream NIDS is responsible for the raw-data
 
 ## Dataset statistics
 
-Results from `process_all_attacks.py --tantgen` on WSL2, **before the CIC-DDoS-2019 expansion**. Identity masking on; `rf_checkpoint_stride=10`.
+Results from `process_all_attacks.py` on WSL2, **before the CIC-DDoS-2019 expansion**. Identity masking on; `rf_checkpoint_stride=10`.
 
 | Source | Flows | Packets |
 |---|---:|---:|
@@ -74,7 +74,7 @@ Results from `process_all_attacks.py --tantgen` on WSL2, **before the CIC-DDoS-2
 
 Total processing time: ~100 min on a desktop Linux machine (WSL2).
 
-The CIC-DDoS-2019 expansion adds five benign + adversarial (×3 modes) pairs — `ntp_ddos`, `dns_ddos`, `ssdp_ddos`, `syn_ddos`, `ldap_ddos`. Each benign source is the first 1,000,000 packets of the raw capture (`data/CIC-DDoS-2019/PCAPs/{NTP,DNS,SSDP,Syn,LDAP}.pcap`), packet-capped because these floods have no clean attack time window. Counts for these sources are produced by the next `--tantgen` run.
+The CIC-DDoS-2019 expansion adds five benign + adversarial (×3 modes) pairs — `ntp_ddos`, `dns_ddos`, `ssdp_ddos`, `syn_ddos`, `ldap_ddos`. Each benign source is the first 1,000,000 packets of the raw capture (`data/CIC-DDoS-2019/PCAPs/{NTP,DNS,SSDP,Syn,LDAP}.pcap`), packet-capped because these floods have no clean attack time window. Counts for these sources are produced by the next `process_all_attacks.py` run.
 
 ## Design decisions
 

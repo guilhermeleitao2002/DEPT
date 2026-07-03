@@ -253,7 +253,7 @@ For TANTGen adversarial generation, additional setup is needed (sibling repo ins
 python3 scripts/adversarial_generation/generate_adversarials.py
 
 # 2. Build ragged per-flow tensors for all benign + adversarial sources
-python3 scripts/packet_to_tensor/process_all_attacks.py --tantgen
+python3 scripts/packet_to_tensor/process_all_attacks.py
 
 # 3. Train + evaluate the Random Forest
 python3 scripts/rf/run_rf.py

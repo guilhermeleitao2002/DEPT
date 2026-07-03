@@ -171,13 +171,6 @@ def evaluate(config: dict, output_dir: Path) -> dict:
         min_len=int(config.get("min_len", 2)),
     )
     test_idx = np.load(output_dir / "split.npz")["test_idx"]
-    # Honour a smoke-test cap so eval matches the trained subsample.
-    max_flows = config.get("_max_flows")
-    if max_flows:
-        rng = np.random.default_rng(int(config["split"]["seed"]))
-        if len(test_idx) > int(max_flows):
-            pick = rng.choice(len(test_idx), size=int(max_flows), replace=False)
-            test_idx = np.sort(test_idx[pick])
 
     ds = PairedFlowDataset(pairs, sample_indices=test_idx,
                            max_length=train_cfg.get("max_length", None))
@@ -192,9 +185,6 @@ def evaluate(config: dict, output_dir: Path) -> dict:
     if tcn is None:
         log.warning("no trained TCN at %s — purification gain skipped",
                     config.get("tcn_model_dir"))
-
-    realize_cfg = dict(config.get("realize", {}))
-    do_realize = bool(realize_cfg.get("write_pcap", True))
 
     groups: dict[str, dict] = defaultdict(_new_group)
     overall = _new_group()
@@ -258,10 +248,9 @@ def evaluate(config: dict, output_dir: Path) -> dict:
                     tgt["det_adv"] += int(p_adv[b] >= 0.5)
                     tgt["det_recon"] += int(p_recon[b] >= 0.5)
 
-            if do_realize:
-                fid = str(pairs.flow_id[row])
-                tl = rz.decode_total_len_batch(rr)
-                realize_pool[gname][fid] = (tl, rr[:, _IPAT_COL].astype(np.float32))
+            fid = str(pairs.flow_id[row])
+            tl = rz.decode_total_len_batch(rr)
+            realize_pool[gname][fid] = (tl, rr[:, _IPAT_COL].astype(np.float32))
 
     metrics = {
         "overall": _finalize_group(overall),
@@ -272,11 +261,9 @@ def evaluate(config: dict, output_dir: Path) -> dict:
     }
 
     # ---- Traffic-space realization + tshark protocol compliance --------------
-    if do_realize:
-        metrics["realization"] = _run_realization(
-            config, realize_pool, pairs, output_dir, realize_cfg, metrics)
-    else:
-        metrics["realization"] = {"skipped": "write_pcap disabled"}
+    # Best-effort: skipped inside when the adversarial PCAPs or tshark are absent.
+    metrics["realization"] = _run_realization(
+        config, realize_pool, pairs, output_dir, metrics)
 
     (output_dir / "metrics.json").write_text(json.dumps(metrics, indent=2, default=str))
 
@@ -289,13 +276,12 @@ def evaluate(config: dict, output_dir: Path) -> dict:
     return metrics
 
 
-def _run_realization(config, realize_pool, pairs, output_dir, realize_cfg, metrics):
+def _run_realization(config, realize_pool, pairs, output_dir, metrics):
     """Realize every reconstructed flow per source → PCAP → tshark compliance."""
     pcap_dir = Path(config.get("realize", {}).get(
         "adversarial_pcap_dir", "data/adversarial"))
     if not pcap_dir.is_absolute():
         pcap_dir = Path(config.get("_repo_root", ".")) / pcap_dir
-    max_pcap = int(realize_cfg.get("max_pcap_packets", 0))
     realized_dir = output_dir / "realized"
 
     if not rz.tshark_available():
@@ -309,7 +295,7 @@ def _run_realization(config, realize_pool, pairs, output_dir, realize_cfg, metri
         adv_pcap = pcap_dir / base / f"{base}_adversarial_{mode}.pcap"
         mean_std = _load_ipat_stats(pairs.adv_folders.get(gname))
         packets, rstats = rz.realize_source(
-            adv_pcap, flow_recon, mean_std[0], mean_std[1], max_pcap_packets=max_pcap)
+            adv_pcap, flow_recon, mean_std[0], mean_std[1])
         entry = {"realize": rstats}
         # Size-edited application-layer text packets (SSDP/HTTP) are excluded
         # from the realized PCAP (can't be faithfully resized by byte-overlay);
