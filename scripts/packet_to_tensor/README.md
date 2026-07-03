@@ -10,7 +10,7 @@ For each processed source, the pipeline writes a self-contained directory under 
 |---|---|---|
 | `flow_packets.npy` | `[P_total, 1090]` float32 (memmap) | All packets of all flows in arrival order. Each row is one packet. |
 | `flow_offsets.npy` | `[N_flows, 2]` int64 | `(start_idx, length)` into `flow_packets.npy` per flow. |
-| `rf_checkpoints.npy` | `[C_total, 24]` float32 | Multi-scale prefix statistics: one row per 10-packet prefix milestone (t=10, 20, 30, …) per flow. |
+| `rf_checkpoints.npy` | `[C_total, 24]` float32 | Multi-scale prefix statistics: one row per prefix milestone per flow. Default cadence (`rf_first_checkpoint=2`, `rf_checkpoint_stride=10`) emits at packets 2, 10, 20, 30, … — the early packet-2 row gives short flows (e.g. PortScan) an RF verdict. |
 | `rf_checkpoint_offsets.npy` | `[N_flows, 2]` int64 | `(start_idx, n_checkpoints)` into `rf_checkpoints.npy` per flow. |
 | `flow_labels.csv` | `[N_flows]` rows | `flow_idx, label, label_str` — one row per flow. |
 | `metadata.json` | JSON | Source metadata: schema version, `n_flows`, `total_packets`, `num_checkpoints`, encoding config. |
@@ -39,7 +39,7 @@ High-entropy identity fields (source/destination IP, IP ID, source/destination p
 
 ## RF prefix statistics (S=24)
 
-At every 10-packet prefix milestone, four aggregations (mean, std, min, max) are computed for each of six base features: `IPAT`, `Packet_Size`, `Payload_Length`, `Payload_Entropy`, `TCP_Flags`, `Direction`. These are computed incrementally via Welford's online algorithm — O(1) memory per flow regardless of flow length.
+At every prefix milestone (packets 2, 10, 20, 30, … under the default cadence), four aggregations (mean, std, min, max) are computed for each of six base features: `IPAT`, `Packet_Size`, `Payload_Length`, `Payload_Entropy`, `TCP_Flags`, `Direction`. These are computed incrementally via Welford's online algorithm — O(1) memory per flow regardless of flow length.
 
 ## Label convention
 

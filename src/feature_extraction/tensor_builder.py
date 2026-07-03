@@ -29,12 +29,11 @@ Implementation notes
 --------------------
 - All RF prefix statistics are computed via Welford's online algorithm so a
   flow of length L is processed in O(L) time and O(1) extra memory per
-  flow. The emitted ``[mean, std, min, max]`` per base feature matches the
-  semantics of the old ``_compute_rf_stats`` but over the growing prefix
-  instead of the latest N-packet window.
-- Output tensors are pre-allocated as memory-mapped ``.npy`` files using the
-  same pattern as the previous windowed builder, so peak RAM stays bounded
-  even when a source's ``flow_packets.npy`` exceeds available memory.
+  flow, emitting ``[mean, std, min, max]`` per base feature over the growing
+  prefix.
+- Output tensors are pre-allocated as memory-mapped ``.npy`` files, so peak
+  RAM stays bounded even when a source's ``flow_packets.npy`` exceeds
+  available memory.
 """
 
 import json
@@ -90,8 +89,7 @@ def _load_or_compute_stats(
 # Streaming RF statistics
 # ──────────────────────────────────────────────────────────────────────────────
 
-# Aggregations supported in the emitted RF checkpoint vector. The order
-# ``[mean, std, min, max]`` is mirrored from the previous windowed builder.
+# Aggregations supported in the emitted RF checkpoint vector, in emit order.
 _SUPPORTED_AGGS = ("mean", "std", "min", "max")
 
 # Output kinds that can be selectively built. "tcn" governs the per-packet
@@ -199,18 +197,12 @@ class StreamingStats:
     def emit(self, agg_functions: List[str]) -> np.ndarray:
         """Return ``[feat × agg]`` flattened vector for the current prefix.
 
-        Uses sample std (ddof=1, matching pandas ``.std()`` and the previous
-        windowed ``np.std`` semantics with ``ddof=0`` — see note). For
+        Uses population std (``ddof=0``: ``std = sqrt(M2 / n)``). For
         single-packet prefixes std is 0.
-
-        Note on std semantics: the previous batch builder used ``np.std``
-        with default ``ddof=0`` (population std). We preserve that here for
-        consistency: ``std = sqrt(M2 / n)``. Switch to ``ddof=1`` only if
-        ``rf_agg_functions`` is later versioned.
         """
         if self.n == 0:
             return np.zeros(self._n_feat * len(agg_functions), dtype=np.float32)
-        std = np.sqrt(self._M2 / self.n)  # ddof=0 (matches old np.std default)
+        std = np.sqrt(self._M2 / self.n)  # ddof=0 (population std)
         out = np.empty(self._n_feat * len(agg_functions), dtype=np.float32)
         for i in range(self._n_feat):
             for j, agg in enumerate(agg_functions):
@@ -500,7 +492,7 @@ def build_tensors(
         np.save(rf_checkpoint_offsets_path, rf_checkpoint_offsets)
         ckpt_mmap.flush()
 
-    print(f"[+] Built ragged tensors:")
+    print("[+] Built ragged tensors:")
     if build_tcn:
         print(f"    flow_packets    : {pkt_mmap.shape}   "
               f"(P, F={n_seq_features})")

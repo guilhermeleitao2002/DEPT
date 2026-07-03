@@ -31,7 +31,6 @@ Outputs (under <output_dir> from metalearner.yaml)
 from __future__ import annotations
 
 import argparse
-import json
 import logging
 import sys
 import time

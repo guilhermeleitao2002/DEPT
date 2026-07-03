@@ -4,9 +4,10 @@ Under the streaming-native schema each row of ``dataset.X`` is one
 *multi-scale prefix view* of a flow (a checkpoint emitted every K
 packets per flow). The metrics produced here are therefore per-checkpoint
 — a fair view of the RF's behaviour across the full inference-time
-distribution of prefix sizes. The richer per-prefix + per-flow streaming
-metrics (AUROC@t, EDP) are produced separately by
-``src/models/common/streaming_eval.py`` in Phase 4.
+distribution of prefix sizes. The richer per-flow streaming metrics
+(AUROC@t, EDP) are also produced here via
+``src/models/common/streaming_eval.py`` and written to
+``streaming_metrics.json``.
 
 Under ADEPT's benign-vs-adversarial label convention, the positive class
 is "adversarial" (TANTGen-perturbed traffic) and the negative class is

@@ -76,11 +76,8 @@ def _flow_codes(sources: np.ndarray, flow_ids: np.ndarray) -> np.ndarray:
     """Integer code per row identifying its ``(source, flow_id)`` flow.
 
     ``codes[i] == codes[j]`` iff rows *i* and *j* belong to the same flow,
-    with codes assigned ``0, 1, 2, …`` in **first-appearance order** — the
-    same grouping and ordering as the previous
-    ``np.unique(("src|flow").astype(str))`` path, but computed with
-    hash-based ``pd.factorize`` (O(N), no object-dtype sort). This is the
-    fix for the multi-day single-threaded ``object``-string bottleneck.
+    with codes assigned ``0, 1, 2, …`` in **first-appearance order**, computed
+    with hash-based ``pd.factorize`` (O(N), no object-dtype sort).
     """
     if len(sources) == 0:
         return np.zeros(0, dtype=np.int64)
@@ -97,8 +94,8 @@ def _flow_codes(sources: np.ndarray, flow_ids: np.ndarray) -> np.ndarray:
 def _expand_ranges(starts: np.ndarray, counts: np.ndarray) -> np.ndarray:
     """Vectorized concat of ``arange(starts[k], starts[k]+counts[k])``.
 
-    Replaces a per-flow Python loop: builds the full gather index in one
-    cumulative-sum pass. ``counts`` must all be > 0 and ``len(starts) > 0``.
+    Builds the full gather index in one cumulative-sum pass. ``counts`` must
+    all be > 0 and ``len(starts) > 0``.
     """
     total = int(counts.sum())
     idx = np.ones(total, dtype=np.int64)
@@ -170,7 +167,7 @@ def _expand_source_checkpoints(
     lab_keep = np.asarray(label_str_per_flow, dtype=object)[keep]
 
     # X: gather every checkpoint block in one shot — rows stay in flow order,
-    # checkpoints ascending within a flow (identical to the old slice loop).
+    # checkpoints ascending within a flow.
     gather = _expand_ranges(starts, counts)
     total = len(gather)
     X = rf_ckpts[gather]
@@ -309,12 +306,9 @@ def flow_level_split(
             test_idx=np.zeros(0, dtype=np.int64),
         )
 
-    # Integer flow code per checkpoint row (hash-based; replaces the old
-    # object-dtype np.unique/np.isin that ran single-threaded for days).
+    # Integer flow code per checkpoint row (hash-based).
     codes = _flow_codes(dataset.sources, dataset.flow_ids)
-    # First-occurrence row of each code, in code (== first-appearance) order —
-    # identical to the previous np.unique(...return_index)+np.sort ordering, so
-    # _common_flow_level_split receives byte-identical per-flow inputs.
+    # First-occurrence row of each code, in code (== first-appearance) order.
     _, first_pos = np.unique(codes, return_index=True)
     per_flow_sources = dataset.sources[first_pos]
     per_flow_flow_ids = dataset.flow_ids[first_pos]
@@ -345,8 +339,7 @@ def flow_level_split(
 
 def split_summary(dataset: RFDataset, split: Split) -> dict:
     """Per-split checkpoint + unique-flow counts."""
-    # Shared integer flow codes — counting distinct codes per split replaces
-    # the old per-split object-string rebuild + set().
+    # Shared integer flow codes — count distinct codes per split.
     codes = _flow_codes(dataset.sources, dataset.flow_ids)
 
     def _stats(idx: np.ndarray) -> dict:

@@ -111,9 +111,7 @@ def evaluate(output_dir: Path, config: dict) -> dict:
 
     per_flow_probs: list[np.ndarray] = []
     per_flow_pkt: list[np.ndarray] = []
-    last_logits: list[float] = []
     last_probs: list[float] = []
-    pos = 0
     with torch.inference_mode():
         for tokens, _labels, lengths, mask in loader:
             tokens = tokens.to(device, non_blocking=True)
@@ -121,16 +119,11 @@ def evaluate(output_dir: Path, config: dict) -> dict:
             logits = model(tokens, key_padding_mask=mask)
             probs = torch.softmax(logits.float(), dim=2)[:, :, 1]
             probs_cpu = probs.detach().cpu().numpy()
-            logit_cpu = (
-                logits.float()[:, :, 1] - logits.float()[:, :, 0]
-            ).detach().cpu().numpy()
             for b in range(probs_cpu.shape[0]):
                 L = int(lengths[b].item())
                 per_flow_probs.append(probs_cpu[b, :L].astype(np.float64))
                 per_flow_pkt.append(np.arange(1, L + 1, dtype=np.int64))
                 last_probs.append(float(probs_cpu[b, L - 1]))
-                last_logits.append(float(logit_cpu[b, L - 1]))
-                pos += 1
 
     labels = cache.labels.astype(np.int64)
     sources = cache.sources.astype(object)

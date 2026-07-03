@@ -28,7 +28,6 @@ from __future__ import annotations
 import logging
 import shutil
 import subprocess
-import tempfile
 from pathlib import Path
 
 import numpy as np
@@ -46,19 +45,8 @@ def _round_tristate(x: np.ndarray) -> np.ndarray:
     return np.clip(np.round(x), -1.0, 1.0)
 
 
-def _decode_bits(bits: np.ndarray, weights: np.ndarray) -> float:
-    """Decode an MSB-first bit slice to an unsigned int (−1 clamped to 0)."""
-    cleaned = np.maximum(_round_tristate(bits), 0.0)
-    return float(cleaned @ weights)
-
-
-def decode_total_len(seq_row: np.ndarray) -> int:
-    """Reconstructed IPv4 total length (bytes) from one purified packet row."""
-    return int(_decode_bits(seq_row[_IDX_IPV4_TL[0]:_IDX_IPV4_TL[1]], _WEIGHTS16))
-
-
 def decode_total_len_batch(seq: np.ndarray) -> np.ndarray:
-    """Vectorised :func:`decode_total_len` over a ``[L, F]`` flow → ``[L]`` int."""
+    """Reconstructed IPv4 total length (bytes) per packet of a ``[L, F]`` flow → ``[L]`` int."""
     bits = np.maximum(_round_tristate(seq[:, _IDX_IPV4_TL[0]:_IDX_IPV4_TL[1]]), 0.0)
     return (bits.astype(np.float64) @ _WEIGHTS16).astype(np.int64)
 
@@ -318,7 +306,6 @@ def tshark_compliance(pcap_path: Path) -> dict:
 
 
 __all__ = [
-    "decode_total_len",
     "decode_total_len_batch",
     "realize_source",
     "write_pcap",

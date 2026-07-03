@@ -22,9 +22,7 @@ from pathlib import Path
 
 import numpy as np
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
-from torch.utils.data import DataLoader
 
 # torch.amp (unified) was added in PyTorch 2.0; fall back to torch.cuda.amp.
 try:

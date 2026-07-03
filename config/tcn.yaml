@@ -1,12 +1,13 @@
 # ===================================
 # ADEPT — TCN base learner
 # ===================================
-# Binary classifier (benign vs adversarial) over the [N=10, F=1090]
-# packet-sequence tensor produced by the Packet-to-Tensor pipeline.
+# Binary classifier (benign vs adversarial) over the ragged, variable-length
+# per-flow [L, F=1090] packet sequences produced by the Packet-to-Tensor
+# pipeline. Emits a per-packet prediction stream.
 #
-# Same dataset scope as config/rf.yaml so RF and TCN see the same windows
-# under the same flow-atomic split (driven by `split.seed`). This is the
-# basis for a fair RF-vs-TCN comparison and the future ensemble step.
+# Same dataset scope as config/rf.yaml so RF and TCN see the same flows under
+# the same flow-atomic split (driven by `split.seed`). This is the basis for a
+# fair RF-vs-TCN comparison and the meta-learner that stacks the two.
 
 tensors_dir: data/tensors
 adversarial_dir: data/tensors/adversarial   # auto-discovered: every subdir with metadata.json
@@ -32,8 +33,7 @@ benign_sources:
 
 # Adversarial pool — every subdirectory of adversarial_dir/ that contains
 # metadata.json is loaded automatically, except those listed below. Same
-# list as rf.yaml; see that file for per-entry rationale (portscan_adv_*
-# is structurally incompatible with N=10 windowing; the rest are
+# list as rf.yaml; see that file for per-entry rationale (the excludes are
 # defensive carry-overs from older attack sets).
 adversarial_exclude:
   # - portscan_adv_both
@@ -63,11 +63,9 @@ split:
   test_frac: 0.15
   seed: 42
 
-# Benign capping: total benign windows ≤ benign_cap_ratio × adversarial
-# windows (applied globally, flow-atomic). Same value as rf.yaml.
+# Benign capping: total benign flows ≤ benign_cap_ratio × adversarial
+# flows (applied globally, flow-atomic). Same value as rf.yaml.
 benign_cap_ratio: 3.0
-
-drop_unknown: true
 
 # ---- TCN architecture ----
 # Default: 3 dilated temporal blocks at 128 channels (~0.8M params).
@@ -87,8 +85,7 @@ model:
 training:
   device: auto             # auto | cuda | cuda:0 | cuda:1 | cpu
   epochs: 20
-  batch_size: 32           # smaller than the old fixed-window batch (256)
-                           # because flows can be hundreds of packets long
+  batch_size: 32           # small because flows can be hundreds of packets long
   num_workers: auto        # auto | <int> — auto = min(16, cpu_count // 2)
   lr: 1.0e-3
   weight_decay: 1.0e-4
