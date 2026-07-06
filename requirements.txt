@@ -24,6 +24,15 @@ scikit-learn>=1.3           # import name: sklearn
 # --- Packet / network processing ---------------------------------------------
 scapy>=2.5
 
+# --- Kitsune (independent-NIDS purification metric) --------------------------
+# The reconstructor eval scores purified packets through TANTGen's Kitsune
+# (KitNET + the compiled AfterImage Cython extension). Loading that prebuilt
+# `AfterImage*.so` runs `pyximport.install()` at import, so this venv needs
+# Cython/pyximport. Matches TANTGen's Cython 3.2.4. The metric also requires the
+# sibling TANTGen tree with its AfterImage .so already built (see reconstructor.yaml
+# `kitsune.tantgen_root`); it is best-effort and skipped if absent.
+Cython==3.2.4               # provides `pyximport` for the AfterImage .so
+
 # --- Deep learning -----------------------------------------------------------
 # ADEPT TCN + mini-transformer meta-learner (raw torch);
 # TANTGen transformer surrogate + finetune + pretrain (PyTorch Lightning).

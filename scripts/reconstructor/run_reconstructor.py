@@ -123,6 +123,26 @@ def _print_recon_metrics(metrics: dict) -> None:
         print(f"   {cyan('gain')} {bold(green(_fmt(pur['gain'])))}   "
               f"{cyan('residual gap')} {_fmt(pur['residual_gap'])}")
 
+    kit = metrics.get("kitsune", {})
+    kov = kit.get("overall") if isinstance(kit, dict) else None
+    if kov:
+        print(f"\n {bold('Purification efficacy (through Kitsune — independent NIDS)')}")
+        print(f"   {dim('anomaly score restored: adv (evaded) → purified → clean (oracle)')}")
+        print(f"   {cyan('mean RMSE')}  adv {_fmt(kov.get('mean_rmse_adv'), 4)}  "
+              f"purified {_fmt(kov.get('mean_rmse_purified'), 4)}  "
+              f"clean {_fmt(kov.get('mean_rmse_clean'), 4)}")
+        rr = kov.get('rmse_restoration_ratio')
+        print(f"   {cyan('RMSE restoration')} "
+              f"{bold(green((_fmt(rr * 100, 1) + '%') if rr is not None else '—'))}   "
+              f"{dim('(fraction of the adv→clean anomaly gap recovered)')}")
+        print(f"   {cyan('detect(adv)')} {_fmt(kov.get('detection_rate_adv'))}   "
+              f"{cyan('detect(purified)')} {_fmt(kov.get('detection_rate_purified'))}   "
+              f"{cyan('detect(clean)')} {_fmt(kov.get('detection_rate_clean'))}   "
+              f"{dim('(threshold-dependent — see README)')}")
+    elif isinstance(kit, dict) and kit.get("skipped"):
+        print(f"\n {bold('Purification efficacy (Kitsune)')}  "
+              f"{yellow('skipped:')} {dim(str(kit['skipped']))}")
+
     comp = ov["protocol_compliance"]
     print(f"\n {bold('Protocol compliance')}")
     print(f"   {cyan('tshark')} {_fmt(comp.get('tshark_rate'))}")
@@ -130,19 +150,23 @@ def _print_recon_metrics(metrics: dict) -> None:
     per = metrics.get("per_source", {})
     if per:
         print(f"\n {bold('Per-source')}  {dim('(' + str(len(per)) + ' variant(s))')}")
-        hdr = (f"   {'variant':<24} {'mse_before':>11} {'mse_after':>11} "
-               f"{'P_adv':>7} {'P_recon':>8} {'gain':>7} {'tshark':>7}")
+        hdr = (f"   {'variant':<24} {'mse_after':>10} "
+               f"{'P_recon':>8} {'gain':>7} "
+               f"{'K_adv':>7} {'K_puri':>7} {'K_clean':>7} {'tshark':>7}")
         print(cyan(hdr))
         for name in sorted(per.keys()):
             s = per[name]
             r = s["reconstruction"]
             p = s["purification"]
             c = s["protocol_compliance"]
-            print(f"   {name:<24} {_fmt(r.get('perturbed_mse_before'), 5):>11} "
-                  f"{_fmt(r.get('perturbed_mse_after'), 5):>11} "
-                  f"{_fmt(p.get('p_adv_on_adv'), 3):>7} "
+            k = s.get("kitsune", {})
+            print(f"   {name:<24} "
+                  f"{_fmt(r.get('perturbed_mse_after'), 5):>10} "
                   f"{_fmt(p.get('p_adv_on_recon'), 3):>8} "
                   f"{_fmt(p.get('gain'), 3):>7} "
+                  f"{_fmt(k.get('detection_rate_adv'), 3):>7} "
+                  f"{_fmt(k.get('detection_rate_purified'), 3):>7} "
+                  f"{_fmt(k.get('detection_rate_clean'), 3):>7} "
                   f"{_fmt(c.get('tshark_rate'), 3):>7}")
 
 

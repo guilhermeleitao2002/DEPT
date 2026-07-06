@@ -88,3 +88,43 @@ training:
 # realization (and thus the protocol-compliance check) is skipped.
 realize:
   adversarial_pcap_dir: data/adversarial   # original TANTGen PCAPs (phase 1 output)
+
+# ---- Independent-NIDS efficacy (Kitsune) ----
+# The headline purification-efficacy metric. Realize adv / purified / clean packets
+# (same flows & identity; only size+timing differ) and score each through Kitsune
+# (KitNET + AfterImage) — the real anomaly-detection NIDS TANTGen's attacks evade.
+# Kitsune never saw ADEPT's models, so it breaks the TCN's circularity.
+#
+# Scope: restricted to the two Kitsune-NATIVE attacks TANTGen actually calibrated a
+# Kitsune against (mirai, ssdp_flood) — the gold-standard "attacker's own target NIDS"
+# case. Their pretrained pickles are reused verbatim. Extending to other attacks would
+# require calibrating a fresh Kitsune per attack (out of current scope).
+#
+# Semantics: Kitsune flags a flow when RMSE > threshold φ. The attack evades by
+# suppressing RMSE; purification recovers the original attack's fingerprint, so the
+# anomaly score rises from the (evaded) adversarial floor toward the clean-original
+# oracle. Primary metric = rmse_restoration_ratio (fraction of the adv→clean anomaly
+# gap recovered; robust to Kitsune's absolute RMSE scale). Detection rate at φ is also
+# reported but is threshold-dependent (see the reconstructor README caveat).
+#
+# Kitsune is imported from the sibling TANTGen repo (needs its built AfterImage .so
+# and, in the ADEPT venv, Cython/pyximport). Best-effort: skipped if unavailable.
+kitsune:
+  enabled: true
+  tantgen_root: ../Transformer-based_Adversarial_Network_Traffic_Generator
+  sources: [mirai, ssdp_flood]   # only score these base attacks (Kitsune-native)
+  model_dir: data/models/kitsune # cache dir for any locally-trained fallback models
+  # TANTGen's own calibrated models (relative to tantgen_root) — used as-is.
+  pretrained:
+    mirai:      src/Kitsune/models/Mirai_model.pkl
+    ssdp_flood: src/Kitsune/models/SSDP_Flood_model.pkl
+  # Fallback only (if a pretrained pickle is missing): calibrate on the benign split.
+  benign_pcap_dir: data/original/Kitsune/Benign   # under tantgen_root; <TG_NAME>_benign.pcap
+  base_to_tg:
+    mirai: Mirai
+    ssdp_flood: SSDP_Flood
+  fm_grace: 5000            # AfterImage feature-map grace (TANTGen protocol)
+  ad_grace: 50000           # autoencoder-training grace
+  train_cap_packets: 55000  # cap benign feature extraction (>= fm+ad)
+  detection: max            # per-flow RMSE aggregation: max | mean
+  seed: 42

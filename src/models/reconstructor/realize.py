@@ -242,6 +242,111 @@ def realize_source(
     return realized, stats
 
 
+def realize_triplet(
+    adv_pcap: Path,
+    flow_vectors: dict[str, dict[str, tuple[np.ndarray, np.ndarray]]],
+    ipat_mean: float,
+    ipat_std: float,
+) -> tuple[dict[str, dict[str, list]], dict]:
+    """Realize three aligned packet sets (adv / purified / clean) for the Kitsune metric.
+
+    ``flow_vectors`` maps a flow's stringified 5-tuple to a dict with keys ``"adv"``,
+    ``"recon"`` and ``"clean"`` — each a tuple ``(total_len[L] int, ipat_z[L] float)``
+    decoded from the adversarial / reconstructed / clean-target tensor of that flow.
+
+    All three overlays are applied to the **same** adversarial PCAP packets and share
+    **one keep-mask**: a packet is dropped from all three if resizing it under *any*
+    of the three size targets would corrupt an application-layer text grammar
+    (:func:`_is_l7_text`). So the only variable an external NIDS sees across the three
+    branches is size+timing — exactly what the Purifier touches. This makes the
+    adv→purified→clean comparison a controlled experiment (same flows, identity,
+    payloads and exclusions), and it sidesteps any stale on-disk clean PCAP because
+    the clean overlay is driven by the paired tensor, not a separate capture.
+
+    Returns ``({branch: {"packets": [...], "keys": [...]}}, stats)`` — each branch's
+    packets are sorted by their own re-timed timestamps and ``keys[i]`` is the canonical
+    5-tuple of ``packets[i]`` (so a caller can aggregate per-flow after scoring).
+    """
+    from scapy.all import PcapReader
+
+    branches = ("adv", "purified", "clean")
+    out: dict[str, dict[str, list]] = {b: {"packets": [], "keys": []} for b in branches}
+    stats = {"target_flows": len(flow_vectors), "realized_flows": 0,
+             "miss_len": 0, "unmatched": 0, "unrealizable_l7": 0,
+             "pcap_packets_read": 0, "pcap_packets_kept": 0, "packets_per_branch": 0}
+    if not Path(adv_pcap).exists():
+        stats["error"] = f"pcap not found: {adv_pcap}"
+        return out, stats
+
+    # Single streaming pass, keeping only packets of a reconstructed flow (see
+    # realize_source for the rationale — memory scales with the realized flows).
+    target_keys = set(flow_vectors)
+    rows: list[tuple[float, str, object]] = []
+    n_scanned = 0
+    try:
+        with PcapReader(str(adv_pcap)) as reader:
+            for pkt in reader:
+                n_scanned += 1
+                key = _canonical_key(pkt)
+                if key in target_keys:
+                    rows.append((float(pkt.time), key, pkt))
+    except Exception as e:  # pragma: no cover - defensive
+        stats["error"] = f"pcap read failed: {e}"
+        return out, stats
+    stats["pcap_packets_read"] = n_scanned
+    stats["pcap_packets_kept"] = len(rows)
+
+    order = sorted(range(len(rows)), key=lambda i: rows[i][0])
+    groups: dict[str, list[int]] = {}
+    for pos in order:
+        groups.setdefault(rows[pos][1], []).append(pos)
+
+    def _retime(ipat_z, t0):
+        ipat = np.asarray(ipat_z, dtype=np.float64) * float(ipat_std) + float(ipat_mean)
+        ipat = np.clip(ipat, 0.0, None)
+        return t0 + np.cumsum(np.concatenate([[0.0], ipat[1:]]))
+
+    acc: dict[str, list[tuple[float, str, object]]] = {b: [] for b in branches}
+    for fid, vecs in flow_vectors.items():
+        positions = groups.get(fid)
+        if positions is None:
+            stats["unmatched"] += 1
+            continue
+        (tl_a, ip_a) = vecs["adv"]
+        (tl_r, ip_r) = vecs["recon"]
+        (tl_c, ip_c) = vecs["clean"]
+        L = int(len(tl_r))
+        if not (len(positions) == L == len(tl_a) == len(tl_c)):
+            stats["miss_len"] += 1
+            continue
+        t0 = rows[positions[0]][0]
+        ts = {"adv": _retime(ip_a, t0), "purified": _retime(ip_r, t0),
+              "clean": _retime(ip_c, t0)}
+        flow_pkts: dict[str, list] = {b: [] for b in branches}
+        for i, pos in enumerate(positions):
+            base = rows[pos][2]
+            # Overlay each size target on an independent copy (_apply_size mutates).
+            p_adv, _, un_a = _apply_size(base.copy(), int(tl_a[i]))
+            p_pur, _, un_r = _apply_size(base.copy(), int(tl_r[i]))
+            p_cln, _, un_c = _apply_size(base.copy(), int(tl_c[i]))
+            if un_a or un_r or un_c:      # shared keep-mask: exclude from all three
+                stats["unrealizable_l7"] += 1
+                continue
+            for b, pkt in (("adv", p_adv), ("purified", p_pur), ("clean", p_cln)):
+                pkt.time = float(ts[b][i])
+                flow_pkts[b].append((pkt.time, fid, pkt))
+        for b in branches:
+            acc[b].extend(flow_pkts[b])
+        stats["realized_flows"] += 1
+
+    for b in branches:
+        acc[b].sort(key=lambda r: r[0])
+        out[b]["packets"] = [r[2] for r in acc[b]]
+        out[b]["keys"] = [r[1] for r in acc[b]]
+    stats["packets_per_branch"] = len(out["adv"]["packets"])
+    return out, stats
+
+
 def write_pcap(packets: list, out_path: Path) -> bool:
     """Write realized packets to ``out_path`` (best-effort)."""
     if not packets:
@@ -308,6 +413,7 @@ def tshark_compliance(pcap_path: Path) -> dict:
 __all__ = [
     "decode_total_len_batch",
     "realize_source",
+    "realize_triplet",
     "write_pcap",
     "tshark_available",
     "tshark_compliance",
