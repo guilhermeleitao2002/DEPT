@@ -20,8 +20,6 @@ high-entropy identity fields (IPs, ports, IP ID) to prevent overfitting.
 """
 
 import math
-import os
-from concurrent.futures import ProcessPoolExecutor
 from typing import List, Optional
 
 import numpy as np
@@ -91,33 +89,52 @@ assert len(NPRINT_COLUMNS) == TOTAL_BITS
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Bit-level encoding (mirrors nPrint's make_bitstring)
+# Bit-level encoding (mirrors nPrint's make_bitstring), vectorised per capture
 # ──────────────────────────────────────────────────────────────────────────────
 
-def _bytes_to_bits(raw_bytes: bytes, max_bytes: int, fill: int = -1) -> List[int]:
+def _encode_layer(raw_list: list, max_bytes: int) -> np.ndarray:
     """
-    Expand raw header bytes into a bit vector, padding to max_bytes.
+    Expand one header layer's raw bytes into nPrint bit vectors for a whole
+    capture at once, via a single ``np.unpackbits`` call.
 
-    If raw_bytes is None or empty, the entire vector is filled with `fill` (-1).
-    Actual bytes are expanded MSB-first (matching nPrint's make_bitstring).
-    Remaining bytes up to max_bytes are zero-padded (matching nPrint behavior
-    for variable-length headers like IPv4/TCP with options).
+    Mirrors nPrint's ``make_bitstring`` semantics exactly:
+
+      * layer absent (raw is ``None``) -> all -1  ("not present" sentinel)
+      * layer present                  -> header bytes expanded MSB-first, then
+                                          zero-padded out to ``max_bytes * 8``
+                                          bits (unused options space is 0)
+
+    Parameters
+    ----------
+    raw_list : list[bytes | None]
+        One entry per packet: the layer's raw header bytes, or None if the
+        packet has no such layer.
+    max_bytes : int
+        Fixed width nPrint pads this layer to (60 for IPv4/TCP, 8 for
+        UDP/ICMP).
+
+    Returns
+    -------
+    np.ndarray of shape (len(raw_list), max_bytes * 8), int8
     """
+    n = len(raw_list)
     total_bits = max_bytes * 8
-    if raw_bytes is None:
-        return [fill] * total_bits
+    bits = np.full((n, total_bits), -1, dtype=np.int8)
 
-    bits = []
-    for byte in raw_bytes:
-        for j in range(7, -1, -1):
-            bits.append((byte >> j) & 1)
+    present = [i for i, raw in enumerate(raw_list) if raw is not None]
+    if not present:
+        return bits
 
-    # Pad remaining space with zeros (header exists but options space is unused)
-    remaining = total_bits - len(bits)
-    if remaining > 0:
-        bits.extend([0] * remaining)
+    # Pack every present header into a fixed-width, zero-padded byte buffer;
+    # np.unpackbits then expands the whole buffer to MSB-first bits in one
+    # C-level call (unused trailing bytes stay zero, matching nPrint padding).
+    byte_buf = np.zeros((len(present), max_bytes), dtype=np.uint8)
+    for row, i in enumerate(present):
+        raw = raw_list[i][:max_bytes]
+        byte_buf[row, :len(raw)] = np.frombuffer(raw, dtype=np.uint8)
 
-    return bits[:total_bits]
+    bits[present] = np.unpackbits(byte_buf, axis=1).astype(np.int8)
+    return bits
 
 
 def _shannon_entropy(data: bytes) -> float:
@@ -132,15 +149,16 @@ def _shannon_entropy(data: bytes) -> float:
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Two-phase helpers for parallel nPrint encoding
+# Raw header + metadata extraction (Scapy)
 # ──────────────────────────────────────────────────────────────────────────────
 
 def _scan_raw_packet(pkt) -> tuple:
     """
-    Phase 1 (main process): extract raw header bytes and metadata from a packet.
+    Extract raw header bytes and metadata from a single packet.
 
-    Defers the bit expansion — the expensive _bytes_to_bits inner loops are
-    moved to _encode_raw_chunk (worker processes).
+    The (cheap) raw-byte + metadata scan runs sequentially per packet here; the
+    (expensive) bit expansion is deferred and vectorised over the whole capture
+    afterwards by :func:`_encode_layer`.
 
     Returns
     -------
@@ -196,36 +214,6 @@ def _scan_raw_packet(pkt) -> tuple:
     return raw_ip, raw_tcp, raw_udp, raw_icmp, meta
 
 
-def _encode_raw_chunk(raw_list: list) -> np.ndarray:
-    """
-    Phase 2 (worker process): expand raw header bytes into nPrint bit vectors.
-
-    Called via ProcessPoolExecutor — no Scapy dependency here.  With the
-    default fork start method on Linux the module constants (TOTAL_BITS, etc.)
-    are inherited from the parent; with spawn they are re-imported.
-
-    Parameters
-    ----------
-    raw_list : list of (raw_ip, raw_tcp, raw_udp, raw_icmp)
-        Each element is bytes | None, as returned by _scan_raw_packet.
-
-    Returns
-    -------
-    np.ndarray of shape (len(raw_list), TOTAL_BITS) int8
-    """
-    n = len(raw_list)
-    result = np.empty((n, TOTAL_BITS), dtype=np.int8)
-    for i, (raw_ip, raw_tcp, raw_udp, raw_icmp) in enumerate(raw_list):
-        bits = (
-            _bytes_to_bits(raw_ip,  _IPV4_MAX_BYTES)
-            + _bytes_to_bits(raw_tcp, _TCP_MAX_BYTES)
-            + _bytes_to_bits(raw_udp,  _UDP_BYTES)
-            + _bytes_to_bits(raw_icmp, _ICMP_BYTES)
-        )
-        result[i] = bits
-    return result
-
-
 # ──────────────────────────────────────────────────────────────────────────────
 # Selective masking (FlowPaint §3.3.2)
 # ──────────────────────────────────────────────────────────────────────────────
@@ -246,21 +234,18 @@ DEFAULT_MASK_PREFIXES = [
 def extract_packet_features(
     pcap_path: str,
     mask_prefixes: Optional[List[str]] = None,
-    workers: Optional[int] = None,
 ) -> tuple:
     """
     Read a PCAP and return nPrint bit-level features as a compact numpy
     array plus a lightweight metadata DataFrame.
 
-    Uses a two-phase approach to parallelize the nPrint bit expansion:
-
-    Phase 1 (main process, sequential):
-        Read packets with Scapy, extract raw header bytes + metadata.
-        Submits each CHUNK_SIZE-packet batch to the worker pool immediately.
-
-    Phase 2 (worker pool, parallel):
-        Each worker expands raw bytes into the 1088-bit nPrint vector.
-        Workers have no Scapy dependency — pure Python + numpy.
+    Packets are read once, sequentially, with Scapy (``PcapReader``); each
+    packet's raw header bytes + metadata are collected. The nPrint bit
+    expansion — the only genuinely heavy step — is then done for the whole
+    capture in four vectorised ``np.unpackbits`` calls (one per header layer,
+    see :func:`_encode_layer`). Reading dominates the runtime, so this is both
+    simpler and faster than the previous per-file process pool, and it can be
+    interrupted cleanly.
 
     Parameters
     ----------
@@ -269,9 +254,6 @@ def extract_packet_features(
     mask_prefixes : list[str] or None
         nPrint column prefixes to zero out (identity masking).
         Defaults to DEFAULT_MASK_PREFIXES. Pass [] to disable masking.
-    workers : int or None
-        Number of parallel encoding worker processes.
-        Defaults to os.cpu_count() (all available cores).
 
     Returns
     -------
@@ -279,9 +261,6 @@ def extract_packet_features(
         nprint_bits : int8 array of shape (P, 1088)
         meta_df     : DataFrame with columns Timestamp, Source_IP, …, TCP_Flags
     """
-    n_workers  = workers or (os.cpu_count() or 1)
-    CHUNK_SIZE = 50_000
-
     reader = PcapReader(pcap_path)
     pbar = (
         _tqdm(reader, desc="      Parsing packets", unit=" pkt",
@@ -289,43 +268,41 @@ def extract_packet_features(
         if _tqdm is not None else reader
     )
 
-    all_meta   = []   # metadata rows — accumulated in main process
-    raw_chunk  = []   # (raw_ip, raw_tcp, raw_udp, raw_icmp) for current chunk
-    pending    = []   # Future[np.ndarray] in submission order
+    all_meta = []                     # metadata rows, in packet order
+    raw_ip, raw_tcp, raw_udp, raw_icmp = [], [], [], []   # per-layer raw headers
 
-    # Phase 1 + dispatch: read sequentially, hand off encoding to workers.
-    with ProcessPoolExecutor(max_workers=n_workers) as executor:
-        for pkt in pbar:
-            raw_ip, raw_tcp, raw_udp, raw_icmp, meta = _scan_raw_packet(pkt)
-            all_meta.append(meta)
-            raw_chunk.append((raw_ip, raw_tcp, raw_udp, raw_icmp))
-
-            if len(raw_chunk) >= CHUNK_SIZE:
-                pending.append(executor.submit(_encode_raw_chunk, raw_chunk))
-                raw_chunk = []   # free the Python bytes objects
-
-        if raw_chunk:
-            pending.append(executor.submit(_encode_raw_chunk, raw_chunk))
-            raw_chunk = []
-
-        # Phase 2 collect: gather results in submission order (preserves packet
-        # order) while workers may still be running earlier chunks.
-        bit_chunks = [fut.result() for fut in pending]
+    # Read sequentially, collecting raw header bytes + metadata per packet.
+    for pkt in pbar:
+        r_ip, r_tcp, r_udp, r_icmp, meta = _scan_raw_packet(pkt)
+        all_meta.append(meta)
+        raw_ip.append(r_ip); raw_tcp.append(r_tcp)
+        raw_udp.append(r_udp); raw_icmp.append(r_icmp)
 
     if _tqdm is not None:
         pbar.close()
     reader.close()
 
-    n_packets = sum(c.shape[0] for c in bit_chunks)
+    n_packets = len(all_meta)
     if n_packets == 0:
         raise ValueError(
             f"No packets found in {pcap_path}. "
             "If this is a time-filtered PCAP, the time window may be incorrect."
         )
 
-    # Build compact nPrint array (stays as numpy — never enters pandas)
-    nprint_bits = np.vstack(bit_chunks) if len(bit_chunks) > 1 else bit_chunks[0]
-    del bit_chunks
+    # Vectorised nPrint bit expansion, written straight into the output matrix
+    # in the canonical IPv4 | TCP | UDP | ICMP column order (== NPRINT_COLUMNS).
+    nprint_bits = np.empty((n_packets, TOTAL_BITS), dtype=np.int8)
+    col = 0
+    for raw_list, max_bytes in (
+        (raw_ip,   _IPV4_MAX_BYTES),
+        (raw_tcp,  _TCP_MAX_BYTES),
+        (raw_udp,  _UDP_BYTES),
+        (raw_icmp, _ICMP_BYTES),
+    ):
+        width = max_bytes * 8
+        nprint_bits[:, col:col + width] = _encode_layer(raw_list, max_bytes)
+        col += width
+    del raw_ip, raw_tcp, raw_udp, raw_icmp
 
     # Build lightweight metadata DataFrame (~10 columns only)
     meta_df = pd.DataFrame(all_meta)
@@ -337,9 +314,9 @@ def extract_packet_features(
     if mask_prefixes:
         print(f"      Masking {len(mask_prefixes)} field prefixes: {mask_prefixes}")
         cols_to_mask = []
-        for i, col in enumerate(NPRINT_COLUMNS):
+        for i, col_name in enumerate(NPRINT_COLUMNS):
             for prefix in mask_prefixes:
-                if col.startswith(prefix + "_") and col[len(prefix) + 1:].isdigit():
+                if col_name.startswith(prefix + "_") and col_name[len(prefix) + 1:].isdigit():
                     cols_to_mask.append(i)
                     break
         if cols_to_mask:
