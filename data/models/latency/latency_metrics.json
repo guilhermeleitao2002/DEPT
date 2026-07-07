@@ -12,15 +12,65 @@
     "rf_ckpt_sample": 200000,
     "sample_note": "representative test-split sample; raise constants for full split"
   },
+  "preprocessing": {
+    "device": "cpu",
+    "source": "portscan_adv_both",
+    "note": "raw pcap \u2192 nPrint ragged tensors (Scapy parse + nPrint encode + 5-tuple group + ragged/RF tensor build); tmpfs scratch so NAS I/O is excluded; masking + RF cadence per config/pipeline.yaml",
+    "n_packets": 100000,
+    "n_flows": 49505,
+    "workers": 104,
+    "stage_ms_median": {
+      "parse_encode": 36053.87250892818,
+      "group_by_flow": 884.3050829600543,
+      "build_tensors": 2737.5688378233463
+    },
+    "stage_detail_ms": {
+      "parse_encode": {
+        "mean": 36390.398097302146,
+        "median": 36053.87250892818,
+        "p95": 37153.992424020544,
+        "p99": 37153.992424020544,
+        "std": 541.2065147113676,
+        "min": 35963.32935895771,
+        "max": 37153.992424020544,
+        "n": 3
+      },
+      "group_by_flow": {
+        "mean": 911.3617557256172,
+        "median": 884.3050829600543,
+        "p95": 1170.2748010866344,
+        "p99": 1170.2748010866344,
+        "std": 201.2671575397412,
+        "min": 679.505383130163,
+        "max": 1170.2748010866344,
+        "n": 3
+      },
+      "build_tensors": {
+        "mean": 2782.908539287746,
+        "median": 2737.5688378233463,
+        "p95": 2898.902853950858,
+        "p99": 2898.902853950858,
+        "std": 82.66890574112622,
+        "min": 2712.2539260890335,
+        "max": 2898.902853950858,
+        "n": 3
+      }
+    },
+    "total_ms_median": 39675.74642971158,
+    "ms_per_packet_amortized": 0.3967574642971158,
+    "ms_per_flow_amortized": 0.8014492764308975,
+    "pkts_per_s": 2520.4314725913764,
+    "flows_per_s": 1247.7396005063608
+  },
   "per_model": {
     "rf": {
       "device": "cpu",
       "n_estimators": 200,
       "n_checkpoints_timed": 200000,
-      "ckpt_per_s": 866474.202350861,
-      "per_checkpoint_ms": 0.0011541024502366782,
+      "ckpt_per_s": 852730.4203146799,
+      "per_checkpoint_ms": 0.0011727035604417325,
       "mean_checkpoints_per_flow": 1.4357196811576918,
-      "per_flow_ms_est": 0.0016569676018771144,
+      "per_flow_ms_est": 0.001683673581889894,
       "note": "CPU sklearn; per-flow = per-checkpoint x mean checkpoints/flow"
     },
     "tcn": {
@@ -29,23 +79,23 @@
         "batch_size": 32,
         "n_flows": 2048,
         "n_packets": 11817,
-        "sweep_ms_median": 116.6951609775424,
-        "flows_per_s": 17549.999355964133,
-        "pkts_per_s": 101263.83905733797,
-        "ms_per_flow_amortized": 0.056980059071065625
+        "sweep_ms_median": 100.89835803955793,
+        "flows_per_s": 20297.654389946234,
+        "pkts_per_s": 117117.86226855207,
+        "ms_per_flow_amortized": 0.0492667763865029
       },
       "per_flow_bs1_ms": {
-        "mean": 1.2266887144960492,
-        "median": 1.0844535427168012,
-        "p95": 1.9167918944731355,
-        "p99": 1.930173602886498,
-        "std": 0.3081069370085313,
-        "min": 1.0220835683867335,
-        "max": 1.9431514665484428,
+        "mean": 1.3286220485042577,
+        "median": 1.1331762070767581,
+        "p95": 1.6359895234927535,
+        "p99": 1.6578380018472672,
+        "std": 0.24512264818354648,
+        "min": 1.0664239525794983,
+        "max": 1.7394429305568337,
         "n": 512
       },
       "mean_flow_len": 5.228515625,
-      "per_packet_ms_amortized": 0.20741136117706468
+      "per_packet_ms_amortized": 0.21673000299712372
     },
     "metalearner": {
       "device": "cuda",
@@ -54,23 +104,23 @@
         "batch_size": 128,
         "n_flows": 2048,
         "n_packets": 11817,
-        "sweep_ms_median": 41.29523318260908,
-        "flows_per_s": 49594.1018408509,
-        "pkts_per_s": 286158.93625651125,
-        "ms_per_flow_amortized": 0.02016368807744584
+        "sweep_ms_median": 36.24375187791884,
+        "flows_per_s": 56506.291260859354,
+        "pkts_per_s": 326042.40421365964,
+        "ms_per_flow_amortized": 0.01769714447164006
       },
       "per_flow_bs1_ms": {
-        "mean": 1.4329403852570977,
-        "median": 1.1638094438239932,
-        "p95": 2.0824294770136476,
-        "p99": 2.171159954741597,
-        "std": 0.4155398173903231,
-        "min": 1.11343152821064,
-        "max": 2.202968578785658,
+        "mean": 1.2566365808197588,
+        "median": 1.1266247020103037,
+        "p95": 1.6346040647476912,
+        "p99": 1.6826284117996693,
+        "std": 0.22197102029538718,
+        "min": 1.0799806332215667,
+        "max": 1.706863520666957,
         "n": 512
       },
       "mean_flow_len": 5.228515625,
-      "per_packet_ms_amortized": 0.2225888812991724,
+      "per_packet_ms_amortized": 0.21547696952905324,
       "note": "transformer forward only; excludes upstream RF+TCN and token build (see pipeline block)"
     },
     "reconstructor": {
@@ -79,52 +129,55 @@
         "batch_size": 32,
         "n_flows": 2048,
         "n_packets": 13664,
-        "sweep_ms_median": 180.1352018956095,
-        "flows_per_s": 11369.238096986954,
-        "pkts_per_s": 75854.13542833483,
-        "ms_per_flow_amortized": 0.08795664155059058
+        "sweep_ms_median": 142.46727712452412,
+        "flows_per_s": 14375.230869401239,
+        "pkts_per_s": 95909.74345678638,
+        "ms_per_flow_amortized": 0.06956410015845904
       },
       "per_flow_bs1_ms": {
-        "mean": 1.6487218574638973,
-        "median": 1.4779904740862548,
-        "p95": 2.6131875347346067,
-        "p99": 2.6336879236623645,
-        "std": 0.40198183249378094,
-        "min": 1.4653941616415977,
-        "max": 2.747032674960792,
+        "mean": 1.5797775126884517,
+        "median": 1.432096993084997,
+        "p95": 2.079733065329492,
+        "p99": 2.1374558564275503,
+        "std": 0.2704770856037086,
+        "min": 1.406733994372189,
+        "max": 2.163132536225021,
         "n": 512
       },
       "mean_flow_len": 7.224609375,
-      "per_packet_ms_amortized": 0.20457721620226074
+      "per_packet_ms_amortized": 0.19822483386307607
     }
   },
   "realization": {
     "source": "portscan_adv_both",
     "note": "scapy rebuild incl. single-pass PCAP scan; tshark compliance excluded",
-    "pcap_packets_read": 31885,
+    "pcap_packets_read": 321444,
     "target_flows": 1000,
-    "realized_flows": 1000,
-    "realized_packets": 2033,
-    "elapsed_ms": 7978.998322971165,
-    "ms_per_flow": 7.978998322971165,
-    "realized_pkts_per_s": 254.79388736642386
+    "realized_flows": 999,
+    "realized_packets": 2028,
+    "elapsed_ms": 69064.97748708352,
+    "ms_per_flow": 69.13411159868221,
+    "realized_pkts_per_s": 29.363652516635874
   },
   "pipeline": {
     "note": "batch-1 per-flow medians summed; token materialization (CPU numpy) between TCN and meta is not micro-timed",
-    "detect_per_flow_ms": 2.2499199541426718,
+    "detect_per_flow_ms": 2.2614845826689516,
     "detect_stage_breakdown_ms": {
-      "rf": 0.0016569676018771144,
-      "tcn": 1.0844535427168012,
-      "meta_transformer": 1.1638094438239932
+      "rf": 0.001683673581889894,
+      "tcn": 1.1331762070767581,
+      "meta_transformer": 1.1266247020103037
     },
-    "detect_plus_purify_per_flow_ms": 3.7279104282289266,
-    "purify_stage_ms": 1.4779904740862548
+    "detect_plus_purify_per_flow_ms": 3.6935815757539485,
+    "purify_stage_ms": 1.432096993084997,
+    "preprocess_per_flow_ms_amortized": 0.8014492764308975,
+    "preprocess_note": "pcap\u2192nPrint ingress, amortised per flow over a bulk PCAP parse (not a batch-1 figure); dominates end-to-end cost and bounds throughput"
   },
   "budget_context": {
-    "reference_note": "sustained pkts/s per stage at configured batch size; the detect path throughput is bounded by its slowest stage. A line-rate (e.g. 100 Gbps) comparison is packet-size dependent and is framed in the dissertation, not asserted here.",
-    "tcn_pkts_per_s": 101263.83905733797,
-    "meta_pkts_per_s": 286158.93625651125,
-    "reconstructor_pkts_per_s": 75854.13542833483,
-    "rf_ckpt_per_s": 866474.202350861
+    "reference_note": "sustained pkts/s per stage at configured batch size; the detect path throughput is bounded by its slowest stage \u2014 and, end-to-end, by the CPU pcap\u2192nPrint ingress, which is far slower than any neural forward. A line-rate (e.g. 100 Gbps) comparison is packet-size dependent and is framed in the dissertation, not asserted here.",
+    "preprocess_pkts_per_s": 2520.4314725913764,
+    "tcn_pkts_per_s": 117117.86226855207,
+    "meta_pkts_per_s": 326042.40421365964,
+    "reconstructor_pkts_per_s": 95909.74345678638,
+    "rf_ckpt_per_s": 852730.4203146799
   }
 }
