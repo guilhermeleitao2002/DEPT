@@ -13,16 +13,24 @@ each stage we report
 Neural stages (TCN, meta-learner, reconstructor) run on GPU (device=auto);
 the Random Forest is CPU (scikit-learn) inherently. The meta-learner is
 reported for its own transformer forward only — its true detect cost is the
-composite RF + TCN + meta, given in the ``pipeline`` block. The scapy
-traffic-space rebuild is timed separately on one small source (tshark
-compliance excluded — that is a compliance-time step, not inference).
+composite RF + TCN + meta, given in the ``pipeline`` block.
+
+Bracketing the neural pipeline, two non-inference stages are also timed. On
+the ingress side, the CPU ``pcap → nPrint`` preprocessing every deployment
+must run *before* detection (Scapy parse + nPrint bit encoding + 5-tuple
+grouping + ragged/RF tensor build) — reported per-packet/per-flow amortised,
+since it is a bulk operation and, being Scapy-bound, is the practical
+end-to-end bottleneck. On the egress side, the scapy traffic-space rebuild is
+timed on one small source (tshark compliance excluded — that is a
+compliance-time step, not inference).
 
 Timing is done over a preloaded on-device pool so we measure compute, not disk
-I/O or numpy assembly. Parameters are hardcoded module constants (repo
-convention); model dims / batch sizes / device are read from each model's
+I/O or numpy assembly (the ingress stage likewise runs on a tmpfs scratch to
+keep NAS I/O out of the figure). Parameters are hardcoded module constants
+(repo convention); model dims / batch sizes / device are read from each model's
 saved config. Output: ``data/models/latency/latency_metrics.json`` (overwritten
 each run). A representative sample is timed by default; raise ``POOL_FLOWS`` /
-``RF_CKPT_SAMPLE`` for a full-split run.
+``RF_CKPT_SAMPLE`` / ``PREPROCESS_MAX_PACKETS`` for a full-split run.
 
 Usage:
     python3 scripts/benchmark/run_latency.py
@@ -30,6 +38,7 @@ Usage:
 from __future__ import annotations
 
 import json
+import os
 import sys
 import time
 from pathlib import Path
@@ -69,6 +78,9 @@ RF_CKPT_SAMPLE = 200_000  # RF checkpoint rows timed for throughput
 REALIZE_SOURCE = "portscan_adv_both"  # small PCAP; scapy-rebuild sample
 REALIZE_FLOWS = 1000
 _IPAT_COL = 1088          # nPrint bits 0..1087, IPAT at 1088, Direction at 1089
+PREPROCESS_SOURCE = "portscan_adv_both"   # small PCAP; pcap→nPrint ingress sample
+PREPROCESS_MAX_PACKETS = 100_000          # packets timed for the ingress pipeline
+PREPROCESS_REPEATS = 3                     # full pcap→nPrint passes (median taken)
 
 OUTPUT_DIR = REPO_ROOT / "data" / "models" / "latency"
 
@@ -362,6 +374,151 @@ def bench_reconstructor(device) -> tuple[dict, float]:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# PCAP → nPrint preprocessing (ingress: input processing before the models)
+# ─────────────────────────────────────────────────────────────────────────────
+def bench_preprocess() -> dict:
+    """Time the raw-PCAP → nPrint tensor conversion the models depend on.
+
+    Deployed ADEPT cannot feed the RF/TCN/meta stack directly: every incoming
+    flow must first be turned into the ragged per-flow nPrint tensors, exactly
+    as ``run_packet_to_tensor.run()`` does, in three CPU-bound stages —
+
+        1. extract_packet_features — Scapy PCAP parse + nPrint bit encoding +
+                                     identity masking (parallel worker pool);
+        2. group_by_flow           — canonical 5-tuple grouping with per-flow
+                                     IPAT + Direction;
+        3. build_tensors           — ragged [P, 1090] assembly, IPAT z-score,
+                                     and the multi-scale RF checkpoints.
+
+    Timed on the first ``PREPROCESS_MAX_PACKETS`` packets of one real PCAP
+    (device-independent — this stage never touches the GPU). The temporary
+    slice and tensors live on tmpfs so the figure reflects compute, not NAS
+    I/O. Reported as amortised per-packet / per-flow cost and ingress
+    throughput — the practical pipeline bottleneck, since Scapy parsing is far
+    slower than any neural forward.
+    """
+    import contextlib
+    import shutil
+    import subprocess
+    import tempfile
+
+    try:
+        import yaml
+        from src.feature_extraction.pcap_parser import extract_packet_features
+        from src.feature_extraction.flow_grouper import group_by_flow
+        from src.feature_extraction.tensor_builder import build_tensors
+
+        cfg = yaml.safe_load((REPO_ROOT / "config" / "pipeline.yaml").read_text())
+        mask_prefixes = cfg.get("mask_prefixes", [])
+        std_cols = cfg["standardize_columns"]
+        rf_base = cfg["rf_base_features"]
+        rf_agg = cfg["rf_agg_functions"]
+        stride = int(cfg.get("rf_checkpoint_stride", 10))
+        first = int(cfg.get("rf_first_checkpoint", 2))
+
+        base, mode = PREPROCESS_SOURCE.rsplit("_adv_", 1)
+        src_pcap = (REPO_ROOT / "data" / "adversarial" / base
+                    / f"{base}_adversarial_{mode}.pcap")
+        if not src_pcap.exists():
+            return {"skipped": f"pcap not found: {src_pcap}"}
+        shared_mean_std = (REPO_ROOT / "data" / "tensors"
+                           / cfg.get("mean_std_filename", "mean_std.json"))
+
+        tmp_root = Path(tempfile.mkdtemp(prefix="adept_preprocess_"))
+        try:
+            # Cap to a representative slice so the (Scapy-bound) parse stays
+            # bounded. editcap does a fast header-level copy; fall back to a
+            # Scapy read/write slice when it is unavailable.
+            slice_pcap = tmp_root / "slice.pcap"
+            editcap = shutil.which("editcap")
+            if editcap is not None:
+                subprocess.run(
+                    [editcap, "-r", str(src_pcap), str(slice_pcap),
+                     f"1-{PREPROCESS_MAX_PACKETS}"],
+                    check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                )
+            else:
+                from scapy.all import PcapReader, PcapWriter
+                with PcapReader(str(src_pcap)) as rd, PcapWriter(str(slice_pcap)) as wr:
+                    for i, pkt in enumerate(rd):
+                        if i >= PREPROCESS_MAX_PACKETS:
+                            break
+                        wr.write(pkt)
+
+            def _one_pass(out_dir: Path) -> tuple:
+                # Silence the engines' progress bars / prints during timing;
+                # exceptions still propagate (only stream writes are redirected).
+                with open(os.devnull, "w") as dn, \
+                        contextlib.redirect_stdout(dn), \
+                        contextlib.redirect_stderr(dn):
+                    t0 = time.perf_counter()
+                    nprint_bits, meta_df = extract_packet_features(
+                        str(slice_pcap), mask_prefixes=mask_prefixes,
+                    )
+                    t1 = time.perf_counter()
+                    meta_df, flow_indices, sort_order = group_by_flow(meta_df)
+                    nprint_bits = nprint_bits[sort_order]
+                    t2 = time.perf_counter()
+                    res = build_tensors(
+                        nprint_bits=nprint_bits, meta_df=meta_df,
+                        flow_indices=flow_indices, output_dir=str(out_dir),
+                        rf_checkpoint_stride=stride, rf_first_checkpoint=first,
+                        rf_base_features=rf_base, rf_agg_functions=rf_agg,
+                        standardize_columns=std_cols,
+                        mean_std_path=str(shared_mean_std),
+                        outputs=("rf", "tcn"),
+                    )
+                    t3 = time.perf_counter()
+                return ((t1 - t0) * 1e3, (t2 - t1) * 1e3, (t3 - t2) * 1e3,
+                        int(res["num_packets"]), int(res["num_flows"]))
+
+            parse_ms: list[float] = []
+            group_ms: list[float] = []
+            build_ms: list[float] = []
+            n_packets = n_flows = 0
+            for r in range(max(1, PREPROCESS_REPEATS)):
+                out_dir = tmp_root / f"out_{r}"
+                p, g, b, n_packets, n_flows = _one_pass(out_dir)
+                parse_ms.append(p)
+                group_ms.append(g)
+                build_ms.append(b)
+                shutil.rmtree(out_dir, ignore_errors=True)
+        finally:
+            shutil.rmtree(tmp_root, ignore_errors=True)
+
+        parse, group, build = summarize(parse_ms), summarize(group_ms), summarize(build_ms)
+        total_ms = parse["median"] + group["median"] + build["median"]
+        return {
+            "device": "cpu",
+            "source": PREPROCESS_SOURCE,
+            "note": "raw pcap → nPrint ragged tensors (Scapy parse + nPrint "
+                    "encode + 5-tuple group + ragged/RF tensor build); tmpfs "
+                    "scratch so NAS I/O is excluded; masking + RF cadence per "
+                    "config/pipeline.yaml",
+            "n_packets": n_packets,
+            "n_flows": n_flows,
+            "workers": os.cpu_count(),
+            "stage_ms_median": {
+                "parse_encode": parse["median"],
+                "group_by_flow": group["median"],
+                "build_tensors": build["median"],
+            },
+            "stage_detail_ms": {
+                "parse_encode": parse,
+                "group_by_flow": group,
+                "build_tensors": build,
+            },
+            "total_ms_median": total_ms,
+            "ms_per_packet_amortized": total_ms / max(n_packets, 1),
+            "ms_per_flow_amortized": total_ms / max(n_flows, 1),
+            "pkts_per_s": (n_packets / (total_ms / 1e3)) if total_ms else None,
+            "flows_per_s": (n_flows / (total_ms / 1e3)) if total_ms else None,
+        }
+    except Exception as e:  # best-effort — never fail the whole benchmark
+        return {"skipped": f"{type(e).__name__}: {e}"}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Scapy traffic-space rebuild (no tshark)
 # ─────────────────────────────────────────────────────────────────────────────
 def bench_realize() -> dict:
@@ -424,6 +581,8 @@ def main() -> int:
     print(f"[latency] device={device} gpu={gpu_name}")
 
     per_model: dict = {}
+    print("[latency] PCAP → nPrint preprocessing (CPU ingress)…")
+    preprocessing = bench_preprocess()
     print("[latency] Random Forest (CPU)…")
     per_model["rf"] = bench_rf()
     print("[latency] TCN…")
@@ -449,12 +608,28 @@ def main() -> int:
             pipeline["detect_plus_purify_per_flow_ms"] = detect + rec_pf
             pipeline["purify_stage_ms"] = rec_pf
 
+    # Ingress preprocessing is upstream of every neural stage. It is a bulk
+    # (amortised) per-flow cost, not a batch-1 latency, so we surface it beside
+    # the detect medians rather than summing it in — and flag that end-to-end
+    # throughput is ingress-bound (Scapy parsing ≪ any neural forward).
+    pre_pf = preprocessing.get("ms_per_flow_amortized") if isinstance(preprocessing, dict) else None
+    if pre_pf is not None:
+        pipeline["preprocess_per_flow_ms_amortized"] = pre_pf
+        pipeline["preprocess_note"] = (
+            "pcap→nPrint ingress, amortised per flow over a bulk PCAP parse "
+            "(not a batch-1 figure); dominates end-to-end cost and bounds "
+            "throughput"
+        )
+
     # Budget context: raw sustained throughput per neural stage (bottleneck-bound).
     budget = {
         "reference_note": "sustained pkts/s per stage at configured batch size; the "
-                          "detect path throughput is bounded by its slowest stage. "
-                          "A line-rate (e.g. 100 Gbps) comparison is packet-size "
-                          "dependent and is framed in the dissertation, not asserted here.",
+                          "detect path throughput is bounded by its slowest stage — "
+                          "and, end-to-end, by the CPU pcap→nPrint ingress, which is "
+                          "far slower than any neural forward. A line-rate (e.g. "
+                          "100 Gbps) comparison is packet-size dependent and is framed "
+                          "in the dissertation, not asserted here.",
+        "preprocess_pkts_per_s": preprocessing.get("pkts_per_s") if isinstance(preprocessing, dict) else None,
         "tcn_pkts_per_s": per_model["tcn"].get("batched", {}).get("pkts_per_s"),
         "meta_pkts_per_s": per_model["metalearner"].get("batched", {}).get("pkts_per_s"),
         "reconstructor_pkts_per_s": per_model["reconstructor"].get("batched", {}).get("pkts_per_s"),
@@ -471,6 +646,7 @@ def main() -> int:
             "per_flow_iters": PERFLOW_ITERS, "rf_ckpt_sample": RF_CKPT_SAMPLE,
             "sample_note": "representative test-split sample; raise constants for full split",
         },
+        "preprocessing": preprocessing,
         "per_model": per_model,
         "realization": realization,
         "pipeline": pipeline,
@@ -488,6 +664,12 @@ def main() -> int:
             d = d.get(k, {}) if isinstance(d, dict) else {}
         return d
     print("\n=== summary (per-flow median latency, batch=1) ===")
+    if pre_pf is not None:
+        print(f"  ingress (amort): {pre_pf:.3f} ms/flow  "
+              f"({preprocessing.get('pkts_per_s', 0):,.0f} pkt/s, "
+              f"pcap→nPrint, not batch-1)")
+    elif isinstance(preprocessing, dict) and "skipped" in preprocessing:
+        print(f"  ingress        : skipped ({preprocessing['skipped']})")
     print(f"  RF (est/flow)  : {rf_pf:.3f} ms" if rf_pf else "  RF: n/a")
     print(f"  TCN            : {tcn_pf:.3f} ms" if tcn_pf else "  TCN: n/a")
     print(f"  Meta (tx only) : {meta_pf:.3f} ms" if meta_pf else "  Meta: n/a")
