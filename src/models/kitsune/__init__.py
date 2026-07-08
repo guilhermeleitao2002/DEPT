@@ -1,6 +1,6 @@
 """Kitsune (KitNET + AfterImage) adapter — an *independent* NIDS evaluator.
 
-ADEPT scores purification efficacy against its own TCN (in-distribution → circular).
+DEPT scores purification efficacy against its own TCN (in-distribution → circular).
 This package reuses **Kitsune**, the real anomaly-detection NIDS that TANTGen's attacks
 were built to evade, as an INDEPENDENT judge of the Purifier. It is used strictly as an
 evaluator — nothing about Kitsune enters the Reconstructor's training or the ensemble,

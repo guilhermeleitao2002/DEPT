@@ -1,5 +1,5 @@
 # ===================================
-# ADEPT — Packet-to-Tensor Pipeline (streaming-native)
+# DEPT — Packet-to-Tensor Pipeline (streaming-native)
 # ===================================
 # Emits ragged per-flow tensors consumed by the streaming RF/TCN ensemble:
 #   flow_packets.npy             [P_total, F=1090] float32  — per-packet nPrint

@@ -1,6 +1,6 @@
 # TCN Base Learner
 
-> Part of [ADEPT](../../README.md). The temporal half of the streaming ensemble — a causal Temporal Convolutional Network that emits a prediction after every new packet.
+> Part of [DEPT](../../README.md). The temporal half of the streaming ensemble — a causal Temporal Convolutional Network that emits a prediction after every new packet.
 
 ## Role in the ensemble
 

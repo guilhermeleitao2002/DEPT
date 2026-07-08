@@ -1,5 +1,5 @@
 """
-Build the dual-output tensors for ADEPT's *streaming-native* ensemble.
+Build the dual-output tensors for DEPT's *streaming-native* ensemble.
 
 Each source folder under ``data/tensors/<source>/`` now stores **ragged
 per-flow** data instead of fixed N-packet windows. Two memory-mapped views
@@ -241,7 +241,7 @@ def build_tensors(
     outputs: Optional[Iterable[str]] = None,
 ) -> Dict:
     """
-    Convert per-flow data into ADEPT's ragged streaming tensors.
+    Convert per-flow data into DEPT's ragged streaming tensors.
 
     Writes four memory-mapped artifacts (``flow_packets.npy``,
     ``flow_offsets.npy``, ``rf_checkpoints.npy``,

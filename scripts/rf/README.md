@@ -1,6 +1,6 @@
 # Random Forest Base Learner
 
-> Part of [ADEPT](../../README.md). The statistical half of the streaming ensemble — trained on multi-scale prefix statistics, it emits one prediction per 10-packet prefix milestone.
+> Part of [DEPT](../../README.md). The statistical half of the streaming ensemble — trained on multi-scale prefix statistics, it emits one prediction per 10-packet prefix milestone.
 
 ## Role in the ensemble
 

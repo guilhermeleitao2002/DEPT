@@ -1,5 +1,5 @@
 {
-  "input": "/mnt/nas/inesc/gleitao/ADEPT/data/adversarial/ntp_ddos/ntp_ddos_adversarial_iat.pcap",
+  "input": "/mnt/nas/inesc/gleitao/DEPT/data/adversarial/ntp_ddos/ntp_ddos_adversarial_iat.pcap",
   "encoding": "nprint",
   "pipeline_mode": "batch",
   "schema": "ragged-per-flow-v1",

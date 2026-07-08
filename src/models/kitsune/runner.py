@@ -3,7 +3,7 @@
 Kitsune lives in the sibling TANTGen repo. We add its two source dirs to ``sys.path``
 and call ``KitNET`` / ``FEKitsune`` directly, deliberately *skipping* TANTGen's
 ``KitNET/model.py`` CLI (it reads ``config-folders.yaml`` at import time). The compiled
-``AfterImage*.so`` is required; ADEPT's venv is CPython 3.10, matching the committed
+``AfterImage*.so`` is required; DEPT's venv is CPython 3.10, matching the committed
 build (``AfterImage.cpython-310-x86_64-linux-gnu.so``).
 
 Everything here is best-effort: if the TANTGen tree, the ``.so`` or a model is missing,

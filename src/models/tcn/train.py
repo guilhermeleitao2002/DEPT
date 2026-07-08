@@ -1,4 +1,4 @@
-"""Train the TCN base learner for ADEPT (streaming-native edition).
+"""Train the TCN base learner for DEPT (streaming-native edition).
 
 Trains the per-timestep TCN classifier on variable-length per-flow
 sequences. Loss is per-packet cross-entropy averaged inside each flow

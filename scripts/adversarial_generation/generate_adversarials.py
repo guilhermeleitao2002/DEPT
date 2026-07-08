@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
-ADEPT — TANTGen Adversarial Generation Driver
+DEPT — TANTGen Adversarial Generation Driver
 =============================================
 
-Self-contained driver that operates the TANTGen repository (sibling to ADEPT)
-to produce adversarial versions of attack traffic for the 10 attacks ADEPT
+Self-contained driver that operates the TANTGen repository (sibling to DEPT)
+to produce adversarial versions of attack traffic for the 10 attacks DEPT
 targets, across three perturbation modes (both, iat-only, size-only).
 
 Covers all three TANTGen families in one script:
@@ -25,10 +25,10 @@ What this script does, end-to-end, with no manual pre-steps:
 
 Design notes
 ------------
-- ADEPT and TANTGen are sibling directories. INPUT data is read from the
+- DEPT and TANTGen are sibling directories. INPUT data is read from the
   TANTGen tree (data/original/...) — that is the single source of truth and
   the only place the CIC-DDoS-2019 captures live. OUTPUT adversarial PCAPs are
-  written to ADEPT/data/adversarial/<key>/<key>_adversarial_<mode>.pcap, the
+  written to DEPT/data/adversarial/<key>/<key>_adversarial_<mode>.pcap, the
   layout discovered by scripts/packet_to_tensor/process_all_attacks.py.
 - TANTGen scripts hard-code relative paths (config-folders.yaml,
   src/TANTGen/configs/*.yaml, src/TANTGen/*_logs/). They are invoked with
@@ -40,7 +40,7 @@ Design notes
 
 Usage
 -----
-There are no command-line options: the ADEPT core pipeline has one fixed
+There are no command-line options: the DEPT core pipeline has one fixed
 configuration. Running the script always does the whole job — the one-time
 global pretrain (built only if its checkpoint is missing), then all 10 attacks
 × 3 perturbation modes — and always re-runs finetune + apply, overwriting the
@@ -57,11 +57,11 @@ from dataclasses import dataclass
 from pathlib import Path
 
 # -----------------------------------------------------------------------------
-# Paths — ADEPT and TANTGen are siblings under the same parent directory
+# Paths — DEPT and TANTGen are siblings under the same parent directory
 # -----------------------------------------------------------------------------
 SCRIPT_DIR = Path(__file__).resolve().parent
-ADEPT_ROOT = SCRIPT_DIR.parents[1]
-TANTGEN_ROOT = ADEPT_ROOT.parent / "Transformer-based_Adversarial_Network_Traffic_Generator"
+DEPT_ROOT = SCRIPT_DIR.parents[1]
+TANTGEN_ROOT = DEPT_ROOT.parent / "Transformer-based_Adversarial_Network_Traffic_Generator"
 
 # INPUT side (TANTGen tree) -----------------------------------------------------
 TG_ORIGINAL = TANTGEN_ROOT / "data" / "original"
@@ -88,14 +88,14 @@ TG_FINETUNE_CKPT = (
     / f"1#_final_TANTGen_window{SLIDING_WINDOW_SIZE}.ckpt"
 )
 
-# OUTPUT side (ADEPT tree) ------------------------------------------------------
-OUT_ROOT = ADEPT_ROOT / "data" / "adversarial"
+# OUTPUT side (DEPT tree) ------------------------------------------------------
+OUT_ROOT = DEPT_ROOT / "data" / "adversarial"
 
 MODES = ("both", "iat", "size")
 
 # Cap each attack's malicious PCAP to the first N packets before applying
 # TANTGen. Keeps the huge CIC-DDoS floods tractable (apply rewrites every packet
-# with scapy) and ADEPT's adversarial pool balanced; captures under ~400 MB (all
+# with scapy) and DEPT's adversarial pool balanced; captures under ~400 MB (all
 # the Kitsune / CIC-IDS sets) pass through unchanged.
 MAX_MALICIOUS_PACKETS = 1_000_000
 
@@ -121,7 +121,7 @@ def cyan(s):   return _c("36", s)
 # -----------------------------------------------------------------------------
 @dataclass
 class Attack:
-    key: str                # ADEPT-side identifier + output dir / tensor source name
+    key: str                # DEPT-side identifier + output dir / tensor source name
     dataset: str            # "kitsune" or "cic"
     tg_name: str            # attack_name passed to TANTGen scripts (== attacks.yaml id)
     pcap: Path              # raw input PCAP (TANTGen tree)
@@ -435,9 +435,9 @@ def cap_malicious(malicious: Path) -> Path:
 
     apply_TANTGen_to_pcap re-reads and rewrites every packet with scapy, so the
     huge CIC-DDoS captures (e.g. NTP's malicious split is ~75M packets) take many
-    hours and yield far more adversarial traffic than ADEPT needs (it would also
+    hours and yield far more adversarial traffic than DEPT needs (it would also
     choke phase-2 tensorisation). Truncating to the first N packets — timestamps
-    preserved, via tcpdump/editcap — keeps apply to minutes and ADEPT's
+    preserved, via tcpdump/editcap — keeps apply to minutes and DEPT's
     adversarial pool balanced. Captures below a size threshold (all the Kitsune /
     CIC-IDS sets) pass through unchanged.
     """
@@ -454,9 +454,9 @@ def cap_malicious(malicious: Path) -> Path:
     print(f"  {dim(f'Capping {malicious.name} -> first {MAX_MALICIOUS_PACKETS:,} packets')} ({capped.name})")
     if tcpdump:  # -c N stops after N packets (fast even on a 38 GB capture)
         run([tcpdump, "-r", str(malicious), "-w", str(capped), "-c", str(MAX_MALICIOUS_PACKETS)],
-            cwd=ADEPT_ROOT)
+            cwd=DEPT_ROOT)
     elif editcap:
-        run([editcap, "-r", str(malicious), str(capped), f"1-{MAX_MALICIOUS_PACKETS}"], cwd=ADEPT_ROOT)
+        run([editcap, "-r", str(malicious), str(capped), f"1-{MAX_MALICIOUS_PACKETS}"], cwd=DEPT_ROOT)
     else:
         sys.exit(f"{red('ERROR')}: need tcpdump or editcap to cap {malicious.name} "
                  f"(sudo apt install tcpdump wireshark-common).")
@@ -565,7 +565,7 @@ def process_attack(attack: Attack):
 
     # Cap the malicious set fed to apply: CIC-DDoS floods have tens of millions
     # of packets and apply rewrites every one with scapy (hours). Capping keeps
-    # apply to minutes and ADEPT's adversarial pool balanced.
+    # apply to minutes and DEPT's adversarial pool balanced.
     apply_src = cap_malicious(malicious)
 
     # 7. per mode: finetune TANTGen, then apply to the (capped) malicious PCAP.
@@ -574,7 +574,7 @@ def process_attack(attack: Attack):
         print(f"\n  {bold(cyan(f'[mode={mode}]'))} finetune + apply")
         train_tantgen(adv_train_feats, mode)
         apply_tantgen(apply_src, out_pcap)
-        print(f"  {green('✓')} {out_pcap.relative_to(ADEPT_ROOT)}")
+        print(f"  {green('✓')} {out_pcap.relative_to(DEPT_ROOT)}")
 
 
 # -----------------------------------------------------------------------------
@@ -584,7 +584,7 @@ def main():
     if not TANTGEN_ROOT.exists():
         sys.exit(f"{red('ERROR')}: TANTGen repo not found at {TANTGEN_ROOT}")
 
-    print(f"\n{bold('ADEPT × TANTGen — Adversarial Generation')}")
+    print(f"\n{bold('DEPT × TANTGen — Adversarial Generation')}")
     print(f"  TANTGen:  {TANTGEN_ROOT}")
     print(f"  Output:   {OUT_ROOT}")
     print(f"  Attacks:  {', '.join(a.key for a in ATTACKS)}")

@@ -1,5 +1,5 @@
 {
-  "input": "/mnt/nas/inesc/gleitao/ADEPT/data/adversarial/ddos/ddos_adversarial_size.pcap",
+  "input": "/mnt/nas/inesc/gleitao/DEPT/data/adversarial/ddos/ddos_adversarial_size.pcap",
   "encoding": "nprint",
   "pipeline_mode": "batch",
   "schema": "ragged-per-flow-v1",

@@ -1,6 +1,6 @@
 """Mini-Transformer Meta-Learner over RF + TCN streaming predictions.
 
-The meta-learner is the third stage of ADEPT's stacking ensemble. It
+The meta-learner is the third stage of DEPT's stacking ensemble. It
 consumes the per-packet TCN stream and the per-checkpoint RF stream of
 the same flow and emits a fused per-packet ``P(adversarial)`` prediction
 via a small causal Transformer encoder.

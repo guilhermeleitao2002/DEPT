@@ -129,10 +129,10 @@
     }
   },
   "config": {
-    "tensors_dir": "/mnt/nas/inesc/gleitao/ADEPT/data/tensors",
-    "adversarial_dir": "/mnt/nas/inesc/gleitao/ADEPT/data/tensors/adversarial",
-    "output_dir": "/mnt/nas/inesc/gleitao/ADEPT/data/models/reconstructor",
-    "tcn_model_dir": "/mnt/nas/inesc/gleitao/ADEPT/data/models/tcn",
+    "tensors_dir": "/mnt/nas/inesc/gleitao/DEPT/data/tensors",
+    "adversarial_dir": "/mnt/nas/inesc/gleitao/DEPT/data/tensors/adversarial",
+    "output_dir": "/mnt/nas/inesc/gleitao/DEPT/data/models/reconstructor",
+    "tcn_model_dir": "/mnt/nas/inesc/gleitao/DEPT/data/models/tcn",
     "adversarial_exclude": [
       "ddos_kitsune_adv_both",
       "ddos_kitsune_adv_iat",
@@ -161,13 +161,13 @@
       "seed": 42
     },
     "realize": {
-      "adversarial_pcap_dir": "/mnt/nas/inesc/gleitao/ADEPT/data/adversarial",
+      "adversarial_pcap_dir": "/mnt/nas/inesc/gleitao/DEPT/data/adversarial",
       "write_pcap": true,
       "tshark_sample": 300,
       "max_pcap_packets": 100000,
       "roundtrip": false
     },
-    "_repo_root": "/mnt/nas/inesc/gleitao/ADEPT"
+    "_repo_root": "/mnt/nas/inesc/gleitao/DEPT"
   },
   "training_config": {
     "device": "auto",

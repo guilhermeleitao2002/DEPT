@@ -1,5 +1,5 @@
 # ===================================
-# ADEPT — TCN base learner
+# DEPT — TCN base learner
 # ===================================
 # Binary classifier (benign vs adversarial) over the ragged, variable-length
 # per-flow [L, F=1090] packet sequences produced by the Packet-to-Tensor

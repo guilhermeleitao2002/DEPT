@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-ADEPT — Reconstructor (Purification) Transformer (train + eval)
+DEPT — Reconstructor (Purification) Transformer (train + eval)
 ==============================================================
 
 Trains a small causal residual denoiser that purifies adversarially-perturbed
@@ -172,7 +172,7 @@ def _print_recon_metrics(metrics: dict) -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="ADEPT reconstructor — train + evaluate the purification transformer",
+        description="DEPT reconstructor — train + evaluate the purification transformer",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument("--mode", choices=["train", "eval", "both"], default="both")
@@ -199,7 +199,7 @@ def main() -> int:
         cfg["realize"].get("adversarial_pcap_dir", "data/adversarial"), REPO_ROOT))
     cfg["_repo_root"] = str(REPO_ROOT)
 
-    _section(f"ADEPT — Reconstructor  {dim('(mode: ' + args.mode + ')')}")
+    _section(f"DEPT — Reconstructor  {dim('(mode: ' + args.mode + ')')}")
     _row("Config", str(cfg_path))
     _row("Tensors dir", str(tensors_root))
     _row("TCN model dir", cfg["tcn_model_dir"])
@@ -246,7 +246,7 @@ def main() -> int:
         _print_recon_metrics(metrics)
 
     print(f"\n{bold('═' * W)}")
-    print(f" {bold('ADEPT × Reconstructor — Done')}  "
+    print(f" {bold('DEPT × Reconstructor — Done')}  "
           f"{dim(f'Total {time.time() - t0:.1f}s')}")
     print(f" {cyan('Artifacts')}  {output_dir}")
     print(f"{bold('═' * W)}\n")

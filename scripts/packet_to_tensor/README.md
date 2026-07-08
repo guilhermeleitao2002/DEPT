@@ -1,6 +1,6 @@
 # Packet-to-Tensor Pipeline
 
-> Part of [ADEPT](../../README.md). Converts raw PCAP captures into the ragged per-flow tensor format consumed by all downstream models.
+> Part of [DEPT](../../README.md). Converts raw PCAP captures into the ragged per-flow tensor format consumed by all downstream models.
 
 ## Output schema
 
@@ -52,7 +52,7 @@ Labels are derived entirely from the source dataset — no ground-truth CSV is n
 | CIC-DDoS-2019 (any reflection-flood capture) | `0` | `benign` |
 | TANTGen adversarial PCAP | `1` | `adversarial` |
 
-Under ADEPT's defense framing, the upstream NIDS is responsible for the raw-dataset attacks. ADEPT's job is specifically to catch TANTGen-style perturbations that evade the upstream model.
+Under DEPT's defense framing, the upstream NIDS is responsible for the raw-dataset attacks. DEPT's job is specifically to catch TANTGen-style perturbations that evade the upstream model.
 
 ## Dataset statistics
 
@@ -82,7 +82,7 @@ The CIC-DDoS-2019 expansion adds five benign + adversarial (×3 modes) pairs —
 |---|---|
 | Ragged per-flow storage (offsets + flat array) | Avoids a T_max cap; no padding waste. Works for both 2-packet PortScan flows and 10k-packet SSDP flows. |
 | Welford's incremental stats for RF checkpoints | Computes mean/std/min/max for each prefix in O(1) memory per flow, no re-scan required. |
-| Shared `mean_std.json` across all sources | Without a shared fit, IPAT z-scores are incomparable across the benign/adversarial boundary. The shared fit covers all PCAPs ADEPT will see during training. |
+| Shared `mean_std.json` across all sources | Without a shared fit, IPAT z-scores are incomparable across the benign/adversarial boundary. The shared fit covers all PCAPs DEPT will see during training. |
 | Per-flow IPAT (not global IAT) | Each flow has its own timing context; global IAT mixes unrelated flows. |
 | Canonical 5-tuple flow ID | Order-independent — forward and reverse packets belong to the same flow. |
 | Identity masking (IPs, ports, IP ID zeroed) | Prevents models from memorising source/destination addresses instead of behavioral patterns. |

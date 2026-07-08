@@ -179,7 +179,7 @@
   },
   "config": {
     "tensors_dir": "data/tensors",
-    "adversarial_dir": "/mnt/nas/inesc/gleitao/ADEPT/data/tensors/adversarial",
+    "adversarial_dir": "/mnt/nas/inesc/gleitao/DEPT/data/tensors/adversarial",
     "output_dir": "data/models/rf",
     "benign_sources": [
       "brute_force",

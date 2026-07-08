@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
-ADEPT — Random Forest Base Learner (train + eval)
+DEPT — Random Forest Base Learner (train + eval)
 ==================================================
 
 Trains the statistical base learner on the 24-dim window aggregates produced
 by the Packet-to-Tensor pipeline and evaluates it on a held-out, flow-level
-test split. Under ADEPT's benign-vs-adversarial label convention, the
+test split. Under DEPT's benign-vs-adversarial label convention, the
 benign pool is every window from the Kitsune + CIC-IDS2017 folders listed
 as `benign_sources` in rf.yaml, and the adversarial pool is every TANTGen-
 generated subfolder auto-discovered under `adversarial_dir`.
@@ -153,7 +153,7 @@ def _print_config_banner(config_path: Path, config: dict,
     grid_on = gs.get("enabled", False)
     sp = config.get("split", {})
 
-    _section(f"ADEPT — Random Forest  {dim('(mode: ' + mode + ')')}")
+    _section(f"DEPT — Random Forest  {dim('(mode: ' + mode + ')')}")
     label_w = 13
 
     def _row(label: str, value: str) -> None:
@@ -402,7 +402,7 @@ def _print_artifacts(output_dir: Path) -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Train and/or evaluate the ADEPT Random Forest base learner.",
+        description="Train and/or evaluate the DEPT Random Forest base learner.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument("--mode", choices=["train", "eval", "both"], default="both")
@@ -482,7 +482,7 @@ def main() -> int:
     total_elapsed = time.time() - total_t0
 
     print(f"\n{bold('=' * W)}")
-    print(f" {bold('ADEPT × Random Forest — Summary')}")
+    print(f" {bold('DEPT × Random Forest — Summary')}")
     print(f"{bold('=' * W)}")
 
     if metrics is not None:

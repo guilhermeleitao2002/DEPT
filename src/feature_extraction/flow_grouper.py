@@ -2,7 +2,7 @@
 Group packets by 5-tuple flow and compute per-flow IPAT.
 
 This is the key difference from TANTGen: TANTGen computes a global IAT
-across all packets; ADEPT needs *per-flow* Inter-Packet Arrival Time (IPAT)
+across all packets; DEPT needs *per-flow* Inter-Packet Arrival Time (IPAT)
 because each flow window is processed independently by the ensemble.
 
 A flow is identified by the canonical 5-tuple:

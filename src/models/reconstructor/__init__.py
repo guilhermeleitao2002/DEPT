@@ -1,6 +1,6 @@
-"""Reconstructor (Purification) Transformer — ADEPT's input-purification stage.
+"""Reconstructor (Purification) Transformer — DEPT's input-purification stage.
 
-The reconstructor is the fourth stage of ADEPT's defense. When the ensemble
+The reconstructor is the fourth stage of DEPT's defense. When the ensemble
 flags a flow as adversarial, the reconstructor "denoises" it: a small causal
 (decoder-only) Transformer maps the adversarially-perturbed per-packet
 sequence back onto the manifold of normal (un-manipulated) traffic, undoing
@@ -9,7 +9,7 @@ the timing (IPAT) and size (IPv4 length) perturbations TANTGen introduces.
 The module operates in two spaces:
 
   * **Feature-space** — the model reads/writes the same ``[L, 1090]`` nPrint +
-    IPAT + Direction tensor every other ADEPT model consumes. It is trained on
+    IPAT + Direction tensor every other DEPT model consumes. It is trained on
     matched ``(adversarial → clean)`` flow pairs (paired by 5-tuple) with a
     residual reconstruction objective.
   * **Traffic-space (Ψ)** — a realization step (:mod:`realize`) overlays the

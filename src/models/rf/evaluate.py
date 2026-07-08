@@ -9,7 +9,7 @@ distribution of prefix sizes. The richer per-flow streaming metrics
 ``src/models/common/streaming_eval.py`` and written to
 ``streaming_metrics.json``.
 
-Under ADEPT's benign-vs-adversarial label convention, the positive class
+Under DEPT's benign-vs-adversarial label convention, the positive class
 is "adversarial" (TANTGen-perturbed traffic) and the negative class is
 "benign" (all Kitsune + CIC-IDS2017 windows). Per-source metrics are
 reported only for adversarial sources.

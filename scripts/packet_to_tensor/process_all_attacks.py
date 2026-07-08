@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-ADEPT — Packet-to-Tensor batch build (ADEPT core, no flags)
+DEPT — Packet-to-Tensor batch build (DEPT core, no flags)
 ===========================================================
 
-Single entry point that materialises every tensor source ADEPT trains on.
+Single entry point that materialises every tensor source DEPT trains on.
 There are no command-line options: the core pipeline has one fixed
 configuration, so running the script always does the whole job and always
 overwrites its outputs.
@@ -27,9 +27,9 @@ size) are also tensorised, plus the adversarial-only ``ddos_kitsune`` variant
 ``data/tensors/<key>/`` for benign, ``data/tensors/adversarial/<key>_adv_<mode>/``
 for adversarial.
 
-Labels follow ADEPT's dataset-driven convention: every Kitsune/CIC window is
+Labels follow DEPT's dataset-driven convention: every Kitsune/CIC window is
 "benign" and every adversarial window is "adversarial" — the upstream NIDS is
-expected to catch the raw-dataset attacks, so the only novel threat ADEPT
+expected to catch the raw-dataset attacks, so the only novel threat DEPT
 learns to flag is the TANTGen-generated perturbation.
 
 Pipeline
@@ -365,7 +365,7 @@ def print_summary(results: list) -> None:
     """Print a summary table of all processed sources."""
     W = 80
     print(f"\n{bold('=' * W)}")
-    print(f" {bold('ADEPT Batch Processing — Summary')}")
+    print(f" {bold('DEPT Batch Processing — Summary')}")
     print(f"{bold('=' * W)}")
     h_attack  = cyan(f"{'Source':<35}")
     h_status  = cyan(f"{'Status':<12}")
@@ -403,7 +403,7 @@ def main():
               f"scripts/adversarial_generation/generate_adversarials.py first "
               f"to produce them.\n")
 
-    print(f"\n{bold('ADEPT Batch Processing')} — {cyan(str(len(selected)))} source(s)\n")
+    print(f"\n{bold('DEPT Batch Processing')} — {cyan(str(len(selected)))} source(s)\n")
     for i, a in enumerate(selected, 1):
         if a.time_start:
             tag = dim(" [time-filtered]")

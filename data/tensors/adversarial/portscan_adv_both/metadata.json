@@ -1,5 +1,5 @@
 {
-  "input": "/mnt/nas/inesc/gleitao/ADEPT/data/adversarial/portscan/portscan_adversarial_both.pcap",
+  "input": "/mnt/nas/inesc/gleitao/DEPT/data/adversarial/portscan/portscan_adversarial_both.pcap",
   "encoding": "nprint",
   "pipeline_mode": "batch",
   "schema": "ragged-per-flow-v1",

@@ -1,5 +1,5 @@
 {
-  "input": "/mnt/nas/inesc/gleitao/ADEPT/data/Kitsune/pcap/SSDP_Flood_pcap.pcap",
+  "input": "/mnt/nas/inesc/gleitao/DEPT/data/Kitsune/pcap/SSDP_Flood_pcap.pcap",
   "encoding": "nprint",
   "pipeline_mode": "batch",
   "schema": "ragged-per-flow-v1",

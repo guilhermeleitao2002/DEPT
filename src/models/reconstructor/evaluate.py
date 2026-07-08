@@ -16,7 +16,7 @@ Three metric groups (matching the thesis's §5.3), reported overall and per
   4. **Independent-NIDS efficacy (Kitsune)** — the headline metric. Realize the
      adversarial, purified and clean size/timing onto the *same* adversarial
      packets and score each through **Kitsune** (KitNET + AfterImage), the real
-     anomaly detector TANTGen's attacks evade. Kitsune never saw ADEPT's models,
+     anomaly detector TANTGen's attacks evade. Kitsune never saw DEPT's models,
      so it breaks the TCN's circularity. Semantics = *detection restoration*
      (opposite direction to group 2): Kitsune flags a flow when ``RMSE > φ``; the
      attack evades by suppressing RMSE, and purification recovers the original
@@ -172,7 +172,7 @@ def evaluate(config: dict, output_dir: Path) -> dict:
     model = _load_reconstructor(output_dir, device)
     # Rebuild the (deterministic) pair table from config — its row order matches
     # the one training split, so split.npz's test_idx aligns 1:1. This avoids
-    # persisting a multi-hundred-MB index, mirroring how the other ADEPT models
+    # persisting a multi-hundred-MB index, mirroring how the other DEPT models
     # re-derive their flow index at eval time.
     pairs = build_pair_index(
         tensors_dir=Path(config["tensors_dir"]),
@@ -288,7 +288,7 @@ def evaluate(config: dict, output_dir: Path) -> dict:
 
     # ---- Independent-NIDS efficacy (Kitsune) ---------------------------------
     # The headline efficacy metric: realize adv / purified / clean packets and score
-    # each through Kitsune (KitNET), an anomaly detector ADEPT never trained — so it
+    # each through Kitsune (KitNET), an anomaly detector DEPT never trained — so it
     # breaks the TCN's circularity. Best-effort: skipped inside when disabled or the
     # sibling TANTGen Kitsune tree is unavailable.
     metrics["kitsune"] = _run_kitsune_eval(
@@ -433,7 +433,7 @@ def _resolve_kitsune_model(krun, base, tantgen_root, model_dir, benign_dir,
                            pretrained, base_to_tg, *, fm, ad, cap, seed) -> dict:
     """Locate (or train on demand) the Kitsune model for ``base``.
 
-    Priority: TANTGen's calibrated pretrained pickle → a previously ADEPT-trained
+    Priority: TANTGen's calibrated pretrained pickle → a previously DEPT-trained
     pickle → train a fresh one on the benign split. Returns
     ``{"kitnet", "threshold", "source"}`` or ``{"error": reason}``.
     """

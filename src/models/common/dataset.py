@@ -1,4 +1,4 @@
-"""Model-agnostic dataset primitives for ADEPT's streaming base learners.
+"""Model-agnostic dataset primitives for DEPT's streaming base learners.
 
 This module owns the parts of the data pipeline that don't care which
 tensor view a model consumes:
@@ -246,7 +246,7 @@ def flow_level_split(
     """Stratified split. One row per flow, one source per stratum.
 
     Each source contributes a single class (benign xor adversarial) under
-    ADEPT's label convention, so the stratum is just the source folder.
+    DEPT's label convention, so the stratum is just the source folder.
     Flows are bin-packed into the split with the greatest deficit so every
     split lands near its target flow fraction.
     """

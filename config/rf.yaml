@@ -1,11 +1,11 @@
 # ===================================
-# ADEPT — Random Forest base learner
+# DEPT — Random Forest base learner
 # ===================================
 # Binary classifier (benign vs adversarial) over the 24-dim multi-scale
 # prefix statistics (one row per RF checkpoint) produced by the
 # Packet-to-Tensor pipeline.
 #
-# Under ADEPT's dataset-driven label convention, every Kitsune/CIC-IDS2017
+# Under DEPT's dataset-driven label convention, every Kitsune/CIC-IDS2017
 # flow is benign and every TANTGen-generated flow is adversarial. The
 # RF learns to distinguish the benign manifold from adversarial
 # perturbations — the upstream NIDS is expected to handle the raw-dataset

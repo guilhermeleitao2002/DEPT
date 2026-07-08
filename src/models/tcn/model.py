@@ -1,4 +1,4 @@
-"""Temporal Convolutional Network for ADEPT (streaming-native edition).
+"""Temporal Convolutional Network for DEPT (streaming-native edition).
 
 Architecture follows Bai et al. 2018 ("An Empirical Evaluation of Generic
 Convolutional and Recurrent Networks for Sequence Modeling"): stacked
@@ -107,7 +107,7 @@ class TCN(nn.Module):
     ``t + 1`` packets of the flow.
 
     Args:
-        num_features: per-packet feature count ``F`` (1090 for ADEPT).
+        num_features: per-packet feature count ``F`` (1090 for DEPT).
         channels: output channels per block. Length = depth. Dilation at
             block i is ``2 ** i``.
         kernel_size: shared kernel width.

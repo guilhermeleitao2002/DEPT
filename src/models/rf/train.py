@@ -1,4 +1,4 @@
-"""Train the Random Forest base learner for ADEPT."""
+"""Train the Random Forest base learner for DEPT."""
 from __future__ import annotations
 
 import itertools

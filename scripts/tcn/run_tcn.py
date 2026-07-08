@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """
-ADEPT — TCN Base Learner (train + eval)
+DEPT — TCN Base Learner (train + eval)
 =======================================
 
 Trains the temporal base learner on the [N=10, F=1090] sequence tensors
 produced by the Packet-to-Tensor pipeline and evaluates it on the same
 held-out, flow-level test split as the RF (so the two can be compared
-window-for-window). Under ADEPT's benign-vs-adversarial label convention,
+window-for-window). Under DEPT's benign-vs-adversarial label convention,
 the benign pool is every window from the Kitsune + CIC-IDS2017 folders
 listed as ``benign_sources`` in tcn.yaml, and the adversarial pool is
 every TANTGen-generated subfolder auto-discovered under
@@ -166,7 +166,7 @@ def _print_config_banner(config_path: Path, config: dict,
     train_cfg = config.get("training", {})
     model_cfg = config.get("model", {})
 
-    _section(f"ADEPT — TCN  {dim('(mode: ' + mode + ')')}")
+    _section(f"DEPT — TCN  {dim('(mode: ' + mode + ')')}")
     label_w = 13
 
     def _row(label: str, value: str) -> None:
@@ -414,7 +414,7 @@ def _print_artifacts(output_dir: Path) -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Train and/or evaluate the ADEPT TCN base learner.",
+        description="Train and/or evaluate the DEPT TCN base learner.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument("--mode", choices=["train", "eval", "both"], default="both")
@@ -493,7 +493,7 @@ def main() -> int:
     total_elapsed = time.time() - total_t0
 
     print(f"\n{bold('=' * W)}")
-    print(f" {bold('ADEPT × TCN — Summary')}")
+    print(f" {bold('DEPT × TCN — Summary')}")
     print(f"{bold('=' * W)}")
 
     if metrics is not None:

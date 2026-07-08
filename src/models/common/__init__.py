@@ -1,1 +1,1 @@
-"""Shared dataset/loading primitives used by every ADEPT base learner."""
+"""Shared dataset/loading primitives used by every DEPT base learner."""

@@ -212,7 +212,7 @@ def evaluate(output_dir: Path, config: dict) -> dict:
     cmp["Meta-Learner"] = streaming
     plot_latency_accuracy_comparison(
         cmp, output_dir / "latency_vs_accuracy_comparison.png",
-        title="ADEPT base learners + Meta-Learner — overall AUROC@t (test)",
+        title="DEPT base learners + Meta-Learner — overall AUROC@t (test)",
     )
 
     log.info("evaluation written to %s", output_dir)

@@ -1,6 +1,6 @@
-"""ADEPT — inference latency / throughput benchmark (RQ4).
+"""DEPT — inference latency / throughput benchmark (RQ4).
 
-Measures wall-clock inference cost of every ADEPT stage on the held-out
+Measures wall-clock inference cost of every DEPT stage on the held-out
 (seed=42) test split, as the system *actually* computes it: whole-flow
 ``[B, T, F]`` forward passes (there is no incremental / KV-cache path). For
 each stage we report
@@ -379,7 +379,7 @@ def bench_reconstructor(device) -> tuple[dict, float]:
 def bench_preprocess() -> dict:
     """Time the raw-PCAP → nPrint tensor conversion the models depend on.
 
-    Deployed ADEPT cannot feed the RF/TCN/meta stack directly: every incoming
+    Deployed DEPT cannot feed the RF/TCN/meta stack directly: every incoming
     flow must first be turned into the ragged per-flow nPrint tensors, exactly
     as ``run_packet_to_tensor.run()`` does, in three CPU-bound stages —
 
@@ -424,7 +424,7 @@ def bench_preprocess() -> dict:
         shared_mean_std = (REPO_ROOT / "data" / "tensors"
                            / cfg.get("mean_std_filename", "mean_std.json"))
 
-        tmp_root = Path(tempfile.mkdtemp(prefix="adept_preprocess_"))
+        tmp_root = Path(tempfile.mkdtemp(prefix="dept_preprocess_"))
         try:
             # Cap to a representative slice so the (Scapy-bound) parse stays
             # bounded. editcap does a fast header-level copy; fall back to a

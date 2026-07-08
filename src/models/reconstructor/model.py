@@ -1,4 +1,4 @@
-"""Causal residual denoiser for ADEPT's input purification.
+"""Causal residual denoiser for DEPT's input purification.
 
 A small **decoder-only (causal) Transformer** that purifies an
 adversarially-perturbed per-packet sequence. It mirrors the meta-learner's

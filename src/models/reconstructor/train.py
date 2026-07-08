@@ -1,4 +1,4 @@
-"""Train the reconstructor (purification) transformer for ADEPT.
+"""Train the reconstructor (purification) transformer for DEPT.
 
 Trains the causal residual denoiser on matched ``(adversarial → clean)`` flow
 pairs. The loss is a per-element **smooth-L1** between the reconstruction and

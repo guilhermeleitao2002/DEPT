@@ -1,6 +1,6 @@
 """Traffic-space realization: map a purified nPrint flow back onto real packets.
 
-This is ADEPT's "parallel pipeline". The reconstructor denoises in feature
+This is DEPT's "parallel pipeline". The reconstructor denoises in feature
 space (nPrint tensors); to honor the thesis's realizability claim (Table 1:
 scope = Ψ traffic-space) we map the purified length/timing back onto the
 **original adversarial PCAP packets** and validate the result with ``tshark``.

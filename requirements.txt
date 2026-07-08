@@ -1,7 +1,7 @@
 # =============================================================================
-# ADEPT — full-pipeline Python dependencies
+# DEPT — full-pipeline Python dependencies
 # =============================================================================
-# This venv must run BOTH ADEPT's own pipeline (packet_to_tensor -> RF -> TCN ->
+# This venv must run BOTH DEPT's own pipeline (packet_to_tensor -> RF -> TCN ->
 # meta-learner) AND the TANTGen modules that
 # scripts/adversarial_generation/generate_adversarials.py invokes as subprocesses
 # under THIS interpreter (dataloader, the Split scripts, and the TANTGen
@@ -34,7 +34,7 @@ scapy>=2.5
 Cython==3.2.4               # provides `pyximport` for the AfterImage .so
 
 # --- Deep learning -----------------------------------------------------------
-# ADEPT TCN + mini-transformer meta-learner (raw torch);
+# DEPT TCN + mini-transformer meta-learner (raw torch);
 # TANTGen transformer surrogate + finetune + pretrain (PyTorch Lightning).
 #
 # torch MUST match this server's NVIDIA driver. The default PyPI torch is a

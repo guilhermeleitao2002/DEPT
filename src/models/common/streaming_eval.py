@@ -1,4 +1,4 @@
-"""Streaming-native evaluation metrics for ADEPT's RF/TCN/ensemble.
+"""Streaming-native evaluation metrics for DEPT's RF/TCN/ensemble.
 
 Two metrics, computed from a per-flow stream of (packet_idx, p_adversarial)
 predictions:

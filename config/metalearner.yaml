@@ -1,5 +1,5 @@
 # =====================================================================
-# ADEPT — Mini-Transformer Meta-Learner
+# DEPT — Mini-Transformer Meta-Learner
 # =====================================================================
 # Trains on the seed=42 val split (out-of-fold for both base learners),
 # sub-split into meta-train/meta-val at seed=43 for early stopping.

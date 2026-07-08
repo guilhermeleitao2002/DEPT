@@ -1,4 +1,4 @@
-"""Wall-clock timing utilities for the ADEPT latency/throughput benchmark.
+"""Wall-clock timing utilities for the DEPT latency/throughput benchmark.
 
 Shared helpers used by ``scripts/benchmark/run_latency.py`` to time model
 forward passes with a warmup phase and CUDA synchronisation, and to summarise

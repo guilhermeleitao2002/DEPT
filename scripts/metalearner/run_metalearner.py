@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-ADEPT — Mini-Transformer Meta-Learner (train + eval)
+DEPT — Mini-Transformer Meta-Learner (train + eval)
 ====================================================
 
 Trains a small causal Transformer that fuses the per-packet TCN stream
@@ -101,7 +101,7 @@ def _resolve(path_str: str, repo_root: Path) -> Path:
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="ADEPT meta-learner — train + evaluate the mini-Transformer",
+        description="DEPT meta-learner — train + evaluate the mini-Transformer",
     )
     parser.add_argument("--mode", choices=["train", "eval", "both"], default="both")
     args = parser.parse_args()
@@ -120,7 +120,7 @@ def main() -> int:
     for k in ("tensors_dir", "adversarial_dir", "rf_model_dir", "tcn_model_dir"):
         cfg[k] = str(_resolve(cfg[k], REPO_ROOT))
 
-    _section(f"ADEPT — Meta-Learner  {dim('(mode: ' + args.mode + ')')}")
+    _section(f"DEPT — Meta-Learner  {dim('(mode: ' + args.mode + ')')}")
     _row("Config",        str(cfg_path))
     _row("RF model dir",  cfg["rf_model_dir"])
     _row("TCN model dir", cfg["tcn_model_dir"])

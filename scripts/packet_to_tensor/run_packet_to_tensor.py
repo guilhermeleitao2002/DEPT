@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
-ADEPT — Packet-to-Tensor engine (streaming-native, nPrint encoding)
+DEPT — Packet-to-Tensor engine (streaming-native, nPrint encoding)
 ===================================================================
 
 Importable engine module driven in-process by ``process_all_attacks.py``.
-There is no command-line interface: the ADEPT core pipeline has a single,
+There is no command-line interface: the DEPT core pipeline has a single,
 fixed configuration, so the two public functions below are called directly
 with the per-source paths and the parsed ``config/pipeline.yaml``.
 
@@ -14,7 +14,7 @@ with the per-source paths and the parsed ``config/pipeline.yaml``.
         Always overwrites.
 
     run(input_pcap, output_dir, mean_std_path, cfg)
-        Convert one PCAP into ADEPT's ragged per-flow tensors:
+        Convert one PCAP into DEPT's ragged per-flow tensors:
 
             flow_packets.npy            [P_total, F=1090] float32
               Per-packet nPrint bits + IPAT (z-score) + Direction,
@@ -31,7 +31,7 @@ with the per-source paths and the parsed ``config/pipeline.yaml``.
         Plus flow_ids.npy, metadata.json, and a local mean_std.json copy.
 
 All tunables come from ``cfg`` (config/pipeline.yaml). The pipeline is fixed
-to the ADEPT core configuration: the batch (global-sort) path, identity
+to the DEPT core configuration: the batch (global-sort) path, identity
 masking on, both the RF and TCN tensor groups, and the config RF checkpoint
 cadence.
 """
@@ -141,9 +141,9 @@ def fit_mean_std(pcap_paths, out_path: str, cfg: dict) -> dict:
 # Per-PCAP tensor build (batch / global-sort path)
 # ---------------------------------------------------------------------------
 def run(input_pcap: str, output_dir: str, mean_std_path: str, cfg: dict) -> dict:
-    """Convert one PCAP into ADEPT's ragged per-flow tensors.
+    """Convert one PCAP into DEPT's ragged per-flow tensors.
 
-    Fixed to the ADEPT core configuration: batch pipeline, identity masking
+    Fixed to the DEPT core configuration: batch pipeline, identity masking
     on, both RF and TCN tensor groups, RF checkpoint cadence from ``cfg``.
     ``mean_std_path`` is the shared standardizer produced by
     :func:`fit_mean_std`; it is loaded for IPAT z-scoring and copied into
@@ -254,7 +254,7 @@ def run(input_pcap: str, output_dir: str, mean_std_path: str, cfg: dict) -> dict
     total = t3 - t0
     W = 62
     print(f"\n{bold('═' * W)}")
-    print(f" {bold('ADEPT Packet-to-Tensor (streaming)')}  {dim(f'Done in {total:.1f}s')}")
+    print(f" {bold('DEPT Packet-to-Tensor (streaming)')}  {dim(f'Done in {total:.1f}s')}")
     print(f"{'─' * W}")
     print(f" {cyan('flow_packets')}     [{n_packets}, {len(result['feature_names'])}]  "
           f"{dim('TCN / Transformer (per-flow ragged)')}")

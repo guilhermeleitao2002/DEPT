@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# run_pipeline.sh — run the full ADEPT pipeline end-to-end with per-phase timing.
+# run_pipeline.sh — run the full DEPT pipeline end-to-end with per-phase timing.
 # See: ./run_pipeline.sh --help
 
 set -euo pipefail
@@ -15,7 +15,7 @@ SKIP_ADV=0
 
 usage() {
     cat <<'EOF'
-run_pipeline.sh — Run the full ADEPT pipeline end-to-end.
+run_pipeline.sh — Run the full DEPT pipeline end-to-end.
 
 Phases (in order):
   1. Adversarial generation (TANTGen)   scripts/adversarial_generation/generate_adversarials.py
