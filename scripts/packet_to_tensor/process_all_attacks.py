@@ -102,7 +102,9 @@ class Attack:
     dataset: str                    # "kitsune", "cic-ids2017", "cic-ddos2019", "adversarial"
     pcap_path: Path                 # Path to raw PCAP
     output_dir: Path                # Tensor output directory
-    # CIC-IDS2017 time-filtering (editcap -A / -B)
+    # CIC-IDS2017 time-filtering (editcap -A / -B). NOTE: editcap interprets
+    # these in the *local* timezone of the machine running it; the windows
+    # below are tuned for Europe/Lisbon (WEST, UTC+1 in July).
     time_start: str = ""            # e.g. "2017-07-05 09:20:00"
     time_end: str = ""              # e.g. "2017-07-05 12:00:00"
     # CIC-DDoS-2019 packet-count capping (tcpdump -c / editcap 1-N). Used when
@@ -154,9 +156,10 @@ ATTACKS = [
         dataset="cic-ids2017",
         pcap_path=CIC_PCAP / "Tuesday-WorkingHours.pcap",
         output_dir=TENSOR_DIR / "brute_force",
-        # Combined window: FTP-Patator (13:15-14:25 UTC) + SSH-Patator
-        # (18:00-19:05 UTC) plus the benign gap in between. Matches the single
-        # TANTGen BruteForce_adversarial_*.pcap output.
+        # Combined window (local WEST time, see Attack.time_start note):
+        # FTP-Patator (13:15-14:25) + SSH-Patator (18:00-19:05) plus the
+        # benign gap in between. Matches the single TANTGen
+        # BruteForce_adversarial_*.pcap output.
         time_start="2017-07-04 13:15:00",
         time_end="2017-07-04 19:05:00",
     ),

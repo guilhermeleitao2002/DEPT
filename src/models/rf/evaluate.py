@@ -11,8 +11,8 @@ distribution of prefix sizes. The richer per-flow streaming metrics
 
 Under DEPT's benign-vs-adversarial label convention, the positive class
 is "adversarial" (TANTGen-perturbed traffic) and the negative class is
-"benign" (all Kitsune + CIC-IDS2017 windows). Per-source metrics are
-reported only for adversarial sources.
+"benign" (all Kitsune + CIC-IDS2017 + CIC-DDoS-2019 checkpoints).
+Per-source metrics are reported only for adversarial sources.
 """
 from __future__ import annotations
 
@@ -189,9 +189,9 @@ def evaluate(output_dir: Path) -> dict:
     metrics: dict = {"overall": _classification_block(y_te, y_pred, y_prob)}
 
     # Per adversarial source. For each TANTGen variant we report:
-    #   * vs_all_benign       — this variant's positives + every benign window.
-    #                           Realistic prevalence; precision is dominated
-    #                           by total benign FP count.
+    #   * vs_all_benign       — this variant's positives + every benign
+    #                           checkpoint. Realistic prevalence; precision is
+    #                           dominated by total benign FP count.
     #   * vs_balanced_benign  — this variant's positives + K × n_adv benign
     #                           (subsample, capped at total benign). Makes
     #                           precision comparable across variants.
@@ -199,7 +199,8 @@ def evaluate(output_dir: Path) -> dict:
     #                           capture (e.g. mirai_adv_both → benign from
     #                           mirai/). Lets us see within-capture separability
     #                           without cross-capture confounds.
-    # low_support flags variants with fewer than MIN_SUPPORT adversarial windows.
+    # low_support flags variants with fewer than MIN_SUPPORT adversarial
+    # checkpoints.
     MIN_SUPPORT = 50
     BALANCE_K = 10
     rng = np.random.default_rng(42)
@@ -338,6 +339,9 @@ def evaluate(output_dir: Path) -> dict:
             title="RF — Latency vs Accuracy (per-prefix)",
         )
         metrics["streaming"] = streaming["overall"]
+        # Re-persist so the on-disk metrics.json includes the streaming
+        # block (mirrors tcn/evaluate.py).
+        (output_dir / "metrics.json").write_text(json.dumps(metrics, indent=2))
 
     importances = clf.feature_importances_
     order = np.argsort(importances)[::-1]

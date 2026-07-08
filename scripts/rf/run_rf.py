@@ -3,11 +3,12 @@
 DEPT — Random Forest Base Learner (train + eval)
 ==================================================
 
-Trains the statistical base learner on the 24-dim window aggregates produced
-by the Packet-to-Tensor pipeline and evaluates it on a held-out, flow-level
-test split. Under DEPT's benign-vs-adversarial label convention, the
-benign pool is every window from the Kitsune + CIC-IDS2017 folders listed
-as `benign_sources` in rf.yaml, and the adversarial pool is every TANTGen-
+Trains the statistical base learner on the 24-dim multi-scale prefix
+statistics (one row per RF checkpoint) produced by the Packet-to-Tensor
+pipeline and evaluates it on a held-out, flow-level test split. Under
+DEPT's benign-vs-adversarial label convention, the benign pool is every
+flow from the Kitsune + CIC-IDS2017 + CIC-DDoS-2019 folders listed as
+`benign_sources` in rf.yaml, and the adversarial pool is every TANTGen-
 generated subfolder auto-discovered under `adversarial_dir`.
 
 Usage
@@ -29,7 +30,7 @@ Outputs (under <output_dir> from rf.yaml)
     split.npz              — train/val/test row indices into dataset.npz
     dataset.npz            — merged X, y, sources, label_str for reproducibility
     feature_names.json     — ordered RF stat names (24)
-    split_summary.json     — per-split window counts (benign / adversarial / per-source)
+    split_summary.json     — per-split checkpoint + flow counts (benign / adversarial / per-source)
     training_info.json     — grid search results, best params, effective config
     metrics.json           — overall, per-adversarial-source, per-label_str metrics
     confusion_matrix.png   — binary CM (test, benign vs adversarial)
@@ -78,10 +79,6 @@ def magenta(t): return _c("35", t)
 W = 76
 
 
-def _rule(char: str = "─") -> str:
-    return dim(char * W)
-
-
 def _section(title: str) -> None:
     print(f"\n{bold('═' * W)}")
     print(f" {bold(title)}")
@@ -117,12 +114,6 @@ def _fmt_size(nbytes: int) -> str:
 # ---------------------------------------------------------------------------
 # Pretty-printers
 # ---------------------------------------------------------------------------
-
-def _fmt_metric(v) -> str:
-    if v is None:
-        return dim("—")
-    return f"{v:.4f}"
-
 
 def _colour_metric(v, good: float = 0.9, ok: float = 0.75, width: int = 0) -> str:
     if v is None:

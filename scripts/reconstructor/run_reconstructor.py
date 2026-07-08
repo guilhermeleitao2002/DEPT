@@ -70,7 +70,6 @@ def green(t):   return _c("32", t)
 def yellow(t):  return _c("33", t)
 def red(t):     return _c("31", t)
 def cyan(t):    return _c("36", t)
-def magenta(t): return _c("35", t)
 
 
 W = 76

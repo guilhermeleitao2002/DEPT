@@ -121,30 +121,6 @@ def is_rf_checkpoint_packet(packet_index: int, first: int, stride: int) -> bool:
     return packet_index % stride == 0
 
 
-def checkpoint_packet_indices(
-    n_checkpoints: int, first: int, stride: int,
-) -> np.ndarray:
-    """Absolute 1-based packet indices for the first ``n_checkpoints``.
-
-    Under the default cadence (first=2, stride=10) the sequence is
-    ``[2, 10, 20, 30, …]``. When ``first`` is 0 or coincides with
-    ``stride`` (mod-zero), the sequence is the regular ``[stride, 2*stride,
-    3*stride, …]``.
-    """
-    if n_checkpoints <= 0:
-        return np.empty(0, dtype=np.int64)
-    out = np.empty(n_checkpoints, dtype=np.int64)
-    has_early = first > 0 and (first % stride) != 0
-    if has_early:
-        out[0] = first
-        for k in range(1, n_checkpoints):
-            out[k] = k * stride
-    else:
-        for k in range(n_checkpoints):
-            out[k] = (k + 1) * stride
-    return out
-
-
 def _normalize_outputs(outputs: Optional[Iterable[str]]) -> Tuple[str, ...]:
     """Validate and canonicalise the ``outputs`` selector."""
     if outputs is None:

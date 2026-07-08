@@ -1,10 +1,10 @@
 # Random Forest Base Learner
 
-> Part of [DEPT](../../README.md). The statistical half of the streaming ensemble — trained on multi-scale prefix statistics, it emits one prediction per 10-packet prefix milestone.
+> Part of [DEPT](../../README.md). The statistical half of the streaming ensemble — trained on multi-scale prefix statistics, it emits one prediction per checkpoint (packet 2, then every 10 packets).
 
 ## Role in the ensemble
 
-The RF is the **sparse, high-precision stream**: it waits for a full 10-packet prefix before making any prediction, but when it does, it is highly accurate. This contrasts with the TCN, which is noisy early and becomes more reliable as the flow grows. The two streams together give the meta-learner a choice at every packet: act on the TCN's early signal, or wait for the RF's next checkpoint.
+The RF is the **sparse, high-precision stream**: it emits an early verdict at packet 2 (so short flows like PortScan are covered) and then refreshes only at every 10-packet prefix milestone, but when it does predict, it is highly accurate. This contrasts with the TCN, which predicts at every packet — noisy early and more reliable as the flow grows. The two streams together give the meta-learner a choice at every packet: act on the TCN's dense signal, or wait for the RF's next checkpoint.
 
 ## Input
 
@@ -19,7 +19,7 @@ The RF is the **sparse, high-precision stream**: it waits for a full 10-packet p
 | `TCP_Flags` × {mean, std, min, max} | TCP flag byte statistics |
 | `Direction` × {mean, std, min, max} | Forward/reverse packet ratio statistics |
 
-A flow with L packets contributes ⌊L/10⌋ checkpoint rows — one per prefix milestone. This is the same distribution the model sees at inference, avoiding the distribution-shift that would arise from training on a fixed window size alone.
+A flow with L packets contributes ⌊L/10⌋ + 1 checkpoint rows (the +1 is the early packet-2 row, for flows of ≥ 2 packets) — one per prefix milestone. This is the same distribution the model sees at inference, avoiding the distribution-shift that would arise from training on a fixed window size alone.
 
 ## Design
 

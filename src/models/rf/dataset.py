@@ -186,7 +186,9 @@ def _expand_source_checkpoints(
         cidx[group_offsets] = -(counts[:-1] - 1)
     cidx = np.cumsum(cidx).astype(np.int32)
 
-    # packet_idx: closed form of checkpoint_packet_indices() applied to cidx.
+    # packet_idx: absolute 1-based packet index per checkpoint. Under the
+    # early-checkpoint cadence the sequence is [first, stride, 2*stride, …];
+    # otherwise it is the regular [stride, 2*stride, …].
     if rf_first > 0 and (rf_first % rf_stride) != 0:
         pidx = np.where(cidx == 0, rf_first, cidx.astype(np.int64) * rf_stride)
     else:

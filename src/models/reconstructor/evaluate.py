@@ -1,7 +1,7 @@
 """Evaluate the reconstructor on the held-out test pairs.
 
-Three metric groups (matching the thesis's §5.3), reported overall and per
-``<base>_adv_<mode>`` source:
+Four metric groups (the first three match the thesis's §5.3), reported
+overall and per ``<base>_adv_<mode>`` source:
 
   1. **Reconstruction quality** — MSE on the perturbed dimensions, *before*
      (adv vs clean) vs *after* (recon vs clean). A large ``before → after``

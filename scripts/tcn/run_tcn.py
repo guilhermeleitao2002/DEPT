@@ -3,14 +3,14 @@
 DEPT — TCN Base Learner (train + eval)
 =======================================
 
-Trains the temporal base learner on the [N=10, F=1090] sequence tensors
-produced by the Packet-to-Tensor pipeline and evaluates it on the same
-held-out, flow-level test split as the RF (so the two can be compared
-window-for-window). Under DEPT's benign-vs-adversarial label convention,
-the benign pool is every window from the Kitsune + CIC-IDS2017 folders
-listed as ``benign_sources`` in tcn.yaml, and the adversarial pool is
-every TANTGen-generated subfolder auto-discovered under
-``adversarial_dir``.
+Trains the temporal base learner on the ragged, variable-length per-flow
+[L, F=1090] sequence tensors produced by the Packet-to-Tensor pipeline and
+evaluates it on the same held-out, flow-level test split as the RF (so the
+two can be compared flow-for-flow). Under DEPT's benign-vs-adversarial
+label convention, the benign pool is every flow from the Kitsune +
+CIC-IDS2017 + CIC-DDoS-2019 folders listed as ``benign_sources`` in
+tcn.yaml, and the adversarial pool is every TANTGen-generated subfolder
+auto-discovered under ``adversarial_dir``.
 
 Usage
 -----
@@ -30,8 +30,8 @@ Outputs (under <output_dir> from tcn.yaml)
     tcn.pt                 — best PyTorch state_dict
     tcn_config.json        — resolved model + training config
     split.npz              — train/val/test row indices into dataset_index.npz
-    dataset_index.npz      — per-window index (sources, local_idx, y, ...)
-    split_summary.json     — per-split window counts (benign / adversarial / per-source)
+    dataset_index.npz      — per-flow index (sources, local_idx, y, ...)
+    split_summary.json     — per-split flow counts (benign / adversarial / per-source)
     training_info.json     — best epoch, durations, device, effective config
     training_curves.json   — per-epoch train_loss / val_loss / val_macro_f1 / lr
     metrics.json           — overall, per-adversarial-source, per-label_str metrics
@@ -81,10 +81,6 @@ def magenta(t): return _c("35", t)
 W = 76
 
 
-def _rule(char: str = "─") -> str:
-    return dim(char * W)
-
-
 def _section(title: str) -> None:
     print(f"\n{bold('═' * W)}")
     print(f" {bold(title)}")
@@ -118,12 +114,6 @@ def _fmt_size(nbytes: int) -> str:
 # ---------------------------------------------------------------------------
 # Pretty-printers
 # ---------------------------------------------------------------------------
-
-def _fmt_metric(v) -> str:
-    if v is None:
-        return dim("—")
-    return f"{v:.4f}"
-
 
 def _colour_metric(v, good: float = 0.9, ok: float = 0.75, width: int = 0) -> str:
     if v is None:
@@ -381,7 +371,7 @@ def _print_artifacts(output_dir: Path) -> None:
         ("tcn.pt",                 "trained model state_dict"),
         ("tcn_config.json",        "resolved model + training config"),
         ("split.npz",              "train/val/test indices"),
-        ("dataset_index.npz",      "per-window index (no payload)"),
+        ("dataset_index.npz",      "per-flow index (no payload)"),
         ("split_summary.json",     "split counts"),
         ("training_info.json",     "best epoch, durations, device"),
         ("training_curves.json",   "per-epoch loss + val macro-F1"),

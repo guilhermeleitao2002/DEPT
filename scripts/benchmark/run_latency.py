@@ -1,4 +1,4 @@
-"""DEPT — inference latency / throughput benchmark (RQ4).
+"""DEPT — inference latency / throughput benchmark (RQ3: latency and overhead).
 
 Measures wall-clock inference cost of every DEPT stage on the held-out
 (seed=42) test split, as the system *actually* computes it: whole-flow
@@ -69,7 +69,8 @@ from torch.utils.data import DataLoader  # noqa: E402
 
 # ── Benchmark parameters (hardcoded per repo convention) ─────────────────────
 SEED = 42
-WARMUP = 10               # discarded forwards before timing
+WARMUP_SWEEPS = 1         # discarded full-pool sweeps before throughput timing
+WARMUP_PER_FLOW = 2       # discarded forwards before each batch-1 timing
 THROUGHPUT_REPEATS = 5    # full-pool sweeps for throughput
 POOL_FLOWS = 2048         # flows preloaded on-device for timing
 PERFLOW_SAMPLES = 512     # flows timed individually at batch size 1
@@ -140,7 +141,7 @@ def bench_rf() -> dict:
 # ─────────────────────────────────────────────────────────────────────────────
 # Generic on-device pool timing for a [B,T,F] forward model
 # ─────────────────────────────────────────────────────────────────────────────
-def _bench_seq_model(model, loader, device, forward, *, tag: str) -> dict:
+def _bench_seq_model(loader, device, forward) -> dict:
     """Preload a pool of batches on ``device`` and time throughput + per-flow.
 
     ``forward(seq)`` runs one batch forward (already-on-device tensors).
@@ -161,7 +162,7 @@ def _bench_seq_model(model, loader, device, forward, *, tag: str) -> dict:
         for seq, _ in pool:
             forward(seq)
 
-    sweeps = time_sweep(sweep, device, warmup=1, repeats=THROUGHPUT_REPEATS)
+    sweeps = time_sweep(sweep, device, warmup=WARMUP_SWEEPS, repeats=THROUGHPUT_REPEATS)
     sweep_ms = float(np.median(sweeps))
 
     # Per-flow latency at batch size 1.
@@ -172,7 +173,7 @@ def _bench_seq_model(model, loader, device, forward, *, tag: str) -> dict:
             Lb = int(lengths[b].item())
             one = seq[b:b + 1, :Lb, :].contiguous()
             s = summarize(time_calls(
-                lambda x=one: forward(x), device, warmup=2, iters=PERFLOW_ITERS,
+                lambda x=one: forward(x), device, warmup=WARMUP_PER_FLOW, iters=PERFLOW_ITERS,
             ))
             perflow_ms.append(float(s["median"]))
             perflow_len.append(Lb)
@@ -236,8 +237,7 @@ def bench_tcn(device) -> tuple[dict, float]:
         with torch.amp.autocast(device_type="cuda" if use_amp else "cpu", enabled=use_amp):
             return model(seq)
 
-    return _bench_seq_model(model, ((s, l) for s, _y, l, _m in loader),
-                            device, forward, tag="tcn")
+    return _bench_seq_model(((s, l) for s, _y, l, _m in loader), device, forward)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -287,7 +287,7 @@ def bench_meta(device) -> tuple[dict, float]:
         for tokens, mask, _l in pool:
             forward(tokens, mask)
 
-    sweep_ms = float(np.median(time_sweep(sweep, device, warmup=1, repeats=THROUGHPUT_REPEATS)))
+    sweep_ms = float(np.median(time_sweep(sweep, device, warmup=WARMUP_SWEEPS, repeats=THROUGHPUT_REPEATS)))
 
     perflow_ms, perflow_len = [], []
     for tokens, mask, lengths in pool:
@@ -296,7 +296,7 @@ def bench_meta(device) -> tuple[dict, float]:
             tk = tokens[b:b + 1, :Lb, :].contiguous()
             mk = mask[b:b + 1, :Lb].contiguous()
             s = summarize(time_calls(lambda a=tk, c=mk: forward(a, c),
-                                     device, warmup=2, iters=PERFLOW_ITERS))
+                                     device, warmup=WARMUP_PER_FLOW, iters=PERFLOW_ITERS))
             perflow_ms.append(float(s["median"]))
             perflow_len.append(Lb)
             if len(perflow_ms) >= PERFLOW_SAMPLES:
@@ -369,8 +369,8 @@ def bench_reconstructor(device) -> tuple[dict, float]:
         kpm[:] = False
         return model(seq, key_padding_mask=kpm)
 
-    return _bench_seq_model(model, ((adv, l) for adv, _c, l, _m, _r in loader),
-                            device, forward, tag="reconstructor")
+    return _bench_seq_model(((adv, l) for adv, _c, l, _m, _r in loader),
+                            device, forward)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -383,8 +383,8 @@ def bench_preprocess() -> dict:
     flow must first be turned into the ragged per-flow nPrint tensors, exactly
     as ``run_packet_to_tensor.run()`` does, in three CPU-bound stages —
 
-        1. extract_packet_features — Scapy PCAP parse + nPrint bit encoding +
-                                     identity masking (parallel worker pool);
+        1. extract_packet_features — sequential Scapy PCAP parse + vectorised
+                                     nPrint bit encoding + identity masking;
         2. group_by_flow           — canonical 5-tuple grouping with per-flow
                                      IPAT + Direction;
         3. build_tensors           — ragged [P, 1090] assembly, IPAT z-score,
@@ -641,7 +641,8 @@ def main() -> int:
         "gpu_name": gpu_name,
         "torch_version": torch.__version__,
         "config": {
-            "seed": SEED, "warmup": WARMUP, "throughput_repeats": THROUGHPUT_REPEATS,
+            "seed": SEED, "warmup_sweeps": WARMUP_SWEEPS, "warmup_per_flow": WARMUP_PER_FLOW,
+            "throughput_repeats": THROUGHPUT_REPEATS,
             "pool_flows": POOL_FLOWS, "per_flow_samples": PERFLOW_SAMPLES,
             "per_flow_iters": PERFLOW_ITERS, "rf_ckpt_sample": RF_CKPT_SAMPLE,
             "sample_note": "representative test-split sample; raise constants for full split",

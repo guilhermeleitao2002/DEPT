@@ -36,7 +36,6 @@ from ..common.streaming_eval import (  # noqa: E402
 from .dataset import (  # noqa: E402
     MetaLearnerDataset,
     collate_padded,
-    load_token_cache,
     prepare_split_caches,
 )
 from .model import MetaLearner  # noqa: E402
@@ -72,30 +71,28 @@ def evaluate(output_dir: Path, config: dict) -> dict:
     model.load_state_dict(state)
     model.eval()
 
-    # Reuse (or build) the test cache.
-    cache_dir = output_dir / "cache" / "test"
-    if cache_dir.exists() and (cache_dir / "tokens.npy").exists():
-        cache = load_token_cache(cache_dir)
-    else:
-        rf_dir = Path(config["rf_model_dir"])
-        tcn_dir = Path(config["tcn_model_dir"])
-        rf_split = np.load(rf_dir / "split.npz")
-        tcn_idx = np.load(tcn_dir / "dataset_index.npz", allow_pickle=True)
-        token_cfg = config.get("token", {})
-        caches = prepare_split_caches(
-            output_dir=output_dir,
-            rf_dir=rf_dir, tcn_dir=tcn_dir,
-            tensors_dir=Path(config["tensors_dir"]),
-            adversarial_dir=Path(config["adversarial_dir"]),
-            splits={"test": {
-                "rf_sample_indices": rf_split["test_idx"],
-                "tcn_sample_indices": tcn_idx["used_test_idx"],
-            }},
-            rf_age_clip=int(token_cfg.get("rf_age_clip", 30)),
-            pkt_len_norm=float(token_cfg.get("pkt_len_norm", 1500.0)),
-            max_length=int(train_cfg_saved.get("max_length", 200)),
-        )
-        cache = caches["test"]
+    # Reuse (or build) the test cache. prepare_split_caches loads the
+    # existing cache when the base-learner cache key still matches and
+    # rebuilds it otherwise (e.g. after retraining the RF or TCN).
+    rf_dir = Path(config["rf_model_dir"])
+    tcn_dir = Path(config["tcn_model_dir"])
+    rf_split = np.load(rf_dir / "split.npz")
+    tcn_idx = np.load(tcn_dir / "dataset_index.npz", allow_pickle=True)
+    token_cfg = config.get("token", {})
+    caches = prepare_split_caches(
+        output_dir=output_dir,
+        rf_dir=rf_dir, tcn_dir=tcn_dir,
+        tensors_dir=Path(config["tensors_dir"]),
+        adversarial_dir=Path(config["adversarial_dir"]),
+        splits={"test": {
+            "rf_sample_indices": rf_split["test_idx"],
+            "tcn_sample_indices": tcn_idx["used_test_idx"],
+        }},
+        rf_age_clip=int(token_cfg.get("rf_age_clip", 30)),
+        pkt_len_norm=float(token_cfg.get("pkt_len_norm", 1500.0)),
+        max_length=int(train_cfg_saved.get("max_length", 200)),
+    )
+    cache = caches["test"]
 
     num_workers = resolve_num_workers(train_cfg_saved.get("num_workers", "auto"))
     ds = MetaLearnerDataset(cache)
@@ -202,8 +199,6 @@ def evaluate(output_dir: Path, config: dict) -> dict:
         plt.close(fig)
 
     # Three-way comparison plot (overall AUROC@t for RF, TCN, Meta-Learner).
-    rf_dir = Path(config["rf_model_dir"])
-    tcn_dir = Path(config["tcn_model_dir"])
     cmp = {}
     for label, p in [("RF", rf_dir / "streaming_metrics.json"),
                      ("TCN", tcn_dir / "streaming_metrics.json")]:

@@ -5,8 +5,9 @@
 # prefix statistics (one row per RF checkpoint) produced by the
 # Packet-to-Tensor pipeline.
 #
-# Under DEPT's dataset-driven label convention, every Kitsune/CIC-IDS2017
-# flow is benign and every TANTGen-generated flow is adversarial. The
+# Under DEPT's dataset-driven label convention, every Kitsune/CIC-IDS2017/
+# CIC-DDoS-2019 flow is benign and every TANTGen-generated flow is
+# adversarial. The
 # RF learns to distinguish the benign manifold from adversarial
 # perturbations — the upstream NIDS is expected to handle the raw-dataset
 # attacks, so they contribute to the benign class here.
@@ -46,10 +47,8 @@ benign_sources:
 
 # Adversarial pool — every subdirectory of adversarial_dir/ that contains
 # metadata.json is loaded automatically, except those listed below.
-# - portscan_adv_*  : PortScan flows are 1–2 packets each (one SYN ± one
-#   RST), and TANTGen perturbs timing/size without adding packets, so 0
-#   flows out of 15,839 reach N=10 — empirically 0 windows. Excluded to
-#   keep the adversarial pool clean.
+# (portscan_adv_* is included: the early packet-2 RF checkpoint covers its
+# 1–2-packet flows, which the retired fixed N=10 window schema could not.)
 # - dos_slow / syn_dos / fuzzing : defensively drops leftover tensors
 #   from attack sets no longer part of this configuration.
 # - brute_force_kitsune / portscan_kitsune *_adv_* : defensive guard against
@@ -59,9 +58,6 @@ benign_sources:
 #   and the 5 CIC-DDoS-2019 floods (ntp_ddos, dns_ddos, ssdp_ddos, syn_ddos,
 #   ldap_ddos); these kitsune variants are not.
 adversarial_exclude:
-  # - portscan_adv_both
-  # - portscan_adv_iat
-  # - portscan_adv_size
   - dos_slow_adv_both
   - dos_slow_adv_iat
   - dos_slow_adv_size

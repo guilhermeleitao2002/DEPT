@@ -36,9 +36,6 @@ benign_sources:
 # list as rf.yaml; see that file for per-entry rationale (the excludes are
 # defensive carry-overs from older attack sets).
 adversarial_exclude:
-  # - portscan_adv_both
-  # - portscan_adv_iat
-  # - portscan_adv_size
   - dos_slow_adv_both
   - dos_slow_adv_iat
   - dos_slow_adv_size

@@ -63,7 +63,6 @@ def _c(code: str, text: str) -> str:
 def bold(t):    return _c("1", t)
 def dim(t):     return _c("2", t)
 def green(t):   return _c("32", t)
-def yellow(t):  return _c("33", t)
 def cyan(t):    return _c("36", t)
 
 

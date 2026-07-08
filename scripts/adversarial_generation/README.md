@@ -91,7 +91,7 @@ After analyzing the 21 (now 18) adversarial PCAPs, five recommendations were con
 **Implemented:**
 
 1. **Drop Fuzzing entirely.** Reasoning above.
-2. **Recompute `mean_std.json` over benign + adversarial inputs jointly.** Implemented at the packet-to-tensor stage — see [Phase 1 README → shared standardizer](../packet_to_tensor/README.md#why-a-shared-mean_stdjson). Smoke check on SYN_DoS adversarial-only inputs: shared fit yields IPAT mean 9.85 / std 31.08 vs the previous benign-only 0.04 / 3.24 — confirming the heavier tails are now captured.
+2. **Recompute `mean_std.json` over benign + adversarial inputs jointly.** Implemented at the packet-to-tensor stage — see [Phase 1 README → design decisions](../packet_to_tensor/README.md#design-decisions). Smoke check on SYN_DoS adversarial-only inputs: shared fit yields IPAT mean 9.85 / std 31.08 vs the previous benign-only 0.04 / 3.24 — confirming the heavier tails are now captured.
 
 **Deliberately not implemented:**
 

@@ -4,7 +4,7 @@
 
 ## Role in the ensemble
 
-The TCN is the **dense, early-warning stream**: it produces a prediction the moment the first packet of a flow arrives and updates it with every subsequent packet. It trades precision (it is noisier than the RF early on) for latency — it can detect adversarial flows orders of magnitude earlier than the RF's first 10-packet checkpoint. This is the production motivation: detection latency is bounded by TCN forward-pass time, not by flow length.
+The TCN is the **dense, early-warning stream**: it produces a prediction the moment the first packet of a flow arrives and updates it with every subsequent packet. It trades precision (it is noisier than the RF early on) for latency — it flags a flow from packet 1, before the RF's first checkpoint at packet 2 and far ahead of the RF's every-10-packet refresh cadence. This is the production motivation: detection latency is bounded by TCN forward-pass time, not by flow length.
 
 ## Input
 

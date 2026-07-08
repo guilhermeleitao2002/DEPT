@@ -329,10 +329,6 @@ def build_token_cache(
         fp, fo = _resolve_source(fl.source)
         li = _local_idx(fl.source, fl.flow_id)
         flow_start_in_src = int(fo[li, 0])
-        flow_len_in_src = int(fo[li, 1])
-        if flow_len_in_src != fl.length:
-            # TCN may have truncated to max_length; honour the joined length.
-            flow_len_in_src = fl.length
         L = int(flow_offsets[i, 1])
         # Build over the truncated length (so packet features stay aligned
         # with the truncated TCN/RF arrays).
@@ -403,14 +399,20 @@ def prepare_split_caches(
     ``splits`` maps a split name (e.g. ``"val"``) to a dict with keys
     ``rf_sample_indices`` and ``tcn_sample_indices`` (either may be
     ``None`` to use the respective default test split). Re-uses existing
-    caches when the cache key matches; otherwise rebuilds the affected
-    splits.
+    caches when the cache key matches; otherwise every existing split
+    cache is dropped (not only the requested ones — a stale sibling must
+    not survive the key bump) and the requested splits are rebuilt.
     """
     cache_root = output_dir / "cache"
     cache_root.mkdir(parents=True, exist_ok=True)
     key = _cache_key(rf_dir, tcn_dir)
     key_path = cache_root / "cache_key.txt"
     stale = not key_path.exists() or key_path.read_text().strip() != key
+    if stale:
+        import shutil
+        for d in cache_root.iterdir():
+            if d.is_dir():
+                shutil.rmtree(d, ignore_errors=True)
 
     out: dict[str, TokenCache] = {}
     for split_name, args in splits.items():
