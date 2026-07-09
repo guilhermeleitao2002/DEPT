@@ -8,13 +8,25 @@ There is no command-line interface: the DEPT core pipeline has a single,
 fixed configuration, so the two public functions below are called directly
 with the per-source paths and the parsed ``config/pipeline.yaml``.
 
-    fit_mean_std(pcap_paths, out_path, cfg)
-        Fit the shared IPAT standardizer over one or more PCAPs using a
-        streaming Welford accumulator and write it to ``out_path`` (JSON).
-        Always overwrites.
+    parse_pcap(input_pcap, cfg)
+        Scapy-parse + flow-group one PCAP into the compact in-memory form
+        (sorted int8 nPrint bits, slim numeric metadata, flow index map)
+        that both functions below consume. Costs ≈ 1.1 GB RAM per million
+        packets; parsing is the pipeline's dominant cost, so callers that
+        need both the standardizer fit and the tensor build should parse
+        once and pass the result to both (see ``process_all_attacks.py``).
 
-    run(input_pcap, output_dir, mean_std_path, cfg)
-        Convert one PCAP into DEPT's ragged per-flow tensors:
+    fit_mean_std(pcap_paths, out_path, cfg, parsed_cache=None)
+        Fit the shared IPAT standardizer over one or more PCAPs with a
+        numerically-stable Welford/Chan merge and write it to ``out_path``
+        (JSON). Always overwrites. When ``parsed_cache`` (a dict) is given,
+        every PCAP parsed along the way is kept in it, keyed by path, for
+        reuse by ``run`` — this is what removes the second Scapy pass.
+
+    run(input_pcap, output_dir, mean_std_path, cfg, parsed=None)
+        Convert one PCAP into DEPT's ragged per-flow tensors (``parsed``
+        skips the Scapy parse when the caller already holds the
+        ``parse_pcap`` result):
 
             flow_packets.npy            [P_total, F=1090] float32
               Per-packet nPrint bits + IPAT (z-score) + Direction,
@@ -76,6 +88,47 @@ def load_config(config_path: str) -> dict:
 
 
 # ---------------------------------------------------------------------------
+# One-shot parse: Scapy read + nPrint encode + flow grouping
+# ---------------------------------------------------------------------------
+def parse_pcap(input_pcap: str, cfg: dict) -> dict:
+    """Parse one PCAP into the compact in-memory form the engine consumes.
+
+    Runs the two expensive, Scapy-bound stages once — feature extraction and
+    5-tuple flow grouping — and returns a dict with:
+
+        nprint_bits   : int8 [P, 1088], time-sorted (flow-grouper order)
+        meta_df       : DataFrame, time-sorted, slimmed to the numeric
+                        columns downstream actually uses (standardize,
+                        RF base features, IPAT, Direction)
+        flow_indices  : OrderedDict[flow key → row indices]
+
+    Identity columns (IPs/ports) are dropped after grouping, so one parsed
+    million-packet capture holds ≈ 1.1 GB (bits) + ~60 MB (metadata).
+    """
+    nprint_bits, meta_df = extract_packet_features(
+        input_pcap, mask_prefixes=cfg.get("mask_prefixes", []),
+    )
+    meta_df, flow_indices, sort_order = group_by_flow(meta_df)
+    nprint_bits = nprint_bits[sort_order]
+    del sort_order
+
+    keep = [
+        c for c in meta_df.columns
+        if c in set(cfg["standardize_columns"])
+        | set(cfg["rf_base_features"])
+        | {"IPAT", "Direction"}
+    ]
+    meta_df = meta_df[keep]
+
+    return {
+        "nprint_bits": nprint_bits,
+        "meta_df": meta_df,
+        "flow_indices": flow_indices,
+        "num_packets": len(meta_df),
+    }
+
+
+# ---------------------------------------------------------------------------
 # Streaming mean/std fitter (Welford / Chan parallel update)
 # ---------------------------------------------------------------------------
 def _welford_merge(state: dict, vals: "np.ndarray") -> dict:
@@ -95,29 +148,35 @@ def _welford_merge(state: dict, vals: "np.ndarray") -> dict:
     return {"count": n, "mean": mean, "M2": M2}
 
 
-def fit_mean_std(pcap_paths, out_path: str, cfg: dict) -> dict:
+def fit_mean_std(
+    pcap_paths, out_path: str, cfg: dict, parsed_cache: dict = None,
+) -> dict:
     """Fit the shared per-column mean/std across PCAPs and write it to JSON.
 
-    Streams each PCAP once (nPrint bits discarded — only the flow metadata
-    columns listed in ``cfg["standardize_columns"]`` are accumulated) with a
-    numerically-stable Welford/Chan merge. Always overwrites ``out_path``.
+    Parses each PCAP once and folds the flow metadata columns listed in
+    ``cfg["standardize_columns"]`` into a numerically-stable Welford/Chan
+    merge. Always overwrites ``out_path``.
+
+    When ``parsed_cache`` is a dict, each :func:`parse_pcap` result is stored
+    in it (keyed by path) instead of being discarded, so the subsequent
+    per-source :func:`run` calls skip their Scapy pass entirely. The caller
+    owns the cache and should ``pop`` entries as it consumes them; expect
+    ≈ 1.1 GB per million cached packets.
     """
     columns = cfg["standardize_columns"]
-    mask_prefixes = cfg.get("mask_prefixes", [])
     accumulators = {c: {"count": 0, "mean": 0.0, "M2": 0.0} for c in columns}
     for i, pcap in enumerate(pcap_paths, 1):
         print(f"\n  {dim(f'[{i}/{len(pcap_paths)}]')} {os.path.basename(pcap)}")
-        nprint_bits, meta_df = extract_packet_features(
-            pcap, mask_prefixes=mask_prefixes,
-        )
-        del nprint_bits
-        meta_df, _, _ = group_by_flow(meta_df)
+        parsed = parse_pcap(pcap, cfg)
+        meta_df = parsed["meta_df"]
         for c in columns:
             if c in meta_df.columns:
                 accumulators[c] = _welford_merge(
                     accumulators[c], meta_df[c].values.astype(np.float64)
                 )
-        del meta_df
+        if parsed_cache is not None:
+            parsed_cache[pcap] = parsed
+        del parsed, meta_df
 
     stats = {}
     for c, acc in accumulators.items():
@@ -139,7 +198,10 @@ def fit_mean_std(pcap_paths, out_path: str, cfg: dict) -> dict:
 # ---------------------------------------------------------------------------
 # Per-PCAP tensor build (batch / global-sort path)
 # ---------------------------------------------------------------------------
-def run(input_pcap: str, output_dir: str, mean_std_path: str, cfg: dict) -> dict:
+def run(
+    input_pcap: str, output_dir: str, mean_std_path: str, cfg: dict,
+    parsed: dict = None,
+) -> dict:
     """Convert one PCAP into DEPT's ragged per-flow tensors.
 
     Fixed to the DEPT core configuration: batch pipeline, identity masking
@@ -147,6 +209,10 @@ def run(input_pcap: str, output_dir: str, mean_std_path: str, cfg: dict) -> dict
     ``mean_std_path`` is the shared standardizer produced by
     :func:`fit_mean_std`; it is loaded for IPAT z-scoring and copied into
     ``output_dir`` as the source's local ``mean_std.json``.
+
+    ``parsed`` is an optional :func:`parse_pcap` result for ``input_pcap``;
+    when given, the Scapy parse + flow grouping are skipped (the driver
+    already paid that cost while fitting the standardizer).
     """
     rf_checkpoint_stride = int(cfg.get("rf_checkpoint_stride", 10))
     rf_first_checkpoint = int(cfg.get("rf_first_checkpoint", 2))
@@ -167,19 +233,17 @@ def run(input_pcap: str, output_dir: str, mean_std_path: str, cfg: dict) -> dict
     fname = os.path.basename(input_pcap)
     t0 = time.time()
 
-    _step(1, 3, f"Extracting nPrint features  {dim(fname)}")
-    nprint_bits, meta_df = extract_packet_features(
-        input_pcap, mask_prefixes=mask_prefixes,
-    )
-    t1 = time.time()
-    print(f"      {green('✓')} {len(meta_df):,} packets  {dim(f'({t1 - t0:.1f}s)')}")
-
-    _step(2, 3, "Grouping by 5-tuple flow")
-    meta_df, flow_indices, sort_order = group_by_flow(meta_df)
-    nprint_bits = nprint_bits[sort_order]
-    del sort_order
+    if parsed is None:
+        _step(1, 2, f"Extracting nPrint features  {dim(fname)}")
+        parsed = parse_pcap(input_pcap, cfg)
+    else:
+        _step(1, 2, f"Reusing cached parse  {dim(fname)}")
+    nprint_bits = parsed["nprint_bits"]
+    meta_df = parsed["meta_df"]
+    flow_indices = parsed["flow_indices"]
     t2 = time.time()
-    print(f"      {green('✓')} {len(flow_indices):,} flows  {dim(f'({t2 - t1:.1f}s)')}")
+    print(f"      {green('✓')} {len(meta_df):,} packets, "
+          f"{len(flow_indices):,} flows  {dim(f'({t2 - t0:.1f}s)')}")
 
     sizes = [len(idx) for idx in flow_indices.values()]
     if sizes:
@@ -199,7 +263,7 @@ def run(input_pcap: str, output_dir: str, mean_std_path: str, cfg: dict) -> dict
         if rf_first_checkpoint > 0
         else f"stride={rf_checkpoint_stride}"
     )
-    _step(3, 3, f"Building ragged tensors  {dim(f'(rf cadence: {cadence_str})')}")
+    _step(2, 2, f"Building ragged tensors  {dim(f'(rf cadence: {cadence_str})')}")
     result = build_tensors(
         nprint_bits=nprint_bits,
         meta_df=meta_df,

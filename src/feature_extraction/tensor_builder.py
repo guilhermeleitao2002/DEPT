@@ -27,13 +27,20 @@ The meta-learner combines both streams.
 
 Implementation notes
 --------------------
-- All RF prefix statistics are computed via Welford's online algorithm so a
-  flow of length L is processed in O(L) time and O(1) extra memory per
-  flow, emitting ``[mean, std, min, max]`` per base feature over the growing
-  prefix.
-- Output tensors are pre-allocated as memory-mapped ``.npy`` files, so peak
-  RAM stays bounded even when a source's ``flow_packets.npy`` exceeds
-  available memory.
+- The batch build is fully vectorised: ``flow_packets.npy`` is assembled with
+  a single permutation gather (time order → flow-major order), and the RF
+  prefix statistics use per-flow cumulative sums / running extrema evaluated
+  at the checkpoint positions. This assumes the whole capture's features fit
+  in RAM (int8 nPrint bits ≈ 1.1 GB per million packets) — the earlier
+  per-flow streaming loop that kept peak RAM bounded on small machines was
+  replaced when the build host grew to 160 GB.
+- :class:`StreamingStats` (Welford, O(1) memory per flow) remains as the
+  reference implementation of the checkpoint semantics — it is what a
+  deployed, truly streaming DEPT ingress would run per live flow. The
+  vectorised path reproduces it to float32 round-off.
+- Output tensors are still written through memory-mapped ``.npy`` files:
+  the OS page cache absorbs the writes, and RAM stays bounded by the int8
+  inputs rather than the ~4× larger float32 output.
 """
 
 import json
@@ -147,6 +154,11 @@ class StreamingStats:
     ``emit`` method returns the flattened ``[feat0_mean, feat0_std, feat0_min,
     feat0_max, feat1_mean, …]`` vector that the RF base learner consumes,
     matching the configured ``rf_base_features × rf_agg_functions`` order.
+
+    This is the *reference* (and deployment-time, per-live-flow) form of the
+    checkpoint semantics. The batch build in :func:`build_tensors` uses the
+    vectorised :func:`_flow_checkpoint_stats` instead, which reproduces these
+    values to float32 round-off.
     """
 
     __slots__ = ("n", "mean", "_M2", "min", "max", "_n_feat")
@@ -197,6 +209,55 @@ class StreamingStats:
                         f"{_SUPPORTED_AGGS}"
                     )
         return out
+
+
+def checkpoint_positions(flow_length: int, first: int, stride: int) -> np.ndarray:
+    """1-based packet indices at which a flow emits RF checkpoints, ascending.
+
+    Exactly the positions for which :func:`is_rf_checkpoint_packet` is True,
+    so ``len(...) == count_rf_checkpoints(flow_length, first, stride)``.
+    """
+    pos = np.arange(stride, flow_length + 1, stride, dtype=np.int64)
+    if first > 0 and (first % stride) != 0 and flow_length >= first:
+        pos = np.insert(pos, np.searchsorted(pos, first), first)
+    return pos
+
+
+def _flow_checkpoint_stats(
+    x: np.ndarray,
+    pos: np.ndarray,
+    agg_functions: List[str],
+) -> np.ndarray:
+    """Vectorised prefix mean/std/min/max of ``x`` at the checkpoint rows.
+
+    ``x`` is one flow's ``[L, n_base]`` float feature block, ``pos`` the
+    1-based checkpoint positions (ascending, ``pos[-1] <= L``). Equivalent to
+    running :class:`StreamingStats` packet-by-packet and emitting at each
+    position, but computed with cumulative sums over the whole flow at once.
+
+    The sums accumulate ``x - x[0]`` in float64: shifting by the first packet
+    keeps the E[x²] − E[x]² variance form well-conditioned (constant-valued
+    features — e.g. fixed-size flood packets — come out with exactly zero
+    variance instead of catastrophic-cancellation noise). ``std`` matches the
+    reference ddof=0 population form.
+    """
+    idx = pos - 1
+    x64 = x.astype(np.float64)
+    shifted = x64 - x64[0]
+    n = pos.astype(np.float64)[:, None]
+    mean_shifted = np.cumsum(shifted, axis=0)[idx] / n
+    var = np.cumsum(shifted * shifted, axis=0)[idx] / n - mean_shifted ** 2
+    blocks = {
+        "mean": mean_shifted + x64[0],
+        "std": np.sqrt(np.maximum(var, 0.0)),
+        "min": np.minimum.accumulate(x, axis=0)[idx],
+        "max": np.maximum.accumulate(x, axis=0)[idx],
+    }
+    n_aggs = len(agg_functions)
+    out = np.empty((len(pos), x.shape[1] * n_aggs), dtype=np.float32)
+    for j, agg in enumerate(agg_functions):
+        out[:, j::n_aggs] = blocks[agg]
+    return out
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -322,7 +383,6 @@ def build_tensors(
         for agg in rf_agg_functions
     ]
     n_rf_stats = len(rf_stat_names)
-    n_base = len(rf_meta_cols)
 
     # Pre-extract metadata as numpy arrays for fast per-packet access.
     # Only materialise the views the selected outputs actually need.
@@ -408,57 +468,44 @@ def build_tensors(
     else:
         ckpt_mmap = None
 
-    # --- Step 3: Per-flow streaming write -----------------------------------
-    flow_iter = enumerate(flow_keys)
-    if _tqdm is not None:
-        pbar = _tqdm(
-            flow_iter, total=n_flows,
-            desc="      Building per-flow tensors", unit=" flow",
-            dynamic_ncols=True,
-        )
-    else:
-        pbar = flow_iter
+    # --- Step 3: Vectorised tensor assembly ---------------------------------
+    if build_tcn:
+        # Each flow's packets occupy one contiguous slice of the output, so
+        # the flow-major layout is a single permutation of the time-sorted
+        # rows: one gather + three whole-array assignments. The int8 →
+        # float32 cast into the memmap is buffered by numpy, so only the
+        # int8 gather (~1.1 GB per million packets) is materialised in RAM.
+        print("      Writing flow_packets (vectorised gather)…")
+        perm = np.concatenate([flow_indices[fk] for fk in flow_keys])
+        pkt_mmap[:, :1088] = nprint_bits[perm]
+        pkt_mmap[:, 1088] = (ipat_values[perm] - ipat_mean) / ipat_std
+        pkt_mmap[:, 1089] = direction_values[perm]
+        del perm
 
-    for i, fk in pbar:
-        indices = flow_indices[fk]
-        L = int(len(indices))
-        if L == 0:
-            continue
-
-        flow_start = int(flow_packet_offsets[i, 0])
-        ckpt_start = int(rf_checkpoint_offsets[i, 0])
-
-        if build_tcn:
-            # Write the per-flow [L, 1090] block directly into the memmap.
-            pkt_mmap[flow_start:flow_start + L, :1088] = (
-                nprint_bits[indices].astype(np.float32)
+    if build_rf:
+        flow_iter = enumerate(flow_keys)
+        if _tqdm is not None:
+            flow_iter = _tqdm(
+                flow_iter, total=n_flows,
+                desc="      RF prefix checkpoints", unit=" flow",
+                dynamic_ncols=True,
             )
-            pkt_mmap[flow_start:flow_start + L, 1088] = (
-                (ipat_values[indices] - ipat_mean) / ipat_std
-            ).astype(np.float32)
-            pkt_mmap[flow_start:flow_start + L, 1089] = direction_values[indices]
-
-        if build_rf:
-            # Streaming aggregation over the growing prefix → multi-scale RF rows.
-            rf_meta_flow = rf_meta_values[indices]
-            stat = StreamingStats(n_base)
-            ckpt_local = 0
-            for t in range(L):
-                stat.update(rf_meta_flow[t])
-                if is_rf_checkpoint_packet(
-                    t + 1, rf_first_checkpoint, rf_checkpoint_stride
-                ):
-                    if ckpt_local < int(rf_checkpoint_offsets[i, 1]):
-                        ckpt_mmap[ckpt_start + ckpt_local] = stat.emit(rf_agg_functions)
-                    ckpt_local += 1
-
-        if _tqdm is not None and i % 1000 == 0:
-            pbar.set_postfix(
-                flows=i + 1, packets=int(flow_packet_offsets[i, 0]) + L,
+        for i, fk in flow_iter:
+            n_ckpt = int(rf_checkpoint_offsets[i, 1])
+            if n_ckpt == 0:
+                continue
+            indices = flow_indices[fk]
+            pos = checkpoint_positions(
+                len(indices), rf_first_checkpoint, rf_checkpoint_stride
             )
-
-    if _tqdm is not None:
-        pbar.close()
+            ckpt_start = int(rf_checkpoint_offsets[i, 0])
+            # Packets past the last checkpoint never contribute to any row.
+            x = rf_meta_values[indices[: pos[-1]]]
+            ckpt_mmap[ckpt_start:ckpt_start + n_ckpt] = _flow_checkpoint_stats(
+                x, pos, rf_agg_functions
+            )
+        if _tqdm is not None:
+            flow_iter.close()
 
     # Persist offsets and flush memmaps — only for the groups we built.
     if build_tcn:

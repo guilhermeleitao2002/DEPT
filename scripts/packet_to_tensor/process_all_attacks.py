@@ -38,11 +38,19 @@ Pipeline
    packet-cap for CIC-DDoS-2019) into ``data/tensors/.filtered/``.
 2. Force-fit one shared IPAT standardizer ``data/tensors/mean_std.json`` over
    all sliced/benign/adversarial PCAPs (so benign and adversarial z-scores are
-   comparable and the fit reflects exactly the data being tensorised).
+   comparable and the fit reflects exactly the data being tensorised). Every
+   PCAP parsed here is kept in RAM (``parsed_cache``) for step 3.
 3. Rebuild every source into ragged per-flow tensors (via the in-process
-   ``run_packet_to_tensor`` engine), overwriting any previous output, and write
-   ``flow_labels.csv``.
+   ``run_packet_to_tensor`` engine) from its cached parse — no second Scapy
+   pass — overwriting any previous output, and write ``flow_labels.csv``.
+   Each cache entry is released right after its source is built.
 4. Remove the sliced PCAPs.
+
+Memory note: the cache holds all sources between steps 2 and 3 at ≈ 1.1 GB
+per million packets (~30 GB for the full corpus). This deliberately trades
+RAM for halving the Scapy time, sized for the 160 GB build host; on a small
+machine, call ``fit_mean_std``/``run`` without a cache to get the old
+parse-twice behaviour.
 """
 
 import json
@@ -463,6 +471,8 @@ def main():
         # Fit over exactly the PCAPs being tensorised (sliced for CIC, full
         # otherwise), in processing order, so benign and adversarial z-scores
         # are comparable and the standardizer reflects the tensorised data.
+        # Every parse is cached in RAM and reused by step 3 (see the module
+        # docstring's memory note).
         fit_inputs: list = []
         seen: set = set()
         for a in runnable:
@@ -474,7 +484,9 @@ def main():
               f"{len(fit_inputs)} PCAP(s) → {SHARED_MEAN_STD}")
         SHARED_MEAN_STD.parent.mkdir(parents=True, exist_ok=True)
         t0 = time.time()
-        stats = fit_mean_std(fit_inputs, str(SHARED_MEAN_STD), cfg)
+        parsed_cache: dict = {}
+        stats = fit_mean_std(fit_inputs, str(SHARED_MEAN_STD), cfg,
+                             parsed_cache=parsed_cache)
         print(f"\n{green('✓')} Wrote {SHARED_MEAN_STD}  {dim(f'({time.time() - t0:.1f}s)')}")
         for c, s in stats.items():
             print(f"  {cyan(c):<20}  mean={s['mean']:.6f}  std={s['std']:.6f}")
@@ -488,8 +500,11 @@ def main():
             print(f"{dim('─' * 72)}")
             t0 = time.time()
             try:
+                # pop → the cached parse is freed as soon as this source is
+                # built, so cache memory only ever shrinks during step 3.
                 run(str(proc_pcap[attack.key]), str(attack.output_dir),
-                    str(SHARED_MEAN_STD), cfg)
+                    str(SHARED_MEAN_STD), cfg,
+                    parsed=parsed_cache.pop(str(proc_pcap[attack.key]), None))
                 meta = load_metadata(attack.output_dir)
                 print(f"  {green('✓')} Completed in {time.time() - t0:.1f}s")
                 results.append((attack.name, "OK", meta))

@@ -39,7 +39,7 @@ High-entropy identity fields (source/destination IP, IP ID, source/destination p
 
 ## RF prefix statistics (S=24)
 
-At every prefix milestone (packets 2, 10, 20, 30, … under the default cadence), four aggregations (mean, std, min, max) are computed for each of six base features: `IPAT`, `Packet_Size`, `Payload_Length`, `Payload_Entropy`, `TCP_Flags`, `Direction`. These are computed incrementally via Welford's online algorithm — O(1) memory per flow regardless of flow length.
+At every prefix milestone (packets 2, 10, 20, 30, … under the default cadence), four aggregations (mean, std, min, max) are computed for each of six base features: `IPAT`, `Packet_Size`, `Payload_Length`, `Payload_Entropy`, `TCP_Flags`, `Direction`. The batch build computes them with vectorised per-flow cumulative sums / running extrema; `StreamingStats` (Welford, O(1) memory per flow) remains in `tensor_builder.py` as the reference form a deployed streaming ingress would run per live flow — the two agree to float32 round-off.
 
 ## Label convention
 
@@ -72,7 +72,7 @@ Results from `process_all_attacks.py` on WSL2, **before the CIC-DDoS-2019 expans
 | PortScan adversarial (×3 modes) | 15,839 each | 31,885 each |
 | SSDP Flood adversarial (×3 modes) | 64,722 each | 287,921 each |
 
-Total processing time: ~100 min on a desktop Linux machine (WSL2).
+Total processing time: ~100 min on a desktop Linux machine (WSL2, 32 GB RAM, parse-twice pipeline). The single-parse + vectorised build (July 2026) removes one full Scapy pass and the per-flow build loops; on the 160 GB server one 275k-packet source went 258 s → 134 s end-to-end (build stage 126 s → 3 s).
 
 The CIC-DDoS-2019 expansion adds five benign + adversarial (×3 modes) pairs — `ntp_ddos`, `dns_ddos`, `ssdp_ddos`, `syn_ddos`, `ldap_ddos`. Each benign source is the first 1,000,000 packets of the raw capture (`data/CIC-DDoS-2019/PCAPs/{NTP,DNS,SSDP,Syn,LDAP}.pcap`), packet-capped because these floods have no clean attack time window. Counts for these sources are produced by the next `process_all_attacks.py` run.
 
@@ -81,7 +81,9 @@ The CIC-DDoS-2019 expansion adds five benign + adversarial (×3 modes) pairs —
 | Decision | Rationale |
 |---|---|
 | Ragged per-flow storage (offsets + flat array) | Avoids a T_max cap; no padding waste. Works for both 2-packet PortScan flows and 10k-packet SSDP flows. |
-| Welford's incremental stats for RF checkpoints | Computes mean/std/min/max for each prefix in O(1) memory per flow, no re-scan required. |
+| Vectorised batch build (permutation gather + cumulative prefix stats) | Flows are contiguous in the output, so `flow_packets` is one numpy gather and the RF checkpoints are per-flow cumsums — replaces the per-flow/per-packet Python loops the 32 GB build host used to require (the Mirai-scale build stage drops from minutes to seconds). Assumes the capture's int8 bits fit in RAM (~1.1 GB per million packets). |
+| Single Scapy parse per PCAP (`parsed_cache`) | The standardizer fit and the tensor build used to each parse every PCAP; Scapy parsing dominates the pipeline, so caching the parse between the two passes roughly halves total wall time. Costs ~1.1 GB RAM per million cached packets — sized for the 160 GB build host; calling `fit_mean_std`/`run` without a cache restores the low-RAM parse-twice behaviour. |
+| Welford's incremental stats retained as reference (`StreamingStats`) | The vectorised checkpoints reproduce it to float32 round-off; the class stays as the O(1)-memory form a deployed streaming ingress runs per live flow. |
 | Shared `mean_std.json` across all sources | Without a shared fit, IPAT z-scores are incomparable across the benign/adversarial boundary. The shared fit covers all PCAPs DEPT will see during training. |
 | Per-flow IPAT (not global IAT) | Each flow has its own timing context; global IAT mixes unrelated flows. |
 | Canonical 5-tuple flow ID | Order-independent — forward and reverse packets belong to the same flow. |
