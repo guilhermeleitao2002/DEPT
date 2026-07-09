@@ -1,19 +1,13 @@
-*.pcap
-*.pcapng
-*.csv
-__pycache__/
-*.pyc
-*.pyo
-*.npy
-*.joblib
-*.npz
-.ignore
-venv/*
-logs/*
-.vscode/*
+venv/
+logs/
+.vscode/
 dissertation/
-Bibliography.bib
+cache/
+__pycache__/
 
-# Meta-learner per-split token caches (derived from rf.joblib + tcn.pt
-# at runtime; rebuilt automatically when either base learner changes).
-data/models/metalearner/cache/
+*.pcap
+*.csv
+*.npy
+*.npz
+*.joblib
+*.pt
