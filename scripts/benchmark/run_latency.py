@@ -552,7 +552,7 @@ def bench_realize() -> dict:
             tl = rz.decode_total_len_batch(seq).astype(np.int64)
             ipat = seq[:, _IPAT_COL].astype(np.float32)
             flow_recon[str(pairs.flow_id[r])] = (tl, ipat)
-        mean, std = _load_ipat_stats(pairs.adv_folders.get(gname))
+        mean, std = _load_ipat_stats(REPO_ROOT / ycfg["tensors_dir"])
 
         t0 = time.perf_counter()
         packets, rstats = rz.realize_source(adv_pcap, flow_recon, mean, std)

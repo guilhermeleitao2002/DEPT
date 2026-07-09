@@ -4,7 +4,7 @@
 
 ## Output schema
 
-For each processed source, the pipeline writes a self-contained directory under `data/tensors/<key>/`:
+For each processed source, the pipeline writes a directory under `data/tensors/<key>/`:
 
 | File | Shape | Description |
 |---|---|---|
@@ -14,7 +14,8 @@ For each processed source, the pipeline writes a self-contained directory under 
 | `rf_checkpoint_offsets.npy` | `[N_flows, 2]` int64 | `(start_idx, n_checkpoints)` into `rf_checkpoints.npy` per flow. |
 | `flow_labels.csv` | `[N_flows]` rows | `flow_idx, label, label_str` — one row per flow. |
 | `metadata.json` | JSON | Source metadata: schema version, `n_flows`, `total_packets`, `num_checkpoints`, encoding config. |
-| `mean_std.json` | JSON | IPAT z-score reference (shared across all sources in one training run). |
+
+IPAT z-scoring uses one shared `data/tensors/mean_std.json` standardizer for every source (see below).
 
 This ragged layout avoids any fixed-window constraint: a 12-packet Mirai flow and a 12,000-packet SSDP flow coexist without padding or truncation.
 

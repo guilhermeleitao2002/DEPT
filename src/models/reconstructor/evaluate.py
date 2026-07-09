@@ -284,7 +284,7 @@ def evaluate(config: dict, output_dir: Path) -> dict:
     # ---- Traffic-space realization + tshark protocol compliance --------------
     # Best-effort: skipped inside when the adversarial PCAPs or tshark are absent.
     metrics["realization"] = _run_realization(
-        config, realize_pool, pairs, output_dir, metrics)
+        config, realize_pool, output_dir, metrics)
 
     # ---- Independent-NIDS efficacy (Kitsune) ---------------------------------
     # The headline efficacy metric: realize adv / purified / clean packets and score
@@ -292,7 +292,7 @@ def evaluate(config: dict, output_dir: Path) -> dict:
     # breaks the TCN's circularity. Best-effort: skipped inside when disabled or the
     # sibling TANTGen Kitsune tree is unavailable.
     metrics["kitsune"] = _run_kitsune_eval(
-        config, kitsune_pool, pairs, output_dir, metrics)
+        config, kitsune_pool, output_dir, metrics)
 
     (output_dir / "metrics.json").write_text(json.dumps(metrics, indent=2, default=str))
 
@@ -306,7 +306,7 @@ def evaluate(config: dict, output_dir: Path) -> dict:
     return metrics
 
 
-def _run_realization(config, realize_pool, pairs, output_dir, metrics):
+def _run_realization(config, realize_pool, output_dir, metrics):
     """Realize every reconstructed flow per source → PCAP → tshark compliance."""
     pcap_dir = Path(config.get("realize", {}).get(
         "adversarial_pcap_dir", "data/adversarial"))
@@ -317,13 +317,13 @@ def _run_realization(config, realize_pool, pairs, output_dir, metrics):
     if not rz.tshark_available():
         return {"skipped": "tshark not found on PATH"}
 
+    mean_std = _load_ipat_stats(config["tensors_dir"])
     summary = {"per_source": {}, "tshark_n_packets": 0, "tshark_n_bad": 0,
                "unrealizable_l7": 0}
     for gname, flow_recon in sorted(realize_pool.items()):
         # gname = "<base>_adv_<mode>"; locate the original adversarial PCAP.
         base, mode = gname.rsplit("_adv_", 1)
         adv_pcap = pcap_dir / base / f"{base}_adversarial_{mode}.pcap"
-        mean_std = _load_ipat_stats(pairs.adv_folders.get(gname))
         packets, rstats = rz.realize_source(
             adv_pcap, flow_recon, mean_std[0], mean_std[1])
         entry = {"realize": rstats}
@@ -362,11 +362,9 @@ def _run_realization(config, realize_pool, pairs, output_dir, metrics):
     return summary
 
 
-def _load_ipat_stats(folder: Path | None) -> tuple[float, float]:
-    """IPAT (mean, std) from a source's mean_std.json (defaults 0, 1)."""
-    if folder is None:
-        return 0.0, 1.0
-    p = Path(folder) / "mean_std.json"
+def _load_ipat_stats(tensors_dir: Path | str) -> tuple[float, float]:
+    """IPAT (mean, std) from the shared data/tensors/mean_std.json (defaults 0, 1)."""
+    p = Path(tensors_dir) / "mean_std.json"
     if not p.exists():
         return 0.0, 1.0
     try:
@@ -472,7 +470,7 @@ def _resolve_kitsune_model(krun, base, tantgen_root, model_dir, benign_dir,
         return {"error": f"train failed: {e}"}
 
 
-def _run_kitsune_eval(config, kitsune_pool, pairs, output_dir, metrics) -> dict:
+def _run_kitsune_eval(config, kitsune_pool, output_dir, metrics) -> dict:
     """Score adv / purified / clean realized packets through Kitsune (independent NIDS).
 
     For each ``<base>_adv_<mode>`` source we realize three aligned packet sets and score
@@ -516,6 +514,7 @@ def _run_kitsune_eval(config, kitsune_pool, pairs, output_dir, metrics) -> dict:
     summary = {"detection": detection, "scope": sorted(sources) if sources else "all",
                "per_source": {}, "skipped_sources": {}}
     acc = {br: {"sum_rmse": 0.0, "n_detected": 0, "n_flows": 0} for br in _KITSUNE_BRANCHES}
+    mean_std = _load_ipat_stats(config["tensors_dir"])
 
     for gname, flows in sorted(kitsune_pool.items()):
         base, mode = gname.rsplit("_adv_", 1)
@@ -533,7 +532,6 @@ def _run_kitsune_eval(config, kitsune_pool, pairs, output_dir, metrics) -> dict:
             resolved["kitnet"], resolved["threshold"], resolved["source"])
 
         adv_pcap = pcap_dir / base / f"{base}_adversarial_{mode}.pcap"
-        mean_std = _load_ipat_stats(pairs.adv_folders.get(gname))
         branches, rstats = rz.realize_triplet(adv_pcap, flows, mean_std[0], mean_std[1])
         entry = {"realize": rstats, "threshold": threshold, "model_source": source}
         if rstats.get("packets_per_branch", 0) == 0:

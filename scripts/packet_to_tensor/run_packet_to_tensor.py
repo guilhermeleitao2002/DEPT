@@ -40,7 +40,8 @@ with the per-source paths and the parsed ``config/pipeline.yaml``.
             rf_checkpoint_offsets.npy   [N_flows, 2]      int64
               (start_idx, n_checkpoints) into rf_checkpoints.npy per flow.
 
-        Plus flow_ids.npy, metadata.json, and a local mean_std.json copy.
+        Plus flow_ids.npy and metadata.json. IPAT z-scoring uses the shared
+        ``data/tensors/mean_std.json`` standardizer directly.
 
 All tunables come from ``cfg`` (config/pipeline.yaml). The pipeline is fixed
 to the DEPT core configuration: the batch (global-sort) path, identity
@@ -207,8 +208,8 @@ def run(
     Fixed to the DEPT core configuration: batch pipeline, identity masking
     on, both RF and TCN tensor groups, RF checkpoint cadence from ``cfg``.
     ``mean_std_path`` is the shared standardizer produced by
-    :func:`fit_mean_std`; it is loaded for IPAT z-scoring and copied into
-    ``output_dir`` as the source's local ``mean_std.json``.
+    :func:`fit_mean_std`; it is loaded for IPAT z-scoring (downstream readers
+    use this same shared file — no per-source copy is kept).
 
     ``parsed`` is an optional :func:`parse_pcap` result for ``input_pcap``;
     when given, the Scapy parse + flow grouping are skipped (the driver
@@ -223,12 +224,6 @@ def run(
     selected_outputs = ("rf", "tcn")
 
     os.makedirs(output_dir, exist_ok=True)
-
-    # Keep a local copy of the shared standardizer alongside the tensors.
-    local_mean_std = os.path.join(output_dir, cfg["mean_std_filename"])
-    if os.path.abspath(mean_std_path) != os.path.abspath(local_mean_std):
-        with open(mean_std_path) as src, open(local_mean_std, "w") as dst:
-            dst.write(src.read())
 
     fname = os.path.basename(input_pcap)
     t0 = time.time()
