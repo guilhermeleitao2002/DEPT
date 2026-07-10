@@ -6,6 +6,7 @@ cache/
 __pycache__/
 
 *.pcap
+!packet_example/*
 *.csv
 *.npy
 *.npz
