@@ -10,11 +10,7 @@
   "n_pairs": 1986705,
   "pair_skipped": {
     "no_clean_base": [],
-    "excluded": [
-      "ddos_kitsune_adv_both",
-      "ddos_kitsune_adv_iat",
-      "ddos_kitsune_adv_size"
-    ],
+    "excluded": [],
     "len_mismatch": 396750,
     "too_short": 16803,
     "unmatched_adv": 4628163
@@ -134,9 +130,6 @@
     "output_dir": "/mnt/nas/inesc/gleitao/DEPT/data/models/reconstructor",
     "tcn_model_dir": "/mnt/nas/inesc/gleitao/DEPT/data/models/tcn",
     "adversarial_exclude": [
-      "ddos_kitsune_adv_both",
-      "ddos_kitsune_adv_iat",
-      "ddos_kitsune_adv_size",
       "dos_slow_adv_both",
       "dos_slow_adv_iat",
       "dos_slow_adv_size",

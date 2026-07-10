@@ -72,9 +72,6 @@ Precision is now high because the ten-source checkpoint pool is **adversarial-do
 | ddos both | 0.216 | 1.000 | 0.355 | 1.000 | 194 |
 | ddos iat | 0.183 | 0.791 | 0.297 | 0.891 | 182 |
 | ddos size | 0.218 | 1.000 | 0.358 | 1.000 | 194 |
-| ddos_kitsune both | 0.216 | 1.000 | 0.355 | 1.000 | 5,183 |
-| ddos_kitsune iat | 0.194 | 0.865 | 0.317 | 0.919 | 5,205 |
-| ddos_kitsune size | 0.216 | 1.000 | 0.356 | 1.000 | 5,222 |
 | dns_ddos both | 0.217 | 0.995 | 0.356 | 0.715 | 15,685 |
 | dns_ddos iat | 0.216 | 0.993 | 0.354 | 0.716 | 15,677 |
 | dns_ddos size | 0.216 | 0.992 | 0.355 | 0.714 | 15,490 |
@@ -106,8 +103,8 @@ Precision is now high because the ten-source checkpoint pool is **adversarial-do
 
 ## Observations
 
-- **The CIC-DDoS reflection floods are the hard sources.** `dns_ddos`, `ntp_ddos`, `ssdp_ddos` sit at ROC AUC ≈ 0.69–0.72 and dominate the (now lower) aggregate; `ldap_ddos` ≈ 0.82, `syn_ddos` ≈ 0.95, while `portscan`/`ddos`/`ddos_kitsune`/`ssdp_flood` remain ≈ 1.0 on `both`/`size`. These spoofed, high-rate floods leave little prefix-statistical signal separating a manipulated flow from an un-manipulated one.
-- **IAT-only perturbation is harder.** `_iat` variants consistently show lower recall/ROC AUC than `_both`/`_size` (e.g. `ddos_kitsune` 0.92 vs 1.00, `mirai` 0.91 vs ~0.80, `ssdp_flood` 0.975 vs 1.00). Pure timing change without size/header edits is the subtlest signal.
+- **The CIC-DDoS reflection floods are the hard sources.** `dns_ddos`, `ntp_ddos`, `ssdp_ddos` sit at ROC AUC ≈ 0.69–0.72 and dominate the (now lower) aggregate; `ldap_ddos` ≈ 0.82, `syn_ddos` ≈ 0.95, while `portscan`/`ddos`/`ssdp_flood` remain ≈ 1.0 on `both`/`size`. These spoofed, high-rate floods leave little prefix-statistical signal separating a manipulated flow from an un-manipulated one.
+- **IAT-only perturbation is harder.** `_iat` variants consistently show lower recall/ROC AUC than `_both`/`_size` (e.g. `mirai` 0.91 vs ~0.80, `ssdp_flood` 0.975 vs 1.00). Pure timing change without size/header edits is the subtlest signal.
 - **Precision is low under the balanced-benign slicing** (~0.22 for most sources, 0.52 for `syn_ddos`). The RF is recall-first — it rarely misses an adversarial flow (overall recall 0.982) but raises many alerts on benign checkpoints; the meta-learner is meant to suppress those by requiring TCN agreement.
 - **EDP median = 2 packets.** The early packet-2 checkpoint makes the RF's first verdict available at packet 2 (vs the TCN's packet 1), so its role in the ensemble is *near-immediate confirmation* rather than the slow every-10 confirmation of the old cadence.
 

@@ -23,8 +23,8 @@ output_dir: data/models/rf
 # benign tensors are built from the first 1,000,000 packets of each raw
 # capture (packet-capped by process_all_attacks.py, since these floods
 # have no clean attack time window) — the unperturbed counterpart of the
-# matching adversarial source. ddos_kitsune is adversarial-only and pairs
-# with the ddos benign manifold, so it has no entry here.
+# matching adversarial source. Every adversarial source has a benign
+# counterpart in this pool.
 # Excluded sources and reasons:
 #   dos_slow, syn_dos  — no TANTGen adversarial PCAP on disk for this set
 #                        (syn_dos is the Kitsune SYN DoS — distinct from the
@@ -54,8 +54,8 @@ benign_sources:
 # - brute_force_kitsune / portscan_kitsune *_adv_* : defensive guard against
 #   tensors that would only exist if process_all_attacks.py's TANTGEN_KEYS
 #   filter were bypassed. The opted-in adversarial sources are the 5
-#   originals (mirai, ssdp_flood, ddos, portscan, brute_force), ddos_kitsune,
-#   and the 5 CIC-DDoS-2019 floods (ntp_ddos, dns_ddos, ssdp_ddos, syn_ddos,
+#   originals (mirai, ssdp_flood, ddos, portscan, brute_force) and the 5
+#   CIC-DDoS-2019 floods (ntp_ddos, dns_ddos, ssdp_ddos, syn_ddos,
 #   ldap_ddos); these kitsune variants are not.
 adversarial_exclude:
   - dos_slow_adv_both

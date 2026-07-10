@@ -17,14 +17,10 @@ output_dir: data/models/reconstructor
 # purification-gain metric (P(adv) on adversarial vs reconstructed vs clean).
 tcn_model_dir: data/models/tcn
 
-# Adversarial sources with no clean base folder are skipped automatically
-# (e.g. ddos_kitsune_adv_* perturbs the CIC DDoS benign manifold and has no
-# clean "ddos_kitsune" counterpart). List any further sources to exclude here;
-# this mirrors the carry-over excludes in tcn.yaml / rf.yaml.
+# Adversarial sources with no clean base folder are skipped automatically.
+# List any further sources to exclude here; this mirrors the carry-over
+# excludes in tcn.yaml / rf.yaml.
 adversarial_exclude:
-  - ddos_kitsune_adv_both
-  - ddos_kitsune_adv_iat
-  - ddos_kitsune_adv_size
   - dos_slow_adv_both
   - dos_slow_adv_iat
   - dos_slow_adv_size

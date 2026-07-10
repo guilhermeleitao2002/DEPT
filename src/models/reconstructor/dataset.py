@@ -7,8 +7,8 @@ clean counterpart. Training examples are therefore **pairs** of flows — the
 flows so the two folders are not row-aligned).
 
 For each adversarial source we:
-  1. resolve its clean base folder (strip ``_adv_<mode>``; skip sources whose
-     clean base is absent — e.g. ``ddos_kitsune`` has no clean counterpart);
+  1. resolve its clean base folder (strip ``_adv_<mode>``; any source whose
+     clean base folder is absent is skipped automatically);
   2. match flows by their stringified canonical 5-tuple (``flow_ids.npy``);
   3. keep matched pairs, truncating both to ``min(len_adv, len_clean)`` packets
      (the rare ~0.2% of pairs whose packet counts diverge) and dropping pairs

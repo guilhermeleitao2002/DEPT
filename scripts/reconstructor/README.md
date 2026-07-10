@@ -16,7 +16,7 @@ Both the input and the reconstruction target are the same `[L, 1090]` per-packet
 - **IPAT** — Inter-Packet Arrival Time within the flow (z-score normalized).
 - **Direction** — `1` = forward, `0` = reverse.
 
-Training examples are **matched `(adversarial → clean)` flow pairs**. For each `<base>_adv_<mode>` adversarial source the clean base folder is resolved by stripping `_adv_<mode>`; flows are paired **by their canonical 5-tuple** (`flow_ids.npy`), never by row position (TANTGen can split/merge/drop flows). Matched pairs keep equal packet counts ~99.8% of the time; the rare divergent pairs are truncated to the shorter length, and pairs below `min_len` packets are dropped. Sources with no clean base (e.g. `ddos_kitsune_adv_*`) are skipped automatically.
+Training examples are **matched `(adversarial → clean)` flow pairs**. For each `<base>_adv_<mode>` adversarial source the clean base folder is resolved by stripping `_adv_<mode>`; flows are paired **by their canonical 5-tuple** (`flow_ids.npy`), never by row position (TANTGen can split/merge/drop flows). Matched pairs keep equal packet counts ~99.8% of the time; the rare divergent pairs are truncated to the shorter length, and pairs below `min_len` packets are dropped. Any adversarial source with no clean base folder is skipped automatically.
 
 ## Architecture
 

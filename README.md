@@ -47,7 +47,7 @@ Paired with **TANTGen** (sibling repo), which generates the adversarial PCAPs th
 
 ## Dataset
 
-Ten benign traffic sources (Kitsune / CIC-IDS2017 / CIC-DDoS-2019 captures) are paired with TANTGen adversarial variants across three perturbation modes: **both** (timing + size), **iat** (timing only), **size** (payload/size only). The original five sources are joined by the five CIC-DDoS-2019 reflection/amplification floods (NTP, DNS, SSDP, SYN, LDAP), each built from the first 1,000,000 packets of its raw capture (these floods are attack-dominated from the first seconds and have no clean time window, so `process_all_attacks.py` packet-caps them instead of time-filtering — the same scale the generator caps its malicious input to). Counterpart `ddos_kitsune` is adversarial-only (it perturbs the CIC DDoS benign manifold).
+Ten benign traffic sources (Kitsune / CIC-IDS2017 / CIC-DDoS-2019 captures) are paired with TANTGen adversarial variants across three perturbation modes: **both** (timing + size), **iat** (timing only), **size** (payload/size only). The original five sources are joined by the five CIC-DDoS-2019 reflection/amplification floods (NTP, DNS, SSDP, SYN, LDAP), each built from the first 1,000,000 packets of its raw capture (these floods are attack-dominated from the first seconds and have no clean time window, so `process_all_attacks.py` packet-caps them instead of time-filtering — the same scale the generator caps its malicious input to). Every adversarial source pairs with a matching benign source.
 
 The original five sources, as measured before the CIC-DDoS-2019 expansion:
 
@@ -60,7 +60,6 @@ The original five sources, as measured before the CIC-DDoS-2019 expansion:
 | Brute Force FTP+SSH (CIC-IDS2017) | 158,115 | 9,830,521 |
 | Brute Force adversarial (×3 modes) | 80 each | ~2,500 each |
 | DDoS adversarial (×3 modes) | 1,011 each | ~9,741 each |
-| DDoS Kitsune adversarial (×3 modes) | 15,819 each | ~255,827 each |
 | Mirai adversarial (×3 modes) | 3,830 each | ~192,755 each |
 | PortScan adversarial (×3 modes) | 15,839 each | ~31,885 each |
 | SSDP Flood adversarial (×3 modes) | 64,722 each | ~287,921 each |
@@ -139,8 +138,8 @@ On this like-for-like flow-level axis the **meta-learner leads from packet 5 onw
 
 ### Observations
 
-- **The CIC-DDoS reflection floods are the hard new sources.** All three models hover at AUROC ≈ 0.52–0.62 on `dns_ddos`, `ntp_ddos`, `ssdp_ddos`, `ldap_ddos` — these high-rate, source-spoofed floods leave little per-flow structure to separate a TANTGen-manipulated flow from an un-manipulated one. They dominate the (now lower) aggregate. `syn_ddos` is moderate (≈0.88–0.90), while `portscan`, `ddos`, `ddos_kitsune` and `ssdp_flood` remain easy (≥0.99 on `both`/`size`).
-- **IAT-only perturbation is consistently the hardest mode.** Every model scores lowest on `_iat` variants: e.g. `portscan_iat` (TCN AUROC@max 0.31, meta 0.43), `mirai_iat` (0.36 / 0.41), `ddos_kitsune_iat` (0.48 / 0.57). Pure timing change without structural edits is the subtlest signal — and, on these high-rate floods, the per-flow IPAT is already nearly constant.
+- **The CIC-DDoS reflection floods are the hard new sources.** All three models hover at AUROC ≈ 0.52–0.62 on `dns_ddos`, `ntp_ddos`, `ssdp_ddos`, `ldap_ddos` — these high-rate, source-spoofed floods leave little per-flow structure to separate a TANTGen-manipulated flow from an un-manipulated one. They dominate the (now lower) aggregate. `syn_ddos` is moderate (≈0.88–0.90), while `portscan`, `ddos` and `ssdp_flood` remain easy (≥0.99 on `both`/`size`).
+- **IAT-only perturbation is consistently the hardest mode.** Every model scores lowest on `_iat` variants: e.g. `portscan_iat` (TCN AUROC@max 0.31, meta 0.43), `mirai_iat` (0.36 / 0.41). Pure timing change without structural edits is the subtlest signal — and, on these high-rate floods, the per-flow IPAT is already nearly constant.
 - **The meta-learner is doing its job on the comparable axis.** It matches or beats the RF at every flow-level checkpoint from packet 5 and keeps EDP = 1; the apparent "RF >> meta" gap only appears when RF's per-checkpoint `overall` block is juxtaposed against the meta-learner's flow-level one (different populations and verdict timing).
 - **RF stays recall-first** (recall-adv 0.982, detection rate 99.7%): it rarely misses an adversarial flow but is late (no verdict before packet 2). The TCN/meta-learner trade a few points of recall for packet-1 detection.
 

@@ -86,9 +86,6 @@ Best epoch: 5/9 (early-stopped). Val macro-F1 = 0.7264. Training time: ~17.6 h o
 | ddos both | 0.226 | 1.000 | 0.368 | 1.000 | 151 |
 | ddos iat | 0.181 | 0.775 | 0.294 | 0.863 | 151 |
 | ddos size | 0.219 | 1.000 | 0.360 | 1.000 | 151 |
-| ddos_kitsune both | 0.229 | 1.000 | 0.373 | 1.000 | 2,373 |
-| ddos_kitsune iat | 0.044 | 0.159 | 0.069 | 0.483 | 2,373 |
-| ddos_kitsune size | 0.227 | 0.999 | 0.370 | 0.999 | 2,373 |
 | dns_ddos both | 0.046 | 0.164 | 0.072 | 0.669 | 1,019 |
 | dns_ddos iat | 0.046 | 0.162 | 0.072 | 0.668 | 1,019 |
 | dns_ddos size | 0.045 | 0.161 | 0.070 | 0.669 | 1,019 |
@@ -119,7 +116,7 @@ Best epoch: 5/9 (early-stopped). Val macro-F1 = 0.7264. Training time: ~17.6 h o
 ## Observations
 
 - **EDP median = 1 packet.** The TCN flags 86% of adversarial flows from the very first packet — before the RF's packet-2 checkpoint. This packet-1 latency is the core advantage the meta-learner inherits.
-- **IAT-only perturbation is consistently the hardest mode**, and on short flows it collapses entirely: `portscan_iat` (ROC AUC 0.320, F1 0.000), `mirai_iat` (0.360, 0.000), `ddos_kitsune_iat` (0.483). With ~2 packets there is effectively one inter-packet interval, so a pure timing change is indistinguishable from natural variability — while the `_both`/`_size` variants of the same attacks stay detectable (ROC AUC ≈ 0.99).
+- **IAT-only perturbation is consistently the hardest mode**, and on short flows it collapses entirely: `portscan_iat` (ROC AUC 0.320, F1 0.000), `mirai_iat` (0.360, 0.000). With ~2 packets there is effectively one inter-packet interval, so a pure timing change is indistinguishable from natural variability — while the `_both`/`_size` variants of the same attacks stay detectable (ROC AUC ≈ 0.99).
 - **The CIC-DDoS reflection floods are the new hard sources.** `dns_ddos`/`ntp_ddos`/`ssdp_ddos` sit at ROC AUC ≈ 0.55–0.67 across all modes; `ldap_ddos` (0.837) and `syn_ddos` (0.836–1.000) fare better. These spoofed, near-constant-timing floods are where the per-packet view has least to grip.
 - **Mirai/ntp/ssdp adversarial recall is low for the TCN.** The RF's aggregated prefix statistics are more informative than the raw per-packet sequence for these floods, which is exactly the complementarity the meta-learner is designed to exploit.
 - **AUROC is roughly flat after packet 5** (0.825 → 0.836 at max): most of the TCN's discriminative signal is present within the first few packets of a flow.

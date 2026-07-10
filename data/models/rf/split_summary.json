@@ -1,9 +1,9 @@
 {
   "train": {
-    "n_checkpoints": 7940793,
-    "n_flows": 5634405,
+    "n_checkpoints": 7867687,
+    "n_flows": 5601186,
     "n_benign": 2374055,
-    "n_adversarial": 5566738,
+    "n_adversarial": 5493632,
     "per_source": {
       "brute_force": 830584,
       "brute_force_adv_both": 206,
@@ -13,9 +13,6 @@
       "ddos_adv_both": 894,
       "ddos_adv_iat": 903,
       "ddos_adv_size": 892,
-      "ddos_kitsune_adv_both": 24384,
-      "ddos_kitsune_adv_iat": 24370,
-      "ddos_kitsune_adv_size": 24352,
       "dns_ddos": 74315,
       "dns_ddos_adv_both": 74240,
       "dns_ddos_adv_iat": 73874,
@@ -51,10 +48,10 @@
     }
   },
   "val": {
-    "n_checkpoints": 1616782,
-    "n_flows": 1207380,
+    "n_checkpoints": 1601179,
+    "n_flows": 1200261,
     "n_benign": 414404,
-    "n_adversarial": 1202378,
+    "n_adversarial": 1186775,
     "per_source": {
       "brute_force": 84674,
       "brute_force_adv_both": 41,
@@ -64,9 +61,6 @@
       "ddos_adv_both": 189,
       "ddos_adv_iat": 192,
       "ddos_adv_size": 191,
-      "ddos_kitsune_adv_both": 5206,
-      "ddos_kitsune_adv_iat": 5198,
-      "ddos_kitsune_adv_size": 5199,
       "dns_ddos": 15621,
       "dns_ddos_adv_both": 15742,
       "dns_ddos_adv_iat": 16116,
@@ -102,10 +96,10 @@
     }
   },
   "test": {
-    "n_checkpoints": 1733442,
-    "n_flows": 1207368,
+    "n_checkpoints": 1717832,
+    "n_flows": 1200249,
     "n_benign": 549765,
-    "n_adversarial": 1183677,
+    "n_adversarial": 1168067,
     "per_source": {
       "brute_force": 154444,
       "brute_force_adv_both": 46,
@@ -115,9 +109,6 @@
       "ddos_adv_both": 194,
       "ddos_adv_iat": 182,
       "ddos_adv_size": 194,
-      "ddos_kitsune_adv_both": 5183,
-      "ddos_kitsune_adv_iat": 5205,
-      "ddos_kitsune_adv_size": 5222,
       "dns_ddos": 15956,
       "dns_ddos_adv_both": 15685,
       "dns_ddos_adv_iat": 15677,

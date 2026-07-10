@@ -68,7 +68,6 @@ Results from `process_all_attacks.py` on WSL2, **before the CIC-DDoS-2019 expans
 | Brute Force FTP+SSH (CIC-IDS2017) | 158,115 | 9,830,521 |
 | Brute Force adversarial (×3 modes) | 80 each | 2,500 each |
 | DDoS adversarial (×3 modes) | 1,011 each | 9,741 each |
-| DDoS Kitsune adversarial (×3 modes) | 15,819 each | 255,827 each |
 | Mirai adversarial (×3 modes) | 3,830 each | 192,755 each |
 | PortScan adversarial (×3 modes) | 15,839 each | 31,885 each |
 | SSDP Flood adversarial (×3 modes) | 64,722 each | 287,921 each |

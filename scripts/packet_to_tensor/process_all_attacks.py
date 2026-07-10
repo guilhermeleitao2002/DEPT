@@ -22,8 +22,7 @@ The ten TANTGen-paired benign sources and their adversarial counterparts:
 
 For every source above, the matching TANTGen adversarial PCAPs under
 ``data/adversarial/<key>/<key>_adversarial_<mode>.pcap`` (modes: both / iat /
-size) are also tensorised, plus the adversarial-only ``ddos_kitsune`` variant
-(it perturbs the CIC DDoS benign manifold). Output layout:
+size) are also tensorised. Output layout:
 ``data/tensors/<key>/`` for benign, ``data/tensors/adversarial/<key>_adv_<mode>/``
 for adversarial.
 
@@ -218,15 +217,12 @@ ATTACKS = [
 ]
 
 # Adversarial subdirectories under data/adversarial/ that are tensorised.
-# Most name a benign Attack above; ddos_kitsune is adversarial-only (its
-# TANTGen model was trained against a Kitsune capture but its PCAPs perturb the
-# CIC DDoS benign manifold, augmenting the adversarial pool without a new benign
-# source). Other on-disk variants (e.g. brute_force_kitsune, portscan_kitsune)
-# are intentionally excluded.
+# Each names a benign Attack above, so every adversarial source has a matching
+# clean counterpart. Other on-disk variants (e.g. brute_force_kitsune,
+# portscan_kitsune) are intentionally excluded.
 TANTGEN_KEYS = {
     "mirai", "ssdp_flood",                  # Kitsune (benign + adversarial)
     "ddos", "portscan", "brute_force",      # CIC-IDS-2017 (benign + adversarial)
-    "ddos_kitsune",                          # Adversarial-only (paired with ddos benign)
     "ntp_ddos", "dns_ddos", "ssdp_ddos",    # CIC-DDoS-2019 (benign + adversarial)
     "syn_ddos", "ldap_ddos",                 # CIC-DDoS-2019 (benign + adversarial)
 }
