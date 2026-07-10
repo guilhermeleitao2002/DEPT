@@ -17,6 +17,12 @@ Usage
     python scripts/reconstructor/run_reconstructor.py --mode train
     python scripts/reconstructor/run_reconstructor.py --mode eval
 
+    # Per-attack model — pairs restricted to one attack, purification gain
+    # scored through the per-attack TCN from data/models/per_attack/<attack>/tcn
+    # (train it first); artifacts land under
+    # data/models/per_attack/<attack>/reconstructor:
+    python scripts/reconstructor/run_reconstructor.py --attack mirai
+
 Reads config/reconstructor.yaml and force-overwrites every artifact under
 <output_dir>.
 
@@ -53,6 +59,9 @@ warnings.filterwarnings(
 REPO_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO_ROOT))
 
+from src.models.common.attack_scope import (  # noqa: E402
+    per_attack_models_root, scoped_adversarial_exclude,
+)
 from src.models.reconstructor import evaluate as rc_eval  # noqa: E402
 from src.models.reconstructor import train as rc_train    # noqa: E402
 
@@ -175,6 +184,11 @@ def main() -> int:
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument("--mode", choices=["train", "eval", "both"], default="both")
+    parser.add_argument(
+        "--attack", default=None, metavar="NAME",
+        help="restrict pairs to one attack and score purification through the "
+             "per-attack TCN from data/models/per_attack/<NAME>/tcn; artifacts "
+             "go to data/models/per_attack/<NAME>/reconstructor")
     args = parser.parse_args()
 
     logging.basicConfig(
@@ -198,8 +212,29 @@ def main() -> int:
         cfg["realize"].get("adversarial_pcap_dir", "data/adversarial"), REPO_ROOT))
     cfg["_repo_root"] = str(REPO_ROOT)
 
+    if args.attack:
+        try:
+            cfg["adversarial_exclude"] = scoped_adversarial_exclude(
+                Path(cfg["adversarial_dir"]), args.attack,
+                cfg.get("adversarial_exclude", []))
+        except ValueError as e:
+            print(f"{red(bold('ERROR:'))} {e}")
+            return 1
+        root = per_attack_models_root(REPO_ROOT, args.attack)
+        cfg["tcn_model_dir"] = str(root / "tcn")
+        output_dir = root / "reconstructor"
+        cfg["output_dir"] = str(output_dir)
+        if not (root / "tcn" / "tcn.pt").exists():
+            print(f"{red(bold('ERROR:'))} per-attack TCN missing: "
+                  f"{root / 'tcn' / 'tcn.pt'}. "
+                  f"Train it first: run_tcn.py --attack {args.attack}")
+            return 1
+
     _section(f"DEPT — Reconstructor  {dim('(mode: ' + args.mode + ')')}")
     _row("Config", str(cfg_path))
+    if args.attack:
+        _row("Attack scope", f"{bold(args.attack)}  "
+                             f"{dim('(per-attack run — other attacks excluded)')}")
     _row("Tensors dir", str(tensors_root))
     _row("TCN model dir", cfg["tcn_model_dir"])
     _row("Output dir", str(output_dir))

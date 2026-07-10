@@ -23,6 +23,10 @@ Usage
     # Evaluate an already-trained artifact:
     python scripts/tcn/run_tcn.py --mode eval
 
+    # Per-attack model (single attack's benign + adversarial pools only);
+    # artifacts land under data/models/per_attack/<attack>/tcn:
+    python scripts/tcn/run_tcn.py --attack mirai
+
 Reads config/tcn.yaml and force-overwrites every artifact under <output_dir>.
 
 Outputs (under <output_dir> from tcn.yaml)
@@ -55,6 +59,9 @@ import yaml
 REPO_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO_ROOT))
 
+from src.models.common.attack_scope import (  # noqa: E402
+    per_attack_models_root, scoped_adversarial_exclude,
+)
 from src.models.tcn import evaluate as tcn_eval  # noqa: E402
 from src.models.tcn import train as tcn_train  # noqa: E402
 
@@ -143,7 +150,7 @@ def _resolve_device_label(device_cfg: str) -> str:
 
 def _print_config_banner(config_path: Path, config: dict,
                          tensors_root: Path, output_dir: Path,
-                         mode: str) -> None:
+                         mode: str, attack: str | None = None) -> None:
     benign_sources = config.get("benign_sources", [])
     adv_dir = Path(config.get("adversarial_dir", "data/tensors/adversarial"))
     adv_names: list[str] = []
@@ -163,6 +170,9 @@ def _print_config_banner(config_path: Path, config: dict,
         print(f" {cyan(f'{label:<{label_w}}')} {value}")
 
     _row("Config",       str(config_path))
+    if attack:
+        _row("Attack scope", f"{bold(magenta(attack))}  "
+                             f"{dim('(per-attack run — other attacks excluded)')}")
     _row("Tensors dir",  str(tensors_root))
     _row("Adversarial",  f"{adv_dir}  "
                          f"{dim('(' + str(len(adv_names)) + ' source(s) discovered)')}")
@@ -408,6 +418,10 @@ def main() -> int:
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument("--mode", choices=["train", "eval", "both"], default="both")
+    parser.add_argument(
+        "--attack", default=None, metavar="NAME",
+        help="restrict to one attack (benign pool + its _adv_* variants only); "
+             "artifacts go to data/models/per_attack/<NAME>/tcn")
     args = parser.parse_args()
 
     logging.basicConfig(
@@ -426,8 +440,19 @@ def main() -> int:
         config.get("adversarial_dir", "data/tensors/adversarial"), REPO_ROOT)
     config["adversarial_dir"] = str(adversarial_dir)
 
+    if args.attack:
+        try:
+            config["adversarial_exclude"] = scoped_adversarial_exclude(
+                adversarial_dir, args.attack,
+                config.get("adversarial_exclude", []))
+        except ValueError as e:
+            print(f"{red(bold('ERROR:'))} {e}")
+            return 1
+        config["benign_sources"] = [args.attack]
+        output_dir = per_attack_models_root(REPO_ROOT, args.attack) / "tcn"
+
     _print_config_banner(config_path, config, tensors_root, output_dir,
-                          args.mode)
+                          args.mode, args.attack)
 
     total_t0 = time.time()
     total_steps = 2 if args.mode == "both" else 1

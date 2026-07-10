@@ -12,6 +12,12 @@ cd "$REPO_ROOT"
 START_PHASE=1
 END_PHASE=6
 SKIP_ADV=0
+PER_ATTACK=0
+
+# The 10 attacks with TANTGen adversarial counterparts (mirrors the
+# benign_sources list in config/rf.yaml / config/tcn.yaml).
+ATTACKS=(brute_force ddos dns_ddos ldap_ddos mirai ntp_ddos portscan
+         ssdp_ddos ssdp_flood syn_ddos)
 
 usage() {
     cat <<'EOF'
@@ -31,10 +37,23 @@ at the end. Live output is also mirrored to
 The script aborts on the first failing phase (set -euo pipefail).
 
 Usage:
-  ./run_pipeline.sh                 # all 6 phases
+  ./run_pipeline.sh                 # all 6 phases (one global model per stage)
   ./run_pipeline.sh --skip-adv      # skip phase 1 (PCAPs already present)
   ./run_pipeline.sh --from N        # start at phase N  (1..6)
   ./run_pipeline.sh --to   N        # stop  after phase N (1..6)
+
+Per-attack mode:
+  ./run_pipeline.sh --per-attack            # phases 3-6 once per attack
+  ./run_pipeline.sh --per-attack --from 5   # e.g. meta + reconstructor only
+  ./run_pipeline.sh --attacks mirai,ddos    # subset (implies --per-attack)
+
+  Runs the model phases (3-6) once per attack, passing --attack <name> to
+  each stage script. Phases 1-2 are per-attack by construction (their
+  outputs are keyed by attack), so they are skipped here — run them via a
+  normal (global) invocation first. Global artifacts stay at
+  data/models/<stage>/; per-attack artifacts land under
+  data/models/per_attack/<attack>/<stage>/. Logs go to
+  logs/pipeline_<timestamp>/<attack>/phase_<N>_<name>.log.
 
 Env overrides:
   PYTHON=python3   # interpreter to use (default: python3)
@@ -44,11 +63,14 @@ EOF
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        --skip-adv)  SKIP_ADV=1;       shift   ;;
-        --from)      START_PHASE="$2"; shift 2 ;;
-        --to)        END_PHASE="$2";   shift 2 ;;
-        -h|--help)   usage 0 ;;
-        *)           echo "Unknown argument: $1" >&2; usage 2 ;;
+        --skip-adv)   SKIP_ADV=1;       shift   ;;
+        --from)       START_PHASE="$2"; shift 2 ;;
+        --to)         END_PHASE="$2";   shift 2 ;;
+        --per-attack) PER_ATTACK=1;     shift   ;;
+        --attacks)    PER_ATTACK=1
+                      IFS=',' read -r -a ATTACKS <<< "$2"; shift 2 ;;
+        -h|--help)    usage 0 ;;
+        *)            echo "Unknown argument: $1" >&2; usage 2 ;;
     esac
 done
 
@@ -86,44 +108,101 @@ TS="$(date +%Y%m%d_%H%M%S)"
 LOG_DIR="logs/pipeline_${TS}"
 mkdir -p "$LOG_DIR"
 
-OVERALL_START=$(date +%s)
+# run_phase <phase> [<attack>] — run one phase (optionally scoped to one
+# attack), tee its output to the log, and record its duration.
+run_phase() {
+    local i="$1" attack="${2:-}"
+    local name="${PHASE_NAMES[$i]}"
+    local cmd="${PHASE_CMDS[$i]}"
+    local label="$name" log_file key
 
-for i in 1 2 3 4 5 6; do
-    if (( i < START_PHASE || i > END_PHASE )); then continue; fi
-    if [[ $i -eq 1 && $SKIP_ADV -eq 1 ]]; then continue; fi
+    if [[ -n "$attack" ]]; then
+        cmd+=" --attack $attack"
+        label="$name  [attack: $attack]"
+        log_file="$LOG_DIR/$attack/phase_${i}_${name}.log"
+        key="$attack:$i"
+        mkdir -p "$LOG_DIR/$attack"
+    else
+        log_file="$LOG_DIR/phase_${i}_${name}.log"
+        key="$i"
+    fi
 
-    name="${PHASE_NAMES[$i]}"
-    cmd="${PHASE_CMDS[$i]}"
-    log_file="$LOG_DIR/phase_${i}_${name}.log"
-
-    section "$i" "$name"
+    section "$i" "$label"
     printf 'Command : %s\n'   "$cmd"
     printf 'Log     : %s\n'   "$log_file"
     printf 'Started : %s\n\n' "$(date '+%Y-%m-%d %H:%M:%S')"
 
+    local start rc elapsed
     start=$(date +%s)
     set +e
     $cmd 2>&1 | tee "$log_file"
     rc=${PIPESTATUS[0]}
     set -e
     elapsed=$(( $(date +%s) - start ))
-    DURATIONS[$i]=$elapsed
+    DURATIONS[$key]=$elapsed
 
     printf '\nFinished: %s  (%s)\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$(format_duration "$elapsed")"
 
     if [[ $rc -ne 0 ]]; then
-        printf '\nPHASE %d (%s) FAILED with exit code %d\n' "$i" "$name" "$rc" >&2
+        printf '\nPHASE %d (%s) FAILED with exit code %d\n' "$i" "$label" "$rc" >&2
         exit "$rc"
     fi
-done
+}
+
+OVERALL_START=$(date +%s)
+
+if (( PER_ATTACK )); then
+    if (( START_PHASE < 3 )); then
+        printf 'Note: --per-attack only applies to phases 3-6; starting at phase 3.\n'
+        printf '      (Phases 1-2 are per-attack by construction — run them globally.)\n'
+        START_PHASE=3
+    fi
+    printf 'Per-attack run over %d attack(s): %s\n' \
+        "${#ATTACKS[@]}" "${ATTACKS[*]}"
+    for attack in "${ATTACKS[@]}"; do
+        for i in 3 4 5 6; do
+            if (( i < START_PHASE || i > END_PHASE )); then continue; fi
+            run_phase "$i" "$attack"
+        done
+    done
+else
+    for i in 1 2 3 4 5 6; do
+        if (( i < START_PHASE || i > END_PHASE )); then continue; fi
+        if [[ $i -eq 1 && $SKIP_ADV -eq 1 ]]; then continue; fi
+        run_phase "$i"
+    done
+fi
 
 OVERALL=$(( $(date +%s) - OVERALL_START ))
 
 printf '\n%s\n PIPELINE SUMMARY\n%s\n' "$SEP" "$SEP"
-for i in 1 2 3 4 5 6; do
-    if [[ -n "${DURATIONS[$i]:-}" ]]; then
-        printf '  phase %d  %-22s  %s\n' "$i" "${PHASE_NAMES[$i]}" "$(format_duration "${DURATIONS[$i]}")"
-    fi
-done
+if (( PER_ATTACK )); then
+    for attack in "${ATTACKS[@]}"; do
+        attack_total=0
+        attack_ran=0
+        for i in 3 4 5 6; do
+            if [[ -n "${DURATIONS[$attack:$i]:-}" ]]; then
+                attack_total=$(( attack_total + DURATIONS[$attack:$i] ))
+                attack_ran=1
+            fi
+        done
+        if (( attack_ran )); then
+            printf '  %s\n' "$attack"
+            for i in 3 4 5 6; do
+                if [[ -n "${DURATIONS[$attack:$i]:-}" ]]; then
+                    printf '    phase %d  %-22s  %s\n' "$i" "${PHASE_NAMES[$i]}" \
+                        "$(format_duration "${DURATIONS[$attack:$i]}")"
+                fi
+            done
+            printf '    %-32s %s\n' "subtotal" "$(format_duration "$attack_total")"
+        fi
+    done
+else
+    for i in 1 2 3 4 5 6; do
+        if [[ -n "${DURATIONS[$i]:-}" ]]; then
+            printf '  phase %d  %-22s  %s\n' "$i" "${PHASE_NAMES[$i]}" "$(format_duration "${DURATIONS[$i]}")"
+        fi
+    done
+fi
 printf '  %-32s %s\n' "TOTAL" "$(format_duration "$OVERALL")"
 printf '\nLogs: %s\n' "$LOG_DIR"

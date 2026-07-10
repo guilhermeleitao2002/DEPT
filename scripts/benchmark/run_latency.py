@@ -32,11 +32,20 @@ saved config. Output: ``data/models/latency/latency_metrics.json`` (overwritten
 each run). A representative sample is timed by default; raise ``POOL_FLOWS`` /
 ``RF_CKPT_SAMPLE`` / ``PREPROCESS_MAX_PACKETS`` for a full-split run.
 
+Per-attack mode benchmarks the per-attack models trained by
+``run_pipeline.sh --per-attack`` instead of the global ones: every stage is
+read from ``data/models/per_attack/<attack>/`` and the result is written to
+``data/models/per_attack/<attack>/latency/latency_metrics.json`` (the ingress
+and scapy-rebuild samples switch to that attack's ``_adv_both`` PCAP).
+
 Usage:
-    python3 scripts/benchmark/run_latency.py
+    python3 scripts/benchmark/run_latency.py                  # global models
+    python3 scripts/benchmark/run_latency.py --attack mirai   # one attack
+    python3 scripts/benchmark/run_latency.py --per-attack     # every trained attack
 """
 from __future__ import annotations
 
+import argparse
 import json
 import os
 import sys
@@ -49,6 +58,9 @@ import torch
 REPO_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO_ROOT))
 
+from src.models.common.attack_scope import (  # noqa: E402
+    list_trained_attacks, per_attack_models_root, scoped_adversarial_exclude,
+)
 from src.models.common.latency import summarize, time_calls, time_sweep  # noqa: E402
 from src.models.tcn.model import TCN  # noqa: E402
 from src.models.tcn.evaluate import _load_dataset_index  # noqa: E402
@@ -83,7 +95,38 @@ PREPROCESS_SOURCE = "portscan_adv_both"   # small PCAP; pcap→nPrint ingress sa
 PREPROCESS_MAX_PACKETS = 100_000          # packets timed for the ingress pipeline
 PREPROCESS_REPEATS = 3                     # full pcap→nPrint passes (median taken)
 
-OUTPUT_DIR = REPO_ROOT / "data" / "models" / "latency"
+# ── Benchmark scope (global models by default; see _configure_scope) ─────────
+ATTACK: str | None = None                      # per-attack name, or None = global
+MODELS_ROOT = REPO_ROOT / "data" / "models"    # stage artifact root being timed
+OUTPUT_DIR = MODELS_ROOT / "latency"
+_DEFAULT_REALIZE_SOURCE = REALIZE_SOURCE
+_DEFAULT_PREPROCESS_SOURCE = PREPROCESS_SOURCE
+
+
+def _configure_scope(attack: str | None) -> None:
+    """Point the module globals at one attack's artifact tree (or the global one)."""
+    global ATTACK, MODELS_ROOT, OUTPUT_DIR, REALIZE_SOURCE, PREPROCESS_SOURCE
+    ATTACK = attack
+    if attack is None:
+        MODELS_ROOT = REPO_ROOT / "data" / "models"
+        REALIZE_SOURCE = _DEFAULT_REALIZE_SOURCE
+        PREPROCESS_SOURCE = _DEFAULT_PREPROCESS_SOURCE
+    else:
+        MODELS_ROOT = per_attack_models_root(REPO_ROOT, attack)
+        REALIZE_SOURCE = f"{attack}_adv_both"
+        PREPROCESS_SOURCE = f"{attack}_adv_both"
+    OUTPUT_DIR = MODELS_ROOT / "latency"
+
+
+def _pair_index_excludes(ycfg: dict) -> list[str]:
+    """Adversarial excludes matching how the benchmarked reconstructor was
+    trained, so ``build_pair_index`` rebuilds the exact pair table its
+    ``split.npz`` indices point into."""
+    exclude = list(ycfg.get("adversarial_exclude", []))
+    if ATTACK is not None:
+        exclude = scoped_adversarial_exclude(
+            REPO_ROOT / ycfg["adversarial_dir"], ATTACK, exclude)
+    return exclude
 
 
 def _device() -> torch.device:
@@ -102,7 +145,7 @@ def _sample_idx(all_idx: np.ndarray, n: int) -> np.ndarray:
 def bench_rf() -> dict:
     import joblib
 
-    rf_dir = REPO_ROOT / "data" / "models" / "rf"
+    rf_dir = MODELS_ROOT / "rf"
     clf = joblib.load(rf_dir / "rf.joblib")
     data = np.load(rf_dir / "dataset.npz", allow_pickle=False)
     test_idx = np.load(rf_dir / "split.npz")["test_idx"]
@@ -209,7 +252,7 @@ def _bench_seq_model(loader, device, forward) -> dict:
 # TCN
 # ─────────────────────────────────────────────────────────────────────────────
 def bench_tcn(device) -> tuple[dict, float]:
-    tcn_dir = REPO_ROOT / "data" / "models" / "tcn"
+    tcn_dir = MODELS_ROOT / "tcn"
     cfg = json.loads((tcn_dir / "tcn_config.json").read_text())
     m, t = cfg["model"], cfg["training"]
     model = TCN(
@@ -244,7 +287,7 @@ def bench_tcn(device) -> tuple[dict, float]:
 # Meta-learner (transformer forward only)
 # ─────────────────────────────────────────────────────────────────────────────
 def bench_meta(device) -> tuple[dict, float]:
-    meta_dir = REPO_ROOT / "data" / "models" / "metalearner"
+    meta_dir = MODELS_ROOT / "metalearner"
     cfg = json.loads((meta_dir / "metalearner_config.json").read_text())
     m, t = cfg["model"], cfg["training"]
     model = MetaLearner(
@@ -332,7 +375,7 @@ def bench_meta(device) -> tuple[dict, float]:
 # Reconstructor
 # ─────────────────────────────────────────────────────────────────────────────
 def bench_reconstructor(device) -> tuple[dict, float]:
-    rec_dir = REPO_ROOT / "data" / "models" / "reconstructor"
+    rec_dir = MODELS_ROOT / "reconstructor"
     cfg = json.loads((rec_dir / "reconstructor_config.json").read_text())
     m = cfg["model"]
     t = cfg.get("training", {})
@@ -350,7 +393,7 @@ def bench_reconstructor(device) -> tuple[dict, float]:
     pairs = build_pair_index(
         tensors_dir=REPO_ROOT / ycfg["tensors_dir"],
         adversarial_dir=REPO_ROOT / ycfg["adversarial_dir"],
-        adversarial_exclude=list(ycfg.get("adversarial_exclude", [])),
+        adversarial_exclude=_pair_index_excludes(ycfg),
         min_len=int(ycfg.get("min_len", 2)),
     )
     test_idx = np.load(rec_dir / "split.npz")["test_idx"]
@@ -528,7 +571,7 @@ def bench_realize() -> dict:
         pairs = build_pair_index(
             tensors_dir=REPO_ROOT / ycfg["tensors_dir"],
             adversarial_dir=REPO_ROOT / ycfg["adversarial_dir"],
-            adversarial_exclude=list(ycfg.get("adversarial_exclude", [])),
+            adversarial_exclude=_pair_index_excludes(ycfg),
             min_len=int(ycfg.get("min_len", 2)),
         )
         gname = REALIZE_SOURCE
@@ -575,10 +618,12 @@ def bench_realize() -> dict:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-def main() -> int:
+def _run_one() -> int:
+    """Benchmark every stage under the current scope (see _configure_scope)."""
     device = _device()
     gpu_name = torch.cuda.get_device_name(device) if device.type == "cuda" else None
-    print(f"[latency] device={device} gpu={gpu_name}")
+    scope = f" attack={ATTACK}" if ATTACK else ""
+    print(f"[latency] device={device} gpu={gpu_name}{scope}")
 
     per_model: dict = {}
     print("[latency] PCAP → nPrint preprocessing (CPU ingress)…")
@@ -640,6 +685,8 @@ def main() -> int:
         "device": str(device),
         "gpu_name": gpu_name,
         "torch_version": torch.__version__,
+        "attack": ATTACK,
+        "models_root": str(MODELS_ROOT),
         "config": {
             "seed": SEED, "warmup_sweeps": WARMUP_SWEEPS, "warmup_per_flow": WARMUP_PER_FLOW,
             "throughput_repeats": THROUGHPUT_REPEATS,
@@ -683,6 +730,45 @@ def main() -> int:
     print(f"  TCN   : {_g(per_model,'tcn','batched').get('pkts_per_s'):,.0f}")
     print(f"  Meta  : {_g(per_model,'metalearner','batched').get('pkts_per_s'):,.0f}")
     print(f"  Recon : {_g(per_model,'reconstructor','batched').get('pkts_per_s'):,.0f}")
+    return 0
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(
+        description="DEPT inference latency / throughput benchmark.")
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument(
+        "--attack", default=None, metavar="NAME",
+        help="benchmark the per-attack models under "
+             "data/models/per_attack/<NAME>/ instead of the global ones")
+    group.add_argument(
+        "--per-attack", action="store_true",
+        help="benchmark every attack found under data/models/per_attack/")
+    args = parser.parse_args()
+
+    if args.per_attack:
+        attacks: list[str | None] = list(list_trained_attacks(REPO_ROOT))
+        if not attacks:
+            print("[latency] no per-attack models under data/models/per_attack/ "
+                  "— run ./run_pipeline.sh --per-attack first")
+            return 1
+    elif args.attack:
+        attacks = [args.attack]
+    else:
+        attacks = [None]
+
+    for attack in attacks:
+        _configure_scope(attack)
+        if attack is not None:
+            if not (MODELS_ROOT / "rf" / "rf.joblib").exists():
+                print(f"[latency] no per-attack models for '{attack}' under "
+                      f"{MODELS_ROOT} — run ./run_pipeline.sh --per-attack "
+                      f"--attacks {attack} first")
+                return 1
+            print(f"\n[latency] ===== attack: {attack}  ({MODELS_ROOT}) =====")
+        rc = _run_one()
+        if rc != 0:
+            return rc
     return 0
 
 

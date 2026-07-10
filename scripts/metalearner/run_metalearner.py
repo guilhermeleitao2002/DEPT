@@ -15,6 +15,11 @@ Usage
     python scripts/metalearner/run_metalearner.py --mode train
     python scripts/metalearner/run_metalearner.py --mode eval
 
+    # Per-attack model — stacks the per-attack RF + TCN from
+    # data/models/per_attack/<attack>/{rf,tcn} (train those first);
+    # artifacts land under data/models/per_attack/<attack>/metalearner:
+    python scripts/metalearner/run_metalearner.py --attack mirai
+
 Outputs (under <output_dir> from metalearner.yaml)
 --------------------------------------------------
     metalearner.pt                             — best PyTorch state_dict
@@ -52,6 +57,7 @@ warnings.filterwarnings(
 REPO_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO_ROOT))
 
+from src.models.common.attack_scope import per_attack_models_root  # noqa: E402
 from src.models.metalearner import evaluate as ml_eval  # noqa: E402
 from src.models.metalearner import train as ml_train    # noqa: E402
 
@@ -102,6 +108,11 @@ def main() -> int:
         description="DEPT meta-learner — train + evaluate the mini-Transformer",
     )
     parser.add_argument("--mode", choices=["train", "eval", "both"], default="both")
+    parser.add_argument(
+        "--attack", default=None, metavar="NAME",
+        help="stack the per-attack base learners from "
+             "data/models/per_attack/<NAME>/{rf,tcn}; artifacts go to "
+             "data/models/per_attack/<NAME>/metalearner")
     args = parser.parse_args()
 
     logging.basicConfig(
@@ -118,8 +129,25 @@ def main() -> int:
     for k in ("tensors_dir", "adversarial_dir", "rf_model_dir", "tcn_model_dir"):
         cfg[k] = str(_resolve(cfg[k], REPO_ROOT))
 
+    if args.attack:
+        root = per_attack_models_root(REPO_ROOT, args.attack)
+        cfg["rf_model_dir"] = str(root / "rf")
+        cfg["tcn_model_dir"] = str(root / "tcn")
+        output_dir = root / "metalearner"
+        cfg["output_dir"] = str(output_dir)
+        missing = [p for p in (root / "rf" / "rf.joblib", root / "tcn" / "tcn.pt")
+                   if not p.exists()]
+        if missing:
+            for p in missing:
+                print(f"ERROR: per-attack base learner missing: {p}")
+            print(f"Train it first: run_rf.py / run_tcn.py --attack {args.attack}")
+            return 1
+
     _section(f"DEPT — Meta-Learner  {dim('(mode: ' + args.mode + ')')}")
     _row("Config",        str(cfg_path))
+    if args.attack:
+        _row("Attack scope", f"{bold(args.attack)}  "
+                             f"{dim('(per-attack run)')}")
     _row("RF model dir",  cfg["rf_model_dir"])
     _row("TCN model dir", cfg["tcn_model_dir"])
     _row("Output dir",    str(output_dir))
