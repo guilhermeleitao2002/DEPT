@@ -2,8 +2,8 @@
 
 Loads the model + cached test tokens, runs forward inference, and
 emits the standard streaming-eval artefacts (``metrics.json``,
-``streaming_metrics.json``, ``latency_vs_accuracy.png``) plus a
-three-way ``latency_vs_accuracy_comparison.png`` overlaying RF, TCN,
+``streaming_metrics.json``, ``earliness_vs_accuracy.png``) plus a
+three-way ``earliness_vs_accuracy_comparison.png`` overlaying RF, TCN,
 and meta-learner curves so the README plot is one file.
 """
 from __future__ import annotations
@@ -29,8 +29,8 @@ from torch.utils.data import DataLoader  # noqa: E402
 from ..common.runtime import resolve_num_workers  # noqa: E402
 from ..common.streaming_eval import (  # noqa: E402
     StreamingPredictions,
-    plot_latency_accuracy,
-    plot_latency_accuracy_comparison,
+    plot_earliness_accuracy,
+    plot_earliness_accuracy_comparison,
     streaming_metrics,
 )
 from .dataset import (  # noqa: E402
@@ -133,9 +133,9 @@ def evaluate(output_dir: Path, config: dict) -> dict:
     (output_dir / "streaming_metrics.json").write_text(
         json.dumps(streaming, indent=2)
     )
-    plot_latency_accuracy(
-        streaming, output_dir / "latency_vs_accuracy.png",
-        title="Meta-Learner — Latency vs Accuracy (per-packet)",
+    plot_earliness_accuracy(
+        streaming, output_dir / "earliness_vs_accuracy.png",
+        title="Meta-Learner — Earliness vs Accuracy (per-packet)",
     )
 
     # Last-timestep verdict for the flow-level confusion matrix / ROC.
@@ -205,8 +205,8 @@ def evaluate(output_dir: Path, config: dict) -> dict:
         if p.exists():
             cmp[label] = json.loads(p.read_text())
     cmp["Meta-Learner"] = streaming
-    plot_latency_accuracy_comparison(
-        cmp, output_dir / "latency_vs_accuracy_comparison.png",
+    plot_earliness_accuracy_comparison(
+        cmp, output_dir / "earliness_vs_accuracy_comparison.png",
         title="DEPT base learners + Meta-Learner — overall AUROC@t (test)",
     )
 

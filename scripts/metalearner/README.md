@@ -33,8 +33,8 @@ Under `data/models/metalearner/`:
 | `metrics.json` | last-timestep verdict + streaming overall |
 | `streaming_metrics.json` | full AUROC@t / EDP / per-source slicing |
 | `confusion_matrix.png`, `roc_curve.png`, `pr_curve.png` | last-timestep plots |
-| `latency_vs_accuracy.png` | per-source AUROC@t curves |
-| `latency_vs_accuracy_comparison.png` | RF + TCN + Meta-Learner overlaid |
+| `earliness_vs_accuracy.png` | per-source AUROC@t curves |
+| `earliness_vs_accuracy_comparison.png` | RF + TCN + Meta-Learner overlaid |
 | `cache/{val,test}/` | memmapped per-split token caches (auto-rebuilt when base learners change) |
 
 ## How the data flows

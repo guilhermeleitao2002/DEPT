@@ -29,8 +29,8 @@ Outputs (under <output_dir> from metalearner.yaml)
     metrics.json                               — last-timestep + streaming overall
     streaming_metrics.json                     — full AUROC@t / EDP / per-source
     confusion_matrix.png / roc_curve.png / pr_curve.png
-    latency_vs_accuracy.png                    — meta-learner only
-    latency_vs_accuracy_comparison.png         — RF + TCN + Meta-Learner overlaid
+    earliness_vs_accuracy.png                    — meta-learner only
+    earliness_vs_accuracy_comparison.png         — RF + TCN + Meta-Learner overlaid
     cache/{val,test}/                          — memmapped token caches
 """
 from __future__ import annotations

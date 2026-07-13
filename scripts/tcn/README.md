@@ -4,7 +4,7 @@
 
 ## Role in the ensemble
 
-The TCN is the **dense, early-warning stream**: it produces a prediction the moment the first packet of a flow arrives and updates it with every subsequent packet. It trades precision (it is noisier than the RF early on) for latency — it flags a flow from packet 1, before the RF's first checkpoint at packet 2 and far ahead of the RF's every-10-packet refresh cadence. This is the production motivation: detection latency is bounded by TCN forward-pass time, not by flow length.
+The TCN is the **dense, early-warning stream**: it produces a prediction the moment the first packet of a flow arrives and updates it with every subsequent packet. It trades precision (it is noisier than the RF early on) for earliness — it flags a flow from packet 1, before the RF's first checkpoint at packet 2 and far ahead of the RF's every-10-packet refresh cadence. This is the production motivation: a verdict is available from the very first packet, regardless of flow length.
 
 ## Input
 
@@ -115,7 +115,7 @@ Best epoch: 5/9 (early-stopped). Val macro-F1 = 0.7264. Training time: ~17.6 h o
 
 ## Observations
 
-- **EDP median = 1 packet.** The TCN flags 86% of adversarial flows from the very first packet — before the RF's packet-2 checkpoint. This packet-1 latency is the core advantage the meta-learner inherits.
+- **EDP median = 1 packet.** The TCN flags 86% of adversarial flows from the very first packet — before the RF's packet-2 checkpoint. This packet-1 earliness is the core advantage the meta-learner inherits.
 - **IAT-only perturbation is consistently the hardest mode**, and on short flows it collapses entirely: `portscan_iat` (ROC AUC 0.320, F1 0.000), `mirai_iat` (0.360, 0.000). With ~2 packets there is effectively one inter-packet interval, so a pure timing change is indistinguishable from natural variability — while the `_both`/`_size` variants of the same attacks stay detectable (ROC AUC ≈ 0.99).
 - **The CIC-DDoS reflection floods are the new hard sources.** `dns_ddos`/`ntp_ddos`/`ssdp_ddos` sit at ROC AUC ≈ 0.55–0.67 across all modes; `ldap_ddos` (0.837) and `syn_ddos` (0.836–1.000) fare better. These spoofed, near-constant-timing floods are where the per-packet view has least to grip.
 - **Mirai/ntp/ssdp adversarial recall is low for the TCN.** The RF's aggregated prefix statistics are more informative than the raw per-packet sequence for these floods, which is exactly the complementarity the meta-learner is designed to exploit.

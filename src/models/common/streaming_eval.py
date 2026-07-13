@@ -257,10 +257,10 @@ def streaming_metrics(
     }
 
 
-def plot_latency_accuracy(
+def plot_earliness_accuracy(
     metrics: dict,
     output_path: Path,
-    title: str = "Latency vs Accuracy",
+    title: str = "Earliness vs Accuracy",
 ) -> None:
     """Plot AUROC@t curves: overall + per-source vs_balanced_benign."""
     t_grid = metrics["config"]["t_grid"]
@@ -306,10 +306,10 @@ def plot_latency_accuracy(
     plt.close(fig)
 
 
-def plot_latency_accuracy_comparison(
+def plot_earliness_accuracy_comparison(
     metrics_by_model: dict[str, dict],
     output_path: Path,
-    title: str = "Latency vs Accuracy — model comparison",
+    title: str = "Earliness vs Accuracy — model comparison",
 ) -> None:
     """Overlay AUROC@t curves for multiple models on one figure.
 
@@ -349,6 +349,6 @@ __all__ = [
     "DEFAULT_T_GRID",
     "StreamingPredictions",
     "streaming_metrics",
-    "plot_latency_accuracy",
-    "plot_latency_accuracy_comparison",
+    "plot_earliness_accuracy",
+    "plot_earliness_accuracy_comparison",
 ]

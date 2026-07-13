@@ -12,7 +12,7 @@ of plumbing every runner needs for that:
     adversarial sources;
   * ``per_attack_models_root`` — the canonical artifact home for per-attack
     runs, ``data/models/per_attack/<attack>/{rf,tcn,metalearner,
-    reconstructor,latency}``. The global artifacts stay untouched at
+    reconstructor}``. The global artifacts stay untouched at
     ``data/models/<stage>``.
 """
 from __future__ import annotations
@@ -51,11 +51,3 @@ def scoped_adversarial_exclude(
 def per_attack_models_root(repo_root: Path, attack: str) -> Path:
     """Artifact root for one attack's models: data/models/per_attack/<attack>."""
     return Path(repo_root) / "data" / "models" / PER_ATTACK_DIRNAME / attack
-
-
-def list_trained_attacks(repo_root: Path) -> list[str]:
-    """Attacks with a per-attack artifact directory (any stage) on disk."""
-    root = Path(repo_root) / "data" / "models" / PER_ATTACK_DIRNAME
-    if not root.exists():
-        return []
-    return sorted(d.name for d in root.iterdir() if d.is_dir())

@@ -40,7 +40,7 @@ from sklearn.metrics import (  # noqa: E402
 
 from ..common.streaming_eval import (  # noqa: E402
     StreamingPredictions,
-    plot_latency_accuracy,
+    plot_earliness_accuracy,
     streaming_metrics,
 )
 
@@ -333,10 +333,10 @@ def evaluate(output_dir: Path) -> dict:
         streaming = streaming_metrics(sp)
         (output_dir / "streaming_metrics.json").write_text(
             json.dumps(streaming, indent=2))
-        plot_latency_accuracy(
+        plot_earliness_accuracy(
             streaming,
-            output_dir / "latency_vs_accuracy.png",
-            title="RF — Latency vs Accuracy (per-prefix)",
+            output_dir / "earliness_vs_accuracy.png",
+            title="RF — Earliness vs Accuracy (per-prefix)",
         )
         metrics["streaming"] = streaming["overall"]
         # Re-persist so the on-disk metrics.json includes the streaming

@@ -134,7 +134,7 @@ Architecture: 2 encoder layers, 4 heads, d_model=64, sinusoidal PE, strict causa
 | EDP median | 2 pkts | **1 pkt** | **1 pkt** |
 | Detection rate (p>0.5) | **99.69%** | 86.31% | 87.12% |
 
-On this like-for-like flow-level axis the **meta-learner leads from packet 5 onward** (AUROC@5–@max 0.834 → 0.845, above both base learners) *and* keeps the TCN's packet-1 latency (EDP = 1). The RF leads only at its first checkpoint (@2) and on raw detection rate, but it can't issue a verdict before packet 2. Note that the RF's headline per-checkpoint numbers (e.g. ROC AUC 0.888) are computed on a different, RF-favourable granularity and are *not* directly comparable to the flow-level column above.
+On this like-for-like flow-level axis the **meta-learner leads from packet 5 onward** (AUROC@5–@max 0.834 → 0.845, above both base learners) *and* keeps the TCN's packet-1 first verdict (EDP = 1). The RF leads only at its first checkpoint (@2) and on raw detection rate, but it can't issue a verdict before packet 2. Note that the RF's headline per-checkpoint numbers (e.g. ROC AUC 0.888) are computed on a different, RF-favourable granularity and are *not* directly comparable to the flow-level column above.
 
 ### Observations
 

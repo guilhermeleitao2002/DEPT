@@ -43,7 +43,7 @@ from ..common.dataset import load_source_meta  # noqa: E402
 from ..common.runtime import resolve_num_workers  # noqa: E402
 from ..common.streaming_eval import (  # noqa: E402
     StreamingPredictions,
-    plot_latency_accuracy,
+    plot_earliness_accuracy,
     streaming_metrics,
 )
 
@@ -435,10 +435,10 @@ def evaluate(output_dir: Path) -> dict:
         streaming = streaming_metrics(sp)
         (output_dir / "streaming_metrics.json").write_text(
             json.dumps(streaming, indent=2))
-        plot_latency_accuracy(
+        plot_earliness_accuracy(
             streaming,
-            output_dir / "latency_vs_accuracy.png",
-            title="TCN — Latency vs Accuracy (per-packet)",
+            output_dir / "earliness_vs_accuracy.png",
+            title="TCN — Earliness vs Accuracy (per-packet)",
         )
         metrics["streaming"] = streaming["overall"]
         (output_dir / "metrics.json").write_text(json.dumps(metrics, indent=2))
