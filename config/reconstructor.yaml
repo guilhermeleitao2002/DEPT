@@ -85,42 +85,51 @@ training:
 realize:
   adversarial_pcap_dir: data/adversarial   # original TANTGen PCAPs (phase 1 output)
 
-# ---- Independent-NIDS efficacy (Kitsune) ----
-# The headline purification-efficacy metric. Realize adv / purified / clean packets
-# (same flows & identity; only size+timing differ) and score each through Kitsune
-# (KitNET + AfterImage) — the real anomaly-detection NIDS TANTGen's attacks evade.
-# Kitsune never saw DEPT's models, so it breaks the TCN's circularity.
+# ---- Independent-NIDS efficacy (the headline purification metric) ----
+# Realize adv / purified / clean packets (same flows & identity; only size+timing
+# differ) and score each through the real NIDS each attack was built to evade — NOT
+# DEPT's own TCN (that is circular). This is the shared `nids` registry, also used by
+# the deployment baseline (scripts/baseline). Two NIDS families:
+#   * Kitsune (KitNET + AfterImage) for the Kitsune-native attacks (mirai, ssdp_flood),
+#     evaded by the `iat` vector. TANTGen's calibrated pickles are reused verbatim.
+#   * ML-NIDS (TANTGen's CICFlowMeter flow classifiers) for the 8 CIC attacks, evaded
+#     by the `size` vector. TANTGen's trained <Attack>_<MODEL>.joblib are reused.
 #
-# Scope: restricted to the two Kitsune-NATIVE attacks TANTGen actually calibrated a
-# Kitsune against (mirai, ssdp_flood) — the gold-standard "attacker's own target NIDS"
-# case. Their pretrained pickles are reused verbatim. Extending to other attacks would
-# require calibrating a fresh Kitsune per attack (out of current scope).
+# Semantics: the NIDS flags a flow when its anomaly signal is high (Kitsune RMSE > φ, or
+# ML-NIDS P(malicious) > 0.5). The attack evades by suppressing it; purification recovers
+# the original fingerprint, so the signal rises from the (evaded) adversarial floor
+# toward the clean-original oracle. Primary per-source metric = score_restoration_ratio
+# (fraction of the adv→clean gap recovered; robust to each NIDS's absolute scale). The
+# cross-family overall uses detection_restoration_ratio (rate-based; see the README).
 #
-# Semantics: Kitsune flags a flow when RMSE > threshold φ. The attack evades by
-# suppressing RMSE; purification recovers the original attack's fingerprint, so the
-# anomaly score rises from the (evaded) adversarial floor toward the clean-original
-# oracle. Primary metric = rmse_restoration_ratio (fraction of the adv→clean anomaly
-# gap recovered; robust to Kitsune's absolute RMSE scale). Detection rate at φ is also
-# reported but is threshold-dependent (see the reconstructor README caveat).
-#
-# Kitsune is imported from the sibling TANTGen repo (needs its built AfterImage .so
-# and, in the DEPT venv, Cython/pyximport). Best-effort: skipped if unavailable.
-kitsune:
+# Kitsune needs the sibling TANTGen repo's built AfterImage .so (+ Cython/pyximport in
+# the DEPT venv); ML-NIDS needs `cicflowmeter` on PATH (pip install cicflowmeter). A
+# source whose NIDS/deps are missing is skipped-with-reason so the other metric groups
+# still report.
+nids:
   enabled: true
   tantgen_root: ../Transformer-based_Adversarial_Network_Traffic_Generator
-  sources: [mirai, ssdp_flood]   # only score these base attacks (Kitsune-native)
-  model_dir: data/models/kitsune # cache dir for any locally-trained fallback models
-  # TANTGen's own calibrated models (relative to tantgen_root) — used as-is.
-  pretrained:
-    mirai:      src/Kitsune/models/Mirai_model.pkl
-    ssdp_flood: src/Kitsune/models/SSDP_Flood_model.pkl
-  # Fallback only (if a pretrained pickle is missing): calibrate on the benign split.
-  benign_pcap_dir: data/original/Kitsune/Benign   # under tantgen_root; <TG_NAME>_benign.pcap
-  base_to_tg:
-    mirai: Mirai
-    ssdp_flood: SSDP_Flood
-  fm_grace: 5000            # AfterImage feature-map grace (TANTGen protocol)
-  ad_grace: 50000           # autoencoder-training grace
-  train_cap_packets: 55000  # cap benign feature extraction (>= fm+ad)
-  detection: max            # per-flow RMSE aggregation: max | mean
-  seed: 42
+  default_ml_model: RF                 # ML-NIDS classifier: RF | LR | SVM | MLP
+  ml_nids_model_dir: src/NIDS/models   # under tantgen_root; <Attack>_<MODEL>.joblib
+  # Per-attack NIDS map (base attack -> the NIDS it was built to evade).
+  attacks:
+    mirai:       {kind: kitsune, model: src/Kitsune/models/Mirai_model.pkl}
+    ssdp_flood:  {kind: kitsune, model: src/Kitsune/models/SSDP_Flood_model.pkl}
+    ddos:        {kind: ml_nids, tg_attack: DDoS}
+    portscan:    {kind: ml_nids, tg_attack: PortScan}
+    brute_force: {kind: ml_nids, tg_attack: BruteForce}
+    dns_ddos:    {kind: ml_nids, tg_attack: DNS_DDoS}
+    ldap_ddos:   {kind: ml_nids, tg_attack: LDAP_DDoS}
+    ntp_ddos:    {kind: ml_nids, tg_attack: NTP_DDoS}
+    ssdp_ddos:   {kind: ml_nids, tg_attack: SSDP_DDoS}
+    syn_ddos:    {kind: ml_nids, tg_attack: SYN_DDoS}
+  # Kitsune-specific knobs (calibration fallback + per-flow RMSE aggregation).
+  kitsune:
+    model_dir: data/models/kitsune               # DEPT cache for calibrated fallbacks
+    benign_pcap_dir: data/original/Kitsune/Benign # under tantgen_root; <TG>_benign.pcap
+    base_to_tg: {mirai: Mirai, ssdp_flood: SSDP_Flood}
+    fm_grace: 5000            # AfterImage feature-map grace (TANTGen protocol)
+    ad_grace: 50000           # autoencoder-training grace
+    train_cap_packets: 55000  # cap benign feature extraction (>= fm+ad)
+    detection: max            # per-flow RMSE aggregation: max | mean
+    seed: 42

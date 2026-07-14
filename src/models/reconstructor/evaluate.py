@@ -6,23 +6,26 @@ overall and per ``<base>_adv_<mode>`` source:
   1. **Reconstruction quality** — MSE on the perturbed dimensions, *before*
      (adv vs clean) vs *after* (recon vs clean). A large ``before → after``
      drop means the denoiser removed the perturbation.
-  2. **Purification gain** — feed the adversarial, reconstructed and clean
-     sequences through the trained TCN and report the per-flow last-timestep
-     ``P(adversarial)``. ``gain = P(adv|adv) − P(adv|recon)``; ideally the
-     reconstruction lands near the clean floor ``P(adv|clean)``.
+  1b. **Independent-NIDS efficacy** — *the headline metric*. Realize the
+     adversarial, purified and clean size/timing onto the *same* adversarial
+     packets and score each through the real NIDS each attack was built to evade:
+     **Kitsune** (KitNET + AfterImage) for the Kitsune-native attacks and
+     TANTGen's **ML-NIDS** (CICFlowMeter classifiers) for the CIC attacks. Neither
+     ever saw DEPT's models, so this breaks the TCN's circularity. Semantics =
+     *detection restoration*: the NIDS flags a flow when its anomaly signal
+     (Kitsune RMSE, or ML-NIDS ``P(malicious)``) is high; the attack evades by
+     suppressing it, and purification recovers the original attack's fingerprint,
+     so the signal / detection rise from the (evaded) adversarial floor back
+     toward the clean-original oracle. Shared with the deployment baseline via
+     :mod:`src.models.nids`.
+  2. **Purification gain through the TCN** — *secondary, internal sanity check*.
+     Feed the adversarial, reconstructed and clean sequences through DEPT's own
+     trained TCN and report the per-flow last-timestep ``P(adversarial)``. This is
+     **circular** (the TCN trained on this data) — kept only as an in-distribution
+     diagnostic; the independent-NIDS metric above is the credible one.
   3. **Protocol-compliance rate** — a ``tshark`` check on the *realized*
      purified packets (best-effort; needs the adversarial PCAPs and the
      tshark binary).
-  4. **Independent-NIDS efficacy (Kitsune)** — the headline metric. Realize the
-     adversarial, purified and clean size/timing onto the *same* adversarial
-     packets and score each through **Kitsune** (KitNET + AfterImage), the real
-     anomaly detector TANTGen's attacks evade. Kitsune never saw DEPT's models,
-     so it breaks the TCN's circularity. Semantics = *detection restoration*
-     (opposite direction to group 2): Kitsune flags a flow when ``RMSE > φ``; the
-     attack evades by suppressing RMSE, and purification recovers the original
-     attack's fingerprint, so RMSE / detection rise from the (evaded) adversarial
-     floor back toward the clean-original oracle. Best-effort; needs the sibling
-     TANTGen Kitsune tree.
 """
 from __future__ import annotations
 
@@ -40,6 +43,8 @@ import torch  # noqa: E402
 from torch.utils.data import DataLoader  # noqa: E402
 
 from ..common.runtime import resolve_num_workers  # noqa: E402
+from ..nids import NIDSRegistry, NIDSUnavailable  # noqa: E402
+from ..nids import metrics as nids_metrics  # noqa: E402
 from ..tcn.model import TCN  # noqa: E402
 from . import realize as rz  # noqa: E402
 from .dataset import (  # noqa: E402
@@ -200,10 +205,10 @@ def evaluate(config: dict, output_dir: Path) -> dict:
     overall = _new_group()
     # Compact per-source reconstruction for realization: source -> {fid: (tl, ipat)}
     realize_pool: dict[str, dict[str, tuple]] = defaultdict(dict)
-    # Kitsune 3-way pool: source -> {fid: {"adv"/"recon"/"clean": (tl, ipat)}}. Carries
+    # NIDS 3-way pool: source -> {fid: {"adv"/"recon"/"clean": (tl, ipat)}}. Carries
     # the adversarial and clean-target size/timing alongside the reconstruction so the
     # independent-NIDS metric can realize all three from the same adversarial packets.
-    kitsune_pool: dict[str, dict[str, dict]] = defaultdict(dict)
+    nids_pool: dict[str, dict[str, dict]] = defaultdict(dict)
 
     src_names = np.array(
         [f"{b}_adv_{m}" for b, m in zip(pairs.base, pairs.mode)], dtype=object)
@@ -267,7 +272,7 @@ def evaluate(config: dict, output_dir: Path) -> dict:
             realize_pool[gname][fid] = (tl, rr[:, _IPAT_COL].astype(np.float32))
             # Same decode for the adversarial and clean tensors (both already valid
             # nPrint, so rounding is a no-op) → three aligned size/timing overlays.
-            kitsune_pool[gname][fid] = {
+            nids_pool[gname][fid] = {
                 "adv": (rz.decode_total_len_batch(a), a[:, _IPAT_COL].astype(np.float32)),
                 "recon": (tl, rr[:, _IPAT_COL].astype(np.float32)),
                 "clean": (rz.decode_total_len_batch(c), c[:, _IPAT_COL].astype(np.float32)),
@@ -286,20 +291,20 @@ def evaluate(config: dict, output_dir: Path) -> dict:
     metrics["realization"] = _run_realization(
         config, realize_pool, output_dir, metrics)
 
-    # ---- Independent-NIDS efficacy (Kitsune) ---------------------------------
-    # The headline efficacy metric: realize adv / purified / clean packets and score
-    # each through Kitsune (KitNET), an anomaly detector DEPT never trained — so it
-    # breaks the TCN's circularity. Best-effort: skipped inside when disabled or the
-    # sibling TANTGen Kitsune tree is unavailable.
-    metrics["kitsune"] = _run_kitsune_eval(
-        config, kitsune_pool, output_dir, metrics)
+    # ---- Independent-NIDS efficacy (the headline metric) ---------------------
+    # Realize adv / purified / clean packets and score each through the real NIDS each
+    # attack was built to evade (Kitsune for the Kitsune-native attacks, ML-NIDS for
+    # the CIC attacks) — detectors DEPT never trained, so this breaks the TCN's
+    # circularity. Best-effort: a source is skipped-with-reason when its NIDS/deps are
+    # unavailable (so the reconstruction + TCN groups still report).
+    metrics["nids"] = _run_nids_eval(config, nids_pool, output_dir, metrics)
 
     (output_dir / "metrics.json").write_text(json.dumps(metrics, indent=2, default=str))
 
     # ---- Plots ---------------------------------------------------------------
     _plot_reconstruction_error(metrics, output_dir / "reconstruction_error.png")
     _plot_purification_gain(metrics, output_dir / "purification_gain.png")
-    _plot_kitsune_restoration(metrics, output_dir / "kitsune_restoration.png")
+    _plot_nids_restoration(metrics, output_dir / "nids_restoration.png")
     _plot_training_curves(output_dir / "training_curves.json",
                           output_dir / "training_curves.png")
 
@@ -376,237 +381,98 @@ def _load_ipat_stats(tensors_dir: Path | str) -> tuple[float, float]:
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Independent-NIDS efficacy (Kitsune)
+# Independent-NIDS efficacy (the headline metric)
 # ──────────────────────────────────────────────────────────────────────────────
 
-_KITSUNE_BRANCHES = ("adv", "purified", "clean")
+_NIDS_BRANCHES = ("adv", "purified", "clean")
 
 
-def _sub(a, b):
-    return (a - b) if (a is not None and b is not None) else None
+def _abs(p, anchor: Path) -> Path:
+    p = Path(p)
+    return p if p.is_absolute() else anchor / p
 
 
-def _restoration_ratio(adv, pur, clean):
-    """Fraction of the adv→clean anomaly-score gap the purifier recovers, in [~0, ~1].
+def _run_nids_eval(config, nids_pool, output_dir, metrics) -> dict:
+    """Score adv / purified / clean realized packets through each attack's real NIDS.
 
-    ``0`` = no restoration (purified ≈ adversarial), ``1`` = full restoration
-    (purified ≈ clean original). Robust to Kitsune's absolute RMSE scale / threshold
-    (which does not transfer across feeding regimes), unlike the detection rate.
-    ``None`` when the gap is degenerate (clean ≈ adv, i.e. nothing to restore).
+    For each ``<base>_adv_<mode>`` source we realize three aligned packet sets (same
+    flows / identity / payload; only size+timing differ) and score each through the
+    NIDS ``<base>`` was built to evade — Kitsune for the Kitsune-native attacks,
+    TANTGen's ML-NIDS for the CIC attacks (resolved via :class:`NIDSRegistry`).
+    Detection *restoration*: purification should raise the NIDS anomaly signal from the
+    (evaded) adversarial floor toward the clean-original oracle. Best-effort per source
+    — a source whose NIDS or its dependencies are missing is recorded under
+    ``skipped_sources`` so the reconstruction + TCN metric groups still report.
+
+    ``score_restoration_ratio`` (per source, single NIDS) is the headline; the
+    cross-family ``overall`` reads ``detection_restoration_ratio`` (rate-based, so it is
+    safe to aggregate Kitsune and ML-NIDS together), with per-family numbers in
+    ``by_kind``.
     """
-    if adv is None or pur is None or clean is None:
-        return None
-    gap = clean - adv
-    if abs(gap) < 1e-9:
-        return None
-    return (pur - adv) / gap
-
-
-def _flow_agg(rmse: np.ndarray, keys: list, detection: str) -> dict:
-    """Aggregate per-packet RMSE into a per-flow score (``max`` or ``mean``).
-
-    ``rmse[i]`` and ``keys[i]`` are aligned (Kitsune consumed packets in list order);
-    if extraction stopped early ``len(rmse) < len(keys)`` — we zip the common prefix.
-    """
-    per: dict[str, list] = defaultdict(list)
-    for i in range(min(len(rmse), len(keys))):
-        per[keys[i]].append(float(rmse[i]))
-    reduce = np.mean if detection == "mean" else np.max
-    return {k: float(reduce(v)) for k, v in per.items()}
-
-
-def _branch_stats(agg: dict, threshold: float) -> dict:
-    vals = np.fromiter(agg.values(), dtype=np.float64) if agg else np.zeros(0)
-    n = int(vals.size)
-    return {
-        "mean_rmse": float(vals.mean()) if n else None,
-        "detection_rate": float((vals > threshold).mean()) if n else None,
-        "n_flows": n,
-        "sum_rmse": float(vals.sum()),
-        "n_detected": int((vals > threshold).sum()),
-    }
-
-
-def _resolve_kitsune_model(krun, base, tantgen_root, model_dir, benign_dir,
-                           pretrained, base_to_tg, *, fm, ad, cap, seed) -> dict:
-    """Locate (or train on demand) the Kitsune model for ``base``.
-
-    Priority: TANTGen's calibrated pretrained pickle → a previously DEPT-trained
-    pickle → train a fresh one on the benign split. Returns
-    ``{"kitnet", "threshold", "source"}`` or ``{"error": reason}``.
-    """
-    rel = pretrained.get(base)
-    if rel:
-        p = Path(rel)
-        if not p.is_absolute():
-            p = tantgen_root / p
-        if p.exists():
-            try:
-                kn, thr = krun.load_model(p, tantgen_root)
-                return {"kitnet": kn, "threshold": thr, "source": "pretrained"}
-            except Exception as e:  # pragma: no cover - defensive
-                return {"error": f"load pretrained failed: {e}"}
-
-    local = model_dir / f"{base}_model.pkl"
-    if local.exists():
-        try:
-            kn, thr = krun.load_model(local, tantgen_root)
-            return {"kitnet": kn, "threshold": thr, "source": "trained"}
-        except Exception as e:  # pragma: no cover - defensive
-            return {"error": f"load trained failed: {e}"}
-
-    tg = base_to_tg.get(base)
-    if not tg:
-        return {"error": f"no pretrained/trained model and no base_to_tg entry for '{base}'"}
-    benign_pcap = benign_dir / f"{tg}_benign.pcap"
-    if not benign_pcap.exists():
-        return {"error": f"benign PCAP not found: {benign_pcap}"}
-    try:
-        log.info("training Kitsune for %s from %s", base, benign_pcap)
-        krun.train_model(benign_pcap, local, tantgen_root, fm=fm, ad=ad, cap=cap, seed=seed)
-        kn, thr = krun.load_model(local, tantgen_root)
-        return {"kitnet": kn, "threshold": thr, "source": "trained"}
-    except Exception as e:
-        return {"error": f"train failed: {e}"}
-
-
-def _run_kitsune_eval(config, kitsune_pool, output_dir, metrics) -> dict:
-    """Score adv / purified / clean realized packets through Kitsune (independent NIDS).
-
-    For each ``<base>_adv_<mode>`` source we realize three aligned packet sets and score
-    each through the calibrated Kitsune for ``<base>``. Detection *restoration*:
-    purification should raise Kitsune's RMSE / detection rate from the (evaded)
-    adversarial floor back toward the clean-original attack (the oracle ceiling).
-    """
-    kcfg = dict(config.get("kitsune", {}))
-    if not kcfg.get("enabled", False):
-        return {"skipped": "kitsune.enabled is false"}
-    try:
-        from ..kitsune import runner as krun
-    except Exception as e:  # pragma: no cover - defensive
-        return {"skipped": f"kitsune adapter import failed: {e}"}
-
+    ncfg = dict(config.get("nids", {}))
+    if not ncfg.get("enabled", True):
+        return {"skipped": "nids.enabled is false"}
     repo_root = Path(config.get("_repo_root", "."))
+    reg = NIDSRegistry(ncfg, repo_root)
 
-    def _abs(p, anchor=repo_root):
-        p = Path(p)
-        return p if p.is_absolute() else anchor / p
-
-    tantgen_root = _abs(kcfg.get("tantgen_root", ""))
-    ok, why = krun.available(tantgen_root)
-    if not ok:
-        return {"skipped": f"kitsune unavailable: {why}"}
-
-    model_dir = _abs(kcfg.get("model_dir", "data/models/kitsune"))
-    benign_dir = _abs(kcfg.get("benign_pcap_dir", "data/original/Kitsune/Benign"), tantgen_root)
-    pretrained = kcfg.get("pretrained", {}) or {}
-    base_to_tg = kcfg.get("base_to_tg", {}) or {}
-    # Restrict to the Kitsune-native attacks TANTGen calibrated (empty = no restriction).
-    sources = set(kcfg.get("sources", []) or [])
-    detection = str(kcfg.get("detection", "max"))
-    fm, ad = int(kcfg.get("fm_grace", 5000)), int(kcfg.get("ad_grace", 50000))
-    cap, seed = int(kcfg.get("train_cap_packets", 55000)), int(kcfg.get("seed", 42))
-
-    pcap_dir = _abs(config.get("realize", {}).get("adversarial_pcap_dir", "data/adversarial"))
-    realized_dir = output_dir / "realized_kitsune"
-
-    model_cache: dict[str, dict] = {}
-    summary = {"detection": detection, "scope": sorted(sources) if sources else "all",
-               "per_source": {}, "skipped_sources": {}}
-    acc = {br: {"sum_rmse": 0.0, "n_detected": 0, "n_flows": 0} for br in _KITSUNE_BRANCHES}
+    pcap_dir = _abs(config.get("realize", {}).get(
+        "adversarial_pcap_dir", "data/adversarial"), repo_root)
+    realized_dir = output_dir / "realized_nids"
     mean_std = _load_ipat_stats(config["tensors_dir"])
 
-    for gname, flows in sorted(kitsune_pool.items()):
+    summary = {"per_source": {}, "skipped_sources": {}, "models": {}}
+    acc_all: dict = {}
+    acc_kind: dict[str, dict] = {}
+
+    for gname, flows in sorted(nids_pool.items()):
         base, mode = gname.rsplit("_adv_", 1)
-        if sources and base not in sources:
-            continue  # out of scope (only the Kitsune-native attacks are evaluated)
-        if base not in model_cache:
-            model_cache[base] = _resolve_kitsune_model(
-                krun, base, tantgen_root, model_dir, benign_dir, pretrained,
-                base_to_tg, fm=fm, ad=ad, cap=cap, seed=seed)
-        resolved = model_cache[base]
-        if "error" in resolved:
-            summary["skipped_sources"][gname] = resolved["error"]
+        if not reg.known(base):
+            summary["skipped_sources"][gname] = f"no NIDS mapping for base '{base}'"
             continue
-        kitnet, threshold, source = (
-            resolved["kitnet"], resolved["threshold"], resolved["source"])
+        try:
+            model = reg.get(base)
+        except NIDSUnavailable as e:
+            summary["skipped_sources"][gname] = str(e)
+            continue
 
         adv_pcap = pcap_dir / base / f"{base}_adversarial_{mode}.pcap"
         branches, rstats = rz.realize_triplet(adv_pcap, flows, mean_std[0], mean_std[1])
-        entry = {"realize": rstats, "threshold": threshold, "model_source": source}
+        entry = {"realize": rstats, "model": model.name,
+                 "model_source": getattr(model, "model_source", "?"), "kind": model.kind}
         if rstats.get("packets_per_branch", 0) == 0:
             entry["skipped"] = rstats.get("error", "no realized packets")
             summary["per_source"][gname] = entry
             continue
 
-        bs = {}
-        for br in _KITSUNE_BRANCHES:
+        scored = {}
+        for br in _NIDS_BRANCHES:
             pkts, keys = branches[br]["packets"], branches[br]["keys"]
             rz.write_pcap(pkts, realized_dir / f"{gname}_{br}.pcap")
-            feats = krun.extract_features(pkts, tantgen_root)
-            rmse = krun.score(kitnet, feats)
-            bs[br] = _branch_stats(_flow_agg(rmse, keys, detection), threshold)
-            acc[br]["sum_rmse"] += bs[br]["sum_rmse"]
-            acc[br]["n_detected"] += bs[br]["n_detected"]
-            acc[br]["n_flows"] += bs[br]["n_flows"]
+            bscore = model.score(pkts, keys)
+            scored[br] = bscore
+            nids_metrics.accumulate(acc_all, br, bscore)
+            nids_metrics.accumulate(acc_kind.setdefault(model.kind, {}), br, bscore)
 
-        km = _finalize_kitsune(bs, threshold, source)
-        entry.update(km)
+        rm = nids_metrics.finalize_restoration(
+            scored["adv"], scored["purified"], scored["clean"],
+            threshold=model.threshold, model_name=model.name)
+        rm["kind"] = model.kind
+        entry.update(rm)
         summary["per_source"][gname] = entry
+        summary["models"][base] = model.name
         if gname in metrics["per_source"]:
-            metrics["per_source"][gname]["kitsune"] = km
+            metrics["per_source"][gname]["nids"] = rm
 
-    summary["overall"] = _finalize_kitsune_overall(acc)
+    if not summary["per_source"]:
+        why = "; ".join(sorted(set(summary["skipped_sources"].values()))) or "no sources"
+        return {"skipped": f"all NIDS sources skipped ({why})",
+                "skipped_sources": summary["skipped_sources"]}
+
+    summary["overall"] = nids_metrics.finalize_restoration_overall(acc_all)
+    summary["by_kind"] = {
+        k: nids_metrics.finalize_restoration_overall(a)
+        for k, a in sorted(acc_kind.items())}
     return summary
-
-
-def _finalize_kitsune(bs: dict, threshold: float, source: str) -> dict:
-    d_adv = bs["adv"]["detection_rate"]
-    d_pur = bs["purified"]["detection_rate"]
-    d_cln = bs["clean"]["detection_rate"]
-    r_adv, r_pur, r_cln = (
-        bs["adv"]["mean_rmse"], bs["purified"]["mean_rmse"], bs["clean"]["mean_rmse"])
-    return {
-        # Primary (robust to Kitsune's absolute scale): continuous anomaly score.
-        "mean_rmse_adv": r_adv,
-        "mean_rmse_purified": r_pur,
-        "mean_rmse_clean": r_cln,
-        "rmse_restoration_ratio": _restoration_ratio(r_adv, r_pur, r_cln),
-        # Secondary (threshold-dependent; see the feeding-regime caveat in the README).
-        "detection_rate_adv": d_adv,
-        "detection_rate_purified": d_pur,
-        "detection_rate_clean": d_cln,
-        "restoration_gain": _sub(d_pur, d_adv),   # detectability purification recovers
-        "residual_gap": _sub(d_cln, d_pur),       # shortfall vs the clean oracle ceiling
-        "threshold": threshold,
-        "model_source": source,
-        "n_flows": bs["purified"]["n_flows"],
-    }
-
-
-def _finalize_kitsune_overall(acc: dict) -> dict:
-    def rate(br):
-        n = acc[br]["n_flows"]
-        return (acc[br]["n_detected"] / n) if n else None
-
-    def mean(br):
-        n = acc[br]["n_flows"]
-        return (acc[br]["sum_rmse"] / n) if n else None
-
-    d_adv, d_pur, d_cln = rate("adv"), rate("purified"), rate("clean")
-    r_adv, r_pur, r_cln = mean("adv"), mean("purified"), mean("clean")
-    return {
-        "mean_rmse_adv": r_adv,
-        "mean_rmse_purified": r_pur,
-        "mean_rmse_clean": r_cln,
-        "rmse_restoration_ratio": _restoration_ratio(r_adv, r_pur, r_cln),
-        "detection_rate_adv": d_adv,
-        "detection_rate_purified": d_pur,
-        "detection_rate_clean": d_cln,
-        "restoration_gain": _sub(d_pur, d_adv),
-        "residual_gap": _sub(d_cln, d_pur),
-        "n_flows": acc["purified"]["n_flows"],
-    }
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -661,10 +527,10 @@ def _plot_purification_gain(metrics: dict, out_path: Path) -> None:
     plt.close(fig)
 
 
-def _plot_kitsune_restoration(metrics: dict, out_path: Path) -> None:
-    """Detection restoration through Kitsune: detection rate + mean RMSE per source."""
-    kit = metrics.get("kitsune", {})
-    per = kit.get("per_source", {})
+def _plot_nids_restoration(metrics: dict, out_path: Path) -> None:
+    """Detection restoration through the independent NIDS: detection rate + mean score."""
+    nids = metrics.get("nids", {})
+    per = nids.get("per_source", {})
     names = [n for n in sorted(per)
              if per[n].get("detection_rate_purified") is not None]
     if not names:
@@ -686,12 +552,14 @@ def _plot_kitsune_restoration(metrics: dict, out_path: Path) -> None:
         ax.set_xticklabels(names, rotation=90, fontsize=7)
         ax.set_title(title)
 
-    _tri(ax1, "detection_rate", "Kitsune detection rate (RMSE > φ)",
+    _tri(ax1, "detection_rate", "NIDS detection rate",
          "Detection restoration (independent NIDS)", ylim=(0, 1))
     ax1.legend(fontsize=7)
-    _tri(ax2, "mean_rmse", "mean per-flow Kitsune RMSE",
+    # mean_score = Kitsune RMSE for Kitsune-native attacks, ML-NIDS P(malicious) for
+    # the CIC attacks (different scales — read per-source, not across sources).
+    _tri(ax2, "mean_score", "mean per-flow NIDS anomaly score",
          "Anomaly score (adv → purified → clean)")
-    fig.suptitle("Purification efficacy through Kitsune (KitNET) — "
+    fig.suptitle("Purification efficacy through the independent NIDS — "
                  "purified should rise from adv toward clean", fontsize=10)
     fig.tight_layout()
     fig.savefig(out_path, dpi=130)

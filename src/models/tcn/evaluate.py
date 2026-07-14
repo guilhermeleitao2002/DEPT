@@ -117,6 +117,26 @@ def _load_dataset_index(path: Path) -> dict:
     }
 
 
+def _reanchor_folder(folder, repo_root: Path) -> Path:
+    """Repair a source folder whose stored absolute path is stale.
+
+    ``dataset_index.npz`` persists absolute source-folder paths at build time. If the
+    repository is later moved or renamed (e.g. the ADEPT -> DEPT rename), those paths no
+    longer resolve. When a stored path is missing, re-anchor it under the current repo
+    root by its ``.../data/...`` suffix; this is a no-op whenever the stored path still
+    exists, so it never changes behaviour for an in-place repo.
+    """
+    p = Path(folder)
+    if p.exists():
+        return p
+    s = str(p).replace("\\", "/")
+    if "/data/" in s:
+        cand = Path(repo_root) / ("data/" + s.split("/data/", 1)[1])
+        if cand.exists():
+            return cand
+    return p
+
+
 @torch.inference_mode()
 def _collect_flow_predictions(
     model: torch.nn.Module,
@@ -260,8 +280,9 @@ def predict_streams(
     # Derive (source, flow_id_str) keys so RF and TCN streams share a join
     # key. Build a per-source local_idx -> flow_id_str lookup once.
     src_to_lookup: dict[str, dict[int, str]] = {}
+    repo_root = Path(output_dir).resolve().parents[2]  # <repo>/data/models/tcn -> <repo>
     for src in set(sources_n.tolist()):
-        folder = idx["source_folders"][src]
+        folder = _reanchor_folder(idx["source_folders"][src], repo_root)
         _y, fids, _ls, locals_meta, _ = load_source_meta(folder, src)
         src_to_lookup[src] = {int(li): str(fid) for li, fid in zip(locals_meta, fids)}
     flow_keys = [

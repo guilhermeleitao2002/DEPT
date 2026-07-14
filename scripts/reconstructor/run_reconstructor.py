@@ -7,8 +7,11 @@ Trains a small causal residual denoiser that purifies adversarially-perturbed
 flows back onto the clean-traffic manifold, and evaluates it on the held-out
 test pairs with three metric groups:
 
-  * Reconstruction quality — MSE on perturbed dims, before vs after.
-  * Purification gain       — TCN P(adversarial) on adv / recon / clean.
+  * Reconstruction quality  — MSE on perturbed dims, before vs after.
+  * Independent-NIDS efficacy (headline) — detection restoration through the real
+    NIDS each attack evades (Kitsune / ML-NIDS), via src.models.nids.
+  * Purification gain (secondary) — DEPT's own TCN P(adversarial); circular, kept
+    only as an in-distribution sanity check.
   * Protocol compliance     — tshark on the realized purified packets.
 
 Usage
@@ -122,34 +125,40 @@ def _print_recon_metrics(metrics: dict) -> None:
           f"{cyan('after')} {_fmt(after, 6)}   "
           f"{cyan('reduction')} {bold(_fmt(ratio, 1) + '×') if ratio else dim('—')}")
 
+    # ---- Headline: independent NIDS (detection restoration) ----
+    nids = metrics.get("nids", {})
+    nov = nids.get("overall") if isinstance(nids, dict) else None
+    if nov:
+        print(f"\n {bold('Purification efficacy (independent NIDS — the headline metric)')}")
+        print(f"   {dim('detection restored: adv (evaded) → purified → clean (oracle)')}")
+        print(f"   {cyan('detection rate')}  adv {_fmt(nov.get('detection_rate_adv'))}  "
+              f"purified {_fmt(nov.get('detection_rate_purified'))}  "
+              f"clean {_fmt(nov.get('detection_rate_clean'))}")
+        drr = nov.get('detection_restoration_ratio')
+        print(f"   {cyan('detection restoration')} "
+              f"{bold(green((_fmt(drr * 100, 1) + '%') if drr is not None else '—'))}   "
+              f"{dim('(rate-based; aggregates Kitsune + ML-NIDS)')}")
+        for kind, kk in sorted((nids.get('by_kind') or {}).items()):
+            srr = kk.get('score_restoration_ratio')
+            print(f"   {cyan(kind + ' score restoration')} "
+                  f"{(_fmt(srr * 100, 1) + '%') if srr is not None else dim('—')}   "
+                  f"{dim('mean score adv/pur/clean')} "
+                  f"{_fmt(kk.get('mean_score_adv'), 3)}/"
+                  f"{_fmt(kk.get('mean_score_purified'), 3)}/"
+                  f"{_fmt(kk.get('mean_score_clean'), 3)}")
+    elif isinstance(nids, dict) and nids.get("skipped"):
+        print(f"\n {bold('Purification efficacy (independent NIDS)')}  "
+              f"{yellow('skipped:')} {dim(str(nids['skipped']))}")
+
+    # ---- Secondary: TCN (circular — internal sanity check only) ----
     if metrics.get("tcn_used"):
         pur = ov["purification"]
-        print(f"\n {bold('Purification gain (through TCN)')}")
+        print(f"\n {bold('Purification gain (through TCN — internal sanity check, circular)')}")
         print(f"   {cyan('P(adv|adv)')} {_fmt(pur['p_adv_on_adv'])}   "
               f"{cyan('P(adv|recon)')} {_fmt(pur['p_adv_on_recon'])}   "
               f"{cyan('P(adv|clean)')} {_fmt(pur['p_adv_on_clean'])}")
-        print(f"   {cyan('gain')} {bold(green(_fmt(pur['gain'])))}   "
+        print(f"   {cyan('gain')} {_fmt(pur['gain'])}   "
               f"{cyan('residual gap')} {_fmt(pur['residual_gap'])}")
-
-    kit = metrics.get("kitsune", {})
-    kov = kit.get("overall") if isinstance(kit, dict) else None
-    if kov:
-        print(f"\n {bold('Purification efficacy (through Kitsune — independent NIDS)')}")
-        print(f"   {dim('anomaly score restored: adv (evaded) → purified → clean (oracle)')}")
-        print(f"   {cyan('mean RMSE')}  adv {_fmt(kov.get('mean_rmse_adv'), 4)}  "
-              f"purified {_fmt(kov.get('mean_rmse_purified'), 4)}  "
-              f"clean {_fmt(kov.get('mean_rmse_clean'), 4)}")
-        rr = kov.get('rmse_restoration_ratio')
-        print(f"   {cyan('RMSE restoration')} "
-              f"{bold(green((_fmt(rr * 100, 1) + '%') if rr is not None else '—'))}   "
-              f"{dim('(fraction of the adv→clean anomaly gap recovered)')}")
-        print(f"   {cyan('detect(adv)')} {_fmt(kov.get('detection_rate_adv'))}   "
-              f"{cyan('detect(purified)')} {_fmt(kov.get('detection_rate_purified'))}   "
-              f"{cyan('detect(clean)')} {_fmt(kov.get('detection_rate_clean'))}   "
-              f"{dim('(threshold-dependent — see README)')}")
-    elif isinstance(kit, dict) and kit.get("skipped"):
-        print(f"\n {bold('Purification efficacy (Kitsune)')}  "
-              f"{yellow('skipped:')} {dim(str(kit['skipped']))}")
 
     comp = ov["protocol_compliance"]
     print(f"\n {bold('Protocol compliance')}")
@@ -158,23 +167,23 @@ def _print_recon_metrics(metrics: dict) -> None:
     per = metrics.get("per_source", {})
     if per:
         print(f"\n {bold('Per-source')}  {dim('(' + str(len(per)) + ' variant(s))')}")
-        hdr = (f"   {'variant':<24} {'mse_after':>10} "
-               f"{'P_recon':>8} {'gain':>7} "
-               f"{'K_adv':>7} {'K_puri':>7} {'K_clean':>7} {'tshark':>7}")
+        hdr = (f"   {'variant':<24} {'mse_after':>10} {'nids':>7} "
+               f"{'det_adv':>8} {'det_pur':>8} {'det_cln':>8} "
+               f"{'restor':>7} {'tshark':>7}")
         print(cyan(hdr))
         for name in sorted(per.keys()):
             s = per[name]
             r = s["reconstruction"]
-            p = s["purification"]
             c = s["protocol_compliance"]
-            k = s.get("kitsune", {})
+            k = s.get("nids", {})
+            srr = k.get("score_restoration_ratio")
             print(f"   {name:<24} "
                   f"{_fmt(r.get('perturbed_mse_after'), 5):>10} "
-                  f"{_fmt(p.get('p_adv_on_recon'), 3):>8} "
-                  f"{_fmt(p.get('gain'), 3):>7} "
-                  f"{_fmt(k.get('detection_rate_adv'), 3):>7} "
-                  f"{_fmt(k.get('detection_rate_purified'), 3):>7} "
-                  f"{_fmt(k.get('detection_rate_clean'), 3):>7} "
+                  f"{str(k.get('kind') or '—'):>7} "
+                  f"{_fmt(k.get('detection_rate_adv'), 3):>8} "
+                  f"{_fmt(k.get('detection_rate_purified'), 3):>8} "
+                  f"{_fmt(k.get('detection_rate_clean'), 3):>8} "
+                  f"{(_fmt(srr, 2) if srr is not None else '—'):>7} "
                   f"{_fmt(c.get('tshark_rate'), 3):>7}")
 
 

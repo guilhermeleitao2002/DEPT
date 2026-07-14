@@ -24,14 +24,20 @@ scikit-learn>=1.3           # import name: sklearn
 # --- Packet / network processing ---------------------------------------------
 scapy>=2.5
 
-# --- Kitsune (independent-NIDS purification metric) --------------------------
-# The reconstructor eval scores purified packets through TANTGen's Kitsune
-# (KitNET + the compiled AfterImage Cython extension). Loading that prebuilt
-# `AfterImage*.so` runs `pyximport.install()` at import, so this venv needs
-# Cython/pyximport. Matches TANTGen's Cython 3.2.4. The metric also requires the
-# sibling TANTGen tree with its AfterImage .so already built (see reconstructor.yaml
-# `kitsune.tantgen_root`); it is best-effort and skipped if absent.
-Cython==3.2.4               # provides `pyximport` for the AfterImage .so
+# --- Independent-NIDS evaluation (reconstructor eval + deployment baseline) ---
+# Both the reconstructor eval and scripts/baseline score realized packets through the
+# real NIDS each attack was built to evade (src/models/nids), reused from the sibling
+# TANTGen tree (see `nids.tantgen_root`). Two families, two dependencies:
+#
+#  * Kitsune (mirai, ssdp_flood): KitNET + the compiled AfterImage Cython extension.
+#    Loading that prebuilt `AfterImage*.so` runs `pyximport.install()` at import, so this
+#    venv needs Cython/pyximport (matches TANTGen's Cython 3.2.4) and the sibling tree
+#    with its AfterImage .so already built.
+#  * ML-NIDS (the 8 CIC-IDS/CIC-DDoS attacks): TANTGen's CICFlowMeter flow classifiers.
+#    Scoring re-extracts flow features with the `cicflowmeter` CLI, so it MUST be on PATH
+#    — this is a hard dependency (the ML-NIDS path errors clearly if it is missing).
+Cython==3.2.4               # provides `pyximport` for the AfterImage .so (Kitsune)
+cicflowmeter>=0.1.6         # `cicflowmeter` CLI: PCAP -> flow features (ML-NIDS scoring)
 
 # --- Deep learning -----------------------------------------------------------
 # DEPT TCN + mini-transformer meta-learner (raw torch);
