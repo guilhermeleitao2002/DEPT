@@ -27,7 +27,7 @@ Usage
     python3 scripts/gradient_ablation/run_gradient_ablation.py --flows-per-source 20 \
         --budgets b0,b32
 
-Extra-pipeline: NOT a phase of run_pipeline.sh. Reads config/gradient_ablation.yaml.
+Phase 7 of run_pipeline.sh (global mode only). Reads config/gradient_ablation.yaml.
 Writes data/models/gradient_ablation/{gradient_ablation_metrics.json, evasion_cost.png,
 sidecar/}. Requires trained RF + TCN + meta-learner under data/models/ and the
 TANTGen PCAPs under data/adversarial/.
