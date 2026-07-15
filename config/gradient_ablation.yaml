@@ -1,5 +1,5 @@
 # =====================================================================
-# DEPT — Gradient-guided transferable evasion (RQ1)
+# DEPT — Gradient ablation (RQ1)
 # =====================================================================
 # TANTGen, the adversary DEPT is trained on, is black-box and gradient-free.
 # This study adds the complementary attacker RQ1 asks about: one that
@@ -8,19 +8,19 @@
 # more budget than the TCN alone, heterogeneous stacking has measurably raised
 # the price of evasion.
 #
-#   python3 scripts/transferability/run_transferability.py                  # all sources
-#   python3 scripts/transferability/run_transferability.py --attack mirai   # one attack
+#   python3 scripts/gradient_ablation/run_gradient_ablation.py                  # all sources
+#   python3 scripts/gradient_ablation/run_gradient_ablation.py --attack mirai   # one attack
 #
 # Extra-pipeline: NOT a phase of run_pipeline.sh. Depends on trained RF + TCN +
 # meta-learner under data/models/, and on the TANTGen PCAPs under
 # data/adversarial/ (the sidecar re-derives per-packet payload features from
-# them — see src/models/transferability/features.py for why that is unavoidable).
+# them — see src/models/gradient_ablation/features.py for why that is unavoidable).
 
 # ---- Data ----
 tensors_dir: data/tensors
 adversarial_dir: data/tensors/adversarial     # tensorized TANTGen sources
 adversarial_pcap_dir: data/adversarial        # TANTGen PCAPs (phase 1 output)
-output_dir: data/models/transferability
+output_dir: data/models/gradient_ablation
 min_len: 2
 
 # ---- Trained targets ----
@@ -62,7 +62,7 @@ seed: 42
 # In physical units, because an L-inf ball on the raw tensor is meaningless here:
 # the IPAT channel is z-scored with std=211047.5 s, so eps=0.01 would buy +/-2110
 # SECONDS of delay while the nPrint bit channels are {-1,0,1}. See
-# src/models/transferability/attack.py.
+# src/models/gradient_ablation/attack.py.
 #
 # `bytes`   — max padding per packet (increase-only; capped at the MTU)
 # `seconds` — max added delay per packet (increase-only)

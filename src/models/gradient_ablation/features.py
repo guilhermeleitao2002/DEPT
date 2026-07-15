@@ -80,7 +80,7 @@ SC_TCP_FLAGS = 4
 SC_DIRECTION = 5
 
 HIST_BINS = 256
-SIDECAR_SCHEMA = "transferability-sidecar-v1"
+SIDECAR_SCHEMA = "gradient-ablation-sidecar-v1"
 
 
 @dataclass

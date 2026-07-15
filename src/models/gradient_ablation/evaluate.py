@@ -565,7 +565,7 @@ def _get_sidecar(
 
 
 def evaluate(config: dict, output_dir: Path, attack: str | None = None) -> dict:
-    """Run the study end to end and write ``transferability_metrics.json``."""
+    """Run the study end to end and write ``gradient_ablation_metrics.json``."""
     from .attack import PGDConfig
     from .features import select_flows, test_flow_ids_from_split
     from .pipeline import (
@@ -721,10 +721,10 @@ def evaluate(config: dict, output_dir: Path, attack: str | None = None) -> dict:
         "skipped_sources": skipped,
     }
 
-    (output_dir / "transferability_metrics.json").write_text(
+    (output_dir / "gradient_ablation_metrics.json").write_text(
         json.dumps(summary, indent=2, default=str))
     plot_asr_curves(curves, spend, output_dir / "evasion_cost.png", policy=policy)
-    log.info("wrote %s", output_dir / "transferability_metrics.json")
+    log.info("wrote %s", output_dir / "gradient_ablation_metrics.json")
     return summary
 
 

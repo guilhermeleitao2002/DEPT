@@ -1,4 +1,4 @@
-# Gradient-Guided Evasion — RQ1
+# Gradient Ablation — RQ1
 
 > Part of [DEPT](../../README.md).
 
@@ -6,10 +6,10 @@
 [`scripts/baseline/`](../baseline/README.md).
 
 ```bash
-python3 scripts/transferability/run_transferability.py                    # all sources
-python3 scripts/transferability/run_transferability.py --attack mirai     # one attack
-python3 scripts/transferability/run_transferability.py \
-    --flows-per-source 24 --budgets b0,b32,b128                           # smoke run
+python3 scripts/gradient_ablation/run_gradient_ablation.py                    # all sources
+python3 scripts/gradient_ablation/run_gradient_ablation.py --attack mirai     # one attack
+python3 scripts/gradient_ablation/run_gradient_ablation.py \
+    --flows-per-source 24 --budgets b0,b32,b128                               # smoke run
 ```
 
 ## What it answers
@@ -149,10 +149,10 @@ by +0.09 B.
 
 ## Results
 
-<!-- TODO: populate from data/models/transferability/transferability_metrics.json -->
+<!-- TODO: populate from data/models/gradient_ablation/gradient_ablation_metrics.json -->
 
 Not yet run at full scale. The smoke configuration (`--attack brute_force`,
-24 flows/source) is reported in the thesis; see `data/models/transferability/`.
+24 flows/source) is reported in the thesis; see `data/models/gradient_ablation/`.
 
 ## Observations
 
@@ -185,11 +185,11 @@ cannot overcome that much confidence.
 z-scored IPAT channel, and `dns_ddos`'s median IAT (2.38 µs) sits *below* it — a
 representational limit of the tensor, not an architectural property of the models.
 
-## Output files (`data/models/transferability/`)
+## Output files (`data/models/gradient_ablation/`)
 
 | File | Description |
 |---|---|
-| `transferability_metrics.json` | All metrics: ASR curves, min budget, spend, reliance shift, thresholds, attack-strength check, TANTGen budget |
+| `gradient_ablation_metrics.json` | All metrics: ASR curves, min budget, spend, reliance shift, thresholds, attack-strength check, TANTGen budget |
 | `evasion_cost.png` | ASR vs realised attacker spend, one line per target |
 | `sidecar/<source>.npz` | Cached per-packet RF base features + byte histograms (verified against `rf_checkpoints.npy` at δ=0) |
 

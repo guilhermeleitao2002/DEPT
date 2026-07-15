@@ -1,4 +1,4 @@
-"""Gradient-guided transferable evasion — DEPT's second adversary (RQ1).
+"""Gradient ablation — DEPT's second adversary, priced across the ensemble (RQ1).
 
 TANTGen, DEPT's training adversary, is black-box and gradient-free. This
 package adds the complementary attacker RQ1 asks about: one that
@@ -11,5 +11,5 @@ budget than the TCN alone, heterogeneous stacking has measurably raised the
 price of evasion — RQ1 answered by measurement rather than by design argument.
 
 Extra-pipeline: not a phase of ``run_pipeline.sh``. See
-``scripts/transferability/README.md``.
+``scripts/gradient_ablation/README.md``.
 """

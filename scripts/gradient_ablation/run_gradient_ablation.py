@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-DEPT — Gradient-guided transferable evasion (RQ1)
-=================================================
+DEPT — Gradient ablation (RQ1)
+==============================
 
 TANTGen, the adversary DEPT is trained on, is black-box and gradient-free. This
 study adds the attacker RQ1 asks about: one that differentiates the **TCN**
@@ -22,13 +22,13 @@ measurably raised the price of evasion, and RQ1 is answered by measurement.
 
 Usage
 -----
-    python3 scripts/transferability/run_transferability.py
-    python3 scripts/transferability/run_transferability.py --attack mirai
-    python3 scripts/transferability/run_transferability.py --flows-per-source 20 \
+    python3 scripts/gradient_ablation/run_gradient_ablation.py
+    python3 scripts/gradient_ablation/run_gradient_ablation.py --attack mirai
+    python3 scripts/gradient_ablation/run_gradient_ablation.py --flows-per-source 20 \
         --budgets b0,b32
 
-Extra-pipeline: NOT a phase of run_pipeline.sh. Reads config/transferability.yaml.
-Writes data/models/transferability/{transferability_metrics.json, evasion_cost.png,
+Extra-pipeline: NOT a phase of run_pipeline.sh. Reads config/gradient_ablation.yaml.
+Writes data/models/gradient_ablation/{gradient_ablation_metrics.json, evasion_cost.png,
 sidecar/}. Requires trained RF + TCN + meta-learner under data/models/ and the
 TANTGen PCAPs under data/adversarial/.
 """
@@ -52,7 +52,7 @@ warnings.filterwarnings(
 REPO_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO_ROOT))
 
-from src.models.transferability import evaluate as transfer_eval  # noqa: E402
+from src.models.gradient_ablation import evaluate as gradabl_eval  # noqa: E402
 
 
 _USE_COLOR = sys.stdout.isatty()
@@ -204,7 +204,7 @@ def main() -> int:
         "--budgets", default=None, metavar="ID,ID",
         help="comma-separated budget ids from the config grid (default: all)")
     parser.add_argument(
-        "--config", default="config/transferability.yaml", metavar="PATH")
+        "--config", default="config/gradient_ablation.yaml", metavar="PATH")
     args = parser.parse_args()
 
     logging.basicConfig(
@@ -246,7 +246,7 @@ def main() -> int:
 
     t0 = time.time()
     try:
-        summary = transfer_eval.evaluate(cfg, output_dir, attack=args.attack)
+        summary = gradabl_eval.evaluate(cfg, output_dir, attack=args.attack)
     except Exception as e:
         print(f"  {red(bold('✗ FAILED'))} {e}")
         raise

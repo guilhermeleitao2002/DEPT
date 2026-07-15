@@ -39,7 +39,7 @@ scapy>=2.5
 Cython==3.2.4               # provides `pyximport` for the AfterImage .so (Kitsune)
 cicflowmeter>=0.1.6         # `cicflowmeter` CLI: PCAP -> flow features (ML-NIDS scoring)
 
-# --- Gradient-guided evasion study, RQ1 (scripts/transferability) -------------
+# --- Gradient-guided evasion study, RQ1 (scripts/gradient_ablation) -------------
 # Used for ONE job: AutoProjectedGradientDescent (Croce & Hein 2020) as a
 # parameter-free, third-party check that our own PGD is not simply under-tuned.
 # The attack itself is hand-rolled, because its feasible set (increase-only,

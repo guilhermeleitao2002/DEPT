@@ -180,10 +180,10 @@ The headline is the **residual gap of 0.000**: after purification, a manipulated
 The last two are **extra-pipeline**: comparison studies, not phases of
 `run_pipeline.sh`. The baseline asks whether putting DEPT in front of a real NIDS
 restores the detection TANTGen destroyed
-([`scripts/baseline/`](scripts/baseline/README.md)); the transferability study asks
+([`scripts/baseline/`](scripts/baseline/README.md)); the gradient ablation asks
 whether heterogeneous stacking raises the cost of a *gradient-guided* attacker,
 which TANTGen — being black-box and gradient-free — cannot measure
-([`scripts/transferability/`](scripts/transferability/README.md)).
+([`scripts/gradient_ablation/`](scripts/gradient_ablation/README.md)).
 
 ## Repository layout
 
@@ -196,7 +196,7 @@ DEPT/
 │   ├── metalearner.yaml       # Meta-learner architecture and training config
 │   ├── reconstructor.yaml     # Purification transformer config (+ realization)
 │   ├── baseline.yaml          # Deployment baseline (protected-NIDS) config
-│   └── transferability.yaml   # Gradient-guided evasion study (RQ1) config
+│   └── gradient_ablation.yaml # Gradient-guided evasion study (RQ1) config
 ├── data/
 │   ├── Kitsune/               # Raw Kitsune captures
 │   ├── CIC-IDS-2017/          # Raw CIC-IDS2017 captures
@@ -209,7 +209,7 @@ DEPT/
 │       ├── metalearner/       # Meta-learner model, caches, metrics, plots
 │       ├── reconstructor/     # Purifier model, metrics, plots, realized/*.pcap
 │       ├── baseline/          # Deployment-baseline metrics (extra-pipeline)
-│       └── transferability/   # RQ1 evasion-cost metrics + sidecar cache
+│       └── gradient_ablation/ # RQ1 evasion-cost metrics + sidecar cache
 ├── scripts/
 │   ├── packet_to_tensor/      # Pipeline runner and batch processor
 │   ├── adversarial_generation/# TANTGen driver
@@ -218,7 +218,7 @@ DEPT/
 │   ├── metalearner/           # Meta-learner train + evaluate runner
 │   ├── reconstructor/         # Reconstructor train + evaluate runner
 │   ├── baseline/              # Deployment baseline — extra-pipeline
-│   └── transferability/       # Gradient-guided evasion (RQ1) — extra-pipeline
+│   └── gradient_ablation/     # Gradient-guided evasion (RQ1) — extra-pipeline
 └── src/
     ├── feature_extraction/    # Pipeline internals
     └── models/
@@ -230,7 +230,7 @@ DEPT/
         │                      #   train, realize, evaluate)
         ├── nids/              # Independent-NIDS registry (Kitsune / ML-NIDS)
         ├── baseline/          # Gated detect-then-purify deployment pipeline
-        └── transferability/   # Gradient attacker: sidecar, attack, targets,
+        └── gradient_ablation/ # Gradient attacker: sidecar, attack, targets,
                                #   pipeline, evaluate
 ```
 
@@ -306,5 +306,5 @@ python3 scripts/baseline/run_baseline.py
 # Gradient-guided evasion (RQ1) — TANTGen is black-box and gradient-free, so it
 # cannot price a gradient attacker. This crafts one perturbation against the TCN
 # and scores it, unchanged, on RF / TCN / stack.
-python3 scripts/transferability/run_transferability.py
+python3 scripts/gradient_ablation/run_gradient_ablation.py
 ```
