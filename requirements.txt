@@ -39,6 +39,18 @@ scapy>=2.5
 Cython==3.2.4               # provides `pyximport` for the AfterImage .so (Kitsune)
 cicflowmeter>=0.1.6         # `cicflowmeter` CLI: PCAP -> flow features (ML-NIDS scoring)
 
+# --- Gradient-guided evasion study, RQ1 (scripts/transferability) -------------
+# Used for ONE job: AutoProjectedGradientDescent (Croce & Hein 2020) as a
+# parameter-free, third-party check that our own PGD is not simply under-tuned.
+# The attack itself is hand-rolled, because its feasible set (increase-only,
+# integer bytes, MTU clamp, zero on non-IPv4 packets) is a projection operator
+# that ART's binary include/exclude `mask` cannot express.
+#
+# Safe against the pins above: ART's core requires only numpy/scipy/scikit-learn/
+# six/setuptools/tqdm, and torch is merely an *extra* — installing it does not
+# touch the numpy<2.0 TANTGen ABI pin or the torch==2.6.0+cu124 build.
+adversarial-robustness-toolbox>=1.20   # import name: art
+
 # --- Deep learning -----------------------------------------------------------
 # DEPT TCN + mini-transformer meta-learner (raw torch);
 # TANTGen transformer surrogate + finetune + pretrain (PyTorch Lightning).

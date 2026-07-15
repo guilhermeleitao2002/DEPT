@@ -174,6 +174,16 @@ The headline is the **residual gap of 0.000**: after purification, a manipulated
 | Streaming evaluation (AUROC@t, EDP) | ✅ |
 | Mini-Transformer meta-learner | ✅ |
 | Purification (Reconstructor) Transformer | ✅ |
+| Deployment baseline (protected-NIDS, before vs after DEPT) | ✅ |
+| Gradient-guided evasion study (RQ1) | ✅ |
+
+The last two are **extra-pipeline**: comparison studies, not phases of
+`run_pipeline.sh`. The baseline asks whether putting DEPT in front of a real NIDS
+restores the detection TANTGen destroyed
+([`scripts/baseline/`](scripts/baseline/README.md)); the transferability study asks
+whether heterogeneous stacking raises the cost of a *gradient-guided* attacker,
+which TANTGen — being black-box and gradient-free — cannot measure
+([`scripts/transferability/`](scripts/transferability/README.md)).
 
 ## Repository layout
 
@@ -184,7 +194,9 @@ DEPT/
 │   ├── rf.yaml                # Random Forest hyperparameters and split config
 │   ├── tcn.yaml               # TCN architecture and training config
 │   ├── metalearner.yaml       # Meta-learner architecture and training config
-│   └── reconstructor.yaml     # Purification transformer config (+ realization)
+│   ├── reconstructor.yaml     # Purification transformer config (+ realization)
+│   ├── baseline.yaml          # Deployment baseline (protected-NIDS) config
+│   └── transferability.yaml   # Gradient-guided evasion study (RQ1) config
 ├── data/
 │   ├── Kitsune/               # Raw Kitsune captures
 │   ├── CIC-IDS-2017/          # Raw CIC-IDS2017 captures
@@ -195,14 +207,18 @@ DEPT/
 │       ├── rf/                # RF model, metrics, plots
 │       ├── tcn/               # TCN model, metrics, plots
 │       ├── metalearner/       # Meta-learner model, caches, metrics, plots
-│       └── reconstructor/     # Purifier model, metrics, plots, realized/*.pcap
+│       ├── reconstructor/     # Purifier model, metrics, plots, realized/*.pcap
+│       ├── baseline/          # Deployment-baseline metrics (extra-pipeline)
+│       └── transferability/   # RQ1 evasion-cost metrics + sidecar cache
 ├── scripts/
 │   ├── packet_to_tensor/      # Pipeline runner and batch processor
 │   ├── adversarial_generation/# TANTGen driver
 │   ├── rf/                    # RF train + evaluate runner
 │   ├── tcn/                   # TCN train + evaluate runner
 │   ├── metalearner/           # Meta-learner train + evaluate runner
-│   └── reconstructor/         # Reconstructor train + evaluate runner
+│   ├── reconstructor/         # Reconstructor train + evaluate runner
+│   ├── baseline/              # Deployment baseline — extra-pipeline
+│   └── transferability/       # Gradient-guided evasion (RQ1) — extra-pipeline
 └── src/
     ├── feature_extraction/    # Pipeline internals
     └── models/
@@ -210,8 +226,12 @@ DEPT/
         ├── rf/                # RF dataset, train, evaluate
         ├── tcn/               # TCN model, dataset, train, evaluate
         ├── metalearner/       # Mini-Transformer meta-learner (RF + TCN fusion)
-        └── reconstructor/     # Purification transformer (model, dataset,
-                                #   train, realize, evaluate)
+        ├── reconstructor/     # Purification transformer (model, dataset,
+        │                      #   train, realize, evaluate)
+        ├── nids/              # Independent-NIDS registry (Kitsune / ML-NIDS)
+        ├── baseline/          # Gated detect-then-purify deployment pipeline
+        └── transferability/   # Gradient attacker: sidecar, attack, targets,
+                               #   pipeline, evaluate
 ```
 
 ## Requirements
@@ -272,3 +292,19 @@ python3 scripts/reconstructor/run_reconstructor.py
 ```
 
 Steps 3, 4, and 5 share the same tensor artifacts and the same flow-level split (seed=42). RF and TCN results are directly comparable; the meta-learner consumes both as a stacker over their per-flow streams. Step 6 (the reconstructor) reuses the same split — its test pairs are held out from every base learner — and uses the trained TCN from step 4 as the protected NIDS for its purification-gain metric.
+
+Two further studies sit **outside** the pipeline above. They answer questions the
+six phases structurally cannot, so they are run separately and are not part of
+`run_pipeline.sh`:
+
+```bash
+# Deployment baseline — does putting DEPT in front of a real NIDS restore the
+# detection TANTGen destroyed? Scores clean / perturbed / DEPT-defended streams
+# through the independent NIDS each attack was built to evade.
+python3 scripts/baseline/run_baseline.py
+
+# Gradient-guided evasion (RQ1) — TANTGen is black-box and gradient-free, so it
+# cannot price a gradient attacker. This crafts one perturbation against the TCN
+# and scores it, unchanged, on RF / TCN / stack.
+python3 scripts/transferability/run_transferability.py
+```
