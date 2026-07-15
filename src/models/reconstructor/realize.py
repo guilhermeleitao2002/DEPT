@@ -98,6 +98,41 @@ def _is_l7_text(l4, app: bytes) -> bool:
     return app[:10].upper().startswith(_L7_TEXT_PREFIXES)
 
 
+# Minimum Ethernet frame (802.3), excluding FCS. Frames shorter than this are
+# zero-padded by the sender; that trailer is framing, not datagram.
+_ETH_MIN_FRAME = 60
+
+
+def _split_payload(pkt, l4) -> tuple[bytes, bytes]:
+    """Split ``l4``'s payload into ``(application bytes, Ethernet trailer)``.
+
+    ``bytes(l4.payload)`` lumps the two together, and so does ``bytes(ip)`` — but
+    the trailer is Ethernet frame padding that exists only to reach the 60-byte
+    minimum. It is *not* part of the IP datagram and is not counted by
+    ``ip.len``. Conflating them makes ``len(bytes(ip)) - len(bytes(l4.payload))``
+    over-state the header by the trailer length, which then silently trims real
+    payload on a resize that should have been a no-op.
+
+    Measured on ``packet_example/flow_adversarial.pcap`` packet 0
+    (``Ether/IP/TCP/Raw/Padding``): ``ip.len`` is 73 while ``len(bytes(ip))`` is
+    75, so a no-op target of 73 resolved to ``target_app=29`` against an apparent
+    payload of 31 — a 2-byte trim, reported as a genuine edit. Since
+    ``Packet_Size`` and ``Payload_Length`` are RF features, that drift landed
+    squarely in the signal the models are scored on.
+    """
+    from scapy.all import Padding
+
+    app = bytes(l4.payload)
+    pad_layer = pkt.getlayer(Padding)
+    if pad_layer is None:
+        return app, b""
+    pad = bytes(pad_layer)
+    # Padding is always trailing; guard the slice anyway rather than trust it.
+    if pad and app.endswith(pad):
+        return app[: len(app) - len(pad)], pad
+    return app, b""
+
+
 def _apply_size(pkt, target_total: int):
     """Trim/pad application payload so the IPv4 total length equals target.
 
@@ -111,7 +146,7 @@ def _apply_size(pkt, target_total: int):
       should be excluded from the wire-validity pool rather than scored as a
       purifier failure. (The rebuild is skipped — the packet will be dropped.)
     """
-    from scapy.all import IP, TCP, UDP, Raw
+    from scapy.all import IP, TCP, UDP, Padding, Raw
 
     if not pkt.haslayer(IP):
         return pkt, False, False
@@ -125,8 +160,12 @@ def _apply_size(pkt, target_total: int):
         l4 = pkt[UDP]
     else:
         return pkt, False, False
-    app = bytes(l4.payload)
-    header_total = len(bytes(ip)) - len(app)
+
+    app, _pad = _split_payload(pkt, l4)
+    # Account against the IP header's own length field, not len(bytes(ip)):
+    # the latter includes any Ethernet trailer and would misprice every packet
+    # that carries one.
+    header_total = int(ip.len) - len(app)
     target_app = target_total - header_total
     if target_app < 0 or target_app == len(app):
         return pkt, False, False
@@ -149,7 +188,17 @@ def _apply_size(pkt, target_total: int):
             del pkt[UDP].len
         except Exception:
             pass
-    return pkt.__class__(bytes(pkt)), True, False
+    out = pkt.__class__(bytes(pkt))
+    # Re-pad to Ethernet's 60-byte minimum if the resize took the frame under it.
+    # Keyed on the *output* length, not on whether the input happened to carry a
+    # trailer: trimming an unpadded 70-byte frame to 50 needs padding just as much
+    # as shrinking a padded one. The trailer is framing, not datagram, so it is
+    # recomputed here rather than carried over.
+    short = _ETH_MIN_FRAME - len(bytes(out))
+    if short > 0:
+        out = out / Padding(load=b"\x00" * short)
+        out = out.__class__(bytes(out))
+    return out, True, False
 
 
 def realize_source(
