@@ -22,8 +22,8 @@ DEPT defends ML-based Network Intrusion Detection Systems (NIDS) against adversa
                ▼                               ▼
       ┌─────────────────┐             ┌─────────────────┐
       │      TCN        │             │  Random Forest   │
-      │ causal dilated  │             │ 400 trees,       │
-      │ [B, T, 2] logits│             │ depth=40, leaf=1 │
+      │ causal dilated  │             │ 200 trees,       │
+      │ [B, T, 2] logits│             │ depth=20, leaf=5 │
       └────────┬────────┘             └────────┬─────────┘
                │  dense stream                 │  sparse stream
                └───────────────┬───────────────┘
@@ -41,7 +41,7 @@ DEPT defends ML-based Network Intrusion Detection Systems (NIDS) against adversa
                     └───────────────────────┘
 ```
 
-The two base learners are **temporally complementary by design**: the TCN is dense and early (it flags a flow from its very first packet), while the RF is sparse and precise (it produces an early checkpoint at packet 2, then refreshes every 10 packets, and achieves near-perfect separation at all checkpoints). The meta-learner's role is to learn *when* to trust the early TCN alarm versus wait for RF confirmation — a sequential-fusion problem a transformer is well-suited for.
+The two base learners are **temporally complementary by design**: the TCN is dense and early (it flags a flow from its very first packet), while the RF is sparse and precise (it produces an early checkpoint at packet 2, then refreshes every 10 packets). The meta-learner's role is to learn *when* to trust the early TCN alarm versus wait for RF confirmation — a sequential-fusion problem a transformer is well-suited for.
 
 Paired with **TANTGen** (sibling repo), which generates the adversarial PCAPs that DEPT learns to detect and denoise. Together the two systems form a paired attack/defense benchmark.
 
@@ -161,7 +161,7 @@ The headline is the **residual gap of 0.000**: after purification, a manipulated
 | `ssdp_flood` both/size 0.92 / 0.92 | `dns_ddos`, `ntp_ddos`, `ssdp_ddos`, `ldap_ddos` (perturbation barely moves the features) |
 | `ddos` both/size 0.90 / 0.86 · `syn_ddos` size 0.76 | |
 
-**Caveats (see [`scripts/reconstructor/README.md`](scripts/reconstructor/README.md) for the full breakdown):** purification gain is measured through DEPT's *own* TCN (an independent NIDS would be a stronger test); and a size edit on an application-layer **text** protocol (SSDP/HTTP `M-SEARCH`) corrupts its L7 grammar — `tshark` flags `_ws.malformed` even though IP/UDP lengths and checksums stay valid — so those **85,379** packets (almost all `ssdp_flood` both/size) can't be faithfully realized by byte-overlay and are reported separately as `n_unrealizable_l7`, not scored as failures. The **99.8%** is over the 1.60 M realizable packets.
+**Caveats (see [`scripts/reconstructor/README.md`](scripts/reconstructor/README.md) for the full breakdown):** the purification gain above is measured through DEPT's *own* TCN and is kept only as an in-distribution sanity check — the headline efficacy metric is the independent-NIDS restoration (Kitsune / ML-NIDS, the `nids` group in `metrics.json`), which scores realized adv/purified/clean triplets through the real NIDS each attack was built to evade; and a size edit on an application-layer **text** protocol (SSDP/HTTP `M-SEARCH`) corrupts its L7 grammar — `tshark` flags `_ws.malformed` even though IP/UDP lengths and checksums stay valid — so those **85,379** packets (almost all `ssdp_flood` both/size) can't be faithfully realized by byte-overlay and are reported separately as `n_unrealizable_l7`, not scored as failures. The **99.8%** is over the 1.60 M realizable packets.
 
 ## Implementation status
 
@@ -177,13 +177,15 @@ The headline is the **residual gap of 0.000**: after purification, a manipulated
 | Deployment baseline (protected-NIDS, before vs after DEPT) | ✅ |
 | Gradient-guided evasion study (RQ1) | ✅ |
 
-The last two are **extra-pipeline**: comparison studies, not phases of
-`run_pipeline.sh`. The baseline asks whether putting DEPT in front of a real NIDS
-restores the detection TANTGen destroyed
-([`scripts/baseline/`](scripts/baseline/README.md)); the gradient ablation asks
-whether heterogeneous stacking raises the cost of a *gradient-guided* attacker,
-which TANTGen — being black-box and gradient-free — cannot measure
-([`scripts/gradient_ablation/`](scripts/gradient_ablation/README.md)).
+The last two are comparison studies that run as **phases 7–8** of
+`run_pipeline.sh` (global mode only — they evaluate the global models and are
+skipped in `--per-attack` runs). The gradient ablation asks whether
+heterogeneous stacking raises the cost of a *gradient-guided* attacker, which
+TANTGen — being black-box and gradient-free — cannot measure
+([`scripts/gradient_ablation/`](scripts/gradient_ablation/README.md)); the
+baseline asks whether putting DEPT in front of a real NIDS restores the
+detection TANTGen destroyed
+([`scripts/baseline/`](scripts/baseline/README.md)).
 
 ## Repository layout
 
@@ -208,8 +210,8 @@ DEPT/
 │       ├── tcn/               # TCN model, metrics, plots
 │       ├── metalearner/       # Meta-learner model, caches, metrics, plots
 │       ├── reconstructor/     # Purifier model, metrics, plots, realized/*.pcap
-│       ├── baseline/          # Deployment-baseline metrics (extra-pipeline)
-│       └── gradient_ablation/ # RQ1 evasion-cost metrics + sidecar cache
+│       ├── baseline/          # Deployment-baseline metrics (phase 8)
+│       └── gradient_ablation/ # RQ1 evasion-cost metrics + sidecar cache (phase 7)
 ├── scripts/
 │   ├── packet_to_tensor/      # Pipeline runner and batch processor
 │   ├── adversarial_generation/# TANTGen driver
@@ -217,8 +219,8 @@ DEPT/
 │   ├── tcn/                   # TCN train + evaluate runner
 │   ├── metalearner/           # Meta-learner train + evaluate runner
 │   ├── reconstructor/         # Reconstructor train + evaluate runner
-│   ├── baseline/              # Deployment baseline — extra-pipeline
-│   └── gradient_ablation/     # Gradient-guided evasion (RQ1) — extra-pipeline
+│   ├── baseline/              # Deployment baseline — phase 8
+│   └── gradient_ablation/     # Gradient-guided evasion (RQ1) — phase 7
 └── src/
     ├── feature_extraction/    # Pipeline internals
     └── models/
@@ -293,18 +295,19 @@ python3 scripts/reconstructor/run_reconstructor.py
 
 Steps 3, 4, and 5 share the same tensor artifacts and the same flow-level split (seed=42). RF and TCN results are directly comparable; the meta-learner consumes both as a stacker over their per-flow streams. Step 6 (the reconstructor) reuses the same split — its test pairs are held out from every base learner — and uses the trained TCN from step 4 as the protected NIDS for its purification-gain metric.
 
-Two further studies sit **outside** the pipeline above. They answer questions the
-six phases structurally cannot, so they are run separately and are not part of
-`run_pipeline.sh`:
+Two further studies complete the run as **phases 7 and 8** of
+`run_pipeline.sh`. They answer questions the six model phases structurally
+cannot, and can also be run standalone:
 
 ```bash
-# Deployment baseline — does putting DEPT in front of a real NIDS restore the
-# detection TANTGen destroyed? Scores clean / perturbed / DEPT-defended streams
-# through the independent NIDS each attack was built to evade.
-python3 scripts/baseline/run_baseline.py
-
-# Gradient-guided evasion (RQ1) — TANTGen is black-box and gradient-free, so it
-# cannot price a gradient attacker. This crafts one perturbation against the TCN
-# and scores it, unchanged, on RF / TCN / stack.
+# Phase 7 — Gradient-guided evasion (RQ1). TANTGen is black-box and
+# gradient-free, so it cannot price a gradient attacker. This crafts one
+# perturbation against the TCN and scores it, unchanged, on RF / TCN / stack.
 python3 scripts/gradient_ablation/run_gradient_ablation.py
+
+# Phase 8 — Deployment baseline. Does putting DEPT in front of a real NIDS
+# restore the detection TANTGen destroyed? Scores clean / perturbed /
+# DEPT-defended streams through the independent NIDS each attack was built
+# to evade.
+python3 scripts/baseline/run_baseline.py
 ```

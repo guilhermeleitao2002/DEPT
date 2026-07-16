@@ -21,13 +21,13 @@ Flows are loaded as variable-length sequences via `(start_idx, length)` offsets.
 ```
 Input [B, T, 1090]
     │
-    ├─ TemporalBlock(1090 → 128, k=3, d=1, chomp)  receptive field: 1+2=3
+    ├─ TemporalBlock(1090 → 128, k=3, d=1, chomp)  receptive field: 1+4=5
     │       Causal dilated Conv1d × 2, weight norm, ReLU, Dropout(0.15)
     │       Residual via 1×1 Conv1d
     │
-    ├─ TemporalBlock(128 → 128, k=3, d=2, chomp)   receptive field: +4=7
+    ├─ TemporalBlock(128 → 128, k=3, d=2, chomp)   receptive field: +8=13
     │
-    ├─ TemporalBlock(128 → 128, k=3, d=4, chomp)   receptive field: +8=15 (cumulative: 29)
+    ├─ TemporalBlock(128 → 128, k=3, d=4, chomp)   receptive field: +16=29
     │
     └─ Conv1d(128 → 2, k=1)   per-timestep head
        → [B, T, 2] logits
@@ -134,6 +134,7 @@ Best epoch: 5/9 (early-stopped). Val macro-F1 = 0.7264. Training time: ~17.6 h o
 | `training_curves.json` | Per-epoch train_loss, val_loss, val_macro_f1, lr |
 | `metrics.json` | Overall + per-adversarial-source metrics |
 | `streaming_metrics.json` | AUROC@t and EDP per source |
+| `earliness_vs_accuracy.png` | Per-source AUROC@t curves |
 | `confusion_matrix.png` | Binary confusion matrix |
 | `roc_curve.png` | ROC curve |
 | `pr_curve.png` | Precision-recall curve |

@@ -12,8 +12,9 @@ For each processed source, the pipeline writes a directory under `data/tensors/<
 | `flow_offsets.npy` | `[N_flows, 2]` int64 | `(start_idx, length)` into `flow_packets.npy` per flow. |
 | `rf_checkpoints.npy` | `[C_total, 24]` float32 | Multi-scale prefix statistics: one row per prefix milestone per flow. Default cadence (`rf_first_checkpoint=2`, `rf_checkpoint_stride=10`) emits at packets 2, 10, 20, 30, … — the early packet-2 row gives short flows (e.g. PortScan) an RF verdict. |
 | `rf_checkpoint_offsets.npy` | `[N_flows, 2]` int64 | `(start_idx, n_checkpoints)` into `rf_checkpoints.npy` per flow. |
+| `flow_ids.npy` | `[N_flows]` object | Canonical 5-tuple key per flow — used downstream to pair adversarial flows with their clean counterparts (reconstructor, baseline, gradient ablation). |
 | `flow_labels.csv` | `[N_flows]` rows | `flow_idx, label, label_str` — one row per flow. |
-| `metadata.json` | JSON | Source metadata: schema version, `n_flows`, `total_packets`, `num_checkpoints`, encoding config. |
+| `metadata.json` | JSON | Source metadata: `schema` version, `num_flows`, `num_packets`, `num_checkpoints`, encoding config. |
 
 IPAT z-scoring uses one shared `data/tensors/mean_std.json` standardizer for every source (see below).
 

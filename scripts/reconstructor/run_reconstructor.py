@@ -5,7 +5,7 @@ DEPT — Reconstructor (Purification) Transformer (train + eval)
 
 Trains a small causal residual denoiser that purifies adversarially-perturbed
 flows back onto the clean-traffic manifold, and evaluates it on the held-out
-test pairs with three metric groups:
+test pairs with four metric groups:
 
   * Reconstruction quality  — MSE on perturbed dims, before vs after.
   * Independent-NIDS efficacy (headline) — detection restoration through the real
@@ -38,9 +38,14 @@ Outputs (under <output_dir> from reconstructor.yaml)
     split_summary.json           — per-split / per-source pair counts
     training_curves.json         — per-epoch train/val loss
     training_info.json           — best epoch, durations, device, pair stats
-    metrics.json                 — reconstruction / purification / compliance
+    metrics.json                 — reconstruction / nids (headline) /
+                                   purification (TCN, secondary) / compliance
     realized/<source>.pcap       — realized purified packets (traffic-space)
-    reconstruction_error.png / purification_gain.png / training_curves.png
+    realized_nids/<source>_{adv,purified,clean}.pcap
+                                 — 3-way aligned realization scored through
+                                   the independent NIDS
+    reconstruction_error.png / purification_gain.png / nids_restoration.png /
+    training_curves.png
 """
 from __future__ import annotations
 

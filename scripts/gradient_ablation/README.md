@@ -2,8 +2,10 @@
 
 > Part of [DEPT](../../README.md).
 
-**Extra-pipeline.** Not a phase of `run_pipeline.sh` — a comparison study, like
-[`scripts/baseline/`](../baseline/README.md).
+**Phase 7 of `run_pipeline.sh`** (global mode only — skipped in `--per-attack`
+runs, since it evaluates the global models). A comparison study, like the
+deployment baseline ([`scripts/baseline/`](../baseline/README.md), phase 8);
+it can also be run standalone:
 
 ```bash
 python3 scripts/gradient_ablation/run_gradient_ablation.py                    # all sources

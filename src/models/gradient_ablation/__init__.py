@@ -10,6 +10,6 @@ path into the TCN and none into the forest, so if the stack costs it more
 budget than the TCN alone, heterogeneous stacking has measurably raised the
 price of evasion — RQ1 answered by measurement rather than by design argument.
 
-Extra-pipeline: not a phase of ``run_pipeline.sh``. See
+Phase 7 of ``run_pipeline.sh`` (global mode only). See
 ``scripts/gradient_ablation/README.md``.
 """

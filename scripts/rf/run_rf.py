@@ -37,6 +37,8 @@ Outputs (under <output_dir> from rf.yaml)
     split_summary.json     — per-split checkpoint + flow counts (benign / adversarial / per-source)
     training_info.json     — grid search results, best params, effective config
     metrics.json           — overall, per-adversarial-source, per-label_str metrics
+    streaming_metrics.json — AUROC@t and EDP, overall + per source
+    earliness_vs_accuracy.png — per-source AUROC@t curves
     confusion_matrix.png   — binary CM (test, benign vs adversarial)
     roc_curve.png          — ROC (test, when both classes present)
     pr_curve.png           — PR  (test, when both classes present)

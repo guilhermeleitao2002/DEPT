@@ -39,6 +39,8 @@ Outputs (under <output_dir> from tcn.yaml)
     training_info.json     — best epoch, durations, device, effective config
     training_curves.json   — per-epoch train_loss / val_loss / val_macro_f1 / lr
     metrics.json           — overall, per-adversarial-source, per-label_str metrics
+    streaming_metrics.json — AUROC@t and EDP, overall + per source
+    earliness_vs_accuracy.png — per-source AUROC@t curves
     confusion_matrix.png   — binary CM (test, benign vs adversarial)
     roc_curve.png          — ROC (test, when both classes present)
     pr_curve.png           — PR  (test, when both classes present)

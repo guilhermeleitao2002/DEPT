@@ -1,6 +1,6 @@
 # DEPT × TANTGen — Adversarial PCAP Generation
 
-> Part of [DEPT](../../README.md). Thin driver that operates [TANTGen](../../../Transformer-based_Adversarial_Network_Traffic_Generator/) (sibling repo) as an external tool to produce adversarial versions of attack PCAPs. Its outputs are picked up automatically by [Phase 1](../packet_to_tensor/README.md) via `process_all_attacks.py` and become the positive class for [Phase 2](../rf/README.md).
+> Part of [DEPT](../../README.md). Thin driver that operates [TANTGen](../../../Transformer-based_Adversarial_Network_Traffic_Generator/) (sibling repo) as an external tool to produce adversarial versions of attack PCAPs. Its outputs are picked up automatically by [phase 2](../packet_to_tensor/README.md) via `process_all_attacks.py` and become the positive class for the model phases from [phase 3](../rf/README.md) onward.
 
 TANTGen itself is documented in its own repository — this README only covers the DEPT-side glue.
 
@@ -69,7 +69,8 @@ python3 scripts/adversarial_generation/generate_adversarials.py
 # 2. Build tensors with a shared standardizer (benign + adversarial in one pass)
 python3 scripts/packet_to_tensor/process_all_attacks.py
 
-# 3. Train downstream models (RF today; TCN / Transformer later)
+# 3. Train downstream models (RF shown; TCN, meta-learner and reconstructor
+#    follow the same pattern — or just run ./run_pipeline.sh)
 python3 scripts/rf/run_rf.py
 ```
 
@@ -90,7 +91,7 @@ After analyzing the 21 (now 18) adversarial PCAPs, five recommendations were con
 **Implemented:**
 
 1. **Drop Fuzzing entirely.** Reasoning above.
-2. **Recompute `mean_std.json` over benign + adversarial inputs jointly.** Implemented at the packet-to-tensor stage — see [Phase 1 README → design decisions](../packet_to_tensor/README.md#design-decisions). Smoke check on SYN_DoS adversarial-only inputs: shared fit yields IPAT mean 9.85 / std 31.08 vs the previous benign-only 0.04 / 3.24 — confirming the heavier tails are now captured.
+2. **Recompute `mean_std.json` over benign + adversarial inputs jointly.** Implemented at the packet-to-tensor stage — see [the packet-to-tensor README → design decisions](../packet_to_tensor/README.md#design-decisions). Smoke check on SYN_DoS adversarial-only inputs: shared fit yields IPAT mean 9.85 / std 31.08 vs the previous benign-only 0.04 / 3.24 — confirming the heavier tails are now captured.
 
 **Deliberately not implemented:**
 

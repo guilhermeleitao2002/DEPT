@@ -27,7 +27,7 @@ A flow with L packets contributes ⌊L/10⌋ + 1 checkpoint rows (the +1 is the 
 |---|---|---|
 | **Split** | Flow-atomic, stratified by source | All checkpoints from the same flow stay in the same split — prevents leakage via within-flow correlation. |
 | **Benign capping** | Total benign checkpoints ≤ 3× adversarial checkpoints (flow-atomic) | Prevents the much larger raw-dataset benign pool from dominating. |
-| **Class weight** | `balanced_subsample` | Each tree reweights its bootstrap sample — robust to the 93:7 benign:adversarial ratio. |
+| **Class weight** | `balanced_subsample` | Each tree reweights its bootstrap sample — robust to the residual benign:adversarial imbalance left after capping. |
 | **Hyperparameter search** | Grid over `n_estimators`, `max_depth`, `min_samples_leaf`; scored by val macro-F1 | Best: 200 trees, `max_depth=20`, `min_samples_leaf=5`. |
 | **Final fit** | `train + val`, evaluate on `test` | Maximises data used for the deployable classifier. |
 
@@ -120,6 +120,7 @@ Precision is now high because the ten-source checkpoint pool is **adversarial-do
 | `training_info.json` | Grid-search results, best params |
 | `metrics.json` | Overall + per-adversarial-source metrics |
 | `streaming_metrics.json` | AUROC@t and EDP per source |
+| `earliness_vs_accuracy.png` | Per-source AUROC@t curves |
 | `confusion_matrix.png` | Binary confusion matrix |
 | `roc_curve.png` | ROC curve |
 | `pr_curve.png` | Precision-recall curve |

@@ -11,7 +11,7 @@
 #   python3 scripts/gradient_ablation/run_gradient_ablation.py                  # all sources
 #   python3 scripts/gradient_ablation/run_gradient_ablation.py --attack mirai   # one attack
 #
-# Extra-pipeline: NOT a phase of run_pipeline.sh. Depends on trained RF + TCN +
+# Phase 7 of run_pipeline.sh (global mode only). Depends on trained RF + TCN +
 # meta-learner under data/models/, and on the TANTGen PCAPs under
 # data/adversarial/ (the sidecar re-derives per-packet payload features from
 # them — see src/models/gradient_ablation/features.py for why that is unavoidable).
