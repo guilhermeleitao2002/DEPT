@@ -7,11 +7,20 @@ CICFlowMeter flow features and evades it with the size (padding) vector. We reus
 TANTGen's own trained ``<Attack>_<MODEL>.joblib`` + ``<Attack>_scaler.joblib`` verbatim.
 
 Scoring reproduces TANTGen's ``src/NIDS/model.py`` ``exec`` path exactly: realize the
-packets to a PCAP → ``cicflowmeter`` → rename columns to the CIC-IDS feature names
-(``cicflowmeter_mapping``) → ``scaler.transform`` → ``model.predict``. Per-flow score =
-``P(malicious)`` (or ``decision_function`` for LinearSVC); detection = the classifier's
-own 0/1 verdict. ``cicflowmeter`` is a **hard, assumed-present dependency** — a missing
-binary or model raises :class:`NIDSUnavailable`.
+packets to a PCAP → cicflowmeter flow extraction → rename columns to the CIC-IDS
+feature names (``cicflowmeter_mapping``) → ``scaler.transform`` → ``model.predict``.
+Per-flow score = ``P(malicious)`` (or ``decision_function`` for LinearSVC); detection =
+the classifier's own 0/1 verdict. The ``cicflowmeter`` package is a **hard,
+assumed-present dependency** — if no interpreter can import it (or a model artifact is
+missing) this raises :class:`NIDSUnavailable`.
+
+Extraction goes through :mod:`.cicflowmeter_runner`, which drives the cicflowmeter
+build TANTGen vendors under ``src/Feature_Extraction/cicflowmeter`` (v0.4.2) — the
+version its ML-NIDS features were calibrated on. The pip-distributed cicflowmeter
+(0.1.6) is not used: under scapy >= 2.6 its CLI writes an empty CSV for every PCAP,
+and its column set is missing ``cwr_flag_count`` (a mapping feature). The vendored
+package needs ``requests`` in addition to ``scapy``; :func:`_resolve_cicflowmeter_python`
+picks an interpreter that has both.
 """
 from __future__ import annotations
 
@@ -28,6 +37,7 @@ from .base import BranchScore, NIDSModel, NIDSUnavailable
 log = logging.getLogger(__name__)
 
 _FE_SUBDIR = "src/Feature_Extraction"  # cicflowmeter_mapping.py lives here
+_RUNNER = Path(__file__).resolve().parent / "cicflowmeter_runner.py"
 
 
 def _import_mapping(tantgen_root: Path):
@@ -41,22 +51,69 @@ def _import_mapping(tantgen_root: Path):
     return m.mapping
 
 
-def _cicflowmeter_available() -> bool:
+# TANTGen vendors the cicflowmeter build (0.4.2) it calibrated its ML-NIDS on.
+_VENDORED_CFM_SUBDIR = "src/Feature_Extraction/cicflowmeter/src"
+
+
+def _vendored_cicflowmeter_src(tantgen_root: Path) -> Path | None:
+    """Directory to put on ``PYTHONPATH`` so ``import cicflowmeter`` finds 0.4.2."""
+    src = Path(tantgen_root) / _VENDORED_CFM_SUBDIR
+    return src if (src / "cicflowmeter" / "__init__.py").exists() else None
+
+
+def _pythonpath_env(site_dir: Path) -> dict:
+    import os
+
+    env = dict(os.environ)
+    env["PYTHONPATH"] = str(site_dir) + (
+        os.pathsep + env["PYTHONPATH"] if env.get("PYTHONPATH") else "")
+    return env
+
+
+def _resolve_cicflowmeter_python(site_dir: Path) -> str | None:
+    """First interpreter that can import the vendored package (needs requests+scapy).
+
+    The pipeline runs under a venv that may lack ``requests`` (which the vendored
+    writer imports); probe likely interpreters and pick one whose environment can
+    load ``cicflowmeter.sniffer`` with ``site_dir`` on ``PYTHONPATH``.
+    """
     import shutil
-    return shutil.which("cicflowmeter") is not None
+
+    candidates = [sys.executable, shutil.which("python3"), "/usr/bin/python3"]
+    seen: set[str] = set()
+    env = _pythonpath_env(site_dir)
+    for python in candidates:
+        # Dedup by literal path, not realpath: a venv's python is a symlink to
+        # the system interpreter but resolves imports against a different
+        # site-packages, so the two are not interchangeable here.
+        if not python or python in seen:
+            continue
+        seen.add(python)
+        try:
+            proc = subprocess.run(
+                [python, "-c", "import cicflowmeter.sniffer"],
+                capture_output=True, text=True, timeout=120, env=env)
+        except (OSError, subprocess.SubprocessError):
+            continue
+        if proc.returncode == 0:
+            return python
+    return None
 
 
-def _run_cicflowmeter(pcap_path: Path, out_csv: Path) -> None:
-    """``cicflowmeter -f <pcap> -c <out_csv>`` (TANTGen's extraction command)."""
+def _run_cicflowmeter(pcap_path: Path, out_csv: Path,
+                      python: str, site_dir: Path) -> None:
+    """Extract flows via :mod:`.cicflowmeter_runner` (TANTGen's feature extraction)."""
     try:
         proc = subprocess.run(
-            ["cicflowmeter", "-f", str(pcap_path), "-c", str(out_csv)],
-            capture_output=True, text=True, timeout=3600)
+            [python, str(_RUNNER), str(pcap_path), str(out_csv)],
+            capture_output=True, text=True, timeout=3600,
+            env=_pythonpath_env(site_dir))
     except FileNotFoundError as e:
-        raise NIDSUnavailable(f"cicflowmeter binary not found on PATH: {e}") from e
+        raise NIDSUnavailable(f"cicflowmeter interpreter not found: {e}") from e
     if proc.returncode != 0:
         raise NIDSUnavailable(
-            f"cicflowmeter failed (rc={proc.returncode}): {proc.stderr[:300]}")
+            f"cicflowmeter_runner failed (rc={proc.returncode}): "
+            f"{proc.stderr[-1500:]}")
 
 
 class MLNIDS(NIDSModel):
@@ -64,7 +121,8 @@ class MLNIDS(NIDSModel):
     threshold = None  # the classifier owns its own decision boundary
 
     def __init__(self, base: str, tg_attack: str, model_name: str,
-                 model, scaler, mapping: dict, tantgen_root: Path) -> None:
+                 model, scaler, mapping: dict, tantgen_root: Path,
+                 cfm_python: str, cfm_src: Path) -> None:
         self._base = base
         self._tg_attack = tg_attack
         self._model_name = model_name
@@ -73,6 +131,8 @@ class MLNIDS(NIDSModel):
         self._mapping = mapping
         self._features = list(mapping.values())
         self._tantgen_root = Path(tantgen_root)
+        self._cfm_python = cfm_python
+        self._cfm_src = Path(cfm_src)
         self.name = f"ml_nids:{tg_attack}:{model_name}"
         self.model_source = "pretrained"
 
@@ -85,7 +145,7 @@ class MLNIDS(NIDSModel):
             pcap_path = Path(td) / "branch.pcap"
             raw_csv = Path(td) / "flows.csv"
             wrpcap(str(pcap_path), packets)
-            _run_cicflowmeter(pcap_path, raw_csv)
+            _run_cicflowmeter(pcap_path, raw_csv, self._cfm_python, self._cfm_src)
             if not raw_csv.exists():
                 return BranchScore(0, 0, None, None, 0.0)
             X = self._features_from_csv(raw_csv)
@@ -103,7 +163,10 @@ class MLNIDS(NIDSModel):
     def _features_from_csv(self, raw_csv: Path):
         import pandas as pd
 
-        df = pd.read_csv(raw_csv)
+        try:
+            df = pd.read_csv(raw_csv)
+        except pd.errors.EmptyDataError:
+            return None  # zero flows extracted → scored as an empty branch
         if df.empty:
             return None
         # Reproduce TANTGen's mapping: duplicate fwd_header_len, rename, select, clean.
@@ -132,10 +195,16 @@ def build(base: str, cfg: dict, repo_root: Path) -> MLNIDS:
     tantgen_root = _abs(cfg.get("tantgen_root", ""), repo_root)
     if not tantgen_root.is_dir():
         raise NIDSUnavailable(f"TANTGen root not found: {tantgen_root}")
-    if not _cicflowmeter_available():
+    cfm_src = _vendored_cicflowmeter_src(tantgen_root)
+    if cfm_src is None:
         raise NIDSUnavailable(
-            "cicflowmeter not on PATH — install it in DEPT's venv "
-            "(pip install cicflowmeter) to score the ML-NIDS attacks")
+            f"vendored cicflowmeter not found under "
+            f"{tantgen_root / _VENDORED_CFM_SUBDIR}")
+    cfm_python = _resolve_cicflowmeter_python(cfm_src)
+    if cfm_python is None:
+        raise NIDSUnavailable(
+            f"no interpreter can import the vendored cicflowmeter at {cfm_src} "
+            f"(needs scapy + requests) — install its deps to score ML-NIDS attacks")
 
     entry = dict(cfg.get("attacks", {}).get(base, {}))
     tg = entry.get("tg_attack")
@@ -153,7 +222,8 @@ def build(base: str, cfg: dict, repo_root: Path) -> MLNIDS:
     mapping = _import_mapping(tantgen_root)
     model = joblib.load(model_path)
     scaler = joblib.load(scaler_path)
-    return MLNIDS(base, tg, model_name, model, scaler, mapping, tantgen_root)
+    return MLNIDS(base, tg, model_name, model, scaler, mapping, tantgen_root,
+                  cfm_python, cfm_src)
 
 
 def _abs(p, anchor: Path) -> Path:

@@ -445,13 +445,20 @@ def _run_nids_eval(config, nids_pool, output_dir, metrics) -> dict:
             continue
 
         scored = {}
+        try:
+            for br in _NIDS_BRANCHES:
+                pkts, keys = branches[br]["packets"], branches[br]["keys"]
+                rz.write_pcap(pkts, realized_dir / f"{gname}_{br}.pcap")
+                scored[br] = model.score(pkts, keys)
+        except NIDSUnavailable as e:
+            summary["skipped_sources"][gname] = f"scoring failed: {e}"
+            continue
+        # Accumulate only after all three branches scored, so a mid-source
+        # failure cannot leave partial rows in the overall aggregates.
         for br in _NIDS_BRANCHES:
-            pkts, keys = branches[br]["packets"], branches[br]["keys"]
-            rz.write_pcap(pkts, realized_dir / f"{gname}_{br}.pcap")
-            bscore = model.score(pkts, keys)
-            scored[br] = bscore
-            nids_metrics.accumulate(acc_all, br, bscore)
-            nids_metrics.accumulate(acc_kind.setdefault(model.kind, {}), br, bscore)
+            nids_metrics.accumulate(acc_all, br, scored[br])
+            nids_metrics.accumulate(
+                acc_kind.setdefault(model.kind, {}), br, scored[br])
 
         rm = nids_metrics.finalize_restoration(
             scored["adv"], scored["purified"], scored["clean"],
