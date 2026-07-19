@@ -14,12 +14,34 @@ The pip-distributed ``cicflowmeter`` (0.1.6) is deliberately *not* used: under
 scapy >= 2.6 its sniffer hooks are dead (it writes an empty CSV), and its column
 set is missing ``cwr_flag_count``, so it fails the mapping check anyway.
 
+The vendored ``FlowSession`` writes flows from two threads — the packet loop and
+a background periodic-GC thread — but its ``CSVWriter.write`` is unsynchronised.
+Two writers can both observe ``line == 0`` and each emit the header, leaving a
+duplicate header row that reads back as a data row of strings (crashing the
+downstream ``scaler.transform`` with ``could not convert string to float``). We
+serialise ``write`` with a lock so the header is emitted exactly once; flow
+semantics are otherwise unchanged.
+
 Usage:
     python cicflowmeter_runner.py <pcap> <out_csv>
 """
 from __future__ import annotations
 
 import sys
+import threading
+
+
+def _serialise_writer(session) -> None:
+    """Guard the session's output writer so concurrent writes can't race."""
+    writer = session.output_writer
+    lock = threading.Lock()
+    original = writer.write
+
+    def write(data, _original=original, _lock=lock):
+        with _lock:
+            _original(data)
+
+    writer.write = write
 
 
 def extract(pcap_path: str, out_csv: str) -> None:
@@ -32,15 +54,17 @@ def extract(pcap_path: str, out_csv: str) -> None:
         output_mode="csv",
         output=out_csv,
     )
+    _serialise_writer(session)
     sniffer.start()
     try:
         sniffer.join()
     finally:
-        # Mirror sniffer.py main(): stop the periodic GC thread, then flush the
-        # flows still open at end-of-capture so none are dropped.
+        # Mirror sniffer.py main(): stop the periodic GC thread (fully, so it is
+        # not writing during flush), then flush the flows still open at
+        # end-of-capture so none are dropped.
         if hasattr(session, "_gc_stop"):
             session._gc_stop.set()
-            session._gc_thread.join(timeout=2.0)
+            session._gc_thread.join(timeout=30.0)
         session.flush_flows()
 
 

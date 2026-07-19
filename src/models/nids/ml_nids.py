@@ -178,7 +178,13 @@ class MLNIDS(NIDSModel):
             raise NIDSUnavailable(
                 f"cicflowmeter output missing {len(missing)} expected feature "
                 f"column(s), e.g. {missing[:3]} — is the cicflowmeter version compatible?")
-        df = df[self._features].replace([np.inf, -np.inf], np.nan).fillna(-1)
+        df = df[self._features].apply(pd.to_numeric, errors="coerce")
+        # Drop any all-non-numeric rows (e.g. a stray duplicate header the
+        # extractor may emit) so they can't reach the scaler as strings.
+        df = df.dropna(how="all")
+        if df.empty:
+            return None
+        df = df.replace([np.inf, -np.inf], np.nan).fillna(-1)
         return df.values
 
     def _proba(self, Xs) -> np.ndarray:
