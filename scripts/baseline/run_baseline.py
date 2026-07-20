@@ -45,7 +45,9 @@ warnings.filterwarnings(
 REPO_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO_ROOT))
 
-from src.models.baseline import evaluate as baseline_eval  # noqa: E402
+# The package re-exports the ``evaluate`` *function* (shadowing the submodule
+# of the same name), so bind it as a callable — not as a module.
+from src.models.baseline import evaluate as baseline_evaluate  # noqa: E402
 
 
 _USE_COLOR = sys.stdout.isatty()
@@ -184,7 +186,7 @@ def main() -> int:
 
     t0 = time.time()
     try:
-        summary = baseline_eval.evaluate(cfg, output_dir, attacks=attacks)
+        summary = baseline_evaluate(cfg, output_dir, attacks=attacks)
     except Exception as e:
         print(f"  {red(bold('✗ FAILED'))} {e}")
         raise
