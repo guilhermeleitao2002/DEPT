@@ -1,0 +1,1507 @@
+{
+  "threshold": 0.5,
+  "per_source": {
+    "brute_force_adv_both": {
+      "kind": "ml_nids",
+      "model": "ml_nids:BruteForce:RF",
+      "mode": "both",
+      "model_source": "pretrained",
+      "detection_rate": {
+        "clean": 0.9895403653506187,
+        "adversarial": 0.9917780061664954,
+        "purified_all": 0.7354831681011004,
+        "defended": 0.9837662337662337
+      },
+      "asr": {
+        "clean": 0.010459634649381266,
+        "adversarial": 0.008221993833504637,
+        "purified_all": 0.26451683189889963,
+        "defended": 0.016233766233766267
+      },
+      "mean_score": {
+        "clean": 0.9882181791396581,
+        "adversarial": 0.9908699163118485,
+        "purified_all": 0.6046426625994117,
+        "defended": 0.9789079102715467
+      },
+      "asr_reduction": -0.00801177240026163,
+      "restoration_ratio_detection": 3.580455068309477,
+      "restoration_ratio_score": 4.511007412707161,
+      "gate": {
+        "n_flows": 6682,
+        "n_flagged_adversarial": 138,
+        "flag_rate": 0.02065249925172104
+      },
+      "n_flows": 6776,
+      "realize": {
+        "target_flows": 6692,
+        "realized_flows": 6682,
+        "miss_len": 10,
+        "unmatched": 0,
+        "unrealizable_l7": 0,
+        "pcap_packets_read": 274882,
+        "pcap_packets_kept": 260711,
+        "packets_per_branch": 260139
+      },
+      "test_subset": {
+        "detection_rate_defended": 0.996299722479186,
+        "asr_defended": 0.0037002775208140326,
+        "n_flows": 1081
+      }
+    },
+    "brute_force_adv_iat": {
+      "kind": "ml_nids",
+      "model": "ml_nids:BruteForce:RF",
+      "mode": "iat",
+      "model_source": "pretrained",
+      "detection_rate": {
+        "clean": 0.9915229465068693,
+        "adversarial": 0.9887340646308924,
+        "purified_all": 0.7784045124899275,
+        "defended": 0.9863093504223711
+      },
+      "asr": {
+        "clean": 0.00847705349313066,
+        "adversarial": 0.011265935369107583,
+        "purified_all": 0.22159548751007252,
+        "defended": 0.013690649577628888
+      },
+      "mean_score": {
+        "clean": 0.9907110494007599,
+        "adversarial": 0.9870204565668546,
+        "purified_all": 0.6275469091746287,
+        "defended": 0.9806641421497232
+      },
+      "asr_reduction": -0.002424714208521306,
+      "restoration_ratio_detection": -0.8694216235572716,
+      "restoration_ratio_score": -1.7223017285288318,
+      "gate": {
+        "n_flows": 6682,
+        "n_flagged_adversarial": 143,
+        "flag_rate": 0.021400778210116732
+      },
+      "n_flows": 6866,
+      "realize": {
+        "target_flows": 6692,
+        "realized_flows": 6682,
+        "miss_len": 10,
+        "unmatched": 0,
+        "unrealizable_l7": 0,
+        "pcap_packets_read": 274882,
+        "pcap_packets_kept": 260711,
+        "packets_per_branch": 260139
+      },
+      "test_subset": {
+        "detection_rate_defended": 0.9916743755781684,
+        "asr_defended": 0.008325624421831601,
+        "n_flows": 1081
+      }
+    },
+    "brute_force_adv_size": {
+      "kind": "ml_nids",
+      "model": "ml_nids:BruteForce:RF",
+      "mode": "size",
+      "model_source": "pretrained",
+      "detection_rate": {
+        "clean": 0.9948339483394834,
+        "adversarial": 0.9937425506555423,
+        "purified_all": 0.7700913242009132,
+        "defended": 0.9664108875054293
+      },
+      "asr": {
+        "clean": 0.005166051660516646,
+        "adversarial": 0.006257449344457711,
+        "purified_all": 0.2299086757990868,
+        "defended": 0.03358911249457075
+      },
+      "mean_score": {
+        "clean": 0.9946568265682657,
+        "adversarial": 0.9934743742550656,
+        "purified_all": 0.5524800228310502,
+        "defended": 0.826675836108296
+      },
+      "asr_reduction": -0.02733166315011304,
+      "restoration_ratio_detection": -25.042808457699596,
+      "restoration_ratio_score": -141.0615348160248,
+      "gate": {
+        "n_flows": 6682,
+        "n_flagged_adversarial": 3357,
+        "flag_rate": 0.5023944926668662
+      },
+      "n_flows": 6907,
+      "realize": {
+        "target_flows": 6692,
+        "realized_flows": 6682,
+        "miss_len": 10,
+        "unmatched": 0,
+        "unrealizable_l7": 0,
+        "pcap_packets_read": 274882,
+        "pcap_packets_kept": 260711,
+        "packets_per_branch": 260139
+      },
+      "test_subset": {
+        "detection_rate_defended": 0.9936536718041704,
+        "asr_defended": 0.006346328195829587,
+        "n_flows": 1103
+      }
+    },
+    "ddos_adv_both": {
+      "kind": "ml_nids",
+      "model": "ml_nids:DDoS:RF",
+      "mode": "both",
+      "model_source": "pretrained",
+      "detection_rate": {
+        "clean": 0.9010540503702806,
+        "adversarial": 0.14622321957828774,
+        "purified_all": 0.7570932493268041,
+        "defended": 0.7431331529664981
+      },
+      "asr": {
+        "clean": 0.09894594962971937,
+        "adversarial": 0.8537767804217122,
+        "purified_all": 0.2429067506731959,
+        "defended": 0.25686684703350193
+      },
+      "mean_score": {
+        "clean": 0.8230020606813109,
+        "adversarial": 0.29062719185082175,
+        "purified_all": 0.6536817799284504,
+        "defended": 0.6448182438071463
+      },
+      "asr_reduction": 0.5969099333882103,
+      "restoration_ratio_detection": 0.7907863709831687,
+      "restoration_ratio_score": 0.6653038539073127,
+      "gate": {
+        "n_flows": 38544,
+        "n_flagged_adversarial": 38544,
+        "flag_rate": 1.0
+      },
+      "n_flows": 198854,
+      "realize": {
+        "target_flows": 38544,
+        "realized_flows": 38544,
+        "miss_len": 0,
+        "unmatched": 0,
+        "unrealizable_l7": 74759,
+        "pcap_packets_read": 1000000,
+        "pcap_packets_kept": 1000000,
+        "packets_per_branch": 925241
+      },
+      "test_subset": {
+        "detection_rate_defended": 0.8584527885787244,
+        "asr_defended": 0.14154721142127558,
+        "n_flows": 17231
+      }
+    },
+    "ddos_adv_iat": {
+      "kind": "ml_nids",
+      "model": "ml_nids:DDoS:RF",
+      "mode": "iat",
+      "model_source": "pretrained",
+      "detection_rate": {
+        "clean": 0.9597418190315796,
+        "adversarial": 0.9806704322897448,
+        "purified_all": 0.8451064806842317,
+        "defended": 0.8590763875370716
+      },
+      "asr": {
+        "clean": 0.040258180968420376,
+        "adversarial": 0.01932956771025518,
+        "purified_all": 0.15489351931576834,
+        "defended": 0.1409236124629284
+      },
+      "mean_score": {
+        "clean": 0.9339423616562812,
+        "adversarial": 0.9289929627554477,
+        "purified_all": 0.7655772593801201,
+        "defended": 0.7756482541046862
+      },
+      "asr_reduction": -0.12159404475267321,
+      "restoration_ratio_detection": 5.809942744545384,
+      "restoration_ratio_score": -30.982491353634675,
+      "gate": {
+        "n_flows": 38544,
+        "n_flagged_adversarial": 38495,
+        "flag_rate": 0.9987287256122872
+      },
+      "n_flows": 174662,
+      "realize": {
+        "target_flows": 38544,
+        "realized_flows": 38544,
+        "miss_len": 0,
+        "unmatched": 0,
+        "unrealizable_l7": 0,
+        "pcap_packets_read": 1000000,
+        "pcap_packets_kept": 1000000,
+        "packets_per_branch": 1000000
+      },
+      "test_subset": {
+        "detection_rate_defended": 0.9516640838314515,
+        "asr_defended": 0.04833591616854849,
+        "n_flows": 13551
+      }
+    },
+    "ddos_adv_size": {
+      "kind": "ml_nids",
+      "model": "ml_nids:DDoS:RF",
+      "mode": "size",
+      "model_source": "pretrained",
+      "detection_rate": {
+        "clean": 0.9074859403443472,
+        "adversarial": 0.01538921048514415,
+        "purified_all": 0.7176906100946822,
+        "defended": 0.6898143359536616
+      },
+      "asr": {
+        "clean": 0.09251405965565285,
+        "adversarial": 0.9846107895148558,
+        "purified_all": 0.28230938990531784,
+        "defended": 0.3101856640463384
+      },
+      "mean_score": {
+        "clean": 0.8224704049082957,
+        "adversarial": 0.2253808900204793,
+        "purified_all": 0.6132141892776756,
+        "defended": 0.596895328437485
+      },
+      "asr_reduction": 0.6744251254685174,
+      "restoration_ratio_detection": 0.7559999974161546,
+      "restoration_ratio_score": 0.6222089471572908,
+      "gate": {
+        "n_flows": 32284,
+        "n_flagged_adversarial": 32283,
+        "flag_rate": 0.9999690249039772
+      },
+      "n_flows": 154688,
+      "realize": {
+        "target_flows": 32284,
+        "realized_flows": 32284,
+        "miss_len": 0,
+        "unmatched": 0,
+        "unrealizable_l7": 55403,
+        "pcap_packets_read": 740859,
+        "pcap_packets_kept": 740859,
+        "packets_per_branch": 685456
+      },
+      "test_subset": {
+        "detection_rate_defended": 0.7990225216300112,
+        "asr_defended": 0.2009774783699888,
+        "n_flows": 15141
+      }
+    },
+    "dns_ddos_adv_both": {
+      "kind": "ml_nids",
+      "model": "ml_nids:DNS_DDoS:RF",
+      "mode": "both",
+      "model_source": "pretrained",
+      "detection_rate": {
+        "clean": 0.9948199948199948,
+        "adversarial": 0.9865842430619493,
+        "purified_all": 0.7573735736110245,
+        "defended": 0.7617891606481763
+      },
+      "asr": {
+        "clean": 0.005180005180005165,
+        "adversarial": 0.013415756938050749,
+        "purified_all": 0.24262642638897547,
+        "defended": 0.23821083935182374
+      },
+      "mean_score": {
+        "clean": 0.9910418285418285,
+        "adversarial": 0.9123332894909904,
+        "purified_all": 0.5783522479266696,
+        "defended": 0.5847281058445105
+      },
+      "asr_reduction": -0.224795082413773,
+      "restoration_ratio_detection": -27.29502891999732,
+      "restoration_ratio_score": -4.162257203565654,
+      "gate": {
+        "n_flows": 6635,
+        "n_flagged_adversarial": 6624,
+        "flag_rate": 0.9983421250941974
+      },
+      "n_flows": 16477,
+      "realize": {
+        "target_flows": 6683,
+        "realized_flows": 6635,
+        "miss_len": 48,
+        "unmatched": 0,
+        "unrealizable_l7": 2,
+        "pcap_packets_read": 1000000,
+        "pcap_packets_kept": 983612,
+        "packets_per_branch": 967596
+      },
+      "test_subset": {
+        "detection_rate_defended": 0.7352700490998363,
+        "asr_defended": 0.2647299509001637,
+        "n_flows": 2444
+      }
+    },
+    "dns_ddos_adv_iat": {
+      "kind": "ml_nids",
+      "model": "ml_nids:DNS_DDoS:RF",
+      "mode": "iat",
+      "model_source": "pretrained",
+      "detection_rate": {
+        "clean": 0.9947841961142261,
+        "adversarial": 0.9863642323325029,
+        "purified_all": 0.7646665450787282,
+        "defended": 0.7592604044276792
+      },
+      "asr": {
+        "clean": 0.0052158038857739175,
+        "adversarial": 0.013635767667497078,
+        "purified_all": 0.23533345492127178,
+        "defended": 0.24073959557232083
+      },
+      "mean_score": {
+        "clean": 0.9908990741948103,
+        "adversarial": 0.9013360430051134,
+        "purified_all": 0.5850151984923095,
+        "defended": 0.5803107414507452
+      },
+      "asr_reduction": -0.22710382790482375,
+      "restoration_ratio_detection": -26.972067076795256,
+      "restoration_ratio_score": -3.5843505661887214,
+      "gate": {
+        "n_flows": 6635,
+        "n_flagged_adversarial": 6624,
+        "flag_rate": 0.9983421250941974
+      },
+      "n_flows": 16171,
+      "realize": {
+        "target_flows": 6683,
+        "realized_flows": 6635,
+        "miss_len": 48,
+        "unmatched": 0,
+        "unrealizable_l7": 2,
+        "pcap_packets_read": 1000000,
+        "pcap_packets_kept": 983612,
+        "packets_per_branch": 967596
+      },
+      "test_subset": {
+        "detection_rate_defended": 0.7663398692810458,
+        "asr_defended": 0.2336601307189542,
+        "n_flows": 2448
+      }
+    },
+    "dns_ddos_adv_size": {
+      "kind": "ml_nids",
+      "model": "ml_nids:DNS_DDoS:RF",
+      "mode": "size",
+      "model_source": "pretrained",
+      "detection_rate": {
+        "clean": 0.990578734858681,
+        "adversarial": 0.9908655286013777,
+        "purified_all": 0.7521671626342347,
+        "defended": 0.9911683971834347
+      },
+      "asr": {
+        "clean": 0.009421265141319024,
+        "adversarial": 0.009134471398622335,
+        "purified_all": 0.24783283736576533,
+        "defended": 0.008831602816565254
+      },
+      "mean_score": {
+        "clean": 0.9882234185733513,
+        "adversarial": 0.9885931416591796,
+        "purified_all": 0.5797111528011386,
+        "defended": 0.9891926244181883
+      },
+      "asr_reduction": 0.0003028685820570809,
+      "restoration_ratio_detection": -1.0560501746280853,
+      "restoration_ratio_score": -1.6214371836310546,
+      "gate": {
+        "n_flows": 6635,
+        "n_flagged_adversarial": 57,
+        "flag_rate": 0.008590806330067821
+      },
+      "n_flows": 8379,
+      "realize": {
+        "target_flows": 6683,
+        "realized_flows": 6635,
+        "miss_len": 48,
+        "unmatched": 0,
+        "unrealizable_l7": 133,
+        "pcap_packets_read": 1000000,
+        "pcap_packets_kept": 983612,
+        "packets_per_branch": 967465
+      },
+      "test_subset": {
+        "detection_rate_defended": 0.9841121495327103,
+        "asr_defended": 0.015887850467289688,
+        "n_flows": 1070
+      }
+    },
+    "ldap_ddos_adv_both": {
+      "kind": "ml_nids",
+      "model": "ml_nids:LDAP_DDoS:RF",
+      "mode": "both",
+      "model_source": "pretrained",
+      "detection_rate": {
+        "clean": 0.9995690671892294,
+        "adversarial": 0.9994513019109205,
+        "purified_all": 0.9995237944061717,
+        "defended": 0.9995238181620288
+      },
+      "asr": {
+        "clean": 0.0004309328107705568,
+        "adversarial": 0.0005486980890795357,
+        "purified_all": 0.00047620559382832717,
+        "defended": 0.0004761818379711569
+      },
+      "mean_score": {
+        "clean": 0.9984357592582511,
+        "adversarial": 0.927970338560325,
+        "purified_all": 0.9822719315352414,
+        "defended": 0.9822715914450527
+      },
+      "asr_reduction": 7.251625110837878e-05,
+      "restoration_ratio_detection": 0.6157693689486222,
+      "restoration_ratio_score": 0.7706085104849998,
+      "gate": {
+        "n_flows": 220416,
+        "n_flagged_adversarial": 220416,
+        "flag_rate": 1.0
+      },
+      "n_flows": 220504,
+      "realize": {
+        "target_flows": 220588,
+        "realized_flows": 220416,
+        "miss_len": 172,
+        "unmatched": 0,
+        "unrealizable_l7": 0,
+        "pcap_packets_read": 1000000,
+        "pcap_packets_kept": 443152,
+        "packets_per_branch": 442398
+      },
+      "test_subset": {
+        "detection_rate_defended": 0.9994848797042604,
+        "asr_defended": 0.000515120295739635,
+        "n_flows": 33002
+      }
+    },
+    "ldap_ddos_adv_iat": {
+      "kind": "ml_nids",
+      "model": "ml_nids:LDAP_DDoS:RF",
+      "mode": "iat",
+      "model_source": "pretrained",
+      "detection_rate": {
+        "clean": 0.9995917311958193,
+        "adversarial": 0.9994513043990876,
+        "purified_all": 0.9995283339758271,
+        "defended": 0.9995238116833938
+      },
+      "asr": {
+        "clean": 0.0004082688041806559,
+        "adversarial": 0.0005486956009124189,
+        "purified_all": 0.00047166602417292314,
+        "defended": 0.00047618831660622973
+      },
+      "mean_score": {
+        "clean": 0.99845996470743,
+        "adversarial": 0.927971390739288,
+        "purified_all": 0.9822376244359283,
+        "defended": 0.98223341390742
+      },
+      "asr_reduction": 7.250728430618913e-05,
+      "restoration_ratio_detection": 0.5163351012320628,
+      "restoration_ratio_score": 0.7697988498484343,
+      "gate": {
+        "n_flows": 220416,
+        "n_flagged_adversarial": 220416,
+        "flag_rate": 1.0
+      },
+      "n_flows": 220501,
+      "realize": {
+        "target_flows": 220588,
+        "realized_flows": 220416,
+        "miss_len": 172,
+        "unmatched": 0,
+        "unrealizable_l7": 0,
+        "pcap_packets_read": 1000000,
+        "pcap_packets_kept": 443152,
+        "packets_per_branch": 442398
+      },
+      "test_subset": {
+        "detection_rate_defended": 0.9995797688728801,
+        "asr_defended": 0.0004202311271198633,
+        "n_flows": 33315
+      }
+    },
+    "ldap_ddos_adv_size": {
+      "kind": "ml_nids",
+      "model": "ml_nids:LDAP_DDoS:RF",
+      "mode": "size",
+      "model_source": "pretrained",
+      "detection_rate": {
+        "clean": 0.9996007694261968,
+        "adversarial": 0.9996007694261968,
+        "purified_all": 0.9995826263689401,
+        "defended": 0.9996007694261968
+      },
+      "asr": {
+        "clean": 0.0003992305738031998,
+        "adversarial": 0.0003992305738031998,
+        "purified_all": 0.0004173736310598697,
+        "defended": 0.0003992305738031998
+      },
+      "mean_score": {
+        "clean": 0.998472330599209,
+        "adversarial": 0.998472330599209,
+        "purified_all": 0.9847090633591317,
+        "defended": 0.9983393822814213
+      },
+      "asr_reduction": 0.0,
+      "restoration_ratio_detection": null,
+      "restoration_ratio_score": null,
+      "gate": {
+        "n_flows": 220416,
+        "n_flagged_adversarial": 1796,
+        "flag_rate": 0.00814822880371661
+      },
+      "n_flows": 220424,
+      "realize": {
+        "target_flows": 220588,
+        "realized_flows": 220416,
+        "miss_len": 172,
+        "unmatched": 0,
+        "unrealizable_l7": 0,
+        "pcap_packets_read": 1000000,
+        "pcap_packets_kept": 443152,
+        "packets_per_branch": 442398
+      },
+      "test_subset": {
+        "detection_rate_defended": 0.9996354910239664,
+        "asr_defended": 0.0003645089760335729,
+        "n_flows": 32921
+      }
+    },
+    "mirai_adv_both": {
+      "kind": "kitsune",
+      "model": "kitsune:mirai",
+      "mode": "both",
+      "model_source": "pretrained",
+      "detection_rate": {
+        "clean": 0.0029570360062619585,
+        "adversarial": 0.0019133762393459732,
+        "purified_all": 0.0013915463558879806,
+        "defended": 0.001217603061401983
+      },
+      "asr": {
+        "clean": 0.997042963993738,
+        "adversarial": 0.998086623760654,
+        "purified_all": 0.998608453644112,
+        "defended": 0.998782396938598
+      },
+      "mean_score": {
+        "clean": 0.02462975342739891,
+        "adversarial": 0.022796771387590727,
+        "purified_all": 0.024199263882740726,
+        "defended": 0.02347986349608438
+      },
+      "asr_reduction": -0.0006957731779440035,
+      "restoration_ratio_detection": -0.6666666666666667,
+      "restoration_ratio_score": 0.37266710401872555,
+      "gate": {
+        "n_flows": 5749,
+        "n_flagged_adversarial": 3880,
+        "flag_rate": 0.6748999826056705
+      },
+      "n_flows": 5749,
+      "realize": {
+        "target_flows": 5780,
+        "realized_flows": 5749,
+        "miss_len": 31,
+        "unmatched": 0,
+        "unrealizable_l7": 0,
+        "pcap_packets_read": 642516,
+        "pcap_packets_kept": 635250,
+        "packets_per_branch": 21493
+      },
+      "test_subset": {
+        "detection_rate_defended": 0.002285714285714286,
+        "asr_defended": 0.9977142857142857,
+        "n_flows": 875
+      }
+    },
+    "mirai_adv_iat": {
+      "kind": "kitsune",
+      "model": "kitsune:mirai",
+      "mode": "iat",
+      "model_source": "pretrained",
+      "detection_rate": {
+        "clean": 0.0031309793007479564,
+        "adversarial": 0.0019133762393459732,
+        "purified_all": 0.0013915463558879806,
+        "defended": 0.0013915463558879806
+      },
+      "asr": {
+        "clean": 0.9968690206992521,
+        "adversarial": 0.998086623760654,
+        "purified_all": 0.998608453644112,
+        "defended": 0.998608453644112
+      },
+      "mean_score": {
+        "clean": 0.024611461880775586,
+        "adversarial": 0.022887515142582863,
+        "purified_all": 0.02425099391866666,
+        "defended": 0.023639834216515047
+      },
+      "asr_reduction": -0.0005218298834579471,
+      "restoration_ratio_detection": -0.4285714285714285,
+      "restoration_ratio_score": 0.43639345535748314,
+      "gate": {
+        "n_flows": 5749,
+        "n_flagged_adversarial": 3885,
+        "flag_rate": 0.6757696990781006
+      },
+      "n_flows": 5749,
+      "realize": {
+        "target_flows": 5780,
+        "realized_flows": 5749,
+        "miss_len": 31,
+        "unmatched": 0,
+        "unrealizable_l7": 0,
+        "pcap_packets_read": 642516,
+        "pcap_packets_kept": 635250,
+        "packets_per_branch": 21493
+      },
+      "test_subset": {
+        "detection_rate_defended": 0.002331002331002331,
+        "asr_defended": 0.9976689976689976,
+        "n_flows": 858
+      }
+    },
+    "mirai_adv_size": {
+      "kind": "kitsune",
+      "model": "kitsune:mirai",
+      "mode": "size",
+      "model_source": "pretrained",
+      "detection_rate": {
+        "clean": 0.0031309793007479564,
+        "adversarial": 0.24247695251348061,
+        "purified_all": 0.0017394329448599756,
+        "defended": 0.0033049225952339538
+      },
+      "asr": {
+        "clean": 0.9968690206992521,
+        "adversarial": 0.7575230474865193,
+        "purified_all": 0.99826056705514,
+        "defended": 0.996695077404766
+      },
+      "mean_score": {
+        "clean": 0.02257940953258729,
+        "adversarial": 0.3621283503736635,
+        "purified_all": 0.022095546062035735,
+        "defended": 0.022237726938668635
+      },
+      "asr_reduction": -0.2391720299182467,
+      "restoration_ratio_detection": 0.9992732558139534,
+      "restoration_ratio_score": 1.0010062837865796,
+      "gate": {
+        "n_flows": 5749,
+        "n_flagged_adversarial": 2809,
+        "flag_rate": 0.48860671421116714
+      },
+      "n_flows": 5749,
+      "realize": {
+        "target_flows": 5780,
+        "realized_flows": 5749,
+        "miss_len": 31,
+        "unmatched": 0,
+        "unrealizable_l7": 62,
+        "pcap_packets_read": 642516,
+        "pcap_packets_kept": 635250,
+        "packets_per_branch": 21431
+      },
+      "test_subset": {
+        "detection_rate_defended": 0.004689331770222743,
+        "asr_defended": 0.9953106682297772,
+        "n_flows": 853
+      }
+    },
+    "ntp_ddos_adv_both": {
+      "kind": "ml_nids",
+      "model": "ml_nids:NTP_DDoS:RF",
+      "mode": "both",
+      "model_source": "pretrained",
+      "detection_rate": {
+        "clean": 0.9974083672713809,
+        "adversarial": 0.9847280070680298,
+        "purified_all": 0.9875982925185351,
+        "defended": 0.9877717995464449
+      },
+      "asr": {
+        "clean": 0.0025916327286190644,
+        "adversarial": 0.015271992931970235,
+        "purified_all": 0.012401707481464852,
+        "defended": 0.012228200453555105
+      },
+      "mean_score": {
+        "clean": 0.9940950882389239,
+        "adversarial": 0.8615376120156506,
+        "purified_all": 0.7535237025387552,
+        "defended": 0.7532849393036596
+      },
+      "asr_reduction": 0.0030437924784151305,
+      "restoration_ratio_detection": 0.2400399065643826,
+      "restoration_ratio_score": -0.8166470560261387,
+      "gate": {
+        "n_flows": 13921,
+        "n_flagged_adversarial": 13916,
+        "flag_rate": 0.999640830400115
+      },
+      "n_flows": 22489,
+      "realize": {
+        "target_flows": 13943,
+        "realized_flows": 13921,
+        "miss_len": 22,
+        "unmatched": 0,
+        "unrealizable_l7": 0,
+        "pcap_packets_read": 1000000,
+        "pcap_packets_kept": 997494,
+        "packets_per_branch": 994140
+      },
+      "test_subset": {
+        "detection_rate_defended": 0.9901639344262295,
+        "asr_defended": 0.00983606557377048,
+        "n_flows": 3355
+      }
+    },
+    "ntp_ddos_adv_iat": {
+      "kind": "ml_nids",
+      "model": "ml_nids:NTP_DDoS:RF",
+      "mode": "iat",
+      "model_source": "pretrained",
+      "detection_rate": {
+        "clean": 0.997441052823981,
+        "adversarial": 0.9850312364693512,
+        "purified_all": 0.9875443262411348,
+        "defended": 0.9877775335238514
+      },
+      "asr": {
+        "clean": 0.0025589471760190108,
+        "adversarial": 0.014968763530648799,
+        "purified_all": 0.012455673758865249,
+        "defended": 0.012222466476148552
+      },
+      "mean_score": {
+        "clean": 0.9940422226284042,
+        "adversarial": 0.8616187295107318,
+        "purified_all": 0.7530913120567376,
+        "defended": 0.7536229940646295
+      },
+      "asr_reduction": 0.0027462970545002463,
+      "restoration_ratio_detection": 0.22130037834731314,
+      "restoration_ratio_score": -0.8155330516023811,
+      "gate": {
+        "n_flows": 13921,
+        "n_flagged_adversarial": 13917,
+        "flag_rate": 0.999712664320092
+      },
+      "n_flows": 22745,
+      "realize": {
+        "target_flows": 13943,
+        "realized_flows": 13921,
+        "miss_len": 22,
+        "unmatched": 0,
+        "unrealizable_l7": 0,
+        "pcap_packets_read": 1000000,
+        "pcap_packets_kept": 997494,
+        "packets_per_branch": 994140
+      },
+      "test_subset": {
+        "detection_rate_defended": 0.9874090654728596,
+        "asr_defended": 0.01259093452714044,
+        "n_flows": 3574
+      }
+    },
+    "ntp_ddos_adv_size": {
+      "kind": "ml_nids",
+      "model": "ml_nids:NTP_DDoS:RF",
+      "mode": "size",
+      "model_source": "pretrained",
+      "detection_rate": {
+        "clean": 0.9980909654942013,
+        "adversarial": 0.998099220680479,
+        "purified_all": 0.987789288075821,
+        "defended": 0.9980394969636112
+      },
+      "asr": {
+        "clean": 0.0019090345057987124,
+        "adversarial": 0.0019007793195210398,
+        "purified_all": 0.012210711924178996,
+        "defended": 0.0019605030363888387
+      },
+      "mean_score": {
+        "clean": 0.9951193146566124,
+        "adversarial": 0.9951378065006653,
+        "purified_all": 0.7573244434648445,
+        "defended": 0.994826662841295
+      },
+      "asr_reduction": -5.972371686779887e-05,
+      "restoration_ratio_detection": 7.234690394489494,
+      "restoration_ratio_score": 16.825994123700205,
+      "gate": {
+        "n_flows": 13921,
+        "n_flagged_adversarial": 29,
+        "flag_rate": 0.0020831836793333814
+      },
+      "n_flows": 20913,
+      "realize": {
+        "target_flows": 13943,
+        "realized_flows": 13921,
+        "miss_len": 22,
+        "unmatched": 0,
+        "unrealizable_l7": 0,
+        "pcap_packets_read": 1000000,
+        "pcap_packets_kept": 997494,
+        "packets_per_branch": 994140
+      },
+      "test_subset": {
+        "detection_rate_defended": 0.9986957939354418,
+        "asr_defended": 0.0013042060645581666,
+        "n_flows": 3067
+      }
+    },
+    "portscan_adv_both": {
+      "kind": "ml_nids",
+      "model": "ml_nids:PortScan:RF",
+      "mode": "both",
+      "model_source": "pretrained",
+      "detection_rate": {
+        "clean": 0.9989731248503786,
+        "adversarial": 0.010639435751272517,
+        "purified_all": 0.6808422192969749,
+        "defended": 0.6808611144352558
+      },
+      "asr": {
+        "clean": 0.001026875149621409,
+        "adversarial": 0.9893605642487275,
+        "purified_all": 0.31915778070302514,
+        "defended": 0.31913888556474423
+      },
+      "mean_score": {
+        "clean": 0.9988258974132828,
+        "adversarial": 0.21186020247016116,
+        "purified_all": 0.7128368530777031,
+        "defended": 0.7128088252892529
+      },
+      "asr_reduction": 0.6702216786839833,
+      "restoration_ratio_detection": 0.6781329889654062,
+      "restoration_ratio_score": 0.636557128268848,
+      "gate": {
+        "n_flows": 158512,
+        "n_flagged_adversarial": 158512,
+        "flag_rate": 1.0
+      },
+      "n_flows": 158771,
+      "realize": {
+        "target_flows": 158671,
+        "realized_flows": 158671,
+        "miss_len": 0,
+        "unmatched": 0,
+        "unrealizable_l7": 412,
+        "pcap_packets_read": 321444,
+        "pcap_packets_kept": 321444,
+        "packets_per_branch": 321032
+      },
+      "test_subset": {
+        "detection_rate_defended": 0.6803037932192011,
+        "asr_defended": 0.3196962067807989,
+        "n_flows": 23832
+      }
+    },
+    "portscan_adv_iat": {
+      "kind": "ml_nids",
+      "model": "ml_nids:PortScan:RF",
+      "mode": "iat",
+      "model_source": "pretrained",
+      "detection_rate": {
+        "clean": 0.9989552586364238,
+        "adversarial": 0.9935154377865693,
+        "purified_all": 0.8111004146453492,
+        "defended": 0.8112742012638787
+      },
+      "asr": {
+        "clean": 0.0010447413635762404,
+        "adversarial": 0.006484562213430745,
+        "purified_all": 0.1888995853546508,
+        "defended": 0.18872579873612128
+      },
+      "mean_score": {
+        "clean": 0.9988658577263658,
+        "adversarial": 0.7218995804846754,
+        "purified_all": 0.8300126784579471,
+        "defended": 0.8300741773458545
+      },
+      "asr_reduction": -0.18224123652269053,
+      "restoration_ratio_detection": -33.50133056818679,
+      "restoration_ratio_score": 0.3905695593647389,
+      "gate": {
+        "n_flows": 158671,
+        "n_flagged_adversarial": 158660,
+        "flag_rate": 0.9999306741622602
+      },
+      "n_flows": 158876,
+      "realize": {
+        "target_flows": 158671,
+        "realized_flows": 158671,
+        "miss_len": 0,
+        "unmatched": 0,
+        "unrealizable_l7": 1,
+        "pcap_packets_read": 321444,
+        "pcap_packets_kept": 321444,
+        "packets_per_branch": 321443
+      },
+      "test_subset": {
+        "detection_rate_defended": 0.8098955054765202,
+        "asr_defended": 0.19010449452347977,
+        "n_flows": 23829
+      }
+    },
+    "portscan_adv_size": {
+      "kind": "ml_nids",
+      "model": "ml_nids:PortScan:RF",
+      "mode": "size",
+      "model_source": "pretrained",
+      "detection_rate": {
+        "clean": 0.9991691947483038,
+        "adversarial": 0.013040437957124049,
+        "purified_all": 0.47628157527091486,
+        "defended": 0.4806538069533049
+      },
+      "asr": {
+        "clean": 0.0008308052516962094,
+        "adversarial": 0.9869595620428759,
+        "purified_all": 0.5237184247290851,
+        "defended": 0.5193461930466952
+      },
+      "mean_score": {
+        "clean": 0.999294476403872,
+        "adversarial": 0.25691177860234227,
+        "purified_all": 0.5279750921928688,
+        "defended": 0.5320292426358637
+      },
+      "asr_reduction": 0.4676133689961808,
+      "restoration_ratio_detection": 0.4741909875113819,
+      "restoration_ratio_score": 0.3705871174641411,
+      "gate": {
+        "n_flows": 158512,
+        "n_flagged_adversarial": 156448,
+        "flag_rate": 0.9869789038053901
+      },
+      "n_flows": 158946,
+      "realize": {
+        "target_flows": 158671,
+        "realized_flows": 158671,
+        "miss_len": 0,
+        "unmatched": 0,
+        "unrealizable_l7": 412,
+        "pcap_packets_read": 321444,
+        "pcap_packets_kept": 321444,
+        "packets_per_branch": 321032
+      },
+      "test_subset": {
+        "detection_rate_defended": 0.47746159657516996,
+        "asr_defended": 0.52253840342483,
+        "n_flows": 23826
+      }
+    },
+    "ssdp_ddos_adv_both": {
+      "kind": "ml_nids",
+      "model": "ml_nids:SSDP_DDoS:RF",
+      "mode": "both",
+      "model_source": "pretrained",
+      "detection_rate": {
+        "clean": 0.9980806213292347,
+        "adversarial": 0.9979621532134134,
+        "purified_all": 0.9979322198751908,
+        "defended": 0.9979396216328591
+      },
+      "asr": {
+        "clean": 0.0019193786707653038,
+        "adversarial": 0.0020378467865865835,
+        "purified_all": 0.0020677801248092376,
+        "defended": 0.0020603783671409026
+      },
+      "mean_score": {
+        "clean": 0.995732259669288,
+        "adversarial": 0.9474788605875234,
+        "purified_all": 0.9615727565328115,
+        "defended": 0.9615804215794005
+      },
+      "asr_reduction": -2.253158055431914e-05,
+      "restoration_ratio_detection": -0.19019109401815887,
+      "restoration_ratio_score": 0.2922397439397424,
+      "gate": {
+        "n_flows": 269351,
+        "n_flagged_adversarial": 269343,
+        "flag_rate": 0.9999702989779136
+      },
+      "n_flows": 269368,
+      "realize": {
+        "target_flows": 269490,
+        "realized_flows": 269351,
+        "miss_len": 139,
+        "unmatched": 0,
+        "unrealizable_l7": 0,
+        "pcap_packets_read": 1000000,
+        "pcap_packets_kept": 999698,
+        "packets_per_branch": 998876
+      },
+      "test_subset": {
+        "detection_rate_defended": 0.9977237301135661,
+        "asr_defended": 0.0022762698864339237,
+        "n_flows": 40417
+      }
+    },
+    "ssdp_ddos_adv_iat": {
+      "kind": "ml_nids",
+      "model": "ml_nids:SSDP_DDoS:RF",
+      "mode": "iat",
+      "model_source": "pretrained",
+      "detection_rate": {
+        "clean": 0.9980806284549616,
+        "adversarial": 0.9979656385964392,
+        "purified_all": 0.9979322045224209,
+        "defended": 0.9979359628770301
+      },
+      "asr": {
+        "clean": 0.0019193715450384063,
+        "adversarial": 0.002034361403560836,
+        "purified_all": 0.002067795477579071,
+        "defended": 0.002064037122969875
+      },
+      "mean_score": {
+        "clean": 0.9957326282025105,
+        "adversarial": 0.9483755549945801,
+        "purified_all": 0.9621461638124652,
+        "defended": 0.9621502180974479
+      },
+      "asr_reduction": -2.9675719409039125e-05,
+      "restoration_ratio_detection": -0.25807249256899173,
+      "restoration_ratio_score": 0.29086812528273176,
+      "gate": {
+        "n_flows": 269351,
+        "n_flagged_adversarial": 269342,
+        "flag_rate": 0.9999665863501528
+      },
+      "n_flows": 269375,
+      "realize": {
+        "target_flows": 269490,
+        "realized_flows": 269351,
+        "miss_len": 139,
+        "unmatched": 0,
+        "unrealizable_l7": 0,
+        "pcap_packets_read": 1000000,
+        "pcap_packets_kept": 999698,
+        "packets_per_branch": 998876
+      },
+      "test_subset": {
+        "detection_rate_defended": 0.998020292006929,
+        "asr_defended": 0.0019797079930710115,
+        "n_flows": 40410
+      }
+    },
+    "ssdp_ddos_adv_size": {
+      "kind": "ml_nids",
+      "model": "ml_nids:SSDP_DDoS:RF",
+      "mode": "size",
+      "model_source": "pretrained",
+      "detection_rate": {
+        "clean": 0.9980657855657855,
+        "adversarial": 0.9980769016583939,
+        "purified_all": 0.9979150745305208,
+        "defended": 0.9980620874510882
+      },
+      "asr": {
+        "clean": 0.0019342144342144874,
+        "adversarial": 0.0019230983416060887,
+        "purified_all": 0.0020849254694792485,
+        "defended": 0.0019379125489118465
+      },
+      "mean_score": {
+        "clean": 0.9957207640332644,
+        "adversarial": 0.9957318540078783,
+        "purified_all": 0.9947479354786053,
+        "defended": 0.9957186611326023
+      },
+      "asr_reduction": -1.4814207305757776e-05,
+      "restoration_ratio_detection": 1.3326811702310828,
+      "restoration_ratio_score": 1.1896217741924082,
+      "gate": {
+        "n_flows": 269351,
+        "n_flagged_adversarial": 6,
+        "flag_rate": 2.2275766564816912e-05
+      },
+      "n_flows": 269362,
+      "realize": {
+        "target_flows": 269490,
+        "realized_flows": 269351,
+        "miss_len": 139,
+        "unmatched": 0,
+        "unrealizable_l7": 0,
+        "pcap_packets_read": 1000000,
+        "pcap_packets_kept": 999698,
+        "packets_per_branch": 998876
+      },
+      "test_subset": {
+        "detection_rate_defended": 0.9981191843199366,
+        "asr_defended": 0.0018808156800633746,
+        "n_flows": 40408
+      }
+    },
+    "ssdp_flood_adv_both": {
+      "kind": "kitsune",
+      "model": "kitsune:ssdp_flood",
+      "mode": "both",
+      "model_source": "pretrained",
+      "detection_rate": {
+        "clean": 1.0,
+        "adversarial": 0.8,
+        "purified_all": 1.0,
+        "defended": 1.0
+      },
+      "asr": {
+        "clean": 0.0,
+        "adversarial": 0.19999999999999996,
+        "purified_all": 0.0,
+        "defended": 0.0
+      },
+      "mean_score": {
+        "clean": 113.37734880161733,
+        "adversarial": 231.25579916679504,
+        "purified_all": 93.1159350551768,
+        "defended": 93.1159350551768
+      },
+      "asr_reduction": 0.19999999999999996,
+      "restoration_ratio_detection": 1.0,
+      "restoration_ratio_score": 1.171883950659958,
+      "gate": {
+        "n_flows": 5,
+        "n_flagged_adversarial": 5,
+        "flag_rate": 1.0
+      },
+      "n_flows": 5,
+      "realize": {
+        "target_flows": 65536,
+        "realized_flows": 65536,
+        "miss_len": 0,
+        "unmatched": 0,
+        "unrealizable_l7": 1439492,
+        "pcap_packets_read": 1439604,
+        "pcap_packets_kept": 1439602,
+        "packets_per_branch": 110
+      },
+      "test_subset": {
+        "detection_rate_defended": 1.0,
+        "asr_defended": 0.0,
+        "n_flows": 1
+      }
+    },
+    "ssdp_flood_adv_iat": {
+      "kind": "kitsune",
+      "model": "kitsune:ssdp_flood",
+      "mode": "iat",
+      "model_source": "pretrained",
+      "detection_rate": {
+        "clean": 0.9999847412109375,
+        "adversarial": 0.9999847412109375,
+        "purified_all": 0.9999847412109375,
+        "defended": 0.9999847412109375
+      },
+      "asr": {
+        "clean": 1.52587890625e-05,
+        "adversarial": 1.52587890625e-05,
+        "purified_all": 1.52587890625e-05,
+        "defended": 1.52587890625e-05
+      },
+      "mean_score": {
+        "clean": 16.528404851513088,
+        "adversarial": 3.1373005307496724,
+        "purified_all": 12.520083330816707,
+        "defended": 12.520080653505126
+      },
+      "asr_reduction": 0.0,
+      "restoration_ratio_detection": null,
+      "restoration_ratio_score": 0.7006726180309937,
+      "gate": {
+        "n_flows": 65536,
+        "n_flagged_adversarial": 65535,
+        "flag_rate": 0.9999847412109375
+      },
+      "n_flows": 65536,
+      "realize": {
+        "target_flows": 65536,
+        "realized_flows": 65536,
+        "miss_len": 0,
+        "unmatched": 0,
+        "unrealizable_l7": 977,
+        "pcap_packets_read": 1439604,
+        "pcap_packets_kept": 1439602,
+        "packets_per_branch": 1438625
+      },
+      "test_subset": {
+        "detection_rate_defended": 0.9998982809480216,
+        "asr_defended": 0.00010171905197842168,
+        "n_flows": 9831
+      }
+    },
+    "ssdp_flood_adv_size": {
+      "kind": "kitsune",
+      "model": "kitsune:ssdp_flood",
+      "mode": "size",
+      "model_source": "pretrained",
+      "detection_rate": {
+        "clean": 1.0,
+        "adversarial": 1.0,
+        "purified_all": 0.8,
+        "defended": 1.0
+      },
+      "asr": {
+        "clean": 0.0,
+        "adversarial": 0.0,
+        "purified_all": 0.19999999999999996,
+        "defended": 0.0
+      },
+      "mean_score": {
+        "clean": 3.709279297313249,
+        "adversarial": 3.709279297313249,
+        "purified_all": 14.227555376697216,
+        "defended": 3.709279297313249
+      },
+      "asr_reduction": 0.0,
+      "restoration_ratio_detection": null,
+      "restoration_ratio_score": null,
+      "gate": {
+        "n_flows": 5,
+        "n_flagged_adversarial": 0,
+        "flag_rate": 0.0
+      },
+      "n_flows": 5,
+      "realize": {
+        "target_flows": 65536,
+        "realized_flows": 65536,
+        "miss_len": 0,
+        "unmatched": 0,
+        "unrealizable_l7": 1439492,
+        "pcap_packets_read": 1439604,
+        "pcap_packets_kept": 1439602,
+        "packets_per_branch": 110
+      }
+    },
+    "syn_ddos_adv_both": {
+      "kind": "ml_nids",
+      "model": "ml_nids:SYN_DDoS:RF",
+      "mode": "both",
+      "model_source": "pretrained",
+      "detection_rate": {
+        "clean": 0.9991672218520986,
+        "adversarial": 0.9898310644579301,
+        "purified_all": 0.9998336106489185,
+        "defended": 0.9998336106489185
+      },
+      "asr": {
+        "clean": 0.0008327781479013918,
+        "adversarial": 0.010168935542069879,
+        "purified_all": 0.00016638935108148623,
+        "defended": 0.00016638935108148623
+      },
+      "mean_score": {
+        "clean": 0.9921027648234512,
+        "adversarial": 0.7218164671149747,
+        "purified_all": 0.8557670549084858,
+        "defended": 0.8557670549084858
+      },
+      "asr_reduction": 0.010002546190988393,
+      "restoration_ratio_detection": 1.07137720249191,
+      "restoration_ratio_score": 0.49558778572632867,
+      "gate": {
+        "n_flows": 6004,
+        "n_flagged_adversarial": 6004,
+        "flag_rate": 1.0
+      },
+      "n_flows": 6010,
+      "realize": {
+        "target_flows": 71656,
+        "realized_flows": 6004,
+        "miss_len": 65652,
+        "unmatched": 0,
+        "unrealizable_l7": 0,
+        "pcap_packets_read": 4963410,
+        "pcap_packets_kept": 2131124,
+        "packets_per_branch": 13518
+      },
+      "test_subset": {
+        "detection_rate_defended": 1.0,
+        "asr_defended": 0.0,
+        "n_flows": 941
+      }
+    },
+    "syn_ddos_adv_iat": {
+      "kind": "ml_nids",
+      "model": "ml_nids:SYN_DDoS:RF",
+      "mode": "iat",
+      "model_source": "pretrained",
+      "detection_rate": {
+        "clean": 0.9991672218520986,
+        "adversarial": 0.9998359580052494,
+        "purified_all": 1.0,
+        "defended": 1.0
+      },
+      "asr": {
+        "clean": 0.0008327781479013918,
+        "adversarial": 0.00016404199475061887,
+        "purified_all": 0.0,
+        "defended": 0.0
+      },
+      "mean_score": {
+        "clean": 0.9921868754163891,
+        "adversarial": 0.9696866797900264,
+        "purified_all": 0.8094517470881865,
+        "defended": 0.8095051563539587
+      },
+      "asr_reduction": 0.00016404199475061887,
+      "restoration_ratio_detection": -0.24530151985611887,
+      "restoration_ratio_score": -7.119116922183071,
+      "gate": {
+        "n_flows": 6004,
+        "n_flagged_adversarial": 6004,
+        "flag_rate": 1.0
+      },
+      "n_flows": 6012,
+      "realize": {
+        "target_flows": 71656,
+        "realized_flows": 6004,
+        "miss_len": 65652,
+        "unmatched": 0,
+        "unrealizable_l7": 0,
+        "pcap_packets_read": 4963410,
+        "pcap_packets_kept": 2131124,
+        "packets_per_branch": 13518
+      },
+      "test_subset": {
+        "detection_rate_defended": 1.0,
+        "asr_defended": 0.0,
+        "n_flows": 918
+      }
+    },
+    "syn_ddos_adv_size": {
+      "kind": "ml_nids",
+      "model": "ml_nids:SYN_DDoS:RF",
+      "mode": "size",
+      "model_source": "pretrained",
+      "detection_rate": {
+        "clean": 0.9990155865463495,
+        "adversarial": 0.8905121470781353,
+        "purified_all": 1.0,
+        "defended": 1.0
+      },
+      "asr": {
+        "clean": 0.0009844134536505234,
+        "adversarial": 0.10948785292186469,
+        "purified_all": 0.0,
+        "defended": 0.0
+      },
+      "mean_score": {
+        "clean": 0.9965315832649714,
+        "adversarial": 0.5500582731451085,
+        "purified_all": 0.785178625491977,
+        "defended": 0.8520856927142318
+      },
+      "asr_reduction": 0.10948785292186469,
+      "restoration_ratio_detection": 1.0090726474522396,
+      "restoration_ratio_score": 0.6764736272545369,
+      "gate": {
+        "n_flows": 6004,
+        "n_flagged_adversarial": 6004,
+        "flag_rate": 1.0
+      },
+      "n_flows": 7947,
+      "realize": {
+        "target_flows": 71656,
+        "realized_flows": 6004,
+        "miss_len": 65652,
+        "unmatched": 0,
+        "unrealizable_l7": 0,
+        "pcap_packets_read": 4963410,
+        "pcap_packets_kept": 2131124,
+        "packets_per_branch": 13518
+      },
+      "test_subset": {
+        "detection_rate_defended": 1.0,
+        "asr_defended": 0.0,
+        "n_flows": 938
+      }
+    }
+  },
+  "skipped_sources": {},
+  "models": {
+    "brute_force": "ml_nids:BruteForce:RF",
+    "ddos": "ml_nids:DDoS:RF",
+    "dns_ddos": "ml_nids:DNS_DDoS:RF",
+    "ldap_ddos": "ml_nids:LDAP_DDoS:RF",
+    "mirai": "kitsune:mirai",
+    "ntp_ddos": "ml_nids:NTP_DDoS:RF",
+    "portscan": "ml_nids:PortScan:RF",
+    "ssdp_ddos": "ml_nids:SSDP_DDoS:RF",
+    "ssdp_flood": "kitsune:ssdp_flood",
+    "syn_ddos": "ml_nids:SYN_DDoS:RF"
+  },
+  "n_sources": 30,
+  "overall": {
+    "detection_rate": {
+      "clean": 0.9811435820266795,
+      "adversarial": 0.7886793133294865,
+      "purified_all": 0.8830936525599672,
+      "defended": 0.883561395673495
+    },
+    "asr": {
+      "clean": 0.018856417973320494,
+      "adversarial": 0.2113206866705135,
+      "purified_all": 0.11690634744003281,
+      "defended": 0.11643860432650499
+    },
+    "asr_reduction": 0.09488208234400852,
+    "restoration_ratio_detection": 0.4929854408107718,
+    "n_flows": 2704816
+  },
+  "by_kind": {
+    "kitsune": {
+      "detection_rate": {
+        "clean": 0.792313359825106,
+        "adversarial": 0.8087640259442224,
+        "purified_all": 0.791975166982716,
+        "defended": 0.7920838718249127
+      },
+      "asr": {
+        "clean": 0.20768664017489402,
+        "adversarial": 0.19123597405577764,
+        "purified_all": 0.20802483301728403,
+        "defended": 0.2079161281750873
+      },
+      "asr_reduction": -0.016680154119309676,
+      "restoration_ratio_detection": 1.0139500734214413,
+      "n_flows": 82793
+    },
+    "ml_nids": {
+      "detection_rate": {
+        "clean": 0.9876184121864379,
+        "adversarial": 0.7879901041435686,
+        "purified_all": 0.8859795765816979,
+        "defended": 0.8864498900276618
+      },
+      "asr": {
+        "clean": 0.012381587813562134,
+        "adversarial": 0.21200989585643137,
+        "purified_all": 0.1140204234183021,
+        "defended": 0.11355010997233816
+      },
+      "asr_reduction": 0.09845978588409321,
+      "restoration_ratio_detection": 0.49321555068707706,
+      "n_flows": 2622023
+    }
+  }
+}

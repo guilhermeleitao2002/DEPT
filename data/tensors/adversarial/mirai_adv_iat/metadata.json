@@ -20,9 +20,9 @@
   ],
   "rf_checkpoint_stride": 10,
   "rf_first_checkpoint": 2,
-  "num_flows": 3830,
-  "num_packets": 192755,
-  "num_checkpoints": 20150,
+  "num_flows": 13046,
+  "num_packets": 642516,
+  "num_checkpoints": 67327,
   "sequence_feature_count": 1090,
   "rf_stat_names": [
     "IPAT_mean",
@@ -52,16 +52,16 @@
   ],
   "normalization_stats": {
     "IPAT": {
-      "mean": 26.744513662992706,
-      "std": 539.9896285057356
+      "mean": 25.816852240952073,
+      "std": 208.21998059319273
     }
   },
   "flow_packets_shape": [
-    192755,
+    642516,
     1090
   ],
   "rf_checkpoints_shape": [
-    20150,
+    67327,
     24
   ]
 }

@@ -1,123 +1,121 @@
 {
   "best_epoch": 19,
-  "best_val_loss": 0.0002895160289451192,
+  "best_val_loss": 0.0003722657215661907,
   "epochs_run": 20,
   "epochs_planned": 20,
-  "train_seconds": 26557.42036652565,
+  "train_seconds": 35942.737417936325,
   "device": "cuda",
   "amp": true,
   "n_parameters": 677698,
-  "n_pairs": 1986705,
+  "n_pairs": 2566489,
   "pair_skipped": {
     "no_clean_base": [],
     "excluded": [],
-    "len_mismatch": 396750,
-    "too_short": 16803,
-    "unmatched_adv": 4628163
+    "len_mismatch": 241027,
+    "too_short": 21804,
+    "unmatched_adv": 4628979
   },
-  "loss_emphasis": "none",
-  "max_flows_per_split": null,
   "split_summary": {
     "train": {
-      "n_pairs": 1390695,
+      "n_pairs": 1796542,
       "per_source": {
-        "brute_force_adv_both": 52,
-        "brute_force_adv_iat": 52,
-        "brute_force_adv_size": 52,
-        "ddos_adv_both": 708,
-        "ddos_adv_iat": 708,
-        "ddos_adv_size": 708,
+        "brute_force_adv_both": 4684,
+        "brute_force_adv_iat": 4684,
+        "brute_force_adv_size": 4684,
+        "ddos_adv_both": 26981,
+        "ddos_adv_iat": 26981,
+        "ddos_adv_size": 22599,
         "dns_ddos_adv_both": 4678,
         "dns_ddos_adv_iat": 4678,
         "dns_ddos_adv_size": 4678,
         "ldap_ddos_adv_both": 154412,
         "ldap_ddos_adv_iat": 154412,
         "ldap_ddos_adv_size": 154412,
-        "mirai_adv_both": 1173,
-        "mirai_adv_iat": 1173,
-        "mirai_adv_size": 1173,
+        "mirai_adv_both": 4046,
+        "mirai_adv_iat": 4046,
+        "mirai_adv_size": 4046,
         "ntp_ddos_adv_both": 9760,
         "ntp_ddos_adv_iat": 9760,
         "ntp_ddos_adv_size": 9760,
-        "portscan_adv_both": 11087,
-        "portscan_adv_iat": 11087,
-        "portscan_adv_size": 11087,
+        "portscan_adv_both": 111070,
+        "portscan_adv_iat": 111070,
+        "portscan_adv_size": 111070,
         "ssdp_ddos_adv_both": 188643,
         "ssdp_ddos_adv_iat": 188643,
         "ssdp_ddos_adv_size": 188643,
-        "ssdp_flood_adv_both": 42893,
-        "ssdp_flood_adv_iat": 42893,
-        "ssdp_flood_adv_size": 42893,
+        "ssdp_flood_adv_both": 45875,
+        "ssdp_flood_adv_iat": 45875,
+        "ssdp_flood_adv_size": 45875,
         "syn_ddos_adv_both": 50159,
         "syn_ddos_adv_iat": 50159,
         "syn_ddos_adv_size": 50159
       }
     },
     "val": {
-      "n_pairs": 298014,
+      "n_pairs": 384984,
       "per_source": {
-        "brute_force_adv_both": 11,
-        "brute_force_adv_iat": 11,
-        "brute_force_adv_size": 11,
-        "ddos_adv_both": 152,
-        "ddos_adv_iat": 152,
-        "ddos_adv_size": 152,
+        "brute_force_adv_both": 1004,
+        "brute_force_adv_iat": 1004,
+        "brute_force_adv_size": 1004,
+        "ddos_adv_both": 5782,
+        "ddos_adv_iat": 5782,
+        "ddos_adv_size": 4843,
         "dns_ddos_adv_both": 1003,
         "dns_ddos_adv_iat": 1003,
         "dns_ddos_adv_size": 1003,
         "ldap_ddos_adv_both": 33088,
         "ldap_ddos_adv_iat": 33088,
         "ldap_ddos_adv_size": 33088,
-        "mirai_adv_both": 252,
-        "mirai_adv_iat": 252,
-        "mirai_adv_size": 252,
+        "mirai_adv_both": 867,
+        "mirai_adv_iat": 867,
+        "mirai_adv_size": 867,
         "ntp_ddos_adv_both": 2092,
         "ntp_ddos_adv_iat": 2092,
         "ntp_ddos_adv_size": 2092,
-        "portscan_adv_both": 2376,
-        "portscan_adv_iat": 2376,
-        "portscan_adv_size": 2376,
+        "portscan_adv_both": 23801,
+        "portscan_adv_iat": 23801,
+        "portscan_adv_size": 23801,
         "ssdp_ddos_adv_both": 40424,
         "ssdp_ddos_adv_iat": 40424,
         "ssdp_ddos_adv_size": 40424,
-        "ssdp_flood_adv_both": 9191,
-        "ssdp_flood_adv_iat": 9191,
-        "ssdp_flood_adv_size": 9191,
+        "ssdp_flood_adv_both": 9831,
+        "ssdp_flood_adv_iat": 9831,
+        "ssdp_flood_adv_size": 9831,
         "syn_ddos_adv_both": 10749,
         "syn_ddos_adv_iat": 10749,
         "syn_ddos_adv_size": 10749
       }
     },
     "test": {
-      "n_pairs": 297996,
+      "n_pairs": 384963,
       "per_source": {
-        "brute_force_adv_both": 11,
-        "brute_force_adv_iat": 11,
-        "brute_force_adv_size": 11,
-        "ddos_adv_both": 151,
-        "ddos_adv_iat": 151,
-        "ddos_adv_size": 151,
+        "brute_force_adv_both": 1004,
+        "brute_force_adv_iat": 1004,
+        "brute_force_adv_size": 1004,
+        "ddos_adv_both": 5781,
+        "ddos_adv_iat": 5781,
+        "ddos_adv_size": 4842,
         "dns_ddos_adv_both": 1002,
         "dns_ddos_adv_iat": 1002,
         "dns_ddos_adv_size": 1002,
         "ldap_ddos_adv_both": 33088,
         "ldap_ddos_adv_iat": 33088,
         "ldap_ddos_adv_size": 33088,
-        "mirai_adv_both": 251,
-        "mirai_adv_iat": 251,
-        "mirai_adv_size": 251,
+        "mirai_adv_both": 867,
+        "mirai_adv_iat": 867,
+        "mirai_adv_size": 867,
         "ntp_ddos_adv_both": 2091,
         "ntp_ddos_adv_iat": 2091,
         "ntp_ddos_adv_size": 2091,
-        "portscan_adv_both": 2376,
-        "portscan_adv_iat": 2376,
-        "portscan_adv_size": 2376,
+        "portscan_adv_both": 23800,
+        "portscan_adv_iat": 23800,
+        "portscan_adv_size": 23800,
         "ssdp_ddos_adv_both": 40423,
         "ssdp_ddos_adv_iat": 40423,
         "ssdp_ddos_adv_size": 40423,
-        "ssdp_flood_adv_both": 9191,
-        "ssdp_flood_adv_iat": 9191,
-        "ssdp_flood_adv_size": 9191,
+        "ssdp_flood_adv_both": 9830,
+        "ssdp_flood_adv_iat": 9830,
+        "ssdp_flood_adv_size": 9830,
         "syn_ddos_adv_both": 10748,
         "syn_ddos_adv_iat": 10748,
         "syn_ddos_adv_size": 10748
@@ -154,11 +152,68 @@
       "seed": 42
     },
     "realize": {
-      "adversarial_pcap_dir": "/mnt/nas/inesc/gleitao/DEPT/data/adversarial",
-      "write_pcap": true,
-      "tshark_sample": 300,
-      "max_pcap_packets": 100000,
-      "roundtrip": false
+      "adversarial_pcap_dir": "/mnt/nas/inesc/gleitao/DEPT/data/adversarial"
+    },
+    "nids": {
+      "enabled": true,
+      "tantgen_root": "../Transformer-based_Adversarial_Network_Traffic_Generator",
+      "default_ml_model": "RF",
+      "ml_nids_model_dir": "src/NIDS/models",
+      "attacks": {
+        "mirai": {
+          "kind": "kitsune",
+          "model": "src/Kitsune/models/Mirai_model.pkl"
+        },
+        "ssdp_flood": {
+          "kind": "kitsune",
+          "model": "src/Kitsune/models/SSDP_Flood_model.pkl"
+        },
+        "ddos": {
+          "kind": "ml_nids",
+          "tg_attack": "DDoS"
+        },
+        "portscan": {
+          "kind": "ml_nids",
+          "tg_attack": "PortScan"
+        },
+        "brute_force": {
+          "kind": "ml_nids",
+          "tg_attack": "BruteForce"
+        },
+        "dns_ddos": {
+          "kind": "ml_nids",
+          "tg_attack": "DNS_DDoS"
+        },
+        "ldap_ddos": {
+          "kind": "ml_nids",
+          "tg_attack": "LDAP_DDoS"
+        },
+        "ntp_ddos": {
+          "kind": "ml_nids",
+          "tg_attack": "NTP_DDoS"
+        },
+        "ssdp_ddos": {
+          "kind": "ml_nids",
+          "tg_attack": "SSDP_DDoS"
+        },
+        "syn_ddos": {
+          "kind": "ml_nids",
+          "tg_attack": "SYN_DDoS"
+        }
+      },
+      "kitsune": {
+        "model_dir": "data/models/kitsune",
+        "benign_pcap_dir": "data/original/Kitsune/Benign",
+        "base_to_tg": {
+          "mirai": "Mirai",
+          "ssdp_flood": "SSDP_Flood"
+        },
+        "fm_grace": 5000,
+        "ad_grace": 50000,
+        "train_cap_packets": 55000,
+        "detection": "max",
+        "seed": 42
+      }
     },
     "_repo_root": "/mnt/nas/inesc/gleitao/DEPT"
   },
@@ -173,9 +228,7 @@
     "early_stop_patience": 3,
     "amp": true,
     "max_length": 200,
-    "seed": 42,
-    "loss_emphasis": "none",
-    "perturb_weight": 0.0
+    "seed": 42
   },
   "model_config": {
     "num_features": 1090,

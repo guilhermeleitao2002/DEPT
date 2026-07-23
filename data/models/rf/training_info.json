@@ -11,8 +11,8 @@
         "max_depth": null,
         "min_samples_leaf": 1
       },
-      "val_macro_f1": 0.7615562386003265,
-      "fit_seconds": 285.56747174263
+      "val_macro_f1": 0.8531277499490377,
+      "fit_seconds": 326.32692766189575
     },
     {
       "params": {
@@ -20,8 +20,8 @@
         "max_depth": null,
         "min_samples_leaf": 2
       },
-      "val_macro_f1": 0.7818814189413472,
-      "fit_seconds": 261.9758267402649
+      "val_macro_f1": 0.8652103037506832,
+      "fit_seconds": 306.59497022628784
     },
     {
       "params": {
@@ -29,8 +29,8 @@
         "max_depth": null,
         "min_samples_leaf": 5
       },
-      "val_macro_f1": 0.8009752105691307,
-      "fit_seconds": 268.18869805336
+      "val_macro_f1": 0.8855067827820486,
+      "fit_seconds": 292.5184543132782
     },
     {
       "params": {
@@ -38,8 +38,8 @@
         "max_depth": 20,
         "min_samples_leaf": 1
       },
-      "val_macro_f1": 0.8418384251714129,
-      "fit_seconds": 243.75403547286987
+      "val_macro_f1": 0.8922603526742228,
+      "fit_seconds": 278.1024384498596
     },
     {
       "params": {
@@ -47,8 +47,8 @@
         "max_depth": 20,
         "min_samples_leaf": 2
       },
-      "val_macro_f1": 0.841992853049467,
-      "fit_seconds": 258.8718500137329
+      "val_macro_f1": 0.89245802676297,
+      "fit_seconds": 276.4813952445984
     },
     {
       "params": {
@@ -56,8 +56,8 @@
         "max_depth": 20,
         "min_samples_leaf": 5
       },
-      "val_macro_f1": 0.8473843373354577,
-      "fit_seconds": 238.61173677444458
+      "val_macro_f1": 0.8925312401492935,
+      "fit_seconds": 269.7619960308075
     },
     {
       "params": {
@@ -65,8 +65,8 @@
         "max_depth": 40,
         "min_samples_leaf": 1
       },
-      "val_macro_f1": 0.8181076335805033,
-      "fit_seconds": 269.26545691490173
+      "val_macro_f1": 0.8773916956510156,
+      "fit_seconds": 278.9087700843811
     },
     {
       "params": {
@@ -74,8 +74,8 @@
         "max_depth": 40,
         "min_samples_leaf": 2
       },
-      "val_macro_f1": 0.8240707962504275,
-      "fit_seconds": 247.2143747806549
+      "val_macro_f1": 0.8806425616792501,
+      "fit_seconds": 270.2510070800781
     },
     {
       "params": {
@@ -83,8 +83,8 @@
         "max_depth": 40,
         "min_samples_leaf": 5
       },
-      "val_macro_f1": 0.8295494876092988,
-      "fit_seconds": 267.5917477607727
+      "val_macro_f1": 0.887176374290422,
+      "fit_seconds": 281.64965772628784
     },
     {
       "params": {
@@ -92,8 +92,8 @@
         "max_depth": null,
         "min_samples_leaf": 1
       },
-      "val_macro_f1": 0.7601511166384735,
-      "fit_seconds": 510.3505561351776
+      "val_macro_f1": 0.8528032789190576,
+      "fit_seconds": 521.806209564209
     },
     {
       "params": {
@@ -101,8 +101,8 @@
         "max_depth": null,
         "min_samples_leaf": 2
       },
-      "val_macro_f1": 0.7826532960650081,
-      "fit_seconds": 476.1701445579529
+      "val_macro_f1": 0.8649467913876261,
+      "fit_seconds": 502.87689328193665
     },
     {
       "params": {
@@ -110,8 +110,8 @@
         "max_depth": null,
         "min_samples_leaf": 5
       },
-      "val_macro_f1": 0.8019002488419799,
-      "fit_seconds": 498.0458598136902
+      "val_macro_f1": 0.8855377199989753,
+      "fit_seconds": 503.9026041030884
     },
     {
       "params": {
@@ -119,8 +119,8 @@
         "max_depth": 20,
         "min_samples_leaf": 1
       },
-      "val_macro_f1": 0.8418288031180219,
-      "fit_seconds": 437.9688503742218
+      "val_macro_f1": 0.8923030188538921,
+      "fit_seconds": 479.3494107723236
     },
     {
       "params": {
@@ -128,8 +128,8 @@
         "max_depth": 20,
         "min_samples_leaf": 2
       },
-      "val_macro_f1": 0.8419753257963747,
-      "fit_seconds": 441.4434394836426
+      "val_macro_f1": 0.8924573668160776,
+      "fit_seconds": 477.9215614795685
     },
     {
       "params": {
@@ -137,8 +137,8 @@
         "max_depth": 20,
         "min_samples_leaf": 5
       },
-      "val_macro_f1": 0.847367680158609,
-      "fit_seconds": 443.9819703102112
+      "val_macro_f1": 0.8925128213017381,
+      "fit_seconds": 478.5926163196564
     },
     {
       "params": {
@@ -146,8 +146,8 @@
         "max_depth": 40,
         "min_samples_leaf": 1
       },
-      "val_macro_f1": 0.8182173129297741,
-      "fit_seconds": 473.11597633361816
+      "val_macro_f1": 0.8772045766308696,
+      "fit_seconds": 494.0773422718048
     },
     {
       "params": {
@@ -155,8 +155,8 @@
         "max_depth": 40,
         "min_samples_leaf": 2
       },
-      "val_macro_f1": 0.8246485419855583,
-      "fit_seconds": 473.4742622375488
+      "val_macro_f1": 0.880856593960902,
+      "fit_seconds": 501.61076283454895
     },
     {
       "params": {
@@ -164,8 +164,8 @@
         "max_depth": 40,
         "min_samples_leaf": 5
       },
-      "val_macro_f1": 0.8340548337427708,
-      "fit_seconds": 464.9455351829529
+      "val_macro_f1": 0.8872657314953067,
+      "fit_seconds": 490.79021096229553
     }
   ],
   "defaults": {
@@ -217,10 +217,8 @@
       "seed": 42
     },
     "benign_cap_ratio": 3.0,
-    "drop_unknown": true,
     "grid_search": {
       "enabled": true,
-      "scoring": "macro_f1",
       "n_estimators": [
         200,
         400

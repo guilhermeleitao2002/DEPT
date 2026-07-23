@@ -19,9 +19,7 @@
     "early_stop_patience": 3,
     "amp": true,
     "max_length": 200,
-    "seed": 42,
-    "loss_emphasis": "none",
-    "perturb_weight": 0.0
+    "seed": 42
   },
   "n_parameters": 677698
 }
