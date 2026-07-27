@@ -110,17 +110,20 @@ directions. Both are reported rather than one assumed (`attack.pad_byte_mode`).
 
 **ASR is conditioned on the flows each target detects at δ=0** — the standard
 robust-accuracy convention (attack success measured on initially-correct inputs).
-Here it is the difference between a number and an artifact: the TCN's reported
-ROC-AUC is **0.494** on `mirai_adv_size` and **0.232** on `mirai_adv_iat` — at
-chance, or below. An unconditional ASR would start near 75% before the attack did
-anything and would mostly be reporting flows the detector never caught.
-`detection_rate_clean` is reported alongside, because a target that detects nothing
-cannot be evaded.
+Here it is the difference between a number and an artifact: the TCN detects only
+3,374 of the 9,000 sampled flows at its matched threshold, versus 7,510 for the RF
+and 7,597 for the stack. An unconditional ASR would mostly be reporting flows the
+detector never caught in the first place. `detection_rate_clean` is reported
+alongside, because a target that detects nothing cannot be evaded — and on the
+sources where a target's δ=0 detection is empty the per-source ASR is `nan` by
+construction.
 
-**Thresholds are matched-FPR, never a raw 0.5.** The meta-learner early-stopped at
-`best_epoch: 1`; comparing at a fixed 0.5 would credit it for rarely saying
-"adversarial", which is undertraining rather than robustness. Each target's
-threshold is set at a common false-positive rate on unperturbed benign flows.
+**Thresholds are matched-FPR, never a raw 0.5.** Comparing at a fixed 0.5 would
+credit whichever model happens to say "adversarial" least often — and the three
+targets are calibrated very differently (median verdict on unperturbed benign
+flows: RF 0.043, TCN 0.379, stack 0.002). Each target's threshold is instead set
+at a common false-positive rate on unperturbed benign flows; at 5% FPR that is
+RF 0.4535, TCN 0.9820, stack 0.3658.
 
 **The curve is the monotone envelope.** A flow counts as evaded at budget *b* if it
 evaded at any budget ≤ *b*. This follows from the feasible sets being nested — an
@@ -145,43 +148,96 @@ distance the verdict moves when slot *x* is handed back its clean value, a large
 claim.
 
 `tantgen_budget` is context the marginal cost needs: TANTGen's own spend varies by
-two orders of magnitude across sources — `mirai_adv_size` perturbs 81% of packets
-by +23.6 B and `portscan_adv_size` 63% by +63 B, but `dns_ddos_adv_size` only 0.3%
-by +0.09 B.
+three orders of magnitude across sources — `portscan_adv_size` perturbs 63% of
+packets by a mean +246 B and `mirai_adv_size` 54% by +32 B, but `dns_ddos_adv_size`
+only 0.4% by +0.04 B.
 
 ## Results
 
-<!-- TODO: populate from data/models/gradient_ablation/gradient_ablation_metrics.json -->
+Full-scale run: 9,000 flows (300 per source × 30 sources), 162,000 scored records,
+6 budgets, 4.3 h. Reported at the `fpr_0.05` matched-threshold policy with the
+`best` (PGD ∪ random) attacker and the monotone envelope.
 
-Not yet run at full scale. The smoke configuration (`--attack brute_force`,
-24 flows/source) is reported in the thesis; see `data/models/gradient_ablation/`.
+### ASR vs budget (overall)
+
+| Budget | median spend / flow | RF | TCN | **Stack** |
+|---|---|---|---|---|
+| b0 | 0 B, 0 ms | 0.0% | 0.0% | 0.0% |
+| b8 | 13 B, 0.004 ms/pkt | 8.6% | 40.5% | **1.7%** |
+| b32 | 47 B, 0.041 ms/pkt | 10.7% | 50.1% | **4.7%** |
+| b128 | 167 B, 0.419 ms/pkt | 13.1% | 52.2% | **8.5%** |
+| b512 | 537 B, 3.68 ms/pkt | 18.4% | 53.3% | 18.9% |
+| b1460 | 1,574 B, 28.5 ms/pkt | 36.0% | 54.5% | **25.5%** |
+
+### Minimum budget to evade
+
+| Target | matched threshold | detected at δ=0 | median min budget | never evaded |
+|---|---|---|---|---|
+| RF | 0.4535 | 7,510 | b512 | 64.0% |
+| TCN | 0.9820 | 3,374 | **b8** | 45.5% |
+| **Stack** | 0.3658 | 7,597 | b512 | **74.5%** |
+
+### Does the gradient help? (TCN, PGD vs query-matched random)
+
+| Budget | b8 | b32 | b128 | b512 | b1460 |
+|---|---|---|---|---|---|
+| PGD | 37.2% | 47.2% | 48.7% | 49.5% | 50.7% |
+| random | 40.1% | 49.8% | 51.4% | 52.1% | 52.8% |
 
 ## Observations
 
+**RQ1 is answered affirmatively, with one qualification.** The stack is the
+hardest target at every budget the attacker can plausibly afford: 1.7% / 4.7% /
+8.5% ASR at b8 / b32 / b128 versus 8.6% / 10.7% / 13.1% for the RF alone and
+40.5% / 50.1% / 52.2% for the TCN alone. 74.5% of flows never evade the stack at
+any budget, against 64.0% for the RF and 45.5% for the TCN. The qualification is
+the crossover at b512, where the stack (18.9%) briefly matches the RF (18.4%)
+before pulling ahead again at b1460 (25.5% vs 36.0%) — so "the stack always costs
+the attacker more than *either* component" is true for the TCN at all budgets and
+for the RF everywhere except that one grid point. TANTGen's own spend (mean
+~29–32 pad-bytes/packet on `portscan`/`mirai`) sits in the b32–b128 region, where
+the stack concedes ≤ 8.5%.
+
+**The gradient buys the attacker nothing here.** Query-matched random search
+*beats* PGD on the TCN at every budget (40.1% vs 37.2% at b8; 52.8% vs 50.7% at
+b1460). The nPrint bit-encoding of packet size makes the loss jagged enough that
+descent direction carries little information — which is why the reported attacker
+is `best` = PGD ∪ random, and why the `random` control is not a formality. ART's
+AutoPGD agrees the search is not simply under-tuned: on the relaxed problem all
+three attackers drive 100% of flows past the boundary (median margin −0.79 to
+−0.85, n=16). The honest reading is that **the stack's advantage here is measured
+against a strong-but-not-gradient-dependent attacker**; it demonstrates that a
+non-differentiable component raises evasion cost, not that gradients are useless
+in general.
+
+**The meta-learner does lean on the RF as the TCN degrades.** `rf_reliance` moves
+from 0.00 at δ=0 (nothing to compensate) to 0.53–0.56 across every non-zero budget,
+with 5,900–6,500 of 9,000 flows registering a shifted verdict. This is the
+falsifiable form of DEPT's design claim, and it holds.
+
 **Only some sources can answer RQ1 at all.** A target that already misses a flow
-cannot be evaded, and the TCN's δ=0 detection rate collapses to 0.000 on
-`brute_force_adv_both/iat`, `ddos_adv_iat`, `dns_ddos_*`, `ssdp_ddos_*` and
-`ssdp_flood_adv_iat`. Flow length compounds it: `ldap_ddos`, `portscan`,
-`ssdp_ddos` and `syn_ddos` have a **median of 2 packets** against a TCN whose
-receptive field is 29.
+cannot be evaded. At δ=0 the TCN detects nothing (0.00–0.02) on `brute_force_*`,
+`ldap_ddos_*`, `mirai_both/iat`, `ntp_ddos_*`, `portscan_iat`, `ssdp_ddos_*` and
+`syn_ddos_iat`; on several of these its ASR is `nan` because the denominator is
+empty. Flow length compounds it: `ldap_ddos`, `portscan`, `ssdp_ddos` and
+`syn_ddos` have a **median of 2 packets** against a TCN whose receptive field is 29.
+The RF's δ=0 detection is near 1.0 almost everywhere except the four
+reflection-flood `_size` variants (0.00–0.42), the same blind spot the base-learner
+evaluation found.
 
-**The stack already rides the RF before any attack.** At δ=0, where the TCN is
-blind and the forest is not, the stack follows the forest: `ddos_adv_iat`,
-`portscan_adv_iat` and `ssdp_flood_adv_iat` all read RF 1.000 / TCN 0.000 /
-**stack 1.000**. It is not universal — on `ssdp_ddos_*` (RF 1.000, TCN 0.000) the
-stack collapses to **0.021**, discarding the RF's signal.
+**The stack usually rides the RF, but not always.** Where the TCN is blind and the
+forest is not (`ldap_ddos_*`, `ntp_ddos_both/iat`, `ssdp_ddos_both/iat`,
+`portscan_iat`, `syn_ddos_iat`), the stack inherits the RF's δ=0 detection of ~1.00.
+It also inherits the RF's failures: on `ssdp_ddos_size` and `ntp_ddos_size` both
+read ≈0.00. And it is not uniformly better per-source — on `ntp_ddos_both` and
+`ssdp_ddos_both` the stack is *easier* to evade than the RF at b128 (0.20 / 0.43
+vs 0.01), because the meta-learner's fused verdict sits closer to its threshold
+than the forest's does.
 
-**Gradients buy the attacker little here.** Query-matched random search matches or
-beats PGD on the TCN, and restarts dominate step count (35% → 60% ASR at 128 B
-going from 2 restarts to 8). The nPrint bit-encoding of packet size makes the loss
-jagged enough that descent direction carries little information — which is why the
-reported attacker is `best` = PGD ∪ random, and why the `random` control is not a
-formality. ART's AutoPGD agrees the search is not under-tuned (100% vs 100%).
-
-**Some flows are unreachable through this surface at any budget.** The TCN's margin
-on `syn_ddos_adv_size` is **91–161 logits**; padding and delay move it around but
-never near the boundary, giving 0% ASR even at 1460 B/packet. Size and timing
-cannot overcome that much confidence.
+**Some flows are unreachable through this surface at any budget.** `ddos_both`,
+`ddos_size`, `portscan_both`, `portscan_size` and `ssdp_flood_size` hold the RF and
+the stack at 0.00 ASR through b1460: padding and delay move the verdict but never
+near the boundary.
 
 **Timing below ~3.07 µs is unrepresentable.** That is one float32 ULP of the
 z-scored IPAT channel, and `dns_ddos`'s median IAT (2.38 µs) sits *below* it — a

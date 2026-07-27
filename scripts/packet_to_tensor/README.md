@@ -58,24 +58,44 @@ Under DEPT's defense framing, the upstream NIDS is responsible for the raw-datas
 
 ## Dataset statistics
 
-Results from `process_all_attacks.py` on WSL2, **before the CIC-DDoS-2019 expansion**. Identity masking on; `rf_checkpoint_stride=10`.
+Final run (`process_all_attacks.py`, 40,340 s = 11.2 h on the 160 GB / 104-core build host). Identity masking on; `rf_first_checkpoint=2`, `rf_checkpoint_stride=10`. **40 sources, 8,624,958 flows, 61,516,406 packets, 12,479,802 RF checkpoints.**
 
-| Source | Flows | Packets |
+### Benign sources
+
+| Source | Dataset | Flows | Packets | Checkpoints |
+|---|---|---:|---:|---:|
+| `brute_force` | CIC-IDS2017 | 158,115 | 9,830,521 | 1,069,702 |
+| `ddos` | CIC-IDS2017 | 86,272 | 2,151,810 | 267,923 |
+| `portscan` | CIC-IDS2017 | 230,156 | 2,026,245 | 369,437 |
+| `mirai` | Kitsune | 32,921 | 764,137 | 83,318 |
+| `ssdp_flood` | Kitsune | 65,738 | 4,077,266 | 444,066 |
+| `dns_ddos` | CIC-DDoS-2019 | 7,164 | 1,000,000 | 105,892 |
+| `ldap_ddos` | CIC-DDoS-2019 | 220,641 | 1,000,000 | 276,396 |
+| `ntp_ddos` | CIC-DDoS-2019 | 14,072 | 1,000,000 | 108,865 |
+| `ssdp_ddos` | CIC-DDoS-2019 | 269,503 | 1,000,000 | 280,888 |
+| `syn_ddos` | CIC-DDoS-2019 | 323,104 | 1,000,000 | 331,737 |
+
+### TANTGen adversarial sources
+
+Counts are per mode; `both` and `iat` are always identical in shape (timing edits do not change packet counts), `size` differs only where padding merged or dropped packets.
+
+| Source | Flows (per mode) | Packets (per mode) |
 |---|---:|---:|
-| Mirai Botnet (Kitsune) | 32,921 | 764,137 |
-| SSDP Flood (Kitsune) | 65,738 | 4,077,266 |
-| DDoS (CIC-IDS2017) | 86,272 | 2,151,810 |
-| Port Scan (CIC-IDS2017) | 230,156 | 2,026,245 |
-| Brute Force FTP+SSH (CIC-IDS2017) | 158,115 | 9,830,521 |
-| Brute Force adversarial (×3 modes) | 80 each | 2,500 each |
-| DDoS adversarial (×3 modes) | 1,011 each | 9,741 each |
-| Mirai adversarial (×3 modes) | 3,830 each | 192,755 each |
-| PortScan adversarial (×3 modes) | 15,839 each | 31,885 each |
-| SSDP Flood adversarial (×3 modes) | 64,722 each | 287,921 each |
+| `brute_force_adv_*` | 6,970 | 274,882 |
+| `ddos_adv_both` / `_iat` | 38,544 | 1,000,000 |
+| `ddos_adv_size` | 32,284 | 740,859 |
+| `dns_ddos_adv_*` | 6,796 | 1,000,000 |
+| `ldap_ddos_adv_*` | 498,065 | 1,000,000 |
+| `mirai_adv_*` | 13,046 | 642,516 |
+| `ntp_ddos_adv_*` | 14,020 | 1,000,000 |
+| `portscan_adv_*` | 158,671 | 321,444 |
+| `ssdp_ddos_adv_*` | 269,641 | 1,000,000 |
+| `ssdp_flood_adv_*` | 65,538 | 1,439,604 |
+| `syn_ddos_adv_*` | 1,336,553 | 4,963,410 |
 
-Total processing time: ~100 min on a desktop Linux machine (WSL2, 32 GB RAM, parse-twice pipeline). The single-parse + vectorised build (July 2026) removes one full Scapy pass and the per-flow build loops; on the 160 GB server one 275k-packet source went 258 s → 134 s end-to-end (build stage 126 s → 3 s).
+`syn_ddos` and `ldap_ddos` dominate the adversarial flow pool (1.34 M and 0.50 M flows per mode against ≤ 0.27 M for everything else) — this is why the downstream evaluation splits are ≈ 84% adversarial and why base-rate-dependent metrics must be read with that prior.
 
-The CIC-DDoS-2019 expansion adds five benign + adversarial (×3 modes) pairs — `ntp_ddos`, `dns_ddos`, `ssdp_ddos`, `syn_ddos`, `ldap_ddos`. Each benign source is the first 1,000,000 packets of the raw capture (`data/CIC-DDoS-2019/PCAPs/{NTP,DNS,SSDP,Syn,LDAP}.pcap`), packet-capped because these floods have no clean attack time window. Counts for these sources are produced by the next `process_all_attacks.py` run.
+The single-parse + vectorised build (July 2026) removes one full Scapy pass and the per-flow build loops; on the 160 GB server one 275k-packet source went 258 s → 134 s end-to-end (build stage 126 s → 3 s). The earlier parse-twice pipeline took ~100 min for the five original sources on a 32 GB desktop.
 
 ## Design decisions
 

@@ -93,6 +93,68 @@ Reads [`config/baseline.yaml`](../../config/baseline.yaml). Writes to
 | `baseline_detection.png` | Detection rate (clean/adv/defended) and ASR before-vs-after per source |
 | `detector_cache/` | Cached meta-learner token stream for the gate (keyed by RF/TCN mtime) |
 
+## Results
+
+Full run: 30 sources, 2,704,816 flow-scores, detector threshold 0.5, 33.6 h.
+No source was skipped.
+
+### Overall
+
+| Regime | detection rate | ASR |
+|---|---|---|
+| clean (oracle) | 0.9811 | 0.0189 |
+| adversarial (TANTGen) | 0.7887 | 0.2113 |
+| **DEPT-defended** | **0.8836** | **0.1164** |
+| purified_all (upper bound) | 0.8831 | 0.1169 |
+
+**ASR reduction 9.49 points; detection-restoration ratio 0.493.** Restricting the
+defended stream to held-out test flows gives 0.9061 over 372,321 flows, i.e. the
+generalization-valid view is not worse than the deployment view. Note that
+`defended` ≈ `purified_all`: because the gate fires on ~100% of flood traffic, the
+gated pipeline is in practice close to purifying everything.
+
+### By NIDS family
+
+| Family | n flows | clean | adversarial | defended | ASR reduction | restoration |
+|---|---|---|---|---|---|---|
+| ml_nids | 2,622,023 | 0.9876 | 0.7880 | 0.8864 | **+9.85 pts** | 0.493 |
+| kitsune | 82,793 | 0.7923 | 0.8088 | 0.7921 | **−1.67 pts** | 1.014 |
+
+### Where the gain comes from — and where it reverses
+
+| Strongest gains (ASR reduction) | Largest regressions |
+|---|---|
+| `ddos_size` +67.4 · `portscan_both` +67.0 | `mirai_size` −23.9 |
+| `ddos_both` +59.7 · `portscan_size` +46.8 | `dns_ddos_iat` −22.7 · `dns_ddos_both` −22.5 |
+| `ssdp_flood_both` +20.0 · `syn_ddos_size` +10.9 | `portscan_iat` −18.2 · `ddos_iat` −12.2 |
+
+Everything else (`ldap_ddos`, `ntp_ddos`, `ssdp_ddos`, `brute_force`, `syn_ddos_iat`)
+moves by less than 1 point in either direction, because TANTGen never evaded those
+NIDS in the first place (adversarial detection is already 0.98–1.00).
+
+### Honest reading
+
+- **The headline gain is real but narrow.** It is carried by six of thirty
+  variants — the `size` and `both` modes of `ddos`, `portscan`, `ssdp_flood` and
+  `syn_ddos`, which are exactly the cases where TANTGen's structural edits actually
+  destroyed detection. Averaged over all thirty, the −9.5-point ASR figure is
+  therefore a mixture of large wins, large losses and a majority of no-ops.
+- **Purifying traffic that was never evading hurts.** `dns_ddos` both/iat lose 22
+  points and `portscan_iat` 18: the gate flags ≈100% of those flows, the purifier
+  removes signal the NIDS was still keying on, and detection drops. A better gate —
+  one that predicts *whether purification will help*, not merely whether the flow is
+  adversarial — is the obvious next step and is left as future work.
+- **The Kitsune family is net negative** (−1.7 points), driven entirely by
+  `mirai_size`, where TANTGen's size edit had accidentally *raised* Kitsune's
+  detection to 0.242 and DEPT removed that self-sabotage (defended 0.003). Kitsune's
+  clean-flow detection on mirai is itself only 0.003, so this family's numbers rest
+  on a detector that barely fires on the traffic at all.
+- **The gate is over-eager.** Flag rates are ~100% on every flood source and near
+  0% on several `_size` variants (`ssdp_ddos_size` 0.0%, `ntp_ddos_size` 0.2%,
+  `ldap_ddos_size` 0.8%, `dns_ddos_size` 0.9%) — the same reflection-flood `_size`
+  blind spot the base learners show. Where the gate does fire correctly and the
+  purifier has something to undo, the pipeline works as designed.
+
 ## Prerequisites
 
 - Trained `data/models/{rf,tcn,metalearner,reconstructor}` (run the pipeline first).

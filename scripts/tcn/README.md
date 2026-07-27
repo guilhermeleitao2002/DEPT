@@ -43,9 +43,9 @@ Total receptive field: **29 packets**. Every output at position `t` depends only
 - **Batching**: variable-length flows padded to the batch-maximum length; a padding mask suppresses gradient at padded positions. Flows truncated at 200 packets before batching to bound the padded tensor size.
 - **Split**: flow-atomic, source-stratified — same `seed=42` and same split logic as the RF, so the two models are evaluated on exactly the same held-out flows.
 
-Best epoch: 5/9 (early-stopped). Val macro-F1 = 0.7264. Training time: ~17.6 h on one GPU (5.66 M training flows).
+Best epoch: 6 of 10 run (early-stopped, patience 3; 20 planned). Val macro-F1 = 0.6611. Training time: 24.7 h on one GPU (6.04 M training flows).
 
-## Results (test split — 1.21 M flows)
+## Results (test split — 1.29 M flows)
 
 > Measured on the full **ten-source** set (adversarial-dominated; the flow-level streaming metrics are the cross-model-comparable axis).
 
@@ -53,73 +53,75 @@ Best epoch: 5/9 (early-stopped). Val macro-F1 = 0.7264. Training time: ~17.6 h o
 
 | Metric | Value |
 |---|---|
-| Macro F1 | 0.7261 |
-| ROC AUC | 0.8359 |
-| PR AUC | 0.9426 |
-| Accuracy | 0.8225 |
-| Precision (adversarial) | 0.9225 |
-| Recall (adversarial) | 0.8570 |
+| Macro F1 | 0.6608 |
+| ROC AUC | 0.8386 |
+| PR AUC | 0.9592 |
+| Accuracy | 0.7621 |
+| Precision (adversarial) | 0.9220 |
+| Recall (adversarial) | 0.7820 |
+| Recall (benign) | 0.6606 |
 
 ### Streaming metrics (overall)
 
 | AUROC@t | Value |
 |---|---|
-| @1 | **0.8009** |
-| @5 | 0.8248 |
-| @10 | 0.8330 |
-| @20 | 0.8359 |
-| @max | 0.8359 |
+| @1 | **0.8191** |
+| @5 | 0.8375 |
+| @10 | 0.8371 |
+| @20 | 0.8386 |
+| @max | 0.8386 |
 
 | EDP | Value |
 |---|---|
 | Median | **1 packet** |
 | IQR | [1, 1] |
-| Detection rate | 86.3% |
+| Detection rate | 78.40% |
 
-### Per-adversarial-source (balanced benign subsample, K=10)
+### Per-adversarial-source (verdict-level, balanced benign subsample K=10)
 
 | Source | precision | recall | F1 | ROC AUC | n_adv |
 |---|---|---|---|---|---|
-| brute_force both * | 0.127 | 0.583 | 0.209 | 0.701 | 12 |
-| brute_force iat * | 0.043 | 0.167 | 0.069 | 0.429 | 12 |
-| brute_force size * | 0.062 | 0.250 | 0.100 | 0.470 | 12 |
-| ddos both | 0.226 | 1.000 | 0.368 | 1.000 | 151 |
-| ddos iat | 0.181 | 0.775 | 0.294 | 0.863 | 151 |
-| ddos size | 0.219 | 1.000 | 0.360 | 1.000 | 151 |
-| dns_ddos both | 0.046 | 0.164 | 0.072 | 0.669 | 1,019 |
-| dns_ddos iat | 0.046 | 0.162 | 0.072 | 0.668 | 1,019 |
-| dns_ddos size | 0.045 | 0.161 | 0.070 | 0.669 | 1,019 |
-| ldap_ddos both | 0.508 | 0.997 | 0.673 | 0.837 | 74,710 |
-| ldap_ddos iat | 0.508 | 0.997 | 0.673 | 0.837 | 74,710 |
-| ldap_ddos size | 0.508 | 0.997 | 0.673 | 0.837 | 74,710 |
-| mirai both | 0.084 | 0.328 | 0.134 | 0.558 | 574 |
-| mirai iat | 0.000 | 0.000 | 0.000 | 0.360 | 574 |
-| mirai size | 0.095 | 0.364 | 0.151 | 0.582 | 574 |
-| ntp_ddos both | 0.000 | 0.001 | 0.000 | 0.614 | 2,103 |
-| ntp_ddos iat | 0.000 | 0.000 | 0.000 | 0.616 | 2,103 |
-| ntp_ddos size | 0.001 | 0.002 | 0.001 | 0.614 | 2,103 |
-| portscan both | 0.223 | 0.988 | 0.363 | 0.992 | 2,376 |
-| portscan iat | 0.000 | 0.000 | 0.000 | 0.320 | 2,376 |
-| portscan size | 0.224 | 0.984 | 0.365 | 0.990 | 2,376 |
-| ssdp_ddos both | 0.000 | 0.000 | 0.000 | 0.550 | 40,446 |
-| ssdp_ddos iat | 0.000 | 0.000 | 0.000 | 0.551 | 40,446 |
-| ssdp_ddos size | 0.000 | 0.000 | 0.000 | 0.551 | 40,446 |
-| ssdp_flood both | 0.227 | 1.000 | 0.369 | 1.000 | 9,708 |
-| ssdp_flood iat | 0.203 | 0.871 | 0.329 | 0.946 | 9,708 |
-| ssdp_flood size | 0.225 | 1.000 | 0.368 | 1.000 | 9,708 |
-| syn_ddos both | 0.733 | 0.987 | 0.841 | 0.836 | 200,483 |
-| syn_ddos iat | 0.733 | 0.987 | 0.841 | 0.836 | 200,483 |
-| syn_ddos size | 0.735 | 1.000 | 0.847 | 1.000 | 200,483 |
+| brute_force both | 0.007 | 0.026 | 0.012 | 0.447 | 1,045 |
+| brute_force iat | 0.008 | 0.028 | 0.013 | 0.444 | 1,045 |
+| brute_force size | 0.010 | 0.033 | 0.015 | 0.445 | 1,045 |
+| ddos both | 0.227 | 1.000 | 0.370 | 1.000 | 5,781 |
+| ddos iat | 0.097 | 0.366 | 0.153 | 0.544 | 5,781 |
+| ddos size | 0.226 | 1.000 | 0.369 | 1.000 | 4,842 |
+| dns_ddos both | 0.192 | 0.800 | 0.310 | 0.856 | 1,019 |
+| dns_ddos iat | 0.194 | 0.809 | 0.313 | 0.859 | 1,019 |
+| dns_ddos size | 0.192 | 0.793 | 0.310 | 0.847 | 1,019 |
+| ldap_ddos both | 0.510 | 1.000 | 0.676 | 0.799 | 74,710 |
+| ldap_ddos iat | 0.510 | 1.000 | 0.676 | 0.799 | 74,710 |
+| ldap_ddos size | 0.510 | 1.000 | 0.676 | 0.799 | 74,710 |
+| mirai both | 0.008 | 0.029 | 0.013 | 0.397 | 1,957 |
+| mirai iat | 0.007 | 0.026 | 0.012 | 0.401 | 1,957 |
+| mirai size | 0.059 | 0.214 | 0.093 | 0.518 | 1,957 |
+| ntp_ddos both | 0.010 | 0.036 | 0.016 | 0.469 | 2,103 |
+| ntp_ddos iat | 0.007 | 0.026 | 0.011 | 0.461 | 2,103 |
+| ntp_ddos size | 0.009 | 0.031 | 0.014 | 0.470 | 2,103 |
+| portscan both | 0.247 | 0.988 | 0.395 | 0.992 | 23,800 |
+| portscan iat | 0.000 | 0.000 | 0.000 | 0.327 | 23,800 |
+| portscan size | 0.247 | 0.987 | 0.395 | 0.992 | 23,800 |
+| ssdp_ddos both | 0.338 | 0.905 | 0.492 | 0.819 | 40,446 |
+| ssdp_ddos iat | 0.339 | 0.910 | 0.494 | 0.821 | 40,446 |
+| ssdp_ddos size | 0.339 | 0.908 | 0.493 | 0.819 | 40,446 |
+| ssdp_flood both | 0.227 | 1.000 | 0.370 | 0.998 | 9,831 |
+| ssdp_flood iat | 0.228 | 1.000 | 0.371 | 0.999 | 9,831 |
+| ssdp_flood size | 0.227 | 1.000 | 0.370 | 0.998 | 9,831 |
+| syn_ddos both | 0.737 | 1.000 | 0.848 | 1.000 | 200,483 |
+| syn_ddos iat | 0.209 | 0.094 | 0.130 | 0.602 | 200,483 |
+| syn_ddos size | 0.737 | 1.000 | 0.848 | 1.000 | 200,483 |
 
-\* Low support (n\_adv < 50) — treat as indicative only. Precision is computed against a balanced benign subsample, so absolute values are low; ROC AUC is the robust per-source signal.
+Precision is computed against a balanced benign subsample, so absolute values are low where recall is low; ROC AUC is the robust per-source signal. Note the balanced-benign ROC for `dns_ddos`/`ssdp_ddos` (0.82–0.86) is *cross-source* separability — against **same-base** benign flows these floods sit at streaming AUROC ≈ 0.50 in every mode (the TCN cannot tell a perturbed flood flow from that flood's own benign flows).
 
 ## Observations
 
-- **EDP median = 1 packet.** The TCN flags 86% of adversarial flows from the very first packet — before the RF's packet-2 checkpoint. This packet-1 earliness is the core advantage the meta-learner inherits.
-- **IAT-only perturbation is consistently the hardest mode**, and on short flows it collapses entirely: `portscan_iat` (ROC AUC 0.320, F1 0.000), `mirai_iat` (0.360, 0.000). With ~2 packets there is effectively one inter-packet interval, so a pure timing change is indistinguishable from natural variability — while the `_both`/`_size` variants of the same attacks stay detectable (ROC AUC ≈ 0.99).
-- **The CIC-DDoS reflection floods are the new hard sources.** `dns_ddos`/`ntp_ddos`/`ssdp_ddos` sit at ROC AUC ≈ 0.55–0.67 across all modes; `ldap_ddos` (0.837) and `syn_ddos` (0.836–1.000) fare better. These spoofed, near-constant-timing floods are where the per-packet view has least to grip.
-- **Mirai/ntp/ssdp adversarial recall is low for the TCN.** The RF's aggregated prefix statistics are more informative than the raw per-packet sequence for these floods, which is exactly the complementarity the meta-learner is designed to exploit.
-- **AUROC is roughly flat after packet 5** (0.825 → 0.836 at max): most of the TCN's discriminative signal is present within the first few packets of a flow.
+- **EDP median = 1 packet.** The TCN flags 78% of adversarial flows from the very first packet — before the RF's packet-2 checkpoint. This packet-1 earliness is the core advantage the meta-learner inherits.
+- **The four reflection floods are the TCN's blind spot** (same-base streaming AUROC ≈ 0.50 on `dns_ddos`, `ldap_ddos`, `ntp_ddos`, `ssdp_ddos` in *every* mode): these one-or-two-packet spoofed UDP flows give the per-packet sequence essentially nothing to grip, and the aggregate is carried by the TCP-ish sources.
+- **IAT-only perturbation is the hardest mode on TCP sources**: `portscan_iat` 0.327 (below chance — perturbed flows look *less* suspicious than benign), `syn_ddos_iat` 0.602, `ddos_iat` 0.544, vs ≈ 1.0 for the `_both`/`_size` variants of the same attacks. With few packets there is effectively one inter-packet interval, so a pure timing change is hard to separate from natural variability.
+- **`brute_force` and `mirai` fail at verdict level** (ROC 0.40–0.52 balanced) despite decent same-base streaming AUROC (0.98 / 0.68–0.72): the TCN's threshold behaviour on these sources is calibrated to the wrong operating point — another reason the ensemble relies on the RF for them.
+- **AUROC is roughly flat after packet 5** (0.8375 → 0.8386 at max): most of the TCN's discriminative signal is present within the first few packets of a flow.
+- The RF's aggregated prefix statistics are more informative than the raw per-packet sequence for the floods and timing-only edits, which is exactly the complementarity the meta-learner is designed to exploit.
 
 ## Output files (`data/models/tcn/`)
 

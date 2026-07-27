@@ -52,6 +52,21 @@ DEPT currently consumes **10 adversarial sources** (the `TANTGEN_KEYS` set in `s
 
 `data/adversarial/brute_force_kitsune/` and `data/adversarial/portscan_kitsune/` may also appear on disk but are intentionally left out of `TANTGEN_KEYS` in `scripts/packet_to_tensor/process_all_attacks.py`; they are skipped by `build_adversarial_attacks()` until explicitly opted in.
 
+### Generation cost (final run)
+
+All 10 attacks × 3 modes took **96,242 s (26.7 h)** end-to-end. Per attack:
+
+| Attack | Time | Attack | Time |
+|---|---:|---|---:|
+| `ntp_ddos` | 11 h 53 m | `ssdp_flood` | 1 h 31 m |
+| `syn_ddos` | 5 h 14 m | `ldap_ddos` | 1 h 34 m |
+| `ssdp_ddos` | 2 h 13 m | `brute_force` | 1 h 01 m |
+| `ddos` | 1 h 24 m | `dns_ddos` | 50 m |
+| `mirai` | 33 m | `portscan` | 31 m |
+
+`ntp_ddos` dominates because its 37 GB raw capture must be streamed to reach the
+1,000,000-packet malicious cap.
+
 CIC-IDS2017 attacks reuse the same time windows as `process_all_attacks.py`, so the malicious PCAPs DEPT trains on match the ones TANTGen perturbed. The CIC-DDoS-2019 floods have no clean time window: the generator caps its malicious input to the first 1,000,000 packets (the hardcoded `MAX_MALICIOUS_PACKETS`) and `process_all_attacks.py` packet-caps the matching benign capture to the same first 1,000,000 packets, so the benign and adversarial sides remain paired and balanced.
 
 > The `generate_adversarials.py` script's built-in `ATTACKS` list covers all 10 attacks across three families (Kitsune: `mirai`, `ssdp_flood`; CIC-IDS2017: `ddos`, `portscan`, `brute_force`; CIC-DDoS-2019: `ntp_ddos`, `dns_ddos`, `ssdp_ddos`, `syn_ddos`, `ldap_ddos`). The PCAPs actually consumed by DEPT are whatever lives under `data/adversarial/<attack>/<attack>_adversarial_<mode>.pcap`; the table above is the source of truth for that on-disk set.

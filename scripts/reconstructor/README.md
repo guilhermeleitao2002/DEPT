@@ -61,69 +61,66 @@ Four metric groups (`metrics.json`), reported overall and per `<base>_adv_<mode>
 
 ## Results
 
-> ⚠ The tables below predate the independent-NIDS-primary refactor (they still lead with the
-> circular TCN gain and score only the two Kitsune-native attacks). Re-run
-> `scripts/reconstructor/run_reconstructor.py --mode eval` to regenerate them with the headline
-> `nids` metrics (Kitsune + ML-NIDS) and the new `score_restoration_ratio` field names.
-
-Trained on **1,986,705** matched `(adversarial → clean)` pairs (split 1.39 M / 298 K / 298 K, seed=42), 20 epochs, ~7.4 h on one GPU, 677,698 parameters, best val reconstruction loss 2.9 × 10⁻⁴. Evaluated on the 298 K-pair held-out test split.
+Trained on **2,566,489** matched `(adversarial → clean)` pairs (split 1,796,542 / 384,984 / 384,963, seed=42), 20 epochs, 10.0 h on one GPU, 677,698 parameters, best epoch 19, best val reconstruction loss 3.7 × 10⁻⁴. Evaluated on the 385 K-pair held-out test split.
 
 ### Overall
 
 | Group | Metric | Value |
 |---|---|---|
-| Reconstruction | perturbed-dim MSE before → after | 0.962 → **0.128** (7.5× reduction) |
-| Purification (through TCN) | P(adv): adversarial / reconstructed / clean | 0.552 / **0.425** / 0.425 |
-| Purification | gain / residual gap to clean floor | **0.128** / **0.000** |
-| Purification | detection rate (P≥0.5): adversarial → reconstructed | 0.489 → 0.350 |
-| Protocol compliance | tshark on **realizable** packets | **0.9976** (3,886 bad / 1,598,558) |
-| Protocol compliance | excluded `n_unrealizable_l7` (size-edited SSDP/HTTP text) | **85,379** (≈99.5% of them `ssdp_flood` both/size) |
-
-The residual gap of 0.000 means the purified flow is, to the detector, indistinguishable from a genuinely un-manipulated one.
+| Reconstruction | perturbed-dim MSE before → after | 0.918 → **0.054** (17.0× reduction) |
+| Purification (through TCN, sanity check) | P(adv): adversarial / reconstructed / clean | 0.675 / **0.428** / 0.421 |
+| Purification | gain / residual gap to clean floor | **0.247** / **0.007** |
+| Protocol compliance | tshark on **realizable** packets | **0.9722** (67,106 bad / 2,412,357) |
+| Protocol compliance | excluded `n_unrealizable_l7` (size-edited SSDP/HTTP text) | **450,758** (96% of them `ssdp_flood` both/size; 19,677 in `ddos`) |
+| **NIDS restoration (headline)** | detection rate: adv → purified (clean oracle) | **0.781 → 0.906** (0.980) |
+| NIDS restoration | detection-restoration ratio / residual gap | **0.630** / 0.074 (n = 370,700 flows) |
+| NIDS restoration, by family | Kitsune: 0.019 → 0.792 (clean 0.793) — ratio **0.999** | ML-NIDS: 0.808 → 0.910 (clean 0.987) — ratio 0.571 |
 
 ### Per-source (`<base> <mode>`)
 
-`mse` = MSE on perturbed dims (before/after); `P_adv`/`P_rec` = TCN P(adversarial) on adv/recon; `gain` = P_adv − P_rec; `tsh` = tshark compliance on **realizable** packets; `l7` = packets excluded as `n_unrealizable_l7` (size-edited SSDP/HTTP text — see §3; `·` = none). `—` = no perturbed cells in the test sample (adv ≈ clean).
+`mse` = MSE on perturbed dims (before/after); `P_adv`/`P_rec` = TCN P(adversarial) on adv/recon; `gain` = P_adv − P_rec; `tsh` = tshark compliance on **realizable** packets; `l7` = packets excluded as `n_unrealizable_l7` (size-edited SSDP/HTTP text — see §3; `·` = none); `NIDS det adv→pur (clean)` = independent-NIDS detection rate on the realized triplet. `—` = not computable (no perturbed cells recorded, or all packets unrealizable).
 
-| variant | mse_before | mse_after | P_adv | P_rec | gain | tsh | l7 |
-|---|---|---|---|---|---|---|---|
-| brute_force both | 0.948 | 0.581 | 0.707 | 0.141 | +0.567 | 1.000 | · |
-| brute_force iat | 0.941 | 0.702 | 0.381 | 0.010 | +0.370 | 1.000 | · |
-| brute_force size | 0.991 | 0.562 | 0.709 | 0.015 | +0.694 | 1.000 | · |
-| ddos both | 0.979 | 0.474 | 1.000 | 0.101 | +0.899 | 0.946 | 161 |
-| ddos iat | 0.977 | 0.530 | 0.737 | 0.095 | +0.642 | 0.954 | 136 |
-| ddos size | 0.985 | 0.481 | 1.000 | 0.145 | +0.855 | 0.943 | 155 |
-| dns_ddos both | 0.000 | 0.000 | 0.467 | 0.467 | +0.000 | 0.998 | · |
-| dns_ddos iat | 0.000 | 0.000 | 0.469 | 0.469 | +0.000 | 0.996 | · |
-| dns_ddos size | 1.000 | 0.361 | 0.468 | 0.467 | +0.000 | 0.996 | 8 |
-| ldap_ddos both | 0.000 | 0.000 | 0.618 | 0.618 | +0.000 | 1.000 | · |
-| ldap_ddos iat | 0.000 | 0.000 | 0.618 | 0.618 | +0.000 | 1.000 | · |
-| ldap_ddos size | 1.000 | 0.568 | 0.618 | 0.618 | −0.000 | 1.000 | · |
-| mirai both | 0.972 | 0.511 | 0.484 | 0.084 | +0.400 | 0.985 | · |
-| mirai iat | 0.947 | 0.486 | 0.089 | 0.091 | −0.002 | 0.982 | · |
-| mirai size | 0.979 | 0.478 | 0.533 | 0.092 | +0.441 | 0.988 | · |
-| ntp_ddos both | 0.300 | 0.075 | 0.432 | 0.431 | +0.001 | 0.998 | 2 |
-| ntp_ddos iat | 0.000 | 0.000 | 0.431 | 0.431 | −0.000 | 0.996 | · |
-| ntp_ddos size | 1.000 | 0.349 | 0.432 | 0.431 | +0.000 | 0.993 | · |
-| portscan both | 0.977 | 0.096 | 0.988 | 0.031 | **+0.957** | 1.000 | 8 |
-| portscan iat | 0.136 | 0.093 | 0.032 | 0.032 | +0.000 | 1.000 | 8 |
-| portscan size | 1.000 | 0.135 | 0.987 | 0.032 | **+0.955** | 1.000 | 8 |
-| ssdp_ddos both | 0.007 | 0.003 | 0.418 | 0.418 | −0.000 | 0.999 | · |
-| ssdp_ddos iat | 0.000 | 0.000 | 0.418 | 0.418 | −0.000 | 0.999 | · |
-| ssdp_ddos size | 1.000 | 0.483 | 0.418 | 0.418 | −0.000 | 0.999 | · |
-| ssdp_flood both | 0.973 | 0.070 | 0.997 | 0.077 | **+0.920** | 1.000 | 42267 |
-| ssdp_flood iat | 0.938 | 0.230 | 0.935 | 0.085 | +0.850 | 1.000 | · |
-| ssdp_flood size | 0.968 | 0.081 | 0.998 | 0.075 | **+0.923** | 1.000 | 42626 |
-| syn_ddos both | — | — | 0.245 | 0.245 | −0.000 | 1.000 | · |
-| syn_ddos iat | 0.000 | 0.000 | 0.246 | 0.246 | −0.000 | 1.000 | · |
-| syn_ddos size | 1.000 | 0.126 | 1.000 | 0.245 | **+0.755** | 1.000 | · |
+| variant | mse_before | mse_after | P_adv | P_rec | gain | tsh | l7 | NIDS det adv→pur (clean) |
+|---|---|---|---|---|---|---|---|---|
+| brute_force both | 0.000 | 0.001 | 0.347 | 0.348 | −0.002 | 1.000 | · | 0.996 → 0.981 (0.996) |
+| brute_force iat | 0.000 | 0.001 | 0.342 | 0.344 | −0.002 | 1.000 | · | 0.997 → 0.990 (0.997) |
+| brute_force size | 1.000 | 0.188 | 0.343 | 0.345 | −0.002 | 1.000 | · | 0.993 → 0.963 (0.994) |
+| ddos both | 0.928 | 0.124 | 1.000 | 0.069 | **+0.931** | 0.839 | 11,318 | **0.080 → 0.865** (0.821) |
+| ddos iat | 0.302 | 0.003 | 0.431 | 0.074 | +0.357 | 0.850 | · | 0.981 → 0.957 (0.946) |
+| ddos size | 1.000 | 0.117 | 0.999 | 0.062 | **+0.938** | 0.838 | 8,359 | **0.005 → 0.817** (0.828) |
+| dns_ddos both | 0.000 | 0.000 | 0.777 | 0.785 | −0.008 | 0.998 | · | 0.986 → 0.762 (0.996) |
+| dns_ddos iat | 0.000 | 0.000 | 0.778 | 0.785 | −0.006 | 0.999 | 2 | 0.993 → 0.756 (0.998) |
+| dns_ddos size | 1.000 | 0.302 | 0.774 | 0.776 | −0.002 | 0.994 | 4 | 0.986 → 0.765 (0.986) |
+| ldap_ddos both | 0.176 | 0.002 | 0.541 | 0.541 | +0.000 | 1.000 | · | 1.000 → 1.000 (1.000) |
+| ldap_ddos iat | 0.081 | 0.001 | 0.541 | 0.541 | +0.000 | 1.000 | · | 0.999 → 0.999 (1.000) |
+| ldap_ddos size | — | — | 0.541 | 0.541 | +0.000 | 1.000 | · | 1.000 → 1.000 (1.000) |
+| mirai both | 1.890 | 1.628 | 0.272 | 0.251 | +0.020 | 0.991 | · | 0.003 → 0.001 (0.007) |
+| mirai iat | 2.462 | 2.142 | 0.269 | 0.246 | +0.023 | 0.991 | · | 0.001 → 0.002 (0.006) |
+| mirai size | 1.569 | 0.973 | 0.520 | 0.249 | +0.271 | 0.990 | · | 0.257 → 0.005 (0.008) |
+| ntp_ddos both | 0.000 | 0.000 | 0.396 | 0.397 | −0.001 | 0.996 | · | 0.983 → 0.985 (0.998) |
+| ntp_ddos iat | 0.000 | 0.000 | 0.395 | 0.395 | −0.001 | 0.996 | · | 0.983 → 0.986 (0.999) |
+| ntp_ddos size | — | — | 0.396 | 0.397 | −0.001 | 0.996 | · | 0.998 → 0.988 (0.998) |
+| portscan both | 0.972 | 0.105 | 0.988 | 0.153 | **+0.835** | 0.999 | 58 | **0.011 → 0.679** (0.999) |
+| portscan iat | 0.000 | 0.007 | 0.154 | 0.154 | +0.000 | 0.999 | · | 0.994 → 0.811 (0.999) |
+| portscan size | 1.000 | 0.104 | 0.989 | 0.154 | **+0.835** | 0.999 | 70 | **0.013 → 0.479** (0.999) |
+| ssdp_ddos both | 0.000 | 0.000 | 0.618 | 0.617 | +0.001 | 0.999 | · | 0.998 → 0.998 (0.998) |
+| ssdp_ddos iat | 0.000 | 0.000 | 0.619 | 0.618 | +0.001 | 0.999 | · | 0.999 → 0.998 (0.999) |
+| ssdp_ddos size | — | — | 0.619 | 0.618 | +0.001 | 0.999 | · | 0.998 → 0.998 (0.998) |
+| ssdp_flood both | 0.965 | 0.003 | 0.999 | 0.625 | +0.374 | 1.000 | 215,295 | 1.000 → 1.000 (1.000) |
+| ssdp_flood iat | 0.110 | 0.081 | 0.999 | 0.464 | +0.535 | 1.000 | · | **0.001 → 1.000** (1.000) |
+| ssdp_flood size | 1.000 | 0.003 | 0.999 | 0.450 | +0.549 | — | 215,652 | — (all packets unrealizable) |
+| syn_ddos both | 0.973 | 0.129 | 1.000 | 0.077 | **+0.923** | 1.000 | · | 0.973 → 0.999 (0.998) |
+| syn_ddos iat | 0.491 | 0.000 | 0.902 | 0.077 | +0.825 | 0.178 | · | 1.000 → 1.000 (0.997) |
+| syn_ddos size | 1.000 | 0.144 | 1.000 | 0.068 | **+0.932** | 1.000 | · | **0.879 → 1.000** (1.000) |
 
 ### Observations
 
-- **Purification is strong exactly where the attack is structural.** `portscan`, `ssdp_flood`, `ddos` and `syn_ddos_size` — attacks that add real packet-size/padding signal the detector keys on — see P(adv) collapse from ~1.0 to <0.15 (gains 0.76–0.96).
-- **It is a near-no-op where there is nothing to undo.** For the high-rate CIC-DDoS floods (`dns_ddos`, `ldap_ddos`, `ntp_ddos`, `ssdp_ddos`) and all `_iat`-only variants, `mse_before ≈ 0` — the adversarial and clean flows already differ only in the near-constant IPAT — so gain ≈ 0. The model correctly leaves these almost unchanged (residual gap stays 0).
-- **Protocol validity holds once SSDP/HTTP text is set aside.** Realized-packet `tshark` compliance is **99.8%** (3,886 bad / 1.60 M realizable). A size edit on an application-layer **text** protocol (SSDP/HTTP `M-SEARCH`) corrupts its L7 grammar — tshark flags `_ws.malformed` although IP/UDP lengths and checksums stay valid — so such packets can't be byte-overlay-realized; the **85,379** of them (almost all `ssdp_flood` both/size; small counts in `ddos`/`portscan`/`dns_ddos`) are excluded and counted as `l7`, not failures. Among the remaining realizable packets most sources are ≥ 99%, with `ddos` the lowest (~94–95%, size-edit checksum/length corner cases). These are realization edge cases, not failures of the purifier itself.
-- **The TCN caveat is addressed by the independent-NIDS group.** TCN purification gain is judged by DEPT's own detector, so "residual gap 0" only means the manipulation signature is gone *relative to this detector*. The **independent-NIDS** metric closes this: it re-realizes the purified flow to real packets and scores it through the NIDS each attack actually targets (Kitsune / ML-NIDS), reporting **detection restoration** (the anomaly signal rising from the evaded adversarial floor back toward the clean-original oracle). See `nids` in `metrics.json` and `nids_restoration.png`.
+- **Restoration is strong exactly where the attack actually evaded.** The rows whose NIDS detection had collapsed — `ddos` both/size (0.08 / 0.005), `portscan` both/size (0.011 / 0.013), `ssdp_flood_iat` (0.001), `syn_ddos_size` (0.879) — are pulled back to 0.48–1.00, in several cases to or above the clean-oracle ceiling. Aggregated: Kitsune-family detection is restored 0.019 → 0.792 against a 0.793 clean ceiling (**99.9%** restoration), ML-NIDS 0.808 → 0.910 vs 0.987 (57.1% — an average diluted by the many rows where there was nothing to restore).
+- **Purifying non-evaded traffic can hurt.** Where TANTGen never fooled the NIDS (`dns_ddos` all modes 0.99 adv detection, `portscan_iat` 0.994, `brute_force` ≈ 0.99), pushing the flow through the denoiser *lowers* detection by 2–24 points (`dns_ddos` both/iat → 0.76). The purifier must be **gated** — this is quantified end-to-end in the deployment baseline (`scripts/baseline`).
+- **Near-no-op where there is nothing to undo.** For the reflection floods' both/iat variants, `mse_before ≈ 0` — TANTGen's edits barely move the tensor dims — so TCN gain ≈ 0 and NIDS detection stays put. The model correctly leaves these flows almost unchanged.
+- **Mirai is the weakest reconstruction** (MSE 1.9–2.5 → 1.6–2.1, only ~1.3×) *and* an uninformative NIDS row: Kitsune's per-flow detection of even the clean mirai slice is ~0.8%, so there is nothing measurable to restore. The one signal — `mirai_size` adv detection 0.257 → 0.005 — means TANTGen's size edit accidentally made flows *more* visible and the purifier removed that self-sabotage (good denoising, bad for defense).
+- **Protocol validity holds once SSDP/HTTP text is set aside.** Realized-packet `tshark` compliance is **97.2%** (67,106 bad / 2.41 M realizable). The **450,758** size-edited text-protocol packets (96% `ssdp_flood` both/size — `ssdp_flood_size` is *entirely* unrealizable — plus 19,677 in `ddos`) are excluded as `l7`, not failures. Two realization weak spots remain and are honest limitations: `ddos` (~84–85%: 22,623 of 140,128 realized packets flagged, checksum/length corner cases at scale) and `syn_ddos_iat` (**17.8%**, but low-support: only 927 of 10,748 pairs survive the equal-length pairing filter, and of the 2,088 realized packets 1,716 carry bad TCP checksums after the scapy re-write — a realization bug on this slice, not a purifier failure; verified `_ws.malformed` count is 0).
+- **The TCN gain stays what it is: a circular sanity check.** Residual gap 0.007 through DEPT's own TCN says the manipulation signature is gone *for this detector*; the independent-NIDS group above is the metric that carries evidential weight.
 
 ## Output files (`data/models/reconstructor/`)
 

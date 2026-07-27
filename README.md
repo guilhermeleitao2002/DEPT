@@ -64,104 +64,165 @@ The original five sources, as measured before the CIC-DDoS-2019 expansion:
 | PortScan adversarial (×3 modes) | 15,839 each | ~31,885 each |
 | SSDP Flood adversarial (×3 modes) | 64,722 each | ~287,921 each |
 
-The five CIC-DDoS-2019 sources (`ntp_ddos`, `dns_ddos`, `ssdp_ddos`, `syn_ddos`, `ldap_ddos`) add a benign + adversarial (×3 modes) pair each. These reflection floods dominate the flow counts (e.g. `syn_ddos` and `ldap_ddos` alone contribute hundreds of thousands of adversarial flows), which is why the **ten-source** base-learner metrics below are both lower and adversarial-dominated relative to the original five-source numbers.
+The five CIC-DDoS-2019 sources (`ntp_ddos`, `dns_ddos`, `ssdp_ddos`, `syn_ddos`, `ldap_ddos`) add a benign + adversarial (×3 modes) pair each. These reflection floods dominate the flow counts (e.g. `syn_ddos` and `ldap_ddos` alone contribute hundreds of thousands of adversarial flows), which is why the **ten-source** evaluation pool below is adversarial-dominated (≈83.7% of test flows are adversarial) — base-rate-dependent figures (accuracy, precision) must be read with that prior in mind.
 
 Under DEPT's label convention, every Kitsune/CIC-IDS2017/CIC-DDoS-2019 flow is **benign** (the upstream NIDS already handles the raw-dataset attacks) and every TANTGen-generated flow is **adversarial**. DEPT's specific job is to catch novel TANTGen-style perturbations.
 
 ## Base learner results
 
-> Measured on the full **ten-source** set (the original five sources + the five CIC-DDoS-2019 reflection floods and their adversarials). Because those floods contribute millions of adversarial flows, the evaluation pool is now **adversarial-dominated** (≈83% adversarial), so base-rate-dependent figures (accuracy/precision) shifted from the earlier five-source numbers. The comparable cross-model axis is the **flow-level streaming** metrics (AUROC@t, EDP).
+> Measured on the full **ten-source** set (the original five sources + the five CIC-DDoS-2019 reflection floods and their adversarials). Because those floods contribute millions of adversarial flows, the evaluation pool is **adversarial-dominated** (≈83.7% adversarial), so base-rate-dependent figures (accuracy/precision) must be read with that prior. The comparable cross-model axis is the **flow-level streaming** metrics (AUROC@t, EDP). Streaming test population: 1,293,737 flows (the RF sees 1,287,558 of them — flows with a single packet never reach its first checkpoint at packet 2).
 
 ### Random Forest
 
-Sparse, high-precision stream over multi-scale prefix checkpoints (cadence: packet 2, then every 10). Grid-search best config: **200 trees, `max_depth=20`, `min_samples_leaf=5`, `class_weight=balanced_subsample`**. Evaluated per-checkpoint and, on the streaming flow axis, over 1.21 M test flows.
+Sparse, high-precision stream over multi-scale prefix checkpoints (cadence: packet 2, then every 10). Grid-search best config: **200 trees, `max_depth=20`, `min_samples_leaf=5`, `class_weight=balanced_subsample`** (val macro F1 0.8925; 400 trees ties it, so the smaller forest wins). Evaluated per-checkpoint (1.84 M test checkpoints) and, on the streaming flow axis, over 1.29 M test flows.
 
 | Metric | Value |
 |---|---|
-| ROC AUC (per-checkpoint) | 0.8877 |
-| PR AUC (per-checkpoint) | 0.9372 |
-| Macro F1 (per-checkpoint) | 0.8378 |
-| Recall (adversarial) | **0.9820** |
-| Streaming AUROC@2 | 0.8298 |
-| Streaming AUROC@10 | 0.8381 |
-| Streaming AUROC@max | 0.8395 |
-| EDP (median) | **2 packets** |
-| Detection rate (p>0.5) | **99.69%** |
+| ROC AUC (per-checkpoint) | 0.9852 |
+| PR AUC (per-checkpoint) | 0.9948 |
+| Macro F1 (per-checkpoint) | 0.8935 |
+| Precision (adversarial) | **0.9939** |
+| Recall (adversarial) | 0.8832 |
+| Streaming AUROC@2 | **0.9805** |
+| Streaming AUROC@10 | **0.9813** |
+| Streaming AUROC@max | **0.9813** |
+| EDP (median) | 2 packets |
+| Detection rate (p>0.5) | **88.99%** |
 
 ### Temporal Convolutional Network
 
-Dense, early-warning stream. Trained on 5.66 M variable-length flows (truncated at 200 packets during batching); evaluated on 1.21 M held-out flows. Best epoch 5 / 9 (early-stopped). 805 K parameters; 3 stacked dilated causal TemporalBlocks, channels=[128,128,128], k=3, receptive field 29 packets.
+Dense, early-warning stream. Trained on 6.04 M variable-length flows (truncated at 200 packets during batching); evaluated on 1.29 M held-out flows. Best epoch 6 of 10 run (early-stopped, patience 3; 24.7 h on one GPU). 805,762 parameters; 3 stacked dilated causal TemporalBlocks, channels=[128,128,128], k=3, receptive field 29 packets.
 
 | Metric | Value (last timestep) |
 |---|---|
-| Macro F1 | 0.7261 |
-| ROC AUC | 0.8359 |
-| PR AUC | 0.9426 |
-| Recall (adversarial) | 0.8570 |
-| Streaming AUROC@1 | 0.8009 |
-| Streaming AUROC@max | 0.8359 |
+| Macro F1 | 0.6608 |
+| ROC AUC | 0.8386 |
+| PR AUC | 0.9592 |
+| Recall (adversarial) | 0.7820 |
+| Recall (benign) | 0.6606 |
+| Streaming AUROC@1 | 0.8191 |
+| Streaming AUROC@max | 0.8386 |
 | EDP (median) | **1 packet** |
-| Detection rate (p>0.5) | 86.31% |
+| Detection rate (p>0.5) | 78.40% |
 
 ### Mini-Transformer Meta-Learner
 
-A 68 K-parameter causal Transformer encoder that consumes a 13-dim per-packet token combining the carry-forward RF logit, the dense TCN logit, four "where are we in the flow" features (`rf_age`, `is_rf_checkpoint`, IPAT, direction), and a compact packet summary (IPv4 length, six TCP flag bits) — *not* the full 1088-bit nPrint vector. Trains on the seed=42 val split (out-of-fold for both base learners) sub-split into meta-train / meta-val (seed=43) for early stopping; evaluated on the test split. Best epoch 6, meta-val AUROC@10 0.843.
+A 68 K-parameter (67,971) causal Transformer encoder that consumes a 13-dim per-packet token combining the carry-forward RF logit, the dense TCN logit, four "where are we in the flow" features (`rf_age`, `is_rf_checkpoint`, IPAT, direction), and a compact packet summary (IPv4 length, six TCP flag bits) — *not* the full 1088-bit nPrint vector. Trains on the seed=42 val split (out-of-fold for both base learners) sub-split into meta-train / meta-val (seed=43) for early stopping; evaluated on the test split. Best epoch 17 of 20, meta-val AUROC@10 0.9333.
 
 | Metric | Value (last timestep) |
 |---|---|
-| Macro F1 | 0.7279 |
-| ROC AUC | **0.8449** |
-| PR AUC | **0.9549** |
-| Recall (adversarial) | 0.8598 |
-| Streaming AUROC@1 | 0.7969 |
-| Streaming AUROC@10 | **0.8424** |
-| Streaming AUROC@max | **0.8449** |
+| Macro F1 | 0.6988 |
+| ROC AUC | 0.9334 |
+| PR AUC | 0.9866 |
+| Precision (adversarial) | **0.9985** |
+| Recall (adversarial) | 0.7076 |
+| Streaming AUROC@1 | **0.8373** |
+| Streaming AUROC@10 | 0.9323 |
+| Streaming AUROC@max | 0.9334 |
 | EDP (median) | **1 packet** |
-| Detection rate (p>0.5) | 87.12% |
+| Detection rate (p>0.5) | 77.69% |
 
-Architecture: 2 encoder layers, 4 heads, d_model=64, sinusoidal PE, strict causal mask, learnable `rf_unknown_logit` parameter substituted for NaN RF slots before the first checkpoint. Auxiliary "beat the best base" loss (weight 0.5) supplements per-packet cross-entropy.
+Architecture: 2 encoder layers, 4 heads, d_model=64, sinusoidal PE, strict causal mask, learnable `rf_unknown_logit` parameter substituted for NaN RF slots before the first checkpoint. Auxiliary "beat the best base" loss (weight 0.5) supplements per-packet cross-entropy. Its confusion profile is precision-first: only 1,115 of 211,151 benign test flows are flagged (FPR 0.53%).
 
 ### Streaming comparison (flow-level — like-for-like across models)
 
 | Metric | RF | TCN | Meta-Learner |
 |---|---|---|---|
-| First prediction at | **packet 2** | packet 1 | packet 1 |
-| AUROC@1 | — (no prediction yet) | **0.8009** | 0.7969 |
-| AUROC@2 | **0.8298** | 0.8031 | 0.8163 |
-| AUROC@5 | 0.8298 | 0.8248 | **0.8343** |
-| AUROC@10 | 0.8381 | 0.8330 | **0.8424** |
-| AUROC@max | 0.8395 | 0.8359 | **0.8449** |
+| First prediction at | packet 2 | **packet 1** | **packet 1** |
+| AUROC@1 | — (no prediction yet) | 0.8191 | **0.8373** |
+| AUROC@2 | **0.9805** | 0.8225 | 0.9099 |
+| AUROC@5 | **0.9805** | 0.8375 | 0.9319 |
+| AUROC@10 | **0.9813** | 0.8371 | 0.9323 |
+| AUROC@max | **0.9813** | 0.8386 | 0.9334 |
 | EDP median | 2 pkts | **1 pkt** | **1 pkt** |
-| Detection rate (p>0.5) | **99.69%** | 86.31% | 87.12% |
+| Detection rate (p>0.5) | **88.99%** | 78.40% | 77.69% |
 
-On this like-for-like flow-level axis the **meta-learner leads from packet 5 onward** (AUROC@5–@max 0.834 → 0.845, above both base learners) *and* keeps the TCN's packet-1 first verdict (EDP = 1). The RF leads only at its first checkpoint (@2) and on raw detection rate, but it can't issue a verdict before packet 2. Note that the RF's headline per-checkpoint numbers (e.g. ROC AUC 0.888) are computed on a different, RF-favourable granularity and are *not* directly comparable to the flow-level column above.
+On this like-for-like flow-level axis the **RF is the strongest single stream from its first checkpoint onward** (0.9805 at packet 2, essentially flat after). The meta-learner sits between the two base learners (0.91–0.93 from packet 2), beats the TCN at every horizon, and is the only model family that pairs a packet-1 verdict (AUROC@1 0.8373, EDP median 1) with near-RF late accuracy. What the stack buys over just using the RF is therefore **not** raw AUROC — it is (i) a verdict one packet earlier, and (ii) robustness against gradient-guided evasion (see the phase-7 study: the stack holds a 74.5% never-evaded rate vs 45.5% for the TCN alone, and matches-or-beats the RF at every attacker budget up to 512 B/flow). At raw detection-rate threshold 0.5 the RF also leads; the meta trades recall for a 0.53% benign FPR.
 
 ### Observations
 
-- **The CIC-DDoS reflection floods are the hard new sources.** All three models hover at AUROC ≈ 0.52–0.62 on `dns_ddos`, `ntp_ddos`, `ssdp_ddos`, `ldap_ddos` — these high-rate, source-spoofed floods leave little per-flow structure to separate a TANTGen-manipulated flow from an un-manipulated one. They dominate the (now lower) aggregate. `syn_ddos` is moderate (≈0.88–0.90), while `portscan`, `ddos` and `ssdp_flood` remain easy (≥0.99 on `both`/`size`).
-- **IAT-only perturbation is consistently the hardest mode.** Every model scores lowest on `_iat` variants: e.g. `portscan_iat` (TCN AUROC@max 0.31, meta 0.43), `mirai_iat` (0.36 / 0.41). Pure timing change without structural edits is the subtlest signal — and, on these high-rate floods, the per-flow IPAT is already nearly constant.
-- **The meta-learner is doing its job on the comparable axis.** It matches or beats the RF at every flow-level checkpoint from packet 5 and keeps EDP = 1; the apparent "RF >> meta" gap only appears when RF's per-checkpoint `overall` block is juxtaposed against the meta-learner's flow-level one (different populations and verdict timing).
-- **RF stays recall-first** (recall-adv 0.982, detection rate 99.7%): it rarely misses an adversarial flow but is late (no verdict before packet 2). The TCN/meta-learner trade a few points of recall for packet-1 detection.
+- **The reflection floods are no longer uniformly hard — but their `size` variants invert.** The RF (and hence the meta) now scores ≈1.0 on `dns_ddos`, `ldap_ddos`, `ntp_ddos`, `ssdp_ddos` `both`/`iat` variants. But the `_size` variants of those same four floods score **below chance against same-base benign** (RF 0.21–0.48, meta 0.44–0.50): TANTGen's size edits on these single-response UDP floods make the flow look *more* like generic benign traffic than the source's own benign flows do. Detecting them would require a different signal than the prefix statistics carry.
+- **The TCN is blind on the four reflection floods** (AUROC ≈ 0.50 on every mode) and weak on `_iat` variants of TCP sources (`portscan_iat` 0.65, `syn_ddos_iat` 0.65, `ddos_iat` 0.92 vs 1.0 for both/size). IAT-only perturbation remains the subtlest signal *for the per-packet stream*; the RF's aggregate IPAT statistics handle it easily (≥0.99 everywhere except `mirai_iat` 0.92).
+- **Mirai is the hardest source overall** for every model (RF 0.83–0.93, TCN 0.68–0.72, meta 0.72–0.73): short, bursty IoT flows with the weakest reconstruction quality too (see below).
+- **Per-checkpoint vs flow-level granularity still matters.** RF per-checkpoint ROC (0.9852) is computed over 1.84 M checkpoints, weighting long flows more heavily; the flow-level column (0.9813) is the comparable number.
 
 ## Purification results
 
-The reconstructor (a 678 K-parameter causal residual denoiser) was trained on **1.99 M matched `(adversarial → clean)` flow pairs** (5-tuple-aligned; ~7.4 h on one GPU) and evaluated on the held-out **298 K-pair** test split (seed=42, never seen by any base learner). Three metric groups, reported overall and per `<base>_adv_<mode>`:
+The reconstructor (a 678 K-parameter causal residual denoiser) was trained on **2.57 M matched `(adversarial → clean)` flow pairs** (5-tuple-aligned; 1.80 M train / 385 K val / 385 K test; 10.0 h on one GPU, best epoch 19/20) and evaluated on the held-out **385 K-pair** test split (seed=42, never seen by any base learner). Four metric groups, reported overall and per `<base>_adv_<mode>`:
 
 | Metric group | Result (overall) |
 |---|---|
-| **Reconstruction** — MSE on the perturbed dims, before (adv) → after (recon) | 0.962 → **0.128** (7.5× reduction) |
-| **Purification gain** — TCN `P(adv)`: adversarial → reconstructed → clean | 0.552 → **0.425** → 0.425 (**gain 0.128, residual gap 0.000**) |
-| **Protocol compliance** — `tshark` on realizable packets | **99.8%** (3,886 bad of 1,598,558; 85,379 SSDP/HTTP size-edits excluded as unrealizable) |
+| **Reconstruction** — MSE on the perturbed dims, before (adv) → after (recon) | 0.918 → **0.054** (17.0× reduction) |
+| **Purification gain** — TCN `P(adv)`: adversarial → reconstructed → clean | 0.675 → **0.428** → 0.421 (**gain 0.247, residual gap 0.007**) |
+| **Protocol compliance** — `tshark` on realizable packets | **97.2%** (67,106 bad of 2,412,357; 450,758 text-protocol size-edit packets excluded as unrealizable) |
+| **Independent-NIDS restoration** — detection rate adv → purified (clean) | 0.781 → **0.906** (clean 0.980); **63.0% of destroyed detection restored** |
 
-The headline is the **residual gap of 0.000**: after purification, a manipulated flow is statistically indistinguishable — *to the detector* — from a genuinely un-manipulated one. The effect is strongly attack-dependent:
+The independent-NIDS restoration is the headline efficacy metric: realized adv/purified/clean PCAP triplets are scored through the real NIDS each attack was built to evade (Kitsune for the Kitsune-derived sources, per-attack ML-NIDS RF models for the CIC ones). Where TANTGen genuinely evaded, purification recovers most of the loss — Kitsune-family detection is restored from 0.019 to 0.792 (clean: 0.793, i.e. **99.9% restoration**); the ML-NIDS family goes 0.808 → 0.910 against a 0.987 clean ceiling (57.1%). The effect is strongly attack-dependent:
 
-| Strongly purified (gain) | Unaffected (gain ≈ 0) |
-|---|---|
-| `portscan` both/size **0.96 / 0.96** (P(adv) 0.99 → 0.03) | all `_iat`-only floods (IPAT near-constant → nothing to undo) |
-| `ssdp_flood` both/size 0.92 / 0.92 | `dns_ddos`, `ntp_ddos`, `ssdp_ddos`, `ldap_ddos` (perturbation barely moves the features) |
-| `ddos` both/size 0.90 / 0.86 · `syn_ddos` size 0.76 | |
+| Strongly restored (NIDS det. adv → purified) | Unaffected (nothing was evaded) | Harmed by purification |
+|---|---|---|
+| `ddos` both 0.08 → 0.87 · size 0.005 → 0.82 | `ldap_ddos`, `ntp_ddos`, `ssdp_ddos` (adv det. already ≈ 0.98–1.00) | `dns_ddos` both/iat 0.99 → 0.76 |
+| `portscan` both 0.01 → 0.68 · size 0.01 → 0.48 | `brute_force` (all modes ≈ 0.99) | `portscan_iat` 0.99 → 0.81 |
+| `ssdp_flood_iat` 0.001 → 1.00 · `syn_ddos` size 0.88 → 1.00 | | `mirai_size` 0.26 → 0.005 |
 
-**Caveats (see [`scripts/reconstructor/README.md`](scripts/reconstructor/README.md) for the full breakdown):** the purification gain above is measured through DEPT's *own* TCN and is kept only as an in-distribution sanity check — the headline efficacy metric is the independent-NIDS restoration (Kitsune / ML-NIDS, the `nids` group in `metrics.json`), which scores realized adv/purified/clean triplets through the real NIDS each attack was built to evade; and a size edit on an application-layer **text** protocol (SSDP/HTTP `M-SEARCH`) corrupts its L7 grammar — `tshark` flags `_ws.malformed` even though IP/UDP lengths and checksums stay valid — so those **85,379** packets (almost all `ssdp_flood` both/size) can't be faithfully realized by byte-overlay and are reported separately as `n_unrealizable_l7`, not scored as failures. The **99.8%** is over the 1.60 M realizable packets.
+**Caveats (see [`scripts/reconstructor/README.md`](scripts/reconstructor/README.md) for the full breakdown):** the TCN purification gain is measured through DEPT's *own* TCN and is kept only as an in-distribution sanity check. A size edit on an application-layer **text** protocol (SSDP/HTTP `M-SEARCH`) corrupts its L7 grammar — `tshark` flags `_ws.malformed` even though IP/UDP lengths and checksums stay valid — so those **450,758** packets (mostly `ssdp_flood`, plus some `ddos`) can't be faithfully realized by byte-overlay and are reported separately as `n_unrealizable_l7`, not scored as failures; the **97.2%** is over the 2.41 M realizable packets. Purifying flows that were *not* evading (the four reflection floods, all `_iat` variants of TCP sources) is at best a no-op and at worst actively harmful — the deployment baseline below quantifies this. Mirai rows are near-uninformative at flow level: Kitsune's clean-flow detection on this per-flow slice is only ~0.8%, so there is almost nothing to restore or destroy. Mirai is also the weakest reconstruction (MSE 1.9–2.5 → 1.6–2.1, only 1.3×).
+
+## Global vs per-attack specialists
+
+Phases 3–6 were also run once per attack (`./run_pipeline.sh --per-attack`), training
+a dedicated RF / TCN / meta-learner / reconstructor on each attack's own benign +
+adversarial pool. Comparing like for like — meta-learner AUROC@max on the same
+`<base>_adv_<mode>` slice, against same-base benign flows in both regimes:
+
+| Attack | mode | specialist | global | Δ |
+|---|---|---|---|---|
+| `brute_force` | both / iat / size | 0.995 / 0.995 / 0.997 | 0.981 / 0.979 / 0.989 | +0.014 / +0.016 / +0.007 |
+| `ddos` | both / iat / size | 1.000 / **1.000** / 1.000 | 1.000 / 0.967 / 1.000 | 0 / **+0.033** / 0 |
+| `dns_ddos` | both / iat / size | 1.000 / 1.000 / 0.192 | 1.000 / 1.000 / **0.443** | 0 / 0 / **−0.251** |
+| `ldap_ddos` | both / iat / size | 1.000 / 1.000 / 0.435 | 1.000 / 1.000 / 0.476 | 0 / 0 / −0.041 |
+| `mirai` | both / iat / size | 0.689 / 0.687 / 0.740 | **0.725 / 0.719** / 0.734 | −0.035 / −0.033 / +0.006 |
+| `ntp_ddos` | both / iat / size | **1.000 / 1.000** / 0.313 | 0.654 / 0.653 / **0.493** | **+0.346 / +0.347** / −0.180 |
+| `portscan` | both / iat / size | 0.998 / **0.824** / 0.996 | 0.998 / 0.757 / 0.997 | 0 / **+0.066** / 0 |
+| `ssdp_ddos` | both / iat / size | **1.000 / 1.000** / 0.355 | 0.927 / 0.927 / **0.497** | **+0.073 / +0.073** / −0.142 |
+| `ssdp_flood` | both / iat / size | 1.000 / 1.000 / 1.000 | 1.000 / 1.000 / 1.000 | 0 / 0 / 0 |
+| `syn_ddos` | both / iat / size | 0.9999 / **0.9999** / 0.9999 | 1.000 / 0.806 / 1.000 | 0 / **+0.194** / 0 |
+
+**Specialists win where they win by a lot, lose where they lose by a lot, and are
+identical on 14 of 30 slices.** The pattern is systematic rather than noisy:
+
+- **Specialists win on the `both`/`iat` modes of the reflection floods and on
+  timing-only edits**: `ntp_ddos` both/iat +0.347, `syn_ddos_iat` +0.194,
+  `ssdp_ddos` both/iat +0.073, `portscan_iat` +0.066, `ddos_iat` +0.033. Training on
+  one attack lets the model key on that flood's own timing signature instead of
+  averaging over nine unrelated benign pools.
+- **The global model wins on the reflection-flood `_size` variants** — the very
+  slices where both regimes are below chance (`dns_ddos_size` 0.443 global vs 0.192
+  specialist, `ntp_ddos_size` 0.493 vs 0.313, `ssdp_ddos_size` 0.497 vs 0.355).
+  Cross-source diversity does not fix this blind spot; it only makes the model less
+  confidently wrong.
+- **`mirai` is the one source where the global model is genuinely better**
+  (+0.035 / +0.033 on both/iat), and it is also where the specialist stack fails its
+  own base learner: the per-attack meta-learner scores 0.705 overall while its own RF
+  scores 0.889. With a single attack's data the fusion layer does not learn to defer
+  to the forest. The global stack does not show this failure as severely — indirect
+  evidence that the meta-learner needs cross-source diversity to learn *when* to
+  trust which stream.
+- **The per-attack TCNs collapse on the reflection floods** (`ldap_ddos` and
+  `ssdp_ddos` at exactly 0.500 overall — predicting "adversarial" for everything;
+  `dns_ddos` 0.531, `ntp_ddos` 0.507). The specialist meta-learners on those
+  attacks therefore ride entirely on their RF.
+
+The practical reading for a deployment: a global model is the right default (one
+model, no routing, and it never loses catastrophically), but the timing-only modes
+of high-rate floods are worth a specialist if that traffic matters. The
+reflection-flood `_size` blind spot is present in **both** regimes, so it is a
+property of the feature representation, not of training scope.
+
+## Comparison-study results (phases 7–8)
+
+**Phase 8 — deployment baseline** (protected NIDS, 2.70 M flow-scores over the full per-source adversarial populations): overall NIDS detection is 0.981 clean / 0.789 under TANTGen / **0.884 behind DEPT** — attack success drops from 21.1% to 11.6% (**−9.5 points; 49.3% of destroyed detection restored**). The net gain is carried entirely by the sources TANTGen actually evaded (`ddos` both/size +60/+67 points, `portscan` both/size +67/+47, `ssdp_flood_both` +20, `syn_ddos_size` +11). On sources where TANTGen never evaded, the gated purifier is a no-op at best and harmful at worst (`dns_ddos` both/iat −22.5/−22.7, `mirai_size` −23.9, `portscan_iat` −18.2, `ddos_iat` −12.2): the meta-learner gate flags nearly 100% of flood flows, so flows that were still being detected get purified into evading ones. Kitsune-family aggregate is slightly negative (−1.7 points, mirai-dominated); the ML-NIDS family is +9.9.
+
+**Phase 7 — gradient-guided evasion (RQ1)** (white-box PGD on the TCN, increase-only padding+delay, 9,000 flows × 6 budgets, matched 5% FPR thresholds, denominator = flows detected unperturbed): the TCN alone folds at the smallest budget (ASR 40.5% at a median 13 pad-bytes/flow; median evasion budget b8; only 45.5% of flows never evaded). The RF resists (median budget b512, 64.0% never evaded), and the **stack is strictly the hardest target at realistic budgets** — ASR 1.7% / 4.7% / 8.5% at b8/b32/b128 vs 8.6% / 10.7% / 13.1% for the RF alone, 74.5% of flows never evaded at any budget. TANTGen's own perturbations average ~30 pad-bytes/packet, i.e. the b32–b128 regime where the stack concedes ≤8.5%. Two honest footnotes: the attacker has no gradient path through the RF (the stack's advantage is precisely that a gradient exists only for half of it), and query-matched *random* search evades the TCN slightly better than PGD at every budget — under these increase-only constraints the search space, not the gradient, is the binding constraint.
 
 ## Implementation status
 
@@ -176,6 +237,25 @@ The headline is the **residual gap of 0.000**: after purification, a manipulated
 | Purification (Reconstructor) Transformer | ✅ |
 | Deployment baseline (protected-NIDS, before vs after DEPT) | ✅ |
 | Gradient-guided evasion study (RQ1) | ✅ |
+
+### Runtime of the full run
+
+| Phase | Wall clock | Notes |
+|---|---|---|
+| 1. Adversarial generation | 26.7 h | 10 attacks × 3 modes; `ntp_ddos` alone is 11.9 h |
+| 2. Packet-to-Tensor | 11.2 h | 40 sources → 8.62 M flows / 61.5 M packets |
+| 3. Random Forest | 2.7 h | incl. 18-point grid search (each fit 4.5–8.7 min) |
+| 4. TCN | 25.3 h | 24.7 h train (10 epochs, early-stopped at 6) + eval |
+| 5. Meta-learner | 3.6 h | 20 epochs, best at 17 |
+| 6. Reconstructor | 10.0 h train | + realization/NIDS evaluation |
+| 7. Gradient ablation | 4.3 h | 9,000 flows × 6 budgets × 3 targets × 2 attackers |
+| 8. Deployment baseline | 33.6 h | 2.70 M flow-scores through the independent NIDS |
+
+A per-attack run of phases 3–6 over all ten attacks (artifacts under
+`data/models/per_attack/<attack>/<stage>/`) adds roughly 28 h — 9.7 h of TCN
+training and 7.0 h of reconstructor training in total, the rest RF fitting and
+evaluation. The largest single attack is `syn_ddos` (8.5 h, of which 5.2 h is TCN
+training); the smallest is `mirai` (29 min).
 
 The last two are comparison studies that run as **phases 7–8** of
 `run_pipeline.sh` (global mode only — they evaluate the global models and are
@@ -288,8 +368,9 @@ python3 scripts/metalearner/run_metalearner.py
 
 # 6. Train + evaluate the Reconstructor (purification) transformer. Learns
 #    matched (adversarial → clean) pairs; the held-out test set is scored by
-#    purification gain (through the trained TCN) and protocol-compliance rate
-#    (tshark on the realized purified PCAPs).
+#    purification gain (through the trained TCN), protocol-compliance rate
+#    (tshark on the realized purified PCAPs), and independent-NIDS restoration
+#    (Kitsune / ML-NIDS on realized adv/purified/clean triplets).
 python3 scripts/reconstructor/run_reconstructor.py
 ```
 

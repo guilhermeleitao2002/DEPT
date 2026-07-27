@@ -31,81 +31,82 @@ A flow with L packets contributes ⌊L/10⌋ + 1 checkpoint rows (the +1 is the 
 | **Hyperparameter search** | Grid over `n_estimators`, `max_depth`, `min_samples_leaf`; scored by val macro-F1 | Best: 200 trees, `max_depth=20`, `min_samples_leaf=5`. |
 | **Final fit** | `train + val`, evaluate on `test` | Maximises data used for the deployable classifier. |
 
-## Results (test split — 1.73 M checkpoints, 1.21 M flows)
+## Results (test split — 1.84 M checkpoints, 1.29 M flows)
 
-> Measured on the full **ten-source** set. The checkpoint pool is now adversarial-dominated, so per-checkpoint precision/accuracy are much higher than the earlier five-source numbers; the flow-level streaming metrics are the cross-model-comparable ones.
+> Measured on the full **ten-source** set. The checkpoint pool is adversarial-dominated (≈74% of test checkpoints), so per-checkpoint precision/accuracy must be read against that prior; the flow-level streaming metrics are the cross-model-comparable ones.
 
 ### Overall (per-checkpoint)
 
 | Metric | Value |
 |---|---|
-| ROC AUC | 0.8877 |
-| PR AUC | 0.9372 |
-| Macro F1 | 0.8378 |
-| Recall (adversarial) | **0.9820** |
-| Precision (adversarial) | 0.8543 |
+| ROC AUC | 0.9852 |
+| PR AUC | 0.9948 |
+| Macro F1 | 0.8935 |
+| Accuracy | 0.9099 |
+| Precision (adversarial) | **0.9939** |
+| Recall (adversarial) | 0.8832 |
+| Recall (benign) | 0.9847 |
 
-Precision is now high because the ten-source checkpoint pool is **adversarial-dominated** (≈68% adversarial in the test checkpoints) — the opposite of the old five-source pool, where precision was ~0.16. ROC AUC and the per-source balanced metrics remain the most meaningful.
+The confusion profile is precision-first: only 7,406 of 483,114 benign test checkpoints are flagged (FPR 1.5%), while the 0.8832 adversarial recall is dragged by the `_size` variants of the reflection floods (see below).
 
 ### Streaming metrics (overall)
 
 | AUROC@t | Value |
 |---|---|
 | @1 | — (first prediction at packet 2) |
-| @2 | 0.8298 |
-| @10 | 0.8381 |
-| @max | 0.8395 |
+| @2 | 0.9805 |
+| @10 | 0.9813 |
+| @max | 0.9813 |
 
 | EDP | Value |
 |---|---|
 | Median | **2 packets** (early checkpoint = earliest possible RF prediction) |
 | IQR | [2, 2] |
-| Detection rate | 99.69% |
+| Detection rate | 88.99% |
 
-### Per-adversarial-source (balanced benign subsample, K=10)
+### Per-adversarial-source (verdict-level, balanced benign subsample K=10)
 
 | Source | precision | recall | F1 | ROC AUC | n_adv |
 |---|---|---|---|---|---|
-| brute_force both * | 0.114 | 0.457 | 0.182 | 0.727 | 46 |
-| brute_force iat | 0.072 | 0.300 | 0.117 | 0.640 | 50 |
-| brute_force size * | 0.123 | 0.538 | 0.200 | 0.760 | 39 |
-| ddos both | 0.216 | 1.000 | 0.355 | 1.000 | 194 |
-| ddos iat | 0.183 | 0.791 | 0.297 | 0.891 | 182 |
-| ddos size | 0.218 | 1.000 | 0.358 | 1.000 | 194 |
-| dns_ddos both | 0.217 | 0.995 | 0.356 | 0.715 | 15,685 |
-| dns_ddos iat | 0.216 | 0.993 | 0.354 | 0.716 | 15,677 |
-| dns_ddos size | 0.216 | 0.992 | 0.355 | 0.714 | 15,490 |
-| ldap_ddos both | 0.274 | 1.000 | 0.430 | 0.818 | 74,732 |
-| ldap_ddos iat | 0.274 | 1.000 | 0.430 | 0.818 | 74,729 |
-| ldap_ddos size | 0.274 | 1.000 | 0.430 | 0.818 | 74,721 |
-| mirai both | 0.156 | 0.667 | 0.252 | 0.793 | 414 |
-| mirai iat | 0.201 | 0.936 | 0.331 | 0.911 | 313 |
-| mirai size | 0.135 | 0.583 | 0.219 | 0.800 | 276 |
-| ntp_ddos both | 0.216 | 0.997 | 0.355 | 0.696 | 16,302 |
-| ntp_ddos iat | 0.215 | 0.995 | 0.354 | 0.697 | 16,052 |
-| ntp_ddos size | 0.217 | 0.997 | 0.356 | 0.694 | 16,150 |
-| portscan both | 0.216 | 1.000 | 0.355 | 1.000 | 2,376 |
-| portscan iat | 0.217 | 1.000 | 0.357 | 1.000 | 2,376 |
-| portscan size | 0.219 | 0.987 | 0.358 | 0.992 | 2,376 |
-| ssdp_ddos both | 0.217 | 1.000 | 0.357 | 0.689 | 42,162 |
-| ssdp_ddos iat | 0.217 | 1.000 | 0.357 | 0.689 | 42,172 |
-| ssdp_ddos size | 0.217 | 0.999 | 0.356 | 0.688 | 42,048 |
-| ssdp_flood both | 0.216 | 1.000 | 0.355 | 1.000 | 9,338 |
-| ssdp_flood iat | 0.209 | 0.952 | 0.342 | 0.975 | 9,319 |
-| ssdp_flood size | 0.218 | 1.000 | 0.358 | 1.000 | 9,333 |
-| syn_ddos both | 0.525 | 0.958 | 0.678 | 0.948 | 228,409 |
-| syn_ddos iat | 0.524 | 0.958 | 0.678 | 0.948 | 228,368 |
-| syn_ddos size | 0.535 | 1.000 | 0.697 | 1.000 | 228,544 |
+| brute_force both | 0.791 | 0.601 | 0.683 | 0.982 | 4,465 |
+| brute_force iat | 0.808 | 0.620 | 0.702 | 0.983 | 4,516 |
+| brute_force size | 0.846 | 0.866 | 0.856 | 0.990 | 4,531 |
+| ddos both | 0.867 | 1.000 | 0.929 | 1.000 | 18,498 |
+| ddos iat | 0.854 | 0.886 | 0.870 | 0.983 | 18,441 |
+| ddos size | 0.868 | 1.000 | 0.929 | 1.000 | 13,886 |
+| dns_ddos both | 0.867 | 1.000 | 0.929 | 0.998 | 16,238 |
+| dns_ddos iat | 0.868 | 1.000 | 0.929 | 0.998 | 15,995 |
+| dns_ddos size | 0.054 | 0.009 | 0.015 | 0.819 | 15,803 |
+| ldap_ddos both | 0.910 | 1.000 | 0.953 | 1.000 | 74,727 |
+| ldap_ddos iat | 0.910 | 1.000 | 0.953 | 1.000 | 74,724 |
+| ldap_ddos size | 0.174 | 0.021 | 0.037 | 0.947 | 74,729 |
+| mirai both | 0.857 | 0.878 | 0.867 | 0.979 | 2,123 |
+| mirai iat | 0.852 | 0.798 | 0.824 | 0.967 | 1,472 |
+| mirai size | 0.827 | 0.700 | 0.758 | 0.946 | 1,853 |
+| ntp_ddos both | 0.866 | 1.000 | 0.928 | 0.998 | 16,512 |
+| ntp_ddos iat | 0.865 | 1.000 | 0.928 | 0.999 | 16,478 |
+| ntp_ddos size | 0.025 | 0.004 | 0.007 | 0.798 | 16,945 |
+| portscan both | 0.868 | 1.000 | 0.929 | 1.000 | 23,829 |
+| portscan iat | 0.867 | 1.000 | 0.928 | 0.999 | 23,817 |
+| portscan size | 0.866 | 0.987 | 0.923 | 0.996 | 23,824 |
+| ssdp_ddos both | 0.867 | 1.000 | 0.929 | 1.000 | 42,192 |
+| ssdp_ddos iat | 0.867 | 1.000 | 0.929 | 1.000 | 42,164 |
+| ssdp_ddos size | 0.001 | 0.000 | 0.000 | 0.805 | 42,094 |
+| ssdp_flood both | 0.866 | 1.000 | 0.928 | 1.000 | 27,016 |
+| ssdp_flood iat | 0.854 | 0.895 | 0.874 | 0.976 | 27,007 |
+| ssdp_flood size | 0.865 | 1.000 | 0.927 | 1.000 | 27,066 |
+| syn_ddos both | 0.969 | 1.000 | 0.984 | 1.000 | 228,198 |
+| syn_ddos iat | 0.969 | 1.000 | 0.984 | 1.000 | 228,483 |
+| syn_ddos size | 0.969 | 1.000 | 0.984 | 1.000 | 228,058 |
 
-\* Low support (n\_adv < 50) — treat as indicative only. (Precision is low across the board because it's computed against a balanced benign subsample; ROC AUC is the more robust per-source signal.)
-
-**PortScan is now fully covered** — under the packet-2 + every-10 cadence every PortScan flow (≥2 packets) gets an RF checkpoint, so the variants that previously produced *zero* RF predictions now score ROC AUC ≈ 1.0 (`both`/`iat`) and 0.992 (`size`).
+(The per-checkpoint ROC AUC column stays high even for the `_size` flood variants because, against the K=10 balanced benign pool, some threshold still separates them; the *recall at 0.5* collapses to ≈0, and on the flow-level streaming axis against **same-base** benign these variants score *below chance* — RF AUROC@max: `dns_size` 0.258, `ntp_size` 0.214, `ssdp_ddos_size` 0.409, `ldap_size` 0.476.)
 
 ## Observations
 
-- **The CIC-DDoS reflection floods are the hard sources.** `dns_ddos`, `ntp_ddos`, `ssdp_ddos` sit at ROC AUC ≈ 0.69–0.72 and dominate the (now lower) aggregate; `ldap_ddos` ≈ 0.82, `syn_ddos` ≈ 0.95, while `portscan`/`ddos`/`ssdp_flood` remain ≈ 1.0 on `both`/`size`. These spoofed, high-rate floods leave little prefix-statistical signal separating a manipulated flow from an un-manipulated one.
-- **IAT-only perturbation is harder.** `_iat` variants consistently show lower recall/ROC AUC than `_both`/`_size` (e.g. `mirai` 0.91 vs ~0.80, `ssdp_flood` 0.975 vs 1.00). Pure timing change without size/header edits is the subtlest signal.
-- **Precision is low under the balanced-benign slicing** (~0.22 for most sources, 0.52 for `syn_ddos`). The RF is recall-first — it rarely misses an adversarial flow (overall recall 0.982) but raises many alerts on benign checkpoints; the meta-learner is meant to suppress those by requiring TCN agreement.
+- **The reflection floods' `both`/`iat` variants are now solved** (ROC AUC ≥ 0.998, recall 1.000): TANTGen's timing perturbation on these near-constant-IPAT floods shifts the IPAT statistics enough for the forest to key on. The aggregate recall cost is concentrated in the four `_size` variants.
+- **The four reflection-flood `_size` variants invert.** At threshold 0.5 the RF recalls almost none of them (0.000–0.021), and against same-base benign flows their streaming AUROC is *below 0.5*: the size edit makes a flood flow look more like generic benign traffic than the flood's own benign flows do. This is the RF's one systematic blind spot.
+- **IAT-only perturbation is no longer hard for the RF** (`ddos_iat` 0.983, `ssdp_flood_iat` 0.976, everything else ≥ 0.98 except `mirai_iat` 0.967): the prefix IPAT statistics capture pure-timing edits that the per-packet TCN misses.
+- **Mirai is the weakest source family** (0.946–0.979 verdict-level; 0.83–0.93 streaming): short bursty IoT flows give the prefix statistics the least to work with.
 - **EDP median = 2 packets.** The early packet-2 checkpoint makes the RF's first verdict available at packet 2 (vs the TCN's packet 1), so its role in the ensemble is *near-immediate confirmation* rather than the slow every-10 confirmation of the old cadence.
 
 ## Output files (`data/models/rf/`)

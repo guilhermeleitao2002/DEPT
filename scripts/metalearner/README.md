@@ -52,3 +52,16 @@ Under `data/models/metalearner/`:
 
 The cache is invalidated automatically when `rf.joblib` or `tcn.pt` changes
 (mtime + size proxy in `cache/cache_key.txt`).
+
+## Results snapshot (final global run)
+
+Best epoch 17/20 (meta-val AUROC@10 0.9333), 67,971 parameters, 3.4 h train +
+0.2 h eval on one GPU. Test split (1,293,737 flows): ROC AUC 0.9334,
+PR AUC 0.9866, macro F1 0.6988, precision-adv 0.9985 (1,115 benign false
+positives out of 211,151), recall-adv 0.7076. Streaming: AUROC@1 0.8373 /
+@2 0.9099 / @10 0.9323 / @max 0.9334, EDP median 1 packet, detection rate
+(p>0.5) 77.69%. The meta-learner beats the TCN at every horizon and is the
+only stream with a packet-1 verdict, but from packet 2 onward the RF stream
+alone is stronger (0.9805–0.9813) — see the root README for the full
+comparison and the gradient-ablation study for what the stack buys in
+robustness terms.
