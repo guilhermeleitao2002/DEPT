@@ -1,9 +1,16 @@
+dissertation/
+!Chapters/
+!Images/
+!*.tex
+!*.pdf
+!Bibliography.bib
+
 venv/
 logs/
 .vscode/
-dissertation/
 cache/
 __pycache__/
+.svgcache/
 
 *.pcap
 !packet_example/*
