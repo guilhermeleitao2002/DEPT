@@ -1,0 +1,26 @@
+{
+  "train": {
+    "n_pairs": 137625,
+    "per_source": {
+      "ssdp_flood_adv_both": 45875,
+      "ssdp_flood_adv_iat": 45875,
+      "ssdp_flood_adv_size": 45875
+    }
+  },
+  "val": {
+    "n_pairs": 29493,
+    "per_source": {
+      "ssdp_flood_adv_both": 9831,
+      "ssdp_flood_adv_iat": 9831,
+      "ssdp_flood_adv_size": 9831
+    }
+  },
+  "test": {
+    "n_pairs": 29490,
+    "per_source": {
+      "ssdp_flood_adv_both": 9830,
+      "ssdp_flood_adv_iat": 9830,
+      "ssdp_flood_adv_size": 9830
+    }
+  }
+}

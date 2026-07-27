@@ -1,0 +1,26 @@
+{
+  "train": {
+    "n_pairs": 463236,
+    "per_source": {
+      "ldap_ddos_adv_both": 154412,
+      "ldap_ddos_adv_iat": 154412,
+      "ldap_ddos_adv_size": 154412
+    }
+  },
+  "val": {
+    "n_pairs": 99264,
+    "per_source": {
+      "ldap_ddos_adv_both": 33088,
+      "ldap_ddos_adv_iat": 33088,
+      "ldap_ddos_adv_size": 33088
+    }
+  },
+  "test": {
+    "n_pairs": 99264,
+    "per_source": {
+      "ldap_ddos_adv_both": 33088,
+      "ldap_ddos_adv_iat": 33088,
+      "ldap_ddos_adv_size": 33088
+    }
+  }
+}

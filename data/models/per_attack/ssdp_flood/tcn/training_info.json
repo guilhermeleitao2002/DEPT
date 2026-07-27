@@ -1,0 +1,129 @@
+{
+  "best_epoch": 14,
+  "best_val_macro_f1": 0.9996955082923621,
+  "epochs_run": 18,
+  "epochs_planned": 20,
+  "train_seconds": 2991.469908475876,
+  "device": "cuda",
+  "amp": true,
+  "n_parameters": 805762,
+  "split_summary": {
+    "train": {
+      "n_flows": 183644,
+      "n_benign": 46016,
+      "n_adversarial": 137628,
+      "per_source": {
+        "ssdp_flood": 46016,
+        "ssdp_flood_adv_both": 45876,
+        "ssdp_flood_adv_iat": 45876,
+        "ssdp_flood_adv_size": 45876
+      }
+    },
+    "val": {
+      "n_flows": 39354,
+      "n_benign": 9861,
+      "n_adversarial": 29493,
+      "per_source": {
+        "ssdp_flood": 9861,
+        "ssdp_flood_adv_both": 9831,
+        "ssdp_flood_adv_iat": 9831,
+        "ssdp_flood_adv_size": 9831
+      }
+    },
+    "test": {
+      "n_flows": 39354,
+      "n_benign": 9861,
+      "n_adversarial": 29493,
+      "per_source": {
+        "ssdp_flood": 9861,
+        "ssdp_flood_adv_both": 9831,
+        "ssdp_flood_adv_iat": 9831,
+        "ssdp_flood_adv_size": 9831
+      }
+    }
+  },
+  "config": {
+    "tensors_dir": "data/tensors",
+    "adversarial_dir": "/mnt/nas/inesc/gleitao/DEPT/data/tensors/adversarial",
+    "output_dir": "data/models/tcn",
+    "benign_sources": [
+      "ssdp_flood"
+    ],
+    "adversarial_exclude": [
+      "brute_force_adv_both",
+      "brute_force_adv_iat",
+      "brute_force_adv_size",
+      "brute_force_kitsune_adv_both",
+      "brute_force_kitsune_adv_iat",
+      "brute_force_kitsune_adv_size",
+      "ddos_adv_both",
+      "ddos_adv_iat",
+      "ddos_adv_size",
+      "dns_ddos_adv_both",
+      "dns_ddos_adv_iat",
+      "dns_ddos_adv_size",
+      "dos_slow_adv_both",
+      "dos_slow_adv_iat",
+      "dos_slow_adv_size",
+      "fuzzing_adv_both",
+      "fuzzing_adv_iat",
+      "fuzzing_adv_size",
+      "ldap_ddos_adv_both",
+      "ldap_ddos_adv_iat",
+      "ldap_ddos_adv_size",
+      "mirai_adv_both",
+      "mirai_adv_iat",
+      "mirai_adv_size",
+      "ntp_ddos_adv_both",
+      "ntp_ddos_adv_iat",
+      "ntp_ddos_adv_size",
+      "portscan_adv_both",
+      "portscan_adv_iat",
+      "portscan_adv_size",
+      "portscan_kitsune_adv_both",
+      "portscan_kitsune_adv_iat",
+      "portscan_kitsune_adv_size",
+      "ssdp_ddos_adv_both",
+      "ssdp_ddos_adv_iat",
+      "ssdp_ddos_adv_size",
+      "syn_ddos_adv_both",
+      "syn_ddos_adv_iat",
+      "syn_ddos_adv_size",
+      "syn_dos_adv_both",
+      "syn_dos_adv_iat",
+      "syn_dos_adv_size"
+    ],
+    "split": {
+      "train_frac": 0.7,
+      "val_frac": 0.15,
+      "test_frac": 0.15,
+      "seed": 42
+    },
+    "benign_cap_ratio": 3.0
+  },
+  "training_config": {
+    "device": "auto",
+    "epochs": 20,
+    "batch_size": 32,
+    "num_workers": "auto",
+    "lr": 0.001,
+    "weight_decay": 0.0001,
+    "scheduler": "cosine",
+    "early_stop_patience": 3,
+    "amp": true,
+    "class_weight": "balanced",
+    "max_length": 200,
+    "seed": 42
+  },
+  "model_config": {
+    "num_features": 1090,
+    "channels": [
+      128,
+      128,
+      128
+    ],
+    "kernel_size": 3,
+    "dropout": 0.15,
+    "num_classes": 2
+  }
+}

@@ -1,0 +1,263 @@
+{
+  "overall": {
+    "n": 8420,
+    "n_benign": 2111,
+    "n_adversarial": 6309,
+    "accuracy": 0.7503562945368171,
+    "precision_adversarial": 0.7502081598667777,
+    "recall_adversarial": 0.9996829925503249,
+    "f1_adversarial": 0.8571622723566187,
+    "precision_benign": 0.8461538461538461,
+    "recall_benign": 0.005210800568450971,
+    "f1_benign": 0.010357815442561206,
+    "macro_f1": 0.43376004389958994,
+    "roc_auc": 0.5069564814545762,
+    "pr_auc": 0.7521593780847752
+  },
+  "per_adversarial_source": {
+    "ntp_ddos_adv_both": {
+      "low_support": false,
+      "base_source": "ntp_ddos",
+      "vs_all_benign": {
+        "n": 4214,
+        "n_benign": 2111,
+        "n_adversarial": 2103,
+        "accuracy": 0.5016611295681063,
+        "precision_adversarial": 0.5003568879371877,
+        "recall_adversarial": 1.0,
+        "f1_adversarial": 0.6669838249286394,
+        "precision_benign": 1.0,
+        "recall_benign": 0.005210800568450971,
+        "f1_benign": 0.010367577756833177,
+        "macro_f1": 0.3386757013427363,
+        "roc_auc": 0.504372968349787,
+        "pr_auc": 0.5015759050230468
+      },
+      "vs_balanced_benign": {
+        "n": 4214,
+        "n_benign": 2111,
+        "n_adversarial": 2103,
+        "accuracy": 0.5016611295681063,
+        "precision_adversarial": 0.5003568879371877,
+        "recall_adversarial": 1.0,
+        "f1_adversarial": 0.6669838249286394,
+        "precision_benign": 1.0,
+        "recall_benign": 0.005210800568450971,
+        "f1_benign": 0.010367577756833177,
+        "macro_f1": 0.3386757013427363,
+        "roc_auc": 0.504372968349787,
+        "pr_auc": 0.5015759050230468
+      },
+      "vs_same_base_benign": {
+        "n": 4214,
+        "n_benign": 2111,
+        "n_adversarial": 2103,
+        "accuracy": 0.5016611295681063,
+        "precision_adversarial": 0.5003568879371877,
+        "recall_adversarial": 1.0,
+        "f1_adversarial": 0.6669838249286394,
+        "precision_benign": 1.0,
+        "recall_benign": 0.005210800568450971,
+        "f1_benign": 0.010367577756833177,
+        "macro_f1": 0.3386757013427363,
+        "roc_auc": 0.504372968349787,
+        "pr_auc": 0.5015759050230468
+      }
+    },
+    "ntp_ddos_adv_iat": {
+      "low_support": false,
+      "base_source": "ntp_ddos",
+      "vs_all_benign": {
+        "n": 4214,
+        "n_benign": 2111,
+        "n_adversarial": 2103,
+        "accuracy": 0.5014238253440911,
+        "precision_adversarial": 0.5002379819133745,
+        "recall_adversarial": 0.9995244888254874,
+        "f1_adversarial": 0.666772402854877,
+        "precision_benign": 0.9166666666666666,
+        "recall_benign": 0.005210800568450971,
+        "f1_benign": 0.010362694300518135,
+        "macro_f1": 0.3385675485776976,
+        "roc_auc": 0.5128024231923309,
+        "pr_auc": 0.5058440117529919
+      },
+      "vs_balanced_benign": {
+        "n": 4214,
+        "n_benign": 2111,
+        "n_adversarial": 2103,
+        "accuracy": 0.5014238253440911,
+        "precision_adversarial": 0.5002379819133745,
+        "recall_adversarial": 0.9995244888254874,
+        "f1_adversarial": 0.666772402854877,
+        "precision_benign": 0.9166666666666666,
+        "recall_benign": 0.005210800568450971,
+        "f1_benign": 0.010362694300518135,
+        "macro_f1": 0.3385675485776976,
+        "roc_auc": 0.5128024231923309,
+        "pr_auc": 0.5058440117529919
+      },
+      "vs_same_base_benign": {
+        "n": 4214,
+        "n_benign": 2111,
+        "n_adversarial": 2103,
+        "accuracy": 0.5014238253440911,
+        "precision_adversarial": 0.5002379819133745,
+        "recall_adversarial": 0.9995244888254874,
+        "f1_adversarial": 0.666772402854877,
+        "precision_benign": 0.9166666666666666,
+        "recall_benign": 0.005210800568450971,
+        "f1_benign": 0.010362694300518135,
+        "macro_f1": 0.3385675485776976,
+        "roc_auc": 0.5128024231923309,
+        "pr_auc": 0.5058440117529919
+      }
+    },
+    "ntp_ddos_adv_size": {
+      "low_support": false,
+      "base_source": "ntp_ddos",
+      "vs_all_benign": {
+        "n": 4214,
+        "n_benign": 2111,
+        "n_adversarial": 2103,
+        "accuracy": 0.5014238253440911,
+        "precision_adversarial": 0.5002379819133745,
+        "recall_adversarial": 0.9995244888254874,
+        "f1_adversarial": 0.666772402854877,
+        "precision_benign": 0.9166666666666666,
+        "recall_benign": 0.005210800568450971,
+        "f1_benign": 0.010362694300518135,
+        "macro_f1": 0.3385675485776976,
+        "roc_auc": 0.5036940528216103,
+        "pr_auc": 0.5012721485706635
+      },
+      "vs_balanced_benign": {
+        "n": 4214,
+        "n_benign": 2111,
+        "n_adversarial": 2103,
+        "accuracy": 0.5014238253440911,
+        "precision_adversarial": 0.5002379819133745,
+        "recall_adversarial": 0.9995244888254874,
+        "f1_adversarial": 0.666772402854877,
+        "precision_benign": 0.9166666666666666,
+        "recall_benign": 0.005210800568450971,
+        "f1_benign": 0.010362694300518135,
+        "macro_f1": 0.3385675485776976,
+        "roc_auc": 0.5036940528216103,
+        "pr_auc": 0.5012721485706635
+      },
+      "vs_same_base_benign": {
+        "n": 4214,
+        "n_benign": 2111,
+        "n_adversarial": 2103,
+        "accuracy": 0.5014238253440911,
+        "precision_adversarial": 0.5002379819133745,
+        "recall_adversarial": 0.9995244888254874,
+        "f1_adversarial": 0.666772402854877,
+        "precision_benign": 0.9166666666666666,
+        "recall_benign": 0.005210800568450971,
+        "f1_benign": 0.010362694300518135,
+        "macro_f1": 0.3385675485776976,
+        "roc_auc": 0.5036940528216103,
+        "pr_auc": 0.5012721485706635
+      }
+    }
+  },
+  "per_source_config": {
+    "min_support": 50,
+    "balance_k": 10
+  },
+  "per_label_str": {
+    "adversarial": {
+      "n": 6309,
+      "y_true_majority": 1,
+      "predicted_adversarial_rate": 0.9996829925503249,
+      "mean_adversarial_prob": 0.504754900932312
+    },
+    "benign": {
+      "n": 2111,
+      "y_true_majority": 0,
+      "predicted_adversarial_rate": 0.994789199431549,
+      "mean_adversarial_prob": 0.502285361289978
+    }
+  },
+  "device": "cuda",
+  "best_epoch": 6,
+  "verdict_at": "last_valid_timestep",
+  "streaming": {
+    "n_flows": 8420,
+    "n_benign": 2111,
+    "n_adversarial": 6309,
+    "auroc_at": {
+      "1": {
+        "n_used": 8420,
+        "n_excluded": 0,
+        "n_benign": 2111,
+        "n_adversarial": 6309,
+        "auroc": 0.5019745389407462
+      },
+      "2": {
+        "n_used": 8420,
+        "n_excluded": 0,
+        "n_benign": 2111,
+        "n_adversarial": 6309,
+        "auroc": 0.5019745389407462
+      },
+      "5": {
+        "n_used": 8420,
+        "n_excluded": 0,
+        "n_benign": 2111,
+        "n_adversarial": 6309,
+        "auroc": 0.4952320112350684
+      },
+      "10": {
+        "n_used": 8420,
+        "n_excluded": 0,
+        "n_benign": 2111,
+        "n_adversarial": 6309,
+        "auroc": 0.5069564814545762
+      },
+      "20": {
+        "n_used": 8420,
+        "n_excluded": 0,
+        "n_benign": 2111,
+        "n_adversarial": 6309,
+        "auroc": 0.5071141592481142
+      },
+      "50": {
+        "n_used": 8420,
+        "n_excluded": 0,
+        "n_benign": 2111,
+        "n_adversarial": 6309,
+        "auroc": 0.5069564814545762
+      },
+      "100": {
+        "n_used": 8420,
+        "n_excluded": 0,
+        "n_benign": 2111,
+        "n_adversarial": 6309,
+        "auroc": 0.5069564814545762
+      },
+      "max": {
+        "n_used": 8420,
+        "n_excluded": 0,
+        "n_benign": 2111,
+        "n_adversarial": 6309,
+        "auroc": 0.5069564814545762
+      }
+    },
+    "edp": {
+      "n_adversarial": 6309,
+      "n_detected": 6307,
+      "detection_rate": 0.9996829925503249,
+      "threshold": 0.5,
+      "edp_median": 1.0,
+      "edp_iqr": [
+        1.0,
+        1.0
+      ],
+      "edp_min": 1,
+      "edp_max": 25
+    }
+  }
+}

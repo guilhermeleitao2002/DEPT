@@ -1,0 +1,38 @@
+{
+  "train": {
+    "n_checkpoints": 211364,
+    "n_flows": 21922,
+    "n_benign": 76165,
+    "n_adversarial": 135199,
+    "per_source": {
+      "mirai": 76165,
+      "mirai_adv_both": 6839,
+      "mirai_adv_iat": 64245,
+      "mirai_adv_size": 64115
+    }
+  },
+  "val": {
+    "n_checkpoints": 9621,
+    "n_flows": 4698,
+    "n_benign": 3942,
+    "n_adversarial": 5679,
+    "per_source": {
+      "mirai": 3942,
+      "mirai_adv_both": 2098,
+      "mirai_adv_iat": 2186,
+      "mirai_adv_size": 1395
+    }
+  },
+  "test": {
+    "n_checkpoints": 64314,
+    "n_flows": 4698,
+    "n_benign": 3211,
+    "n_adversarial": 61103,
+    "per_source": {
+      "mirai": 3211,
+      "mirai_adv_both": 58390,
+      "mirai_adv_iat": 896,
+      "mirai_adv_size": 1817
+    }
+  }
+}

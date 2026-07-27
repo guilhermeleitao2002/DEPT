@@ -1,0 +1,156 @@
+[
+  {
+    "epoch": 1,
+    "train_loss": 0.6083195057820799,
+    "train_loss_primary": 0.5385183579721627,
+    "train_loss_aux": 0.13960229860430592,
+    "meta_val_auroc_at": {
+      "10": 0.8643930139211449
+    },
+    "meta_val_edp_median": 1.0,
+    "lr": 0.00029815325108927063
+  },
+  {
+    "epoch": 2,
+    "train_loss": 0.4440778612920943,
+    "train_loss_primary": 0.41252057660863883,
+    "train_loss_aux": 0.063114570337712,
+    "meta_val_auroc_at": {
+      "10": 0.8712126297136568
+    },
+    "meta_val_edp_median": 1.0,
+    "lr": 0.00029265847744427303
+  },
+  {
+    "epoch": 3,
+    "train_loss": 0.434346509971795,
+    "train_loss_primary": 0.4040574725033718,
+    "train_loss_aux": 0.06057808041508981,
+    "meta_val_auroc_at": {
+      "10": 0.8715079674054584
+    },
+    "meta_val_edp_median": 1.0,
+    "lr": 0.0002836509786282552
+  },
+  {
+    "epoch": 4,
+    "train_loss": 0.43190117406302464,
+    "train_loss_primary": 0.4023956937437207,
+    "train_loss_aux": 0.05901096875687921,
+    "meta_val_auroc_at": {
+      "10": 0.8709441409029278
+    },
+    "meta_val_edp_median": 1.0,
+    "lr": 0.0002713525491562421
+  },
+  {
+    "epoch": 5,
+    "train_loss": 0.4266785990038773,
+    "train_loss_primary": 0.39824345997014055,
+    "train_loss_aux": 0.056870271452036214,
+    "meta_val_auroc_at": {
+      "10": 0.8723268582781813
+    },
+    "meta_val_edp_median": 1.0,
+    "lr": 0.0002560660171779821
+  },
+  {
+    "epoch": 6,
+    "train_loss": 0.4258909498729543,
+    "train_loss_primary": 0.3976614655759901,
+    "train_loss_aux": 0.056458968113826995,
+    "meta_val_auroc_at": {
+      "10": 0.8723402827187178
+    },
+    "meta_val_edp_median": 1.0,
+    "lr": 0.000238167787843871
+  },
+  {
+    "epoch": 7,
+    "train_loss": 0.42543755935910416,
+    "train_loss_primary": 0.39739845417132585,
+    "train_loss_aux": 0.056078210281232006,
+    "meta_val_auroc_at": {
+      "10": 0.8722194627538897
+    },
+    "meta_val_edp_median": 2.0,
+    "lr": 0.00021809857496093204
+  },
+  {
+    "epoch": 8,
+    "train_loss": 0.42369638111648994,
+    "train_loss_primary": 0.39527466811801426,
+    "train_loss_aux": 0.056843426643445515,
+    "meta_val_auroc_at": {
+      "10": 0.8689573237035346
+    },
+    "meta_val_edp_median": 1.0,
+    "lr": 0.00019635254915624216
+  },
+  {
+    "epoch": 9,
+    "train_loss": 0.42459354186125875,
+    "train_loss_primary": 0.39639833198163454,
+    "train_loss_aux": 0.05639042579072129,
+    "meta_val_auroc_at": {
+      "10": 0.8725953470889101
+    },
+    "meta_val_edp_median": 1.0,
+    "lr": 0.00017346516975603468
+  },
+  {
+    "epoch": 10,
+    "train_loss": 0.42492596044988074,
+    "train_loss_primary": 0.3970648330187221,
+    "train_loss_aux": 0.055722257616806506,
+    "meta_val_auroc_at": {
+      "10": 0.8715348162865313
+    },
+    "meta_val_edp_median": 2.0,
+    "lr": 0.00015000000000000001
+  },
+  {
+    "epoch": 11,
+    "train_loss": 0.42519817843206575,
+    "train_loss_primary": 0.3966468996292836,
+    "train_loss_aux": 0.057102557355445276,
+    "meta_val_auroc_at": {
+      "10": 0.8710112631056101
+    },
+    "meta_val_edp_median": 2.0,
+    "lr": 0.0001265348302439654
+  },
+  {
+    "epoch": 12,
+    "train_loss": 0.4223480022394471,
+    "train_loss_primary": 0.3947446582581885,
+    "train_loss_aux": 0.05520667895717098,
+    "meta_val_auroc_at": {
+      "10": 0.8713535863392893
+    },
+    "meta_val_edp_median": 1.0,
+    "lr": 0.0001036474508437579
+  },
+  {
+    "epoch": 13,
+    "train_loss": 0.4229422293635215,
+    "train_loss_primary": 0.395350769480126,
+    "train_loss_aux": 0.05518291907790375,
+    "meta_val_auroc_at": {
+      "10": 0.8718972761810152
+    },
+    "meta_val_edp_median": 1.0,
+    "lr": 8.190142503906799e-05
+  },
+  {
+    "epoch": 14,
+    "train_loss": 0.4220973106146198,
+    "train_loss_primary": 0.3951653351315733,
+    "train_loss_aux": 0.05386394862917545,
+    "meta_val_auroc_at": {
+      "10": 0.8713602985595575
+    },
+    "meta_val_edp_median": 1.0,
+    "lr": 6.183221215612905e-05
+  }
+]

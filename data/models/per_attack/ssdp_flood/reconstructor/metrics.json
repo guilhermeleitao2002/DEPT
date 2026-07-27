@@ -1,0 +1,290 @@
+{
+  "overall": {
+    "n_flows": 29490,
+    "reconstruction": {
+      "perturbed_mse_before": 0.963352206432582,
+      "perturbed_mse_after": 0.00402669945802512,
+      "all_mse_before": 0.014324218374291162,
+      "all_mse_after": 7.987038612198608e-05,
+      "n_perturbed_elems": 10511544,
+      "reduction_ratio": 239.24114935189488
+    },
+    "purification": {
+      "p_adv_on_adv": 0.9999479275784197,
+      "p_adv_on_recon": 0.0006780200006889002,
+      "p_adv_on_clean": 0.001098461097015947,
+      "gain": 0.9992699075777307,
+      "residual_gap": -0.00042044109632704684,
+      "detection_rate_adv": 0.9999660902000678,
+      "detection_rate_recon": 0.0003051881993896236
+    },
+    "protocol_compliance": {
+      "tshark_rate": 0.9996203668552487,
+      "n_unrealizable_l7": 432568
+    }
+  },
+  "per_source": {
+    "ssdp_flood_adv_both": {
+      "n_flows": 9830,
+      "reconstruction": {
+        "perturbed_mse_before": 0.9645430573366617,
+        "perturbed_mse_after": 0.0025582280304742738,
+        "all_mse_before": 0.021109134676276457,
+        "all_mse_after": 8.43020748354103e-05,
+        "n_perturbed_elems": 5173528,
+        "reduction_ratio": 377.0356066178524
+      },
+      "purification": {
+        "p_adv_on_adv": 0.9999999086951433,
+        "p_adv_on_recon": 0.0011793175174597446,
+        "p_adv_on_clean": 0.0008381873630746493,
+        "gain": 0.9988205911776836,
+        "residual_gap": 0.0003411301543850952,
+        "detection_rate_adv": 1.0,
+        "detection_rate_recon": 0.0004069175991861648
+      },
+      "protocol_compliance": {
+        "n_unrealizable_l7": 216849,
+        "tshark_rate": 1.0
+      },
+      "nids": {
+        "mean_score_adv": 16.16146960952245,
+        "mean_score_purified": 676.4066333757593,
+        "mean_score_clean": 150.67167598624562,
+        "score_restoration_ratio": 4.908513499095274,
+        "detection_rate_adv": 1.0,
+        "detection_rate_purified": 1.0,
+        "detection_rate_clean": 1.0,
+        "restoration_gain": 0.0,
+        "residual_gap": 0.0,
+        "threshold": 0.5707482690128459,
+        "model": "kitsune:ssdp_flood",
+        "n_flows": 1,
+        "kind": "kitsune"
+      }
+    },
+    "ssdp_flood_adv_iat": {
+      "n_flows": 9830,
+      "reconstruction": {
+        "perturbed_mse_before": 0.10441005884618007,
+        "perturbed_mse_after": 0.07514524107977669,
+        "all_mse_before": 9.896425709528942e-05,
+        "all_mse_after": 7.281761753883145e-05,
+        "n_perturbed_elems": 223130,
+        "reduction_ratio": 1.3894433944969966
+      },
+      "purification": {
+        "p_adv_on_adv": 0.9998447291272582,
+        "p_adv_on_recon": 0.0007370715351094538,
+        "p_adv_on_clean": 0.0011326185454196254,
+        "gain": 0.9991076575921486,
+        "residual_gap": -0.00039554701031017166,
+        "detection_rate_adv": 0.9998982706002034,
+        "detection_rate_recon": 0.0004069175991861648
+      },
+      "protocol_compliance": {
+        "n_unrealizable_l7": 0,
+        "tshark_rate": 0.9996203193947335
+      },
+      "nids": {
+        "mean_score_adv": 0.30985732840216146,
+        "mean_score_purified": 2.1742294653126994,
+        "mean_score_clean": 1.9933549714968997,
+        "score_restoration_ratio": 1.1074397071820676,
+        "detection_rate_adv": 0.001017293997965412,
+        "detection_rate_purified": 1.0,
+        "detection_rate_clean": 0.9998982706002034,
+        "restoration_gain": 0.9989827060020345,
+        "residual_gap": -0.00010172939979657958,
+        "threshold": 0.5707482690128459,
+        "model": "kitsune:ssdp_flood",
+        "n_flows": 9830,
+        "kind": "kitsune"
+      }
+    },
+    "ssdp_flood_adv_size": {
+      "n_flows": 9830,
+      "reconstruction": {
+        "perturbed_mse_before": 0.9996178946404662,
+        "perturbed_mse_after": 0.0024095564475206535,
+        "all_mse_before": 0.021744783317738645,
+        "all_mse_after": 8.247593575952332e-05,
+        "n_perturbed_elems": 5114886,
+        "reduction_ratio": 414.85556217993434
+      },
+      "purification": {
+        "p_adv_on_adv": 0.9999991449128575,
+        "p_adv_on_recon": 0.00011767094949750222,
+        "p_adv_on_clean": 0.0013245773825535671,
+        "gain": 0.9998814739633599,
+        "residual_gap": -0.001206906433056065,
+        "detection_rate_adv": 1.0,
+        "detection_rate_recon": 0.0001017293997965412
+      },
+      "protocol_compliance": {
+        "n_unrealizable_l7": 215719
+      }
+    }
+  },
+  "device": "cuda",
+  "n_test_pairs": 29490,
+  "tcn_used": true,
+  "realization": {
+    "per_source": {
+      "ssdp_flood_adv_both": {
+        "realize": {
+          "target_flows": 9830,
+          "realized_flows": 9830,
+          "miss_len": 0,
+          "unmatched": 0,
+          "packets": 27,
+          "pcap_packets_read": 1439604,
+          "pcap_packets_kept": 216876,
+          "unrealizable_l7": 216849
+        },
+        "tshark": {
+          "n_packets": 27,
+          "n_bad": 0,
+          "compliance_rate": 1.0
+        }
+      },
+      "ssdp_flood_adv_iat": {
+        "realize": {
+          "target_flows": 9830,
+          "realized_flows": 9830,
+          "miss_len": 0,
+          "unmatched": 0,
+          "packets": 215971,
+          "pcap_packets_read": 1439604,
+          "pcap_packets_kept": 215971,
+          "unrealizable_l7": 0
+        },
+        "tshark": {
+          "n_packets": 215971,
+          "n_bad": 82,
+          "compliance_rate": 0.9996203193947335
+        }
+      },
+      "ssdp_flood_adv_size": {
+        "realize": {
+          "target_flows": 9830,
+          "realized_flows": 9830,
+          "miss_len": 0,
+          "unmatched": 0,
+          "packets": 0,
+          "pcap_packets_read": 1439604,
+          "pcap_packets_kept": 215719,
+          "unrealizable_l7": 215719
+        }
+      }
+    },
+    "tshark_n_packets": 215998,
+    "tshark_n_bad": 82,
+    "unrealizable_l7": 432568,
+    "tshark_compliance_rate": 0.9996203668552487
+  },
+  "nids": {
+    "per_source": {
+      "ssdp_flood_adv_both": {
+        "realize": {
+          "target_flows": 9830,
+          "realized_flows": 9830,
+          "miss_len": 0,
+          "unmatched": 0,
+          "unrealizable_l7": 216849,
+          "pcap_packets_read": 1439604,
+          "pcap_packets_kept": 216876,
+          "packets_per_branch": 27
+        },
+        "model": "kitsune:ssdp_flood",
+        "model_source": "pretrained",
+        "kind": "kitsune",
+        "mean_score_adv": 16.16146960952245,
+        "mean_score_purified": 676.4066333757593,
+        "mean_score_clean": 150.67167598624562,
+        "score_restoration_ratio": 4.908513499095274,
+        "detection_rate_adv": 1.0,
+        "detection_rate_purified": 1.0,
+        "detection_rate_clean": 1.0,
+        "restoration_gain": 0.0,
+        "residual_gap": 0.0,
+        "threshold": 0.5707482690128459,
+        "n_flows": 1
+      },
+      "ssdp_flood_adv_iat": {
+        "realize": {
+          "target_flows": 9830,
+          "realized_flows": 9830,
+          "miss_len": 0,
+          "unmatched": 0,
+          "unrealizable_l7": 130,
+          "pcap_packets_read": 1439604,
+          "pcap_packets_kept": 215971,
+          "packets_per_branch": 215841
+        },
+        "model": "kitsune:ssdp_flood",
+        "model_source": "pretrained",
+        "kind": "kitsune",
+        "mean_score_adv": 0.30985732840216146,
+        "mean_score_purified": 2.1742294653126994,
+        "mean_score_clean": 1.9933549714968997,
+        "score_restoration_ratio": 1.1074397071820676,
+        "detection_rate_adv": 0.001017293997965412,
+        "detection_rate_purified": 1.0,
+        "detection_rate_clean": 0.9998982706002034,
+        "restoration_gain": 0.9989827060020345,
+        "residual_gap": -0.00010172939979657958,
+        "threshold": 0.5707482690128459,
+        "n_flows": 9830
+      },
+      "ssdp_flood_adv_size": {
+        "realize": {
+          "target_flows": 9830,
+          "realized_flows": 9830,
+          "miss_len": 0,
+          "unmatched": 0,
+          "unrealizable_l7": 215719,
+          "pcap_packets_read": 1439604,
+          "pcap_packets_kept": 215719,
+          "packets_per_branch": 0
+        },
+        "model": "kitsune:ssdp_flood",
+        "model_source": "pretrained",
+        "kind": "kitsune",
+        "skipped": "no realized packets"
+      }
+    },
+    "skipped_sources": {},
+    "models": {
+      "ssdp_flood": "kitsune:ssdp_flood"
+    },
+    "overall": {
+      "mean_score_adv": 0.31146973937572675,
+      "mean_score_purified": 2.2428117462516117,
+      "mean_score_clean": 2.0084783893602656,
+      "score_restoration_ratio": 1.138086129904807,
+      "detection_rate_adv": 0.0011189095717627912,
+      "detection_rate_purified": 1.0,
+      "detection_rate_clean": 0.9998982809480216,
+      "detection_restoration_ratio": 1.0001018433649047,
+      "restoration_gain": 0.9988810904282373,
+      "residual_gap": -0.00010171905197842168,
+      "n_flows": 9831
+    },
+    "by_kind": {
+      "kitsune": {
+        "mean_score_adv": 0.31146973937572675,
+        "mean_score_purified": 2.2428117462516117,
+        "mean_score_clean": 2.0084783893602656,
+        "score_restoration_ratio": 1.138086129904807,
+        "detection_rate_adv": 0.0011189095717627912,
+        "detection_rate_purified": 1.0,
+        "detection_rate_clean": 0.9998982809480216,
+        "detection_restoration_ratio": 1.0001018433649047,
+        "restoration_gain": 0.9988810904282373,
+        "residual_gap": -0.00010171905197842168,
+        "n_flows": 9831
+      }
+    }
+  }
+}

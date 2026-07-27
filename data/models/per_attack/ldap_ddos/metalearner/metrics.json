@@ -1,0 +1,91 @@
+{
+  "overall": {
+    "n": 257226,
+    "n_benign": 33096,
+    "n_adversarial": 224130,
+    "accuracy": 0.7098232682543756,
+    "precision_adversarial": 0.9923458465348818,
+    "recall_adversarial": 0.6721590148574488,
+    "f1_adversarial": 0.8014566037936602,
+    "macro_f1": 0.6312837170684074,
+    "roc_auc": 0.8116213299352615,
+    "pr_auc": 0.971362554182222
+  },
+  "verdict_at": "last_timestep",
+  "streaming": {
+    "n_flows": 257226,
+    "n_benign": 33096,
+    "n_adversarial": 224130,
+    "auroc_at": {
+      "1": {
+        "n_used": 257226,
+        "n_excluded": 0,
+        "n_benign": 33096,
+        "n_adversarial": 224130,
+        "auroc": 0.5095997911501191
+      },
+      "2": {
+        "n_used": 257226,
+        "n_excluded": 0,
+        "n_benign": 33096,
+        "n_adversarial": 224130,
+        "auroc": 0.811503999157983
+      },
+      "5": {
+        "n_used": 257226,
+        "n_excluded": 0,
+        "n_benign": 33096,
+        "n_adversarial": 224130,
+        "auroc": 0.8116202860956814
+      },
+      "10": {
+        "n_used": 257226,
+        "n_excluded": 0,
+        "n_benign": 33096,
+        "n_adversarial": 224130,
+        "auroc": 0.8116243833985812
+      },
+      "20": {
+        "n_used": 257226,
+        "n_excluded": 0,
+        "n_benign": 33096,
+        "n_adversarial": 224130,
+        "auroc": 0.8116213555493025
+      },
+      "50": {
+        "n_used": 257226,
+        "n_excluded": 0,
+        "n_benign": 33096,
+        "n_adversarial": 224130,
+        "auroc": 0.8116213302048829
+      },
+      "100": {
+        "n_used": 257226,
+        "n_excluded": 0,
+        "n_benign": 33096,
+        "n_adversarial": 224130,
+        "auroc": 0.8116213299352615
+      },
+      "max": {
+        "n_used": 257226,
+        "n_excluded": 0,
+        "n_benign": 33096,
+        "n_adversarial": 224130,
+        "auroc": 0.8116213299352615
+      }
+    },
+    "edp": {
+      "n_adversarial": 224130,
+      "n_detected": 224130,
+      "detection_rate": 1.0,
+      "threshold": 0.5,
+      "edp_median": 1.0,
+      "edp_iqr": [
+        1.0,
+        1.0
+      ],
+      "edp_min": 1,
+      "edp_max": 2
+    }
+  }
+}

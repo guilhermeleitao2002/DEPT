@@ -1,0 +1,38 @@
+{
+  "train": {
+    "n_checkpoints": 740311,
+    "n_flows": 183640,
+    "n_benign": 362061,
+    "n_adversarial": 378250,
+    "per_source": {
+      "ssdp_flood": 362061,
+      "ssdp_flood_adv_both": 126078,
+      "ssdp_flood_adv_iat": 126080,
+      "ssdp_flood_adv_size": 126092
+    }
+  },
+  "val": {
+    "n_checkpoints": 136198,
+    "n_flows": 39353,
+    "n_benign": 54993,
+    "n_adversarial": 81205,
+    "per_source": {
+      "ssdp_flood": 54993,
+      "ssdp_flood_adv_both": 27008,
+      "ssdp_flood_adv_iat": 27117,
+      "ssdp_flood_adv_size": 27080
+    }
+  },
+  "test": {
+    "n_checkpoints": 108082,
+    "n_flows": 39350,
+    "n_benign": 27012,
+    "n_adversarial": 81070,
+    "per_source": {
+      "ssdp_flood": 27012,
+      "ssdp_flood_adv_both": 27089,
+      "ssdp_flood_adv_iat": 26978,
+      "ssdp_flood_adv_size": 27003
+    }
+  }
+}

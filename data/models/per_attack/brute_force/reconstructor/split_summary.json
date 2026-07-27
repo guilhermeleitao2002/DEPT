@@ -1,0 +1,26 @@
+{
+  "train": {
+    "n_pairs": 14052,
+    "per_source": {
+      "brute_force_adv_both": 4684,
+      "brute_force_adv_iat": 4684,
+      "brute_force_adv_size": 4684
+    }
+  },
+  "val": {
+    "n_pairs": 3012,
+    "per_source": {
+      "brute_force_adv_both": 1004,
+      "brute_force_adv_iat": 1004,
+      "brute_force_adv_size": 1004
+    }
+  },
+  "test": {
+    "n_pairs": 3012,
+    "per_source": {
+      "brute_force_adv_both": 1004,
+      "brute_force_adv_iat": 1004,
+      "brute_force_adv_size": 1004
+    }
+  }
+}

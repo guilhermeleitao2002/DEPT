@@ -1,0 +1,321 @@
+{
+  "overall": {
+    "n_flows": 16404,
+    "reconstruction": {
+      "perturbed_mse_before": 0.9343380095970704,
+      "perturbed_mse_after": 0.11617486803709696,
+      "all_mse_before": 0.007678366794621642,
+      "all_mse_after": 0.001864720650280341,
+      "n_perturbed_elems": 3693359,
+      "reduction_ratio": 8.042514059914556
+    },
+    "purification": {
+      "p_adv_on_adv": 0.93617323317103,
+      "p_adv_on_recon": 0.1952852153090821,
+      "p_adv_on_clean": 0.10740112935859975,
+      "gain": 0.7408880178619479,
+      "residual_gap": 0.08788408595048236,
+      "detection_rate_adv": 0.9310534016093636,
+      "detection_rate_recon": 0.1271641063155328
+    },
+    "protocol_compliance": {
+      "tshark_rate": 0.8437124376082307,
+      "n_unrealizable_l7": 19636
+    }
+  },
+  "per_source": {
+    "ddos_adv_both": {
+      "n_flows": 5781,
+      "reconstruction": {
+        "perturbed_mse_before": 0.9276947599715583,
+        "perturbed_mse_after": 0.12259074239499601,
+        "all_mse_before": 0.01118650788614363,
+        "all_mse_after": 0.002916460929858361,
+        "n_perturbed_elems": 1986623,
+        "reduction_ratio": 7.567412855552015
+      },
+      "purification": {
+        "p_adv_on_adv": 0.999998681645475,
+        "p_adv_on_recon": 0.17906138851660575,
+        "p_adv_on_clean": 0.11322153462781814,
+        "gain": 0.8209372931288693,
+        "residual_gap": 0.06583985388878759,
+        "detection_rate_adv": 1.0,
+        "detection_rate_recon": 0.10344231101885487
+      },
+      "protocol_compliance": {
+        "n_unrealizable_l7": 11277,
+        "tshark_rate": 0.8388003145778222
+      },
+      "nids": {
+        "mean_score_adv": 0.3512448651175885,
+        "mean_score_purified": 0.7205015372561865,
+        "mean_score_clean": 0.7466351190632736,
+        "score_restoration_ratio": 0.9339043349038211,
+        "detection_rate_adv": 0.08057758491695347,
+        "detection_rate_purified": 0.8871831721975437,
+        "detection_rate_clean": 0.8218491406747295,
+        "restoration_gain": 0.8066055872805903,
+        "residual_gap": -0.06533403152281425,
+        "threshold": null,
+        "model": "ml_nids:DDoS:RF",
+        "n_flows": 15308,
+        "kind": "ml_nids"
+      }
+    },
+    "ddos_adv_iat": {
+      "n_flows": 5781,
+      "reconstruction": {
+        "perturbed_mse_before": 0.31273903037270356,
+        "perturbed_mse_after": 0.0022632430084197834,
+        "all_mse_before": 0.00027640492724202427,
+        "all_mse_after": 8.19805024614275e-06,
+        "n_perturbed_elems": 143861,
+        "reduction_ratio": 138.1818166273982
+      },
+      "purification": {
+        "p_adv_on_adv": 0.8188885123829156,
+        "p_adv_on_recon": 0.2813447765026898,
+        "p_adv_on_clean": 0.11175622340904227,
+        "gain": 0.5375437358802257,
+        "residual_gap": 0.16958855309364756,
+        "detection_rate_adv": 0.8043591074208615,
+        "detection_rate_recon": 0.2198581560283688
+      },
+      "protocol_compliance": {
+        "n_unrealizable_l7": 0,
+        "tshark_rate": 0.851545549513835
+      },
+      "nids": {
+        "mean_score_adv": 0.8908034388121346,
+        "mean_score_purified": 0.845356132047411,
+        "mean_score_clean": 0.8850827644836665,
+        "score_restoration_ratio": 7.94439678877743,
+        "detection_rate_adv": 0.977797513321492,
+        "detection_rate_purified": 0.9544396907603393,
+        "detection_rate_clean": 0.9111205794631444,
+        "restoration_gain": -0.023357822561152708,
+        "residual_gap": -0.0433191112971949,
+        "threshold": null,
+        "model": "ml_nids:DDoS:RF",
+        "n_flows": 13323,
+        "kind": "ml_nids"
+      }
+    },
+    "ddos_adv_size": {
+      "n_flows": 4842,
+      "reconstruction": {
+        "perturbed_mse_before": 1.0,
+        "perturbed_mse_after": 0.11850487953752915,
+        "all_mse_before": 0.012820714747618032,
+        "all_mse_after": 0.002922249418674771,
+        "n_perturbed_elems": 1562875,
+        "reduction_ratio": 8.43847108998842
+      },
+      "purification": {
+        "p_adv_on_adv": 0.9999997621353675,
+        "p_adv_on_recon": 0.1119063676071127,
+        "p_adv_on_clean": 0.0952523144955357,
+        "gain": 0.8880933945282546,
+        "residual_gap": 0.01665405311157699,
+        "detection_rate_adv": 1.0,
+        "detection_rate_recon": 0.044816191656340355
+      },
+      "protocol_compliance": {
+        "n_unrealizable_l7": 8359,
+        "tshark_rate": 0.8390479135661687
+      },
+      "nids": {
+        "mean_score_adv": 0.23751003856645206,
+        "mean_score_purified": 0.6489508687592971,
+        "mean_score_clean": 0.7624435226245928,
+        "score_restoration_ratio": 0.7837961240576425,
+        "detection_rate_adv": 0.00534491398029063,
+        "detection_rate_purified": 0.7942983041794632,
+        "detection_rate_clean": 0.8435776596811391,
+        "restoration_gain": 0.7889533901991727,
+        "residual_gap": 0.04927935550167584,
+        "threshold": null,
+        "model": "ml_nids:DDoS:RF",
+        "n_flows": 14978,
+        "kind": "ml_nids"
+      }
+    }
+  },
+  "device": "cuda",
+  "n_test_pairs": 16404,
+  "tcn_used": true,
+  "realization": {
+    "per_source": {
+      "ddos_adv_both": {
+        "realize": {
+          "target_flows": 5781,
+          "realized_flows": 5781,
+          "miss_len": 0,
+          "unmatched": 0,
+          "packets": 139870,
+          "pcap_packets_read": 1000000,
+          "pcap_packets_kept": 151147,
+          "unrealizable_l7": 11277
+        },
+        "tshark": {
+          "n_packets": 139870,
+          "n_bad": 22547,
+          "compliance_rate": 0.8388003145778222
+        }
+      },
+      "ddos_adv_iat": {
+        "realize": {
+          "target_flows": 5781,
+          "realized_flows": 5781,
+          "miss_len": 0,
+          "unmatched": 0,
+          "packets": 149332,
+          "pcap_packets_read": 1000000,
+          "pcap_packets_kept": 149332,
+          "unrealizable_l7": 0
+        },
+        "tshark": {
+          "n_packets": 149332,
+          "n_bad": 22169,
+          "compliance_rate": 0.851545549513835
+        }
+      },
+      "ddos_adv_size": {
+        "realize": {
+          "target_flows": 4842,
+          "realized_flows": 4842,
+          "miss_len": 0,
+          "unmatched": 0,
+          "packets": 103478,
+          "pcap_packets_read": 740859,
+          "pcap_packets_kept": 111837,
+          "unrealizable_l7": 8359
+        },
+        "tshark": {
+          "n_packets": 103478,
+          "n_bad": 16655,
+          "compliance_rate": 0.8390479135661687
+        }
+      }
+    },
+    "tshark_n_packets": 392680,
+    "tshark_n_bad": 61371,
+    "unrealizable_l7": 19636,
+    "tshark_compliance_rate": 0.8437124376082307
+  },
+  "nids": {
+    "per_source": {
+      "ddos_adv_both": {
+        "realize": {
+          "target_flows": 5781,
+          "realized_flows": 5781,
+          "miss_len": 0,
+          "unmatched": 0,
+          "unrealizable_l7": 11277,
+          "pcap_packets_read": 1000000,
+          "pcap_packets_kept": 151147,
+          "packets_per_branch": 139870
+        },
+        "model": "ml_nids:DDoS:RF",
+        "model_source": "pretrained",
+        "kind": "ml_nids",
+        "mean_score_adv": 0.3512448651175885,
+        "mean_score_purified": 0.7205015372561865,
+        "mean_score_clean": 0.7466351190632736,
+        "score_restoration_ratio": 0.9339043349038211,
+        "detection_rate_adv": 0.08057758491695347,
+        "detection_rate_purified": 0.8871831721975437,
+        "detection_rate_clean": 0.8218491406747295,
+        "restoration_gain": 0.8066055872805903,
+        "residual_gap": -0.06533403152281425,
+        "threshold": null,
+        "n_flows": 15308
+      },
+      "ddos_adv_iat": {
+        "realize": {
+          "target_flows": 5781,
+          "realized_flows": 5781,
+          "miss_len": 0,
+          "unmatched": 0,
+          "unrealizable_l7": 0,
+          "pcap_packets_read": 1000000,
+          "pcap_packets_kept": 149332,
+          "packets_per_branch": 149332
+        },
+        "model": "ml_nids:DDoS:RF",
+        "model_source": "pretrained",
+        "kind": "ml_nids",
+        "mean_score_adv": 0.8908034388121346,
+        "mean_score_purified": 0.845356132047411,
+        "mean_score_clean": 0.8850827644836665,
+        "score_restoration_ratio": 7.94439678877743,
+        "detection_rate_adv": 0.977797513321492,
+        "detection_rate_purified": 0.9544396907603393,
+        "detection_rate_clean": 0.9111205794631444,
+        "restoration_gain": -0.023357822561152708,
+        "residual_gap": -0.0433191112971949,
+        "threshold": null,
+        "n_flows": 13323
+      },
+      "ddos_adv_size": {
+        "realize": {
+          "target_flows": 4842,
+          "realized_flows": 4842,
+          "miss_len": 0,
+          "unmatched": 0,
+          "unrealizable_l7": 8359,
+          "pcap_packets_read": 740859,
+          "pcap_packets_kept": 111837,
+          "packets_per_branch": 103478
+        },
+        "model": "ml_nids:DDoS:RF",
+        "model_source": "pretrained",
+        "kind": "ml_nids",
+        "mean_score_adv": 0.23751003856645206,
+        "mean_score_purified": 0.6489508687592971,
+        "mean_score_clean": 0.7624435226245928,
+        "score_restoration_ratio": 0.7837961240576425,
+        "detection_rate_adv": 0.00534491398029063,
+        "detection_rate_purified": 0.7942983041794632,
+        "detection_rate_clean": 0.8435776596811391,
+        "restoration_gain": 0.7889533901991727,
+        "residual_gap": 0.04927935550167584,
+        "threshold": null,
+        "n_flows": 14978
+      }
+    },
+    "skipped_sources": {},
+    "models": {
+      "ddos": "ml_nids:DDoS:RF"
+    },
+    "overall": {
+      "mean_score_adv": 0.5523580566952259,
+      "mean_score_purified": 0.7340710264363345,
+      "mean_score_clean": 0.7986347785254438,
+      "score_restoration_ratio": 0.7378406224944828,
+      "detection_rate_adv": 0.43575232009736803,
+      "detection_rate_purified": 0.8758283840491642,
+      "detection_rate_clean": 0.8587349749095577,
+      "detection_restoration_ratio": 1.0404116077695813,
+      "restoration_gain": 0.44007606395179616,
+      "residual_gap": -0.01709340913960644,
+      "n_flows": 43609
+    },
+    "by_kind": {
+      "ml_nids": {
+        "mean_score_adv": 0.5523580566952259,
+        "mean_score_purified": 0.7340710264363345,
+        "mean_score_clean": 0.7986347785254438,
+        "score_restoration_ratio": 0.7378406224944828,
+        "detection_rate_adv": 0.43575232009736803,
+        "detection_rate_purified": 0.8758283840491642,
+        "detection_rate_clean": 0.8587349749095577,
+        "detection_restoration_ratio": 1.0404116077695813,
+        "restoration_gain": 0.44007606395179616,
+        "residual_gap": -0.01709340913960644,
+        "n_flows": 43609
+      }
+    }
+  }
+}

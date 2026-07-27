@@ -1,0 +1,38 @@
+{
+  "train": {
+    "n_checkpoints": 305722,
+    "n_flows": 39292,
+    "n_benign": 76365,
+    "n_adversarial": 229357,
+    "per_source": {
+      "ntp_ddos": 76365,
+      "ntp_ddos_adv_both": 76418,
+      "ntp_ddos_adv_iat": 76720,
+      "ntp_ddos_adv_size": 76219
+    }
+  },
+  "val": {
+    "n_checkpoints": 63863,
+    "n_flows": 8420,
+    "n_benign": 16222,
+    "n_adversarial": 47641,
+    "per_source": {
+      "ntp_ddos": 16222,
+      "ntp_ddos_adv_both": 15654,
+      "ntp_ddos_adv_iat": 15794,
+      "ntp_ddos_adv_size": 16193
+    }
+  },
+  "test": {
+    "n_checkpoints": 65791,
+    "n_flows": 8420,
+    "n_benign": 16278,
+    "n_adversarial": 49513,
+    "per_source": {
+      "ntp_ddos": 16278,
+      "ntp_ddos_adv_both": 16765,
+      "ntp_ddos_adv_iat": 16323,
+      "ntp_ddos_adv_size": 16425
+    }
+  }
+}

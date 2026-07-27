@@ -1,0 +1,216 @@
+{
+  "best_epoch": 19,
+  "best_val_loss": 6.020342856622188e-06,
+  "epochs_run": 20,
+  "epochs_planned": 20,
+  "train_seconds": 315.1976647377014,
+  "device": "cuda",
+  "amp": true,
+  "n_parameters": 677698,
+  "n_pairs": 20049,
+  "pair_skipped": {
+    "no_clean_base": [],
+    "excluded": [
+      "brute_force_adv_both",
+      "brute_force_adv_iat",
+      "brute_force_adv_size",
+      "ddos_adv_both",
+      "ddos_adv_iat",
+      "ddos_adv_size",
+      "ldap_ddos_adv_both",
+      "ldap_ddos_adv_iat",
+      "ldap_ddos_adv_size",
+      "mirai_adv_both",
+      "mirai_adv_iat",
+      "mirai_adv_size",
+      "ntp_ddos_adv_both",
+      "ntp_ddos_adv_iat",
+      "ntp_ddos_adv_size",
+      "portscan_adv_both",
+      "portscan_adv_iat",
+      "portscan_adv_size",
+      "ssdp_ddos_adv_both",
+      "ssdp_ddos_adv_iat",
+      "ssdp_ddos_adv_size",
+      "ssdp_flood_adv_both",
+      "ssdp_flood_adv_iat",
+      "ssdp_flood_adv_size",
+      "syn_ddos_adv_both",
+      "syn_ddos_adv_iat",
+      "syn_ddos_adv_size"
+    ],
+    "len_mismatch": 42,
+    "too_short": 0,
+    "unmatched_adv": 339
+  },
+  "split_summary": {
+    "train": {
+      "n_pairs": 14034,
+      "per_source": {
+        "dns_ddos_adv_both": 4678,
+        "dns_ddos_adv_iat": 4678,
+        "dns_ddos_adv_size": 4678
+      }
+    },
+    "val": {
+      "n_pairs": 3009,
+      "per_source": {
+        "dns_ddos_adv_both": 1003,
+        "dns_ddos_adv_iat": 1003,
+        "dns_ddos_adv_size": 1003
+      }
+    },
+    "test": {
+      "n_pairs": 3006,
+      "per_source": {
+        "dns_ddos_adv_both": 1002,
+        "dns_ddos_adv_iat": 1002,
+        "dns_ddos_adv_size": 1002
+      }
+    }
+  },
+  "config": {
+    "tensors_dir": "/mnt/nas/inesc/gleitao/DEPT/data/tensors",
+    "adversarial_dir": "/mnt/nas/inesc/gleitao/DEPT/data/tensors/adversarial",
+    "output_dir": "/mnt/nas/inesc/gleitao/DEPT/data/models/per_attack/dns_ddos/reconstructor",
+    "tcn_model_dir": "/mnt/nas/inesc/gleitao/DEPT/data/models/per_attack/dns_ddos/tcn",
+    "adversarial_exclude": [
+      "brute_force_adv_both",
+      "brute_force_adv_iat",
+      "brute_force_adv_size",
+      "brute_force_kitsune_adv_both",
+      "brute_force_kitsune_adv_iat",
+      "brute_force_kitsune_adv_size",
+      "ddos_adv_both",
+      "ddos_adv_iat",
+      "ddos_adv_size",
+      "dos_slow_adv_both",
+      "dos_slow_adv_iat",
+      "dos_slow_adv_size",
+      "fuzzing_adv_both",
+      "fuzzing_adv_iat",
+      "fuzzing_adv_size",
+      "ldap_ddos_adv_both",
+      "ldap_ddos_adv_iat",
+      "ldap_ddos_adv_size",
+      "mirai_adv_both",
+      "mirai_adv_iat",
+      "mirai_adv_size",
+      "ntp_ddos_adv_both",
+      "ntp_ddos_adv_iat",
+      "ntp_ddos_adv_size",
+      "portscan_adv_both",
+      "portscan_adv_iat",
+      "portscan_adv_size",
+      "portscan_kitsune_adv_both",
+      "portscan_kitsune_adv_iat",
+      "portscan_kitsune_adv_size",
+      "ssdp_ddos_adv_both",
+      "ssdp_ddos_adv_iat",
+      "ssdp_ddos_adv_size",
+      "ssdp_flood_adv_both",
+      "ssdp_flood_adv_iat",
+      "ssdp_flood_adv_size",
+      "syn_ddos_adv_both",
+      "syn_ddos_adv_iat",
+      "syn_ddos_adv_size",
+      "syn_dos_adv_both",
+      "syn_dos_adv_iat",
+      "syn_dos_adv_size"
+    ],
+    "min_len": 2,
+    "split": {
+      "train_frac": 0.7,
+      "val_frac": 0.15,
+      "test_frac": 0.15,
+      "seed": 42
+    },
+    "realize": {
+      "adversarial_pcap_dir": "/mnt/nas/inesc/gleitao/DEPT/data/adversarial"
+    },
+    "nids": {
+      "enabled": true,
+      "tantgen_root": "../Transformer-based_Adversarial_Network_Traffic_Generator",
+      "default_ml_model": "RF",
+      "ml_nids_model_dir": "src/NIDS/models",
+      "attacks": {
+        "mirai": {
+          "kind": "kitsune",
+          "model": "src/Kitsune/models/Mirai_model.pkl"
+        },
+        "ssdp_flood": {
+          "kind": "kitsune",
+          "model": "src/Kitsune/models/SSDP_Flood_model.pkl"
+        },
+        "ddos": {
+          "kind": "ml_nids",
+          "tg_attack": "DDoS"
+        },
+        "portscan": {
+          "kind": "ml_nids",
+          "tg_attack": "PortScan"
+        },
+        "brute_force": {
+          "kind": "ml_nids",
+          "tg_attack": "BruteForce"
+        },
+        "dns_ddos": {
+          "kind": "ml_nids",
+          "tg_attack": "DNS_DDoS"
+        },
+        "ldap_ddos": {
+          "kind": "ml_nids",
+          "tg_attack": "LDAP_DDoS"
+        },
+        "ntp_ddos": {
+          "kind": "ml_nids",
+          "tg_attack": "NTP_DDoS"
+        },
+        "ssdp_ddos": {
+          "kind": "ml_nids",
+          "tg_attack": "SSDP_DDoS"
+        },
+        "syn_ddos": {
+          "kind": "ml_nids",
+          "tg_attack": "SYN_DDoS"
+        }
+      },
+      "kitsune": {
+        "model_dir": "data/models/kitsune",
+        "benign_pcap_dir": "data/original/Kitsune/Benign",
+        "base_to_tg": {
+          "mirai": "Mirai",
+          "ssdp_flood": "SSDP_Flood"
+        },
+        "fm_grace": 5000,
+        "ad_grace": 50000,
+        "train_cap_packets": 55000,
+        "detection": "max",
+        "seed": 42
+      }
+    },
+    "_repo_root": "/mnt/nas/inesc/gleitao/DEPT"
+  },
+  "training_config": {
+    "device": "auto",
+    "epochs": 20,
+    "batch_size": 32,
+    "num_workers": "auto",
+    "lr": 0.0003,
+    "weight_decay": 0.0001,
+    "scheduler": "cosine",
+    "early_stop_patience": 3,
+    "amp": true,
+    "max_length": 200,
+    "seed": 42
+  },
+  "model_config": {
+    "num_features": 1090,
+    "d_model": 128,
+    "n_layers": 3,
+    "n_heads": 4,
+    "dim_feedforward": 256,
+    "dropout": 0.1,
+    "max_seq_len": 200
+  }
+}

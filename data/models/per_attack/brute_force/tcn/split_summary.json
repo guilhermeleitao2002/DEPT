@@ -1,0 +1,35 @@
+{
+  "train": {
+    "n_flows": 58548,
+    "n_benign": 43911,
+    "n_adversarial": 14637,
+    "per_source": {
+      "brute_force": 43911,
+      "brute_force_adv_both": 4879,
+      "brute_force_adv_iat": 4879,
+      "brute_force_adv_size": 4879
+    }
+  },
+  "val": {
+    "n_flows": 12548,
+    "n_benign": 9410,
+    "n_adversarial": 3138,
+    "per_source": {
+      "brute_force": 9410,
+      "brute_force_adv_both": 1046,
+      "brute_force_adv_iat": 1046,
+      "brute_force_adv_size": 1046
+    }
+  },
+  "test": {
+    "n_flows": 12544,
+    "n_benign": 9409,
+    "n_adversarial": 3135,
+    "per_source": {
+      "brute_force": 9409,
+      "brute_force_adv_both": 1045,
+      "brute_force_adv_iat": 1045,
+      "brute_force_adv_size": 1045
+    }
+  }
+}

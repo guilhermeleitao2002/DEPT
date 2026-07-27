@@ -1,0 +1,26 @@
+{
+  "train": {
+    "n_pairs": 76561,
+    "per_source": {
+      "ddos_adv_both": 26981,
+      "ddos_adv_iat": 26981,
+      "ddos_adv_size": 22599
+    }
+  },
+  "val": {
+    "n_pairs": 16407,
+    "per_source": {
+      "ddos_adv_both": 5782,
+      "ddos_adv_iat": 5782,
+      "ddos_adv_size": 4843
+    }
+  },
+  "test": {
+    "n_pairs": 16404,
+    "per_source": {
+      "ddos_adv_both": 5781,
+      "ddos_adv_iat": 5781,
+      "ddos_adv_size": 4842
+    }
+  }
+}

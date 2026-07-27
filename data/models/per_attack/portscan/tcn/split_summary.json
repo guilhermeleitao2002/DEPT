@@ -1,0 +1,35 @@
+{
+  "train": {
+    "n_flows": 494319,
+    "n_benign": 161109,
+    "n_adversarial": 333210,
+    "per_source": {
+      "portscan": 161109,
+      "portscan_adv_both": 111070,
+      "portscan_adv_iat": 111070,
+      "portscan_adv_size": 111070
+    }
+  },
+  "val": {
+    "n_flows": 105927,
+    "n_benign": 34524,
+    "n_adversarial": 71403,
+    "per_source": {
+      "portscan": 34524,
+      "portscan_adv_both": 23801,
+      "portscan_adv_iat": 23801,
+      "portscan_adv_size": 23801
+    }
+  },
+  "test": {
+    "n_flows": 105923,
+    "n_benign": 34523,
+    "n_adversarial": 71400,
+    "per_source": {
+      "portscan": 34523,
+      "portscan_adv_both": 23800,
+      "portscan_adv_iat": 23800,
+      "portscan_adv_size": 23800
+    }
+  }
+}

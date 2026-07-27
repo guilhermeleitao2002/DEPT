@@ -1,0 +1,26 @@
+{
+  "train": {
+    "n_pairs": 12138,
+    "per_source": {
+      "mirai_adv_both": 4046,
+      "mirai_adv_iat": 4046,
+      "mirai_adv_size": 4046
+    }
+  },
+  "val": {
+    "n_pairs": 2601,
+    "per_source": {
+      "mirai_adv_both": 867,
+      "mirai_adv_iat": 867,
+      "mirai_adv_size": 867
+    }
+  },
+  "test": {
+    "n_pairs": 2601,
+    "per_source": {
+      "mirai_adv_both": 867,
+      "mirai_adv_iat": 867,
+      "mirai_adv_size": 867
+    }
+  }
+}

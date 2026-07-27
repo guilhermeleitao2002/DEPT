@@ -1,0 +1,26 @@
+{
+  "train": {
+    "n_pairs": 150477,
+    "per_source": {
+      "syn_ddos_adv_both": 50159,
+      "syn_ddos_adv_iat": 50159,
+      "syn_ddos_adv_size": 50159
+    }
+  },
+  "val": {
+    "n_pairs": 32247,
+    "per_source": {
+      "syn_ddos_adv_both": 10749,
+      "syn_ddos_adv_iat": 10749,
+      "syn_ddos_adv_size": 10749
+    }
+  },
+  "test": {
+    "n_pairs": 32244,
+    "per_source": {
+      "syn_ddos_adv_both": 10748,
+      "syn_ddos_adv_iat": 10748,
+      "syn_ddos_adv_size": 10748
+    }
+  }
+}

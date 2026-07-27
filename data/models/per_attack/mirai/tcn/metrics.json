@@ -1,0 +1,263 @@
+{
+  "overall": {
+    "n": 10809,
+    "n_benign": 4938,
+    "n_adversarial": 5871,
+    "accuracy": 0.6334536034785827,
+    "precision_adversarial": 0.6150970698179187,
+    "recall_adversarial": 0.8688468744677227,
+    "f1_adversarial": 0.7202767579779723,
+    "precision_benign": 0.6939586645468998,
+    "recall_benign": 0.353584447144593,
+    "f1_benign": 0.46847330292460426,
+    "macro_f1": 0.5943750304512883,
+    "roc_auc": 0.6781347610040884,
+    "pr_auc": 0.6938283050040006
+  },
+  "per_adversarial_source": {
+    "mirai_adv_both": {
+      "low_support": false,
+      "base_source": "mirai",
+      "vs_all_benign": {
+        "n": 6895,
+        "n_benign": 4938,
+        "n_adversarial": 1957,
+        "accuracy": 0.49224075416968815,
+        "precision_adversarial": 0.34049586776859503,
+        "recall_adversarial": 0.8421052631578947,
+        "f1_adversarial": 0.4849198175665735,
+        "precision_benign": 0.8496350364963504,
+        "recall_benign": 0.353584447144593,
+        "f1_benign": 0.49935649935649934,
+        "macro_f1": 0.4921381584615364,
+        "roc_auc": 0.6548177472193265,
+        "pr_auc": 0.3847274842763257
+      },
+      "vs_balanced_benign": {
+        "n": 6895,
+        "n_benign": 4938,
+        "n_adversarial": 1957,
+        "accuracy": 0.49224075416968815,
+        "precision_adversarial": 0.34049586776859503,
+        "recall_adversarial": 0.8421052631578947,
+        "f1_adversarial": 0.4849198175665735,
+        "precision_benign": 0.8496350364963504,
+        "recall_benign": 0.353584447144593,
+        "f1_benign": 0.49935649935649934,
+        "macro_f1": 0.4921381584615364,
+        "roc_auc": 0.6548177472193265,
+        "pr_auc": 0.3847274842763257
+      },
+      "vs_same_base_benign": {
+        "n": 6895,
+        "n_benign": 4938,
+        "n_adversarial": 1957,
+        "accuracy": 0.49224075416968815,
+        "precision_adversarial": 0.34049586776859503,
+        "recall_adversarial": 0.8421052631578947,
+        "f1_adversarial": 0.4849198175665735,
+        "precision_benign": 0.8496350364963504,
+        "recall_benign": 0.353584447144593,
+        "f1_benign": 0.49935649935649934,
+        "macro_f1": 0.4921381584615364,
+        "roc_auc": 0.6548177472193265,
+        "pr_auc": 0.3847274842763257
+      }
+    },
+    "mirai_adv_iat": {
+      "low_support": false,
+      "base_source": "mirai",
+      "vs_all_benign": {
+        "n": 6895,
+        "n_benign": 4938,
+        "n_adversarial": 1957,
+        "accuracy": 0.492675852066715,
+        "precision_adversarial": 0.340904398100351,
+        "recall_adversarial": 0.8436382217680123,
+        "f1_adversarial": 0.48558823529411765,
+        "precision_benign": 0.8508771929824561,
+        "recall_benign": 0.353584447144593,
+        "f1_benign": 0.4995708154506438,
+        "macro_f1": 0.4925795253723807,
+        "roc_auc": 0.6539190717063276,
+        "pr_auc": 0.3852933972522356
+      },
+      "vs_balanced_benign": {
+        "n": 6895,
+        "n_benign": 4938,
+        "n_adversarial": 1957,
+        "accuracy": 0.492675852066715,
+        "precision_adversarial": 0.340904398100351,
+        "recall_adversarial": 0.8436382217680123,
+        "f1_adversarial": 0.48558823529411765,
+        "precision_benign": 0.8508771929824561,
+        "recall_benign": 0.353584447144593,
+        "f1_benign": 0.4995708154506438,
+        "macro_f1": 0.4925795253723807,
+        "roc_auc": 0.6539190717063276,
+        "pr_auc": 0.3852933972522356
+      },
+      "vs_same_base_benign": {
+        "n": 6895,
+        "n_benign": 4938,
+        "n_adversarial": 1957,
+        "accuracy": 0.492675852066715,
+        "precision_adversarial": 0.340904398100351,
+        "recall_adversarial": 0.8436382217680123,
+        "f1_adversarial": 0.48558823529411765,
+        "precision_benign": 0.8508771929824561,
+        "recall_benign": 0.353584447144593,
+        "f1_benign": 0.4995708154506438,
+        "macro_f1": 0.4925795253723807,
+        "roc_auc": 0.6539190717063276,
+        "pr_auc": 0.3852933972522356
+      }
+    },
+    "mirai_adv_size": {
+      "low_support": false,
+      "base_source": "mirai",
+      "vs_all_benign": {
+        "n": 6895,
+        "n_benign": 4938,
+        "n_adversarial": 1957,
+        "accuracy": 0.5145757795503988,
+        "precision_adversarial": 0.3608329995995194,
+        "recall_adversarial": 0.9207971384772611,
+        "f1_adversarial": 0.518486548698029,
+        "precision_benign": 0.9184639663335087,
+        "recall_benign": 0.353584447144593,
+        "f1_benign": 0.5106009650533704,
+        "macro_f1": 0.5145437568756996,
+        "roc_auc": 0.7256674640866105,
+        "pr_auc": 0.5533165230881381
+      },
+      "vs_balanced_benign": {
+        "n": 6895,
+        "n_benign": 4938,
+        "n_adversarial": 1957,
+        "accuracy": 0.5145757795503988,
+        "precision_adversarial": 0.3608329995995194,
+        "recall_adversarial": 0.9207971384772611,
+        "f1_adversarial": 0.518486548698029,
+        "precision_benign": 0.9184639663335087,
+        "recall_benign": 0.353584447144593,
+        "f1_benign": 0.5106009650533704,
+        "macro_f1": 0.5145437568756996,
+        "roc_auc": 0.7256674640866105,
+        "pr_auc": 0.5533165230881381
+      },
+      "vs_same_base_benign": {
+        "n": 6895,
+        "n_benign": 4938,
+        "n_adversarial": 1957,
+        "accuracy": 0.5145757795503988,
+        "precision_adversarial": 0.3608329995995194,
+        "recall_adversarial": 0.9207971384772611,
+        "f1_adversarial": 0.518486548698029,
+        "precision_benign": 0.9184639663335087,
+        "recall_benign": 0.353584447144593,
+        "f1_benign": 0.5106009650533704,
+        "macro_f1": 0.5145437568756996,
+        "roc_auc": 0.7256674640866105,
+        "pr_auc": 0.5533165230881381
+      }
+    }
+  },
+  "per_source_config": {
+    "min_support": 50,
+    "balance_k": 10
+  },
+  "per_label_str": {
+    "adversarial": {
+      "n": 5871,
+      "y_true_majority": 1,
+      "predicted_adversarial_rate": 0.8688468744677227,
+      "mean_adversarial_prob": 0.55043625831604
+    },
+    "benign": {
+      "n": 4938,
+      "y_true_majority": 0,
+      "predicted_adversarial_rate": 0.6464155528554071,
+      "mean_adversarial_prob": 0.4015873372554779
+    }
+  },
+  "device": "cuda",
+  "best_epoch": 3,
+  "verdict_at": "last_valid_timestep",
+  "streaming": {
+    "n_flows": 10809,
+    "n_benign": 4938,
+    "n_adversarial": 5871,
+    "auroc_at": {
+      "1": {
+        "n_used": 10809,
+        "n_excluded": 0,
+        "n_benign": 4938,
+        "n_adversarial": 5871,
+        "auroc": 0.6528653135707849
+      },
+      "2": {
+        "n_used": 10809,
+        "n_excluded": 0,
+        "n_benign": 4938,
+        "n_adversarial": 5871,
+        "auroc": 0.6538985136006701
+      },
+      "5": {
+        "n_used": 10809,
+        "n_excluded": 0,
+        "n_benign": 4938,
+        "n_adversarial": 5871,
+        "auroc": 0.6800951453965125
+      },
+      "10": {
+        "n_used": 10809,
+        "n_excluded": 0,
+        "n_benign": 4938,
+        "n_adversarial": 5871,
+        "auroc": 0.6785438707560189
+      },
+      "20": {
+        "n_used": 10809,
+        "n_excluded": 0,
+        "n_benign": 4938,
+        "n_adversarial": 5871,
+        "auroc": 0.6781820342990608
+      },
+      "50": {
+        "n_used": 10809,
+        "n_excluded": 0,
+        "n_benign": 4938,
+        "n_adversarial": 5871,
+        "auroc": 0.6782464508465696
+      },
+      "100": {
+        "n_used": 10809,
+        "n_excluded": 0,
+        "n_benign": 4938,
+        "n_adversarial": 5871,
+        "auroc": 0.6780147237428666
+      },
+      "max": {
+        "n_used": 10809,
+        "n_excluded": 0,
+        "n_benign": 4938,
+        "n_adversarial": 5871,
+        "auroc": 0.6781347610040884
+      }
+    },
+    "edp": {
+      "n_adversarial": 5871,
+      "n_detected": 5412,
+      "detection_rate": 0.9218191108840061,
+      "threshold": 0.5,
+      "edp_median": 1.0,
+      "edp_iqr": [
+        1.0,
+        1.0
+      ],
+      "edp_min": 1,
+      "edp_max": 12
+    }
+  }
+}

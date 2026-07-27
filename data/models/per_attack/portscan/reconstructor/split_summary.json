@@ -1,0 +1,26 @@
+{
+  "train": {
+    "n_pairs": 333210,
+    "per_source": {
+      "portscan_adv_both": 111070,
+      "portscan_adv_iat": 111070,
+      "portscan_adv_size": 111070
+    }
+  },
+  "val": {
+    "n_pairs": 71403,
+    "per_source": {
+      "portscan_adv_both": 23801,
+      "portscan_adv_iat": 23801,
+      "portscan_adv_size": 23801
+    }
+  },
+  "test": {
+    "n_pairs": 71400,
+    "per_source": {
+      "portscan_adv_both": 23800,
+      "portscan_adv_iat": 23800,
+      "portscan_adv_size": 23800
+    }
+  }
+}

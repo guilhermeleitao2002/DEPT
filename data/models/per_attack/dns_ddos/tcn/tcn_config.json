@@ -1,0 +1,29 @@
+{
+  "model": {
+    "num_features": 1090,
+    "channels": [
+      128,
+      128,
+      128
+    ],
+    "kernel_size": 3,
+    "dropout": 0.15,
+    "num_classes": 2
+  },
+  "training": {
+    "device": "auto",
+    "epochs": 20,
+    "batch_size": 32,
+    "num_workers": "auto",
+    "lr": 0.001,
+    "weight_decay": 0.0001,
+    "scheduler": "cosine",
+    "early_stop_patience": 3,
+    "amp": true,
+    "class_weight": "balanced",
+    "max_length": 200,
+    "seed": 42
+  },
+  "n_parameters": 805762,
+  "receptive_field": 29
+}

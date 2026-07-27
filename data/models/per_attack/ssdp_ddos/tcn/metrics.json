@@ -1,0 +1,263 @@
+{
+  "overall": {
+    "n": 161763,
+    "n_benign": 40425,
+    "n_adversarial": 121338,
+    "accuracy": 0.7500973646631183,
+    "precision_adversarial": 0.7500973646631183,
+    "recall_adversarial": 1.0,
+    "f1_adversarial": 0.8572064386914917,
+    "precision_benign": 0.0,
+    "recall_benign": 0.0,
+    "f1_benign": 0.0,
+    "macro_f1": 0.42860321934574586,
+    "roc_auc": 0.49997111622029505,
+    "pr_auc": 0.7500892856257263
+  },
+  "per_adversarial_source": {
+    "ssdp_ddos_adv_both": {
+      "low_support": false,
+      "base_source": "ssdp_ddos",
+      "vs_all_benign": {
+        "n": 80871,
+        "n_benign": 40425,
+        "n_adversarial": 40446,
+        "accuracy": 0.5001298364061283,
+        "precision_adversarial": 0.5001298364061283,
+        "recall_adversarial": 1.0,
+        "f1_adversarial": 0.6667820668166868,
+        "precision_benign": 0.0,
+        "recall_benign": 0.0,
+        "f1_benign": 0.0,
+        "macro_f1": 0.3333910334083434,
+        "roc_auc": 0.49999996146858633,
+        "pr_auc": 0.5001381763215625
+      },
+      "vs_balanced_benign": {
+        "n": 80871,
+        "n_benign": 40425,
+        "n_adversarial": 40446,
+        "accuracy": 0.5001298364061283,
+        "precision_adversarial": 0.5001298364061283,
+        "recall_adversarial": 1.0,
+        "f1_adversarial": 0.6667820668166868,
+        "precision_benign": 0.0,
+        "recall_benign": 0.0,
+        "f1_benign": 0.0,
+        "macro_f1": 0.3333910334083434,
+        "roc_auc": 0.49999996146858633,
+        "pr_auc": 0.5001381763215625
+      },
+      "vs_same_base_benign": {
+        "n": 80871,
+        "n_benign": 40425,
+        "n_adversarial": 40446,
+        "accuracy": 0.5001298364061283,
+        "precision_adversarial": 0.5001298364061283,
+        "recall_adversarial": 1.0,
+        "f1_adversarial": 0.6667820668166868,
+        "precision_benign": 0.0,
+        "recall_benign": 0.0,
+        "f1_benign": 0.0,
+        "macro_f1": 0.3333910334083434,
+        "roc_auc": 0.49999996146858633,
+        "pr_auc": 0.5001381763215625
+      }
+    },
+    "ssdp_ddos_adv_iat": {
+      "low_support": false,
+      "base_source": "ssdp_ddos",
+      "vs_all_benign": {
+        "n": 80871,
+        "n_benign": 40425,
+        "n_adversarial": 40446,
+        "accuracy": 0.5001298364061283,
+        "precision_adversarial": 0.5001298364061283,
+        "recall_adversarial": 1.0,
+        "f1_adversarial": 0.6667820668166868,
+        "precision_benign": 0.0,
+        "recall_benign": 0.0,
+        "f1_benign": 0.0,
+        "macro_f1": 0.3333910334083434,
+        "roc_auc": 0.4999381515765265,
+        "pr_auc": 0.5001257124753793
+      },
+      "vs_balanced_benign": {
+        "n": 80871,
+        "n_benign": 40425,
+        "n_adversarial": 40446,
+        "accuracy": 0.5001298364061283,
+        "precision_adversarial": 0.5001298364061283,
+        "recall_adversarial": 1.0,
+        "f1_adversarial": 0.6667820668166868,
+        "precision_benign": 0.0,
+        "recall_benign": 0.0,
+        "f1_benign": 0.0,
+        "macro_f1": 0.3333910334083434,
+        "roc_auc": 0.4999381515765265,
+        "pr_auc": 0.5001257124753793
+      },
+      "vs_same_base_benign": {
+        "n": 80871,
+        "n_benign": 40425,
+        "n_adversarial": 40446,
+        "accuracy": 0.5001298364061283,
+        "precision_adversarial": 0.5001298364061283,
+        "recall_adversarial": 1.0,
+        "f1_adversarial": 0.6667820668166868,
+        "precision_benign": 0.0,
+        "recall_benign": 0.0,
+        "f1_benign": 0.0,
+        "macro_f1": 0.3333910334083434,
+        "roc_auc": 0.4999381515765265,
+        "pr_auc": 0.5001257124753793
+      }
+    },
+    "ssdp_ddos_adv_size": {
+      "low_support": false,
+      "base_source": "ssdp_ddos",
+      "vs_all_benign": {
+        "n": 80871,
+        "n_benign": 40425,
+        "n_adversarial": 40446,
+        "accuracy": 0.5001298364061283,
+        "precision_adversarial": 0.5001298364061283,
+        "recall_adversarial": 1.0,
+        "f1_adversarial": 0.6667820668166868,
+        "precision_benign": 0.0,
+        "recall_benign": 0.0,
+        "f1_benign": 0.0,
+        "macro_f1": 0.3333910334083434,
+        "roc_auc": 0.49997523561577223,
+        "pr_auc": 0.5001232304126482
+      },
+      "vs_balanced_benign": {
+        "n": 80871,
+        "n_benign": 40425,
+        "n_adversarial": 40446,
+        "accuracy": 0.5001298364061283,
+        "precision_adversarial": 0.5001298364061283,
+        "recall_adversarial": 1.0,
+        "f1_adversarial": 0.6667820668166868,
+        "precision_benign": 0.0,
+        "recall_benign": 0.0,
+        "f1_benign": 0.0,
+        "macro_f1": 0.3333910334083434,
+        "roc_auc": 0.49997523561577223,
+        "pr_auc": 0.5001232304126482
+      },
+      "vs_same_base_benign": {
+        "n": 80871,
+        "n_benign": 40425,
+        "n_adversarial": 40446,
+        "accuracy": 0.5001298364061283,
+        "precision_adversarial": 0.5001298364061283,
+        "recall_adversarial": 1.0,
+        "f1_adversarial": 0.6667820668166868,
+        "precision_benign": 0.0,
+        "recall_benign": 0.0,
+        "f1_benign": 0.0,
+        "macro_f1": 0.3333910334083434,
+        "roc_auc": 0.49997523561577223,
+        "pr_auc": 0.5001232304126482
+      }
+    }
+  },
+  "per_source_config": {
+    "min_support": 50,
+    "balance_k": 10
+  },
+  "per_label_str": {
+    "adversarial": {
+      "n": 121338,
+      "y_true_majority": 1,
+      "predicted_adversarial_rate": 1.0,
+      "mean_adversarial_prob": 0.5048059225082397
+    },
+    "benign": {
+      "n": 40425,
+      "y_true_majority": 0,
+      "predicted_adversarial_rate": 1.0,
+      "mean_adversarial_prob": 0.5048320889472961
+    }
+  },
+  "device": "cuda",
+  "best_epoch": 2,
+  "verdict_at": "last_valid_timestep",
+  "streaming": {
+    "n_flows": 161763,
+    "n_benign": 40425,
+    "n_adversarial": 121338,
+    "auroc_at": {
+      "1": {
+        "n_used": 161763,
+        "n_excluded": 0,
+        "n_benign": 40425,
+        "n_adversarial": 121338,
+        "auroc": 0.49997111622029505
+      },
+      "2": {
+        "n_used": 161763,
+        "n_excluded": 0,
+        "n_benign": 40425,
+        "n_adversarial": 121338,
+        "auroc": 0.49997111622029505
+      },
+      "5": {
+        "n_used": 161763,
+        "n_excluded": 0,
+        "n_benign": 40425,
+        "n_adversarial": 121338,
+        "auroc": 0.49997111622029505
+      },
+      "10": {
+        "n_used": 161763,
+        "n_excluded": 0,
+        "n_benign": 40425,
+        "n_adversarial": 121338,
+        "auroc": 0.49997111622029505
+      },
+      "20": {
+        "n_used": 161763,
+        "n_excluded": 0,
+        "n_benign": 40425,
+        "n_adversarial": 121338,
+        "auroc": 0.4999711158125552
+      },
+      "50": {
+        "n_used": 161763,
+        "n_excluded": 0,
+        "n_benign": 40425,
+        "n_adversarial": 121338,
+        "auroc": 0.4999711158125552
+      },
+      "100": {
+        "n_used": 161763,
+        "n_excluded": 0,
+        "n_benign": 40425,
+        "n_adversarial": 121338,
+        "auroc": 0.49997111622029505
+      },
+      "max": {
+        "n_used": 161763,
+        "n_excluded": 0,
+        "n_benign": 40425,
+        "n_adversarial": 121338,
+        "auroc": 0.49997111622029505
+      }
+    },
+    "edp": {
+      "n_adversarial": 121338,
+      "n_detected": 121338,
+      "detection_rate": 1.0,
+      "threshold": 0.5,
+      "edp_median": 1.0,
+      "edp_iqr": [
+        1.0,
+        1.0
+      ],
+      "edp_min": 1,
+      "edp_max": 1
+    }
+  }
+}

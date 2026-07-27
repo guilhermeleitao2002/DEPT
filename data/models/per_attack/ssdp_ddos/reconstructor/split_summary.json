@@ -1,0 +1,26 @@
+{
+  "train": {
+    "n_pairs": 565929,
+    "per_source": {
+      "ssdp_ddos_adv_both": 188643,
+      "ssdp_ddos_adv_iat": 188643,
+      "ssdp_ddos_adv_size": 188643
+    }
+  },
+  "val": {
+    "n_pairs": 121272,
+    "per_source": {
+      "ssdp_ddos_adv_both": 40424,
+      "ssdp_ddos_adv_iat": 40424,
+      "ssdp_ddos_adv_size": 40424
+    }
+  },
+  "test": {
+    "n_pairs": 121269,
+    "per_source": {
+      "ssdp_ddos_adv_both": 40423,
+      "ssdp_ddos_adv_iat": 40423,
+      "ssdp_ddos_adv_size": 40423
+    }
+  }
+}

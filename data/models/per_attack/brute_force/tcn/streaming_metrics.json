@@ -1,0 +1,794 @@
+{
+  "overall": {
+    "n_flows": 12544,
+    "n_benign": 9409,
+    "n_adversarial": 3135,
+    "auroc_at": {
+      "1": {
+        "n_used": 12544,
+        "n_excluded": 0,
+        "n_benign": 9409,
+        "n_adversarial": 3135,
+        "auroc": 0.9823948803302278
+      },
+      "2": {
+        "n_used": 12544,
+        "n_excluded": 0,
+        "n_benign": 9409,
+        "n_adversarial": 3135,
+        "auroc": 0.981152390149375
+      },
+      "5": {
+        "n_used": 12544,
+        "n_excluded": 0,
+        "n_benign": 9409,
+        "n_adversarial": 3135,
+        "auroc": 0.9816198071580655
+      },
+      "10": {
+        "n_used": 12544,
+        "n_excluded": 0,
+        "n_benign": 9409,
+        "n_adversarial": 3135,
+        "auroc": 0.9810087325193244
+      },
+      "20": {
+        "n_used": 12544,
+        "n_excluded": 0,
+        "n_benign": 9409,
+        "n_adversarial": 3135,
+        "auroc": 0.9809311828252261
+      },
+      "50": {
+        "n_used": 12544,
+        "n_excluded": 0,
+        "n_benign": 9409,
+        "n_adversarial": 3135,
+        "auroc": 0.9803816563699319
+      },
+      "100": {
+        "n_used": 12544,
+        "n_excluded": 0,
+        "n_benign": 9409,
+        "n_adversarial": 3135,
+        "auroc": 0.9803626715267867
+      },
+      "max": {
+        "n_used": 12544,
+        "n_excluded": 0,
+        "n_benign": 9409,
+        "n_adversarial": 3135,
+        "auroc": 0.9803626715267864
+      }
+    },
+    "edp": {
+      "n_adversarial": 3135,
+      "n_detected": 3135,
+      "detection_rate": 1.0,
+      "threshold": 0.5,
+      "edp_median": 1.0,
+      "edp_iqr": [
+        1.0,
+        1.0
+      ],
+      "edp_min": 1,
+      "edp_max": 2
+    }
+  },
+  "per_adversarial_source": {
+    "brute_force_adv_both": {
+      "low_support": false,
+      "base_source": "brute_force",
+      "n_adversarial_flows": 1045,
+      "vs_all_benign": {
+        "n_flows": 10454,
+        "n_benign": 9409,
+        "n_adversarial": 1045,
+        "auroc_at": {
+          "1": {
+            "n_used": 10454,
+            "n_excluded": 0,
+            "n_benign": 9409,
+            "n_adversarial": 1045,
+            "auroc": 0.9814924222507108
+          },
+          "2": {
+            "n_used": 10454,
+            "n_excluded": 0,
+            "n_benign": 9409,
+            "n_adversarial": 1045,
+            "auroc": 0.9809489641649219
+          },
+          "5": {
+            "n_used": 10454,
+            "n_excluded": 0,
+            "n_benign": 9409,
+            "n_adversarial": 1045,
+            "auroc": 0.9817764829662734
+          },
+          "10": {
+            "n_used": 10454,
+            "n_excluded": 0,
+            "n_benign": 9409,
+            "n_adversarial": 1045,
+            "auroc": 0.9804292540838179
+          },
+          "20": {
+            "n_used": 10454,
+            "n_excluded": 0,
+            "n_benign": 9409,
+            "n_adversarial": 1045,
+            "auroc": 0.9813260336611439
+          },
+          "50": {
+            "n_used": 10454,
+            "n_excluded": 0,
+            "n_benign": 9409,
+            "n_adversarial": 1045,
+            "auroc": 0.9803773339279658
+          },
+          "100": {
+            "n_used": 10454,
+            "n_excluded": 0,
+            "n_benign": 9409,
+            "n_adversarial": 1045,
+            "auroc": 0.9802569666322737
+          },
+          "max": {
+            "n_used": 10454,
+            "n_excluded": 0,
+            "n_benign": 9409,
+            "n_adversarial": 1045,
+            "auroc": 0.9802569666322737
+          }
+        },
+        "edp": {
+          "n_adversarial": 1045,
+          "n_detected": 1045,
+          "detection_rate": 1.0,
+          "threshold": 0.5,
+          "edp_median": 1.0,
+          "edp_iqr": [
+            1.0,
+            1.0
+          ],
+          "edp_min": 1,
+          "edp_max": 1
+        }
+      },
+      "vs_balanced_benign": {
+        "n_flows": 10454,
+        "n_benign": 9409,
+        "n_adversarial": 1045,
+        "auroc_at": {
+          "1": {
+            "n_used": 10454,
+            "n_excluded": 0,
+            "n_benign": 9409,
+            "n_adversarial": 1045,
+            "auroc": 0.9814924222507108
+          },
+          "2": {
+            "n_used": 10454,
+            "n_excluded": 0,
+            "n_benign": 9409,
+            "n_adversarial": 1045,
+            "auroc": 0.9809489641649219
+          },
+          "5": {
+            "n_used": 10454,
+            "n_excluded": 0,
+            "n_benign": 9409,
+            "n_adversarial": 1045,
+            "auroc": 0.9817764829662734
+          },
+          "10": {
+            "n_used": 10454,
+            "n_excluded": 0,
+            "n_benign": 9409,
+            "n_adversarial": 1045,
+            "auroc": 0.9804292540838179
+          },
+          "20": {
+            "n_used": 10454,
+            "n_excluded": 0,
+            "n_benign": 9409,
+            "n_adversarial": 1045,
+            "auroc": 0.9813260336611439
+          },
+          "50": {
+            "n_used": 10454,
+            "n_excluded": 0,
+            "n_benign": 9409,
+            "n_adversarial": 1045,
+            "auroc": 0.9803773339279658
+          },
+          "100": {
+            "n_used": 10454,
+            "n_excluded": 0,
+            "n_benign": 9409,
+            "n_adversarial": 1045,
+            "auroc": 0.9802569666322737
+          },
+          "max": {
+            "n_used": 10454,
+            "n_excluded": 0,
+            "n_benign": 9409,
+            "n_adversarial": 1045,
+            "auroc": 0.9802569666322737
+          }
+        },
+        "edp": {
+          "n_adversarial": 1045,
+          "n_detected": 1045,
+          "detection_rate": 1.0,
+          "threshold": 0.5,
+          "edp_median": 1.0,
+          "edp_iqr": [
+            1.0,
+            1.0
+          ],
+          "edp_min": 1,
+          "edp_max": 1
+        }
+      },
+      "vs_same_base_benign": {
+        "n_flows": 10454,
+        "n_benign": 9409,
+        "n_adversarial": 1045,
+        "auroc_at": {
+          "1": {
+            "n_used": 10454,
+            "n_excluded": 0,
+            "n_benign": 9409,
+            "n_adversarial": 1045,
+            "auroc": 0.9814924222507108
+          },
+          "2": {
+            "n_used": 10454,
+            "n_excluded": 0,
+            "n_benign": 9409,
+            "n_adversarial": 1045,
+            "auroc": 0.9809489641649219
+          },
+          "5": {
+            "n_used": 10454,
+            "n_excluded": 0,
+            "n_benign": 9409,
+            "n_adversarial": 1045,
+            "auroc": 0.9817764829662734
+          },
+          "10": {
+            "n_used": 10454,
+            "n_excluded": 0,
+            "n_benign": 9409,
+            "n_adversarial": 1045,
+            "auroc": 0.9804292540838179
+          },
+          "20": {
+            "n_used": 10454,
+            "n_excluded": 0,
+            "n_benign": 9409,
+            "n_adversarial": 1045,
+            "auroc": 0.9813260336611439
+          },
+          "50": {
+            "n_used": 10454,
+            "n_excluded": 0,
+            "n_benign": 9409,
+            "n_adversarial": 1045,
+            "auroc": 0.9803773339279658
+          },
+          "100": {
+            "n_used": 10454,
+            "n_excluded": 0,
+            "n_benign": 9409,
+            "n_adversarial": 1045,
+            "auroc": 0.9802569666322737
+          },
+          "max": {
+            "n_used": 10454,
+            "n_excluded": 0,
+            "n_benign": 9409,
+            "n_adversarial": 1045,
+            "auroc": 0.9802569666322737
+          }
+        },
+        "edp": {
+          "n_adversarial": 1045,
+          "n_detected": 1045,
+          "detection_rate": 1.0,
+          "threshold": 0.5,
+          "edp_median": 1.0,
+          "edp_iqr": [
+            1.0,
+            1.0
+          ],
+          "edp_min": 1,
+          "edp_max": 1
+        }
+      }
+    },
+    "brute_force_adv_iat": {
+      "low_support": false,
+      "base_source": "brute_force",
+      "n_adversarial_flows": 1045,
+      "vs_all_benign": {
+        "n_flows": 10454,
+        "n_benign": 9409,
+        "n_adversarial": 1045,
+        "auroc_at": {
+          "1": {
+            "n_used": 10454,
+            "n_excluded": 0,
+            "n_benign": 9409,
+            "n_adversarial": 1045,
+            "auroc": 0.9815938725062687
+          },
+          "2": {
+            "n_used": 10454,
+            "n_excluded": 0,
+            "n_benign": 9409,
+            "n_adversarial": 1045,
+            "auroc": 0.9811837490420705
+          },
+          "5": {
+            "n_used": 10454,
+            "n_excluded": 0,
+            "n_benign": 9409,
+            "n_adversarial": 1045,
+            "auroc": 0.9818102488658675
+          },
+          "10": {
+            "n_used": 10454,
+            "n_excluded": 0,
+            "n_benign": 9409,
+            "n_adversarial": 1045,
+            "auroc": 0.9802319981733868
+          },
+          "20": {
+            "n_used": 10454,
+            "n_excluded": 0,
+            "n_benign": 9409,
+            "n_adversarial": 1045,
+            "auroc": 0.9808292579485892
+          },
+          "50": {
+            "n_used": 10454,
+            "n_excluded": 0,
+            "n_benign": 9409,
+            "n_adversarial": 1045,
+            "auroc": 0.9802446603857348
+          },
+          "100": {
+            "n_used": 10454,
+            "n_excluded": 0,
+            "n_benign": 9409,
+            "n_adversarial": 1045,
+            "auroc": 0.9804044381817063
+          },
+          "max": {
+            "n_used": 10454,
+            "n_excluded": 0,
+            "n_benign": 9409,
+            "n_adversarial": 1045,
+            "auroc": 0.9804044381817064
+          }
+        },
+        "edp": {
+          "n_adversarial": 1045,
+          "n_detected": 1045,
+          "detection_rate": 1.0,
+          "threshold": 0.5,
+          "edp_median": 1.0,
+          "edp_iqr": [
+            1.0,
+            1.0
+          ],
+          "edp_min": 1,
+          "edp_max": 1
+        }
+      },
+      "vs_balanced_benign": {
+        "n_flows": 10454,
+        "n_benign": 9409,
+        "n_adversarial": 1045,
+        "auroc_at": {
+          "1": {
+            "n_used": 10454,
+            "n_excluded": 0,
+            "n_benign": 9409,
+            "n_adversarial": 1045,
+            "auroc": 0.9815938725062687
+          },
+          "2": {
+            "n_used": 10454,
+            "n_excluded": 0,
+            "n_benign": 9409,
+            "n_adversarial": 1045,
+            "auroc": 0.9811837490420705
+          },
+          "5": {
+            "n_used": 10454,
+            "n_excluded": 0,
+            "n_benign": 9409,
+            "n_adversarial": 1045,
+            "auroc": 0.9818102488658675
+          },
+          "10": {
+            "n_used": 10454,
+            "n_excluded": 0,
+            "n_benign": 9409,
+            "n_adversarial": 1045,
+            "auroc": 0.9802319981733868
+          },
+          "20": {
+            "n_used": 10454,
+            "n_excluded": 0,
+            "n_benign": 9409,
+            "n_adversarial": 1045,
+            "auroc": 0.9808292579485892
+          },
+          "50": {
+            "n_used": 10454,
+            "n_excluded": 0,
+            "n_benign": 9409,
+            "n_adversarial": 1045,
+            "auroc": 0.9802446603857348
+          },
+          "100": {
+            "n_used": 10454,
+            "n_excluded": 0,
+            "n_benign": 9409,
+            "n_adversarial": 1045,
+            "auroc": 0.9804044381817063
+          },
+          "max": {
+            "n_used": 10454,
+            "n_excluded": 0,
+            "n_benign": 9409,
+            "n_adversarial": 1045,
+            "auroc": 0.9804044381817064
+          }
+        },
+        "edp": {
+          "n_adversarial": 1045,
+          "n_detected": 1045,
+          "detection_rate": 1.0,
+          "threshold": 0.5,
+          "edp_median": 1.0,
+          "edp_iqr": [
+            1.0,
+            1.0
+          ],
+          "edp_min": 1,
+          "edp_max": 1
+        }
+      },
+      "vs_same_base_benign": {
+        "n_flows": 10454,
+        "n_benign": 9409,
+        "n_adversarial": 1045,
+        "auroc_at": {
+          "1": {
+            "n_used": 10454,
+            "n_excluded": 0,
+            "n_benign": 9409,
+            "n_adversarial": 1045,
+            "auroc": 0.9815938725062687
+          },
+          "2": {
+            "n_used": 10454,
+            "n_excluded": 0,
+            "n_benign": 9409,
+            "n_adversarial": 1045,
+            "auroc": 0.9811837490420705
+          },
+          "5": {
+            "n_used": 10454,
+            "n_excluded": 0,
+            "n_benign": 9409,
+            "n_adversarial": 1045,
+            "auroc": 0.9818102488658675
+          },
+          "10": {
+            "n_used": 10454,
+            "n_excluded": 0,
+            "n_benign": 9409,
+            "n_adversarial": 1045,
+            "auroc": 0.9802319981733868
+          },
+          "20": {
+            "n_used": 10454,
+            "n_excluded": 0,
+            "n_benign": 9409,
+            "n_adversarial": 1045,
+            "auroc": 0.9808292579485892
+          },
+          "50": {
+            "n_used": 10454,
+            "n_excluded": 0,
+            "n_benign": 9409,
+            "n_adversarial": 1045,
+            "auroc": 0.9802446603857348
+          },
+          "100": {
+            "n_used": 10454,
+            "n_excluded": 0,
+            "n_benign": 9409,
+            "n_adversarial": 1045,
+            "auroc": 0.9804044381817063
+          },
+          "max": {
+            "n_used": 10454,
+            "n_excluded": 0,
+            "n_benign": 9409,
+            "n_adversarial": 1045,
+            "auroc": 0.9804044381817064
+          }
+        },
+        "edp": {
+          "n_adversarial": 1045,
+          "n_detected": 1045,
+          "detection_rate": 1.0,
+          "threshold": 0.5,
+          "edp_median": 1.0,
+          "edp_iqr": [
+            1.0,
+            1.0
+          ],
+          "edp_min": 1,
+          "edp_max": 1
+        }
+      }
+    },
+    "brute_force_adv_size": {
+      "low_support": false,
+      "base_source": "brute_force",
+      "n_adversarial_flows": 1045,
+      "vs_all_benign": {
+        "n_flows": 10454,
+        "n_benign": 9409,
+        "n_adversarial": 1045,
+        "auroc_at": {
+          "1": {
+            "n_used": 10454,
+            "n_excluded": 0,
+            "n_benign": 9409,
+            "n_adversarial": 1045,
+            "auroc": 0.9840983462337037
+          },
+          "2": {
+            "n_used": 10454,
+            "n_excluded": 0,
+            "n_benign": 9409,
+            "n_adversarial": 1045,
+            "auroc": 0.9813244572411327
+          },
+          "5": {
+            "n_used": 10454,
+            "n_excluded": 0,
+            "n_benign": 9409,
+            "n_adversarial": 1045,
+            "auroc": 0.981272689642056
+          },
+          "10": {
+            "n_used": 10454,
+            "n_excluded": 0,
+            "n_benign": 9409,
+            "n_adversarial": 1045,
+            "auroc": 0.9823649453007683
+          },
+          "20": {
+            "n_used": 10454,
+            "n_excluded": 0,
+            "n_benign": 9409,
+            "n_adversarial": 1045,
+            "auroc": 0.9806382568659447
+          },
+          "50": {
+            "n_used": 10454,
+            "n_excluded": 0,
+            "n_benign": 9409,
+            "n_adversarial": 1045,
+            "auroc": 0.9805229747960953
+          },
+          "100": {
+            "n_used": 10454,
+            "n_excluded": 0,
+            "n_benign": 9409,
+            "n_adversarial": 1045,
+            "auroc": 0.9804266097663797
+          },
+          "max": {
+            "n_used": 10454,
+            "n_excluded": 0,
+            "n_benign": 9409,
+            "n_adversarial": 1045,
+            "auroc": 0.9804266097663797
+          }
+        },
+        "edp": {
+          "n_adversarial": 1045,
+          "n_detected": 1045,
+          "detection_rate": 1.0,
+          "threshold": 0.5,
+          "edp_median": 1.0,
+          "edp_iqr": [
+            1.0,
+            1.0
+          ],
+          "edp_min": 1,
+          "edp_max": 2
+        }
+      },
+      "vs_balanced_benign": {
+        "n_flows": 10454,
+        "n_benign": 9409,
+        "n_adversarial": 1045,
+        "auroc_at": {
+          "1": {
+            "n_used": 10454,
+            "n_excluded": 0,
+            "n_benign": 9409,
+            "n_adversarial": 1045,
+            "auroc": 0.9840983462337037
+          },
+          "2": {
+            "n_used": 10454,
+            "n_excluded": 0,
+            "n_benign": 9409,
+            "n_adversarial": 1045,
+            "auroc": 0.9813244572411327
+          },
+          "5": {
+            "n_used": 10454,
+            "n_excluded": 0,
+            "n_benign": 9409,
+            "n_adversarial": 1045,
+            "auroc": 0.981272689642056
+          },
+          "10": {
+            "n_used": 10454,
+            "n_excluded": 0,
+            "n_benign": 9409,
+            "n_adversarial": 1045,
+            "auroc": 0.9823649453007683
+          },
+          "20": {
+            "n_used": 10454,
+            "n_excluded": 0,
+            "n_benign": 9409,
+            "n_adversarial": 1045,
+            "auroc": 0.9806382568659447
+          },
+          "50": {
+            "n_used": 10454,
+            "n_excluded": 0,
+            "n_benign": 9409,
+            "n_adversarial": 1045,
+            "auroc": 0.9805229747960953
+          },
+          "100": {
+            "n_used": 10454,
+            "n_excluded": 0,
+            "n_benign": 9409,
+            "n_adversarial": 1045,
+            "auroc": 0.9804266097663797
+          },
+          "max": {
+            "n_used": 10454,
+            "n_excluded": 0,
+            "n_benign": 9409,
+            "n_adversarial": 1045,
+            "auroc": 0.9804266097663797
+          }
+        },
+        "edp": {
+          "n_adversarial": 1045,
+          "n_detected": 1045,
+          "detection_rate": 1.0,
+          "threshold": 0.5,
+          "edp_median": 1.0,
+          "edp_iqr": [
+            1.0,
+            1.0
+          ],
+          "edp_min": 1,
+          "edp_max": 2
+        }
+      },
+      "vs_same_base_benign": {
+        "n_flows": 10454,
+        "n_benign": 9409,
+        "n_adversarial": 1045,
+        "auroc_at": {
+          "1": {
+            "n_used": 10454,
+            "n_excluded": 0,
+            "n_benign": 9409,
+            "n_adversarial": 1045,
+            "auroc": 0.9840983462337037
+          },
+          "2": {
+            "n_used": 10454,
+            "n_excluded": 0,
+            "n_benign": 9409,
+            "n_adversarial": 1045,
+            "auroc": 0.9813244572411327
+          },
+          "5": {
+            "n_used": 10454,
+            "n_excluded": 0,
+            "n_benign": 9409,
+            "n_adversarial": 1045,
+            "auroc": 0.981272689642056
+          },
+          "10": {
+            "n_used": 10454,
+            "n_excluded": 0,
+            "n_benign": 9409,
+            "n_adversarial": 1045,
+            "auroc": 0.9823649453007683
+          },
+          "20": {
+            "n_used": 10454,
+            "n_excluded": 0,
+            "n_benign": 9409,
+            "n_adversarial": 1045,
+            "auroc": 0.9806382568659447
+          },
+          "50": {
+            "n_used": 10454,
+            "n_excluded": 0,
+            "n_benign": 9409,
+            "n_adversarial": 1045,
+            "auroc": 0.9805229747960953
+          },
+          "100": {
+            "n_used": 10454,
+            "n_excluded": 0,
+            "n_benign": 9409,
+            "n_adversarial": 1045,
+            "auroc": 0.9804266097663797
+          },
+          "max": {
+            "n_used": 10454,
+            "n_excluded": 0,
+            "n_benign": 9409,
+            "n_adversarial": 1045,
+            "auroc": 0.9804266097663797
+          }
+        },
+        "edp": {
+          "n_adversarial": 1045,
+          "n_detected": 1045,
+          "detection_rate": 1.0,
+          "threshold": 0.5,
+          "edp_median": 1.0,
+          "edp_iqr": [
+            1.0,
+            1.0
+          ],
+          "edp_min": 1,
+          "edp_max": 2
+        }
+      }
+    }
+  },
+  "config": {
+    "t_grid": [
+      1,
+      2,
+      5,
+      10,
+      20,
+      50,
+      100,
+      "max"
+    ],
+    "edp_threshold": 0.5,
+    "balance_k": 10,
+    "min_support": 50
+  }
+}
