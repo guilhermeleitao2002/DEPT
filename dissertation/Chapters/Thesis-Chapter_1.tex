@@ -1,0 +1,221 @@
+% #############################################################################
+% This is Chapter 1
+% !TEX root = ../main.tex
+% #############################################################################
+% Change the Name of the Chapter i the following line
+\fancychapter{Introduction}
+% The following line allows to ref this chapter
+\label{chap:intro}
+
+Network intrusion detection has largely become a machine learning problem. The systems
+that guard today's networks rely less and less on hand-written signatures and more on
+learned models, and with that shift they inherited a weakness that signatures never had:
+the models themselves can be attacked. This thesis is concerned with that weakness in its
+most realistic form, and with what a defender can actually do about it. It proposes DEPT
+(Defense via Ensemble and Purification Transformer), a streaming defense that detects
+adversarially manipulated network traffic and undoes the manipulation before it reaches
+the detector it was meant to evade.
+
+% #############################################################################
+\section{Context and Motivation}\label{sec:intro-context}
+A \ac{NIDS} watches the traffic that crosses a network boundary and decides what is
+malicious. For a long time this decision was made by matching traffic against signatures
+of known threats, which is precise for catalogued attacks and blind to everything else.
+\ac{ML} changed the terms of the problem: instead of enumerating what an attack looks
+like, a model learns the statistical behaviour that separates malicious from benign
+traffic, and can therefore generalize to variants and to attacks it never
+saw~\cite{boutaba2018comprehensive,wang2021machine}. Learning-based detection is by now
+the dominant research direction in the field and an increasingly common deployment
+choice~\cite{xu2025deep,anis2025survey}.
+
+The improvement came with a new attack surface. A learned model can be fooled: a small,
+deliberate perturbation of its input may flip its decision, the phenomenon known as an
+\emph{adversarial example}~\cite{szegedy2014intriguing,goodfellow2014explaining}. For a
+\ac{NIDS}, adversarial examples take the form of \emph{evasion}: the attacker reshapes
+ongoing attack traffic just enough for the detector to label it benign, while the attack
+keeps doing its work~\cite{he2023adversarial}. The threat is not hypothetical. Black-box
+attacks have reached evasion rates of up to $35.7\%$ against deep detectors that looked
+nearly perfect on clean benchmarks~\cite{zhang2020tiki}. \Cref{fig:intro-evasion}
+illustrates the situation this thesis starts from.
+
+\begin{figure}[htbp]
+    \centering
+    \includesvg[width=0.98\textwidth]{./Images/intro_evasion}
+    \caption[The adversarial evasion problem.]{The problem this thesis addresses. In the
+    form the attacker originally generates it, attack traffic is flagged by the ML-based
+    NIDS that guards the network (top path). A black-box generator, TANTGen in this work,
+    reshapes the same attack, altering only packet timing and sizes while every packet
+    remains protocol-compliant, and the detector now labels the traffic benign, so the
+    attack is delivered to the network it was aimed at (bottom path). DEPT exists to
+    close exactly this gap.}
+    \label{fig:intro-evasion}
+\end{figure}
+
+Not every adversarial example in the literature is a real threat, however, and this
+point shapes the whole thesis. In the image domain, where adversarial examples were
+first studied, any perturbed pixel array is still an image; a perturbed feature vector
+of network traffic, in contrast, is only a threat if some sendable sequence of packets
+actually produces it. Recovering concrete traffic from a desired feature vector is the
+\ac{IFM} problem, and it is often intractable, since packets must keep their checksums,
+lengths, and protocol semantics consistent~\cite{pierazzi2020intriguing,hashemi2019towards}.
+A realistic attacker is further confined to the \emph{black-box} setting: it can probe a
+deployed detector and observe outcomes, but it holds neither the model's architecture
+nor its gradients~\cite{papernot2017practical,apruzzese2023sok}. Much of the defensive
+literature sidesteps one or both of these constraints, assuming white-box access or
+training against feature-space perturbations that no real packet sequence can produce,
+and so ends up measuring robustness against a threat that cannot occur as measured;
+\Cref{chap:related} examines this mismatch in detail.
+
+This mismatch is what the present work, together with its sibling thesis, set out to
+remove. TANTGen~\cite{pissarra2026tantgen}, developed in the sibling thesis of this one,
+closes the realism gap on the attack side: it is a Transformer-based generator that
+manipulates live attack traffic under black-box constraints, altering only packet timing
+and packet size, and the traffic it emits is protocol-compliant by construction. DEPT is
+the defense side of the same effort. It is trained on, and evaluated against, the
+realizable adversarial traffic that TANTGen produces, so that every claim made about the
+defense refers to an attack that demonstrably exists on the wire, and not to a synthetic
+worst case.
+
+% #############################################################################
+\section{Problem Statement}\label{sec:intro-problem}
+The problem this thesis addresses can now be stated. A stream of flows arrives at the
+boundary of a protected network, where a \ac{NIDS} is deployed. Part of the traffic is
+benign; part belongs to conventional attacks, which the deployed \ac{NIDS} is assumed to
+handle, since that is precisely its job; and part has been adversarially manipulated so
+that this \ac{NIDS} mishandles it. The defense must decide, for each flow and while the
+flow is still in progress, whether it has been manipulated, and, when it has, neutralize
+the manipulation before the protected system consumes the flow.
+
+Three constraints qualify an acceptable solution. First, \emph{streaming operation}: the
+verdict must be produced packet by packet, as the flow unfolds, because a defense that
+waits for a flow to complete has already let the attack through, and buffering whole
+flows at a network boundary is not viable in any case. Second, \emph{black-box realism}:
+the defense may not assume any knowledge the attacker would not grant it, which means it
+must be trained and evaluated against realizable, protocol-compliant adversarial
+traffic rather than against convenient synthetic perturbations. Third, \emph{realizable
+output}: a flow the defense repairs must leave it as valid traffic, packets that parse
+and keep their protocol semantics, otherwise the defense has merely moved the
+realizability problem from the attacker to the defender.
+
+Two boundaries complete the statement. DEPT complements the protected \ac{NIDS}, it does
+not replace it: recognizing the underlying attacks themselves (a flood, a scan, a
+brute-force attempt) remains the downstream system's task, and DEPT answers only the
+narrower question of whether a flow has been tampered with on its way in. And since the
+defense sits inline, its decisions must fit a real-time latency budget: the per-flow
+cost of detection, and of purification when it triggers, has to remain compatible with
+acting on a flow while it is still passing. This budget shapes the design choices of
+\Cref{chap:solution}; measuring the delivered system against it is deliberately left
+to future work (\Cref{sec:concl-future}).
+
+% #############################################################################
+\section{Work Objectives and Challenges}\label{sec:intro-objectives}
+The problem statement was broken into four objectives, which structure both the design
+of \Cref{chap:solution} and the research questions that organize the evaluation of
+\Cref{chap:evaluation}:
+
+\begin{itemize}
+    \item \textbf{O1 (shared traffic representation).} Find a representation of raw
+    traffic that stays close to the packets themselves, so that model outputs can be
+    turned back into real traffic, and that architecturally different learners can
+    consume at different temporal granularities, from individual packets to aggregated
+    flow statistics.
+    \item \textbf{O2 (heterogeneous detection).} Build a detection ensemble whose
+    members belong to different architectural families, so that a perturbation shaped
+    against one member does not automatically transfer to the others, and fuse their
+    asynchronous opinions into a single per-packet verdict.
+    \item \textbf{O3 (input purification).} Learn to reconstruct a flagged flow:
+    remove the adversarial manipulation and return the flow to its clean appearance,
+    while keeping the result a valid, sendable packet sequence.
+    \item \textbf{O4 (streaming-aware evaluation).} Evaluate the system the way it
+    would be used: on partial flows as they arrive, with metrics that expose how early
+    a verdict becomes reliable, rather than end-of-flow accuracy alone.
+\end{itemize}
+
+The setting makes these objectives harder than they may look, and three difficulties
+deserve to be named early. The first is imbalance: public attack corpora are dominated
+by high-rate floods, so a handful of traffic sources contributes the overwhelming
+majority of flows, and both training and evaluation have to be designed so that these
+sources neither drown out the rest nor flatter the aggregate numbers. The second is the
+thinness of the signal: a manipulation confined to packet timing on a high-rate flood
+barely moves any observable feature, and no detector can find a footprint where almost
+none exists; \Cref{chap:evaluation} quantifies this limit openly instead of averaging it
+away. The third is that the defense inherits the attacker's constraint: purification
+edits traffic, and edited traffic must remain realizable, which rules out treating flows
+as free-floating feature vectors and directly forces the representation choices of O1.
+Cutting across all three runs the latency constraint: whatever the pipeline does, it
+must do at streaming pace.
+
+% #############################################################################
+\section{Rationale and Contributions}\label{sec:intro-contributions}
+The design of DEPT rests on two decisions, whose full justification occupies
+\Cref{chap:back,chap:related} but whose logic can be given in a few lines. The first
+concerns detection. A black-box attacker's practical weapon is transferability:
+perturbations crafted against a substitute model tend to carry over to the target when
+both expose similar, differentiable decision surfaces~\cite{papernot2017practical}.
+DEPT's detector therefore stacks two learners from different architectural families, a
+\ac{RF}, whose decision function offers no gradient at all, and a \ac{TCN}, which reads
+the raw packet sequence, fused at every packet by a small attention-based
+meta-learner~\cite{wolpert1992stacked}. What moves one member's verdict does not
+necessarily move the other's, and a single gradient signal cannot cross both.
+
+The second decision concerns what to do with a flagged flow. Dropping it would turn
+every false positive into denial of service for a legitimate client, so DEPT purifies
+instead, in the input-transformation tradition started by
+Defense-GAN~\cite{samangouei2018defense}. The purifier is a causal Transformer that
+predicts a residual correction over the packet sequence, rather than a \ac{GAN} or a
+diffusion model: flows are sequences, which is what self-attention models well;
+causality preserves the streaming property; a residual head makes ``change nothing'' the
+default behaviour; and a single forward pass fits a latency budget that an iterative
+denoiser does not.
+
+Against this rationale, the thesis makes five contributions:
+
+\begin{itemize}
+    \item A streaming packet-to-tensor pipeline that turns raw captures into a masked,
+    bit-level representation of each flow, emitted at two temporal granularities, so
+    that architecturally different learners share one behaviour-focused view of the
+    same traffic (\Cref{sec:sol-pipeline}).
+    \item A heterogeneous detection ensemble, a \ac{RF} and a \ac{TCN} fused per packet
+    by an attention meta-learner, together with a like-for-like streaming comparison
+    that scores every model by how early, and not only how well, it separates
+    manipulated from clean flows (\Cref{sec:sol-ensemble,sec:eval-meta}).
+    \item A causal purification Transformer coupled to an explicit realization step:
+    flagged flows are corrected in feature space, written back into protocol-compliant
+    packets, and validated with a standard dissector. On the sources where the
+    manipulation leaves a footprint the protected detector can see, purification recovers
+    most of the detection the attack destroyed, and this is confirmed not through DEPT's
+    own detector but through the \emph{independent} NIDS each attack was built to evade
+    (\Cref{sec:sol-reconstructor,sec:eval-purification}).
+    \item An end-to-end deployment baseline that measures DEPT as what it is, a defense
+    placed in front of a protected NIDS: the full gated detect-then-purify pipeline is run
+    over clean, TANTGen-perturbed, and DEPT-defended traffic, and each is scored through
+    the real NIDS the attack targets, Kitsune for the Kitsune-native attacks and TANTGen's
+    ML-NIDS for the CIC attacks, reporting the attack-success rate the defense removes and
+    the detection it restores (\Cref{sec:eval-e2e}).
+    \item A paired adversarial evaluation corpus and its honest accounting: ten benign
+    traffic sources drawn from three public datasets
+    (Kitsune, CIC-IDS2017, and CIC-DDoS-2019~\cite{mirsky2018kitsune,cicids2017,sharafaldin2019cicddos}),
+    each manipulated by TANTGen in three perturbation modes, evaluated end to end with
+    an explicit per-source analysis of where the defense works, where it is inert, and
+    why (\Cref{sec:sol-pipeline} and \Cref{chap:evaluation}).
+\end{itemize}
+
+% #############################################################################
+\section{Organization of the Document}\label{sec:intro-organization}
+The remainder of this document is organized as follows. \Cref{chap:back} presents the
+background this work builds on: learning-based intrusion detection and traffic
+representation, adversarial machine learning and the realizability constraints that
+distinguish it in the network domain, and the ensemble concepts behind DEPT's detector.
+\Cref{chap:related} surveys the related work on both the attack and the defense sides,
+gives TANTGen the closer treatment its role in this thesis requires, and closes by
+positioning DEPT against the surveyed defenses and stating the gap it fills.
+\Cref{chap:solution} presents DEPT itself, as a designer would proceed: the threat
+model, the system overview, the construction of the corpus and of the packet-to-tensor
+pipeline, the detection ensemble, and the purification and realization stages, together
+with the implementation. \Cref{chap:evaluation} evaluates the delivered system against
+two research questions derived from the objectives above, covering streaming
+detection and purification, and reporting the cases where the system does
+poorly with the same prominence as those where it excels. \Cref{chap:conclusion} closes
+with the summary of contributions, the answers to the research questions, the system's
+limitations, and future work, of which the continuous adaptation of the defense against
+an evolving attacker is the main direction.

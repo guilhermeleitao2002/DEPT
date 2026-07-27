@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 150 740 1120" font-family="Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="arr" markerWidth="10" markerHeight="10" refX="7" refY="3.5" orient="auto">
+      <path d="M0,0 L8,3.5 L0,7 Z" fill="#3a444e"/>
+    </marker>
+    <marker id="arrg" markerWidth="10" markerHeight="10" refX="7" refY="3.5" orient="auto">
+      <path d="M0,0 L8,3.5 L0,7 Z" fill="#8a939c"/>
+    </marker>
+    <marker id="arrr" markerWidth="10" markerHeight="10" refX="7" refY="3.5" orient="auto">
+      <path d="M0,0 L8,3.5 L0,7 Z" fill="#b0453a"/>
+    </marker>
+  </defs>
+
+  <!-- ============ output ============ -->
+  <rect x="105" y="180" width="310" height="76" rx="12" fill="#f6e8cd" stroke="#a2721f" stroke-width="3"/>
+  <text x="260" y="212" text-anchor="middle" font-size="24" fill="#5e430f">per-position output</text>
+  <text x="260" y="242" text-anchor="middle" font-size="21" font-style="italic" fill="#5e430f">(one per packet)</text>
+
+  <line x1="260" y1="300" x2="260" y2="264" stroke="#3a444e" stroke-width="3" marker-end="url(#arr)"/>
+
+  <!-- linear head -->
+  <rect x="125" y="300" width="270" height="68" rx="10" fill="#eef1f4" stroke="#5a6673" stroke-width="2.5"/>
+  <text x="260" y="343" text-anchor="middle" font-size="26" fill="#1a1a1a">linear head</text>
+
+  <line x1="260" y1="440" x2="260" y2="376" stroke="#3a444e" stroke-width="3" marker-end="url(#arr)"/>
+  <line x1="260" y1="500" x2="260" y2="440" stroke="#3a444e" stroke-width="3"/>
+
+  <!-- ============ decoder block container ============ -->
+  <rect x="60" y="440" width="400" height="560" rx="24" fill="#f0f5fa" stroke="#2c5f8a" stroke-width="3"/>
+  <text x="424" y="488" text-anchor="middle" font-size="32" font-weight="bold" fill="#2c5f8a">&#215;N</text>
+
+  <!-- add & norm (top) -->
+  <rect x="150" y="500" width="220" height="48" rx="8" fill="#eef1f4" stroke="#5a6673" stroke-width="2.5"/>
+  <text x="260" y="532" text-anchor="middle" font-size="23" fill="#1a1a1a">add &#38; norm</text>
+
+  <!-- residual elbow 2 (around FFN) -->
+  <path d="M 260 715 L 430 715 L 430 524 L 378 524" fill="none" stroke="#8a939c" stroke-width="3" marker-end="url(#arrg)"/>
+
+  <!-- arrow FFN -> add&norm -->
+  <line x1="260" y1="590" x2="260" y2="552" stroke="#3a444e" stroke-width="3" marker-end="url(#arr)"/>
+
+  <!-- FFN -->
+  <rect x="110" y="590" width="300" height="96" rx="12" fill="#d7e4f2" stroke="#2c5f8a" stroke-width="3"/>
+  <text x="260" y="630" text-anchor="middle" font-size="25" fill="#16344c">feed-forward</text>
+  <text x="260" y="662" text-anchor="middle" font-size="25" fill="#16344c">network</text>
+
+  <!-- branch dot + arrow into FFN -->
+  <circle cx="260" cy="715" r="6" fill="#3a444e"/>
+  <line x1="260" y1="715" x2="260" y2="690" stroke="#3a444e" stroke-width="3" marker-end="url(#arr)"/>
+
+  <!-- add & norm (bottom) -->
+  <rect x="150" y="740" width="220" height="48" rx="8" fill="#eef1f4" stroke="#5a6673" stroke-width="2.5"/>
+  <text x="260" y="772" text-anchor="middle" font-size="23" fill="#1a1a1a">add &#38; norm</text>
+  <line x1="260" y1="740" x2="260" y2="715" stroke="#3a444e" stroke-width="3"/>
+
+  <!-- residual elbow 1 (around attention) -->
+  <path d="M 260 962 L 430 962 L 430 764 L 378 764" fill="none" stroke="#8a939c" stroke-width="3" marker-end="url(#arrg)"/>
+
+  <!-- masked self-attention -->
+  <rect x="110" y="830" width="300" height="96" rx="12" fill="#f2d8d3" stroke="#b0453a" stroke-width="3"/>
+  <text x="260" y="870" text-anchor="middle" font-size="25" fill="#7c2c23">masked (causal)</text>
+  <text x="260" y="902" text-anchor="middle" font-size="25" fill="#7c2c23">self-attention</text>
+  <line x1="260" y1="830" x2="260" y2="792" stroke="#3a444e" stroke-width="3" marker-end="url(#arr)"/>
+
+  <!-- input into attention with branch dot -->
+  <circle cx="260" cy="962" r="6" fill="#3a444e"/>
+  <line x1="260" y1="962" x2="260" y2="930" stroke="#3a444e" stroke-width="3" marker-end="url(#arr)"/>
+
+  <!-- ============ embedding ============ -->
+  <line x1="260" y1="1030" x2="260" y2="966" stroke="#3a444e" stroke-width="3"/>
+  <rect x="95" y="1030" width="330" height="76" rx="10" fill="#eef1f4" stroke="#5a6673" stroke-width="2.5"/>
+  <text x="260" y="1062" text-anchor="middle" font-size="25" fill="#1a1a1a">token embedding</text>
+  <text x="260" y="1093" text-anchor="middle" font-size="22" fill="#1a1a1a">+ positional encoding</text>
+
+  <!-- ============ input tokens ============ -->
+  <line x1="260" y1="1144" x2="260" y2="1112" stroke="#3a444e" stroke-width="3" marker-end="url(#arr)"/>
+  <g>
+    <rect x="148" y="1150" width="40" height="40" fill="#eef1f4" stroke="#5a6673" stroke-width="2"/>
+    <rect x="194" y="1150" width="40" height="40" fill="#eef1f4" stroke="#5a6673" stroke-width="2"/>
+    <rect x="240" y="1150" width="40" height="40" fill="#eef1f4" stroke="#5a6673" stroke-width="2"/>
+    <rect x="286" y="1150" width="40" height="40" fill="#eef1f4" stroke="#5a6673" stroke-width="2"/>
+    <rect x="332" y="1150" width="40" height="40" fill="#f6e8cd" stroke="#a2721f" stroke-width="3"/>
+  </g>
+  <text x="260" y="1232" text-anchor="middle" font-size="24" font-style="italic" fill="#1a1a1a">packet tokens x1 &#8230; xt</text>
+
+  <!-- ============ side notes ============ -->
+  <g font-size="20" fill="#7c2c23">
+    <text x="478" y="856">causal mask:</text>
+    <text x="478" y="882">position t attends</text>
+    <text x="478" y="908">only to positions &#8804; t</text>
+  </g>
+  <line x1="472" y1="878" x2="422" y2="878" stroke="#b0453a" stroke-width="2.5" stroke-dasharray="7 6" marker-end="url(#arrr)"/>
+
+  <g font-size="20" fill="#5a6673">
+    <text x="478" y="1042">K, V of past positions</text>
+    <text x="478" y="1068">are stored and reused</text>
+    <text x="478" y="1094">(KV cache)</text>
+  </g>
+</svg>

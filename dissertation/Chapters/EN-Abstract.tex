@@ -1,0 +1,31 @@
+% #############################################################################
+% Abstract Text
+% !TEX root = ../main.tex
+% #############################################################################
+% reset acronyms
+\acresetall
+% use \noindent in firts paragraph
+\noindent Network intrusion detection today relies on machine learning, which brought a
+weakness signatures never had: the detector itself can be evaded. An attacker that
+reshapes only packet timing and sizes, keeping every packet protocol-compliant, can make
+an ongoing attack look benign to a deployed detector. Much of the defensive literature
+measures robustness against perturbations no real packet sequence can produce. This
+thesis proposes DEPT (Defense via Ensemble and Purification Transformer), a streaming
+defense trained and evaluated on realizable adversarial traffic from TANTGen, a
+black-box generator built in a sibling thesis. DEPT turns traffic into a masked,
+bit-level representation at two temporal granularities; two architecturally different
+learners, a Random Forest and a Temporal Convolutional Network, fused per packet by an
+attention-based meta-learner, decide whether a flow was manipulated; flagged flows are
+corrected by a causal purification Transformer and realized back into sendable packets.
+Across ten traffic sources from three public datasets, each manipulated in three
+perturbation modes, DEPT gives a verdict from the first packet, where the fusion is the
+best model available, and reaches an end-of-flow AUROC of $0.933$; the Random Forest
+alone is stronger from the second packet on, and the fusion's benefit is
+earliness and a higher cost to a gradient-guided attacker, which never evades the stack
+on $74.5\%$ of flows against $45.5\%$ for the sequence model alone. Judged through the
+independent detector each attack targeted, purification recovers $63\%$ of the
+destroyed detection and cuts attack success from $21.1\%$ to $11.6\%$, with $97.2\%$ of
+reconstructed packets parsed cleanly by Wireshark's \texttt{tshark}. The evaluation
+reports the failures with equal prominence: on the size-perturbed reflection floods no
+model beats chance, and purifying non-evading traffic lowers detection rather than
+restoring it.

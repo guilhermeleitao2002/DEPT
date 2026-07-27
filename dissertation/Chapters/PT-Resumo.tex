@@ -1,0 +1,33 @@
+% #############################################################################
+% RESUMO em Português
+% !TEX root = ../main.tex
+% #############################################################################
+% reset acronyms
+\acresetall
+% use \noindent in firts paragraph
+\noindent A deteção de intrusões em rede assenta hoje em aprendizagem automática,
+trazendo uma fragilidade que as assinaturas não tinham: o próprio detetor pode ser
+enganado. Um atacante que altere apenas tempos e tamanhos de pacotes, sem nunca
+violar o protocolo, faz um ataque em curso passar por benigno ao detetor.
+Muita da literatura de defesa mede a robustez contra perturbações que nenhum tráfego
+real consegue produzir. Esta dissertação propõe o DEPT
+(\emph{Defense via Ensemble and Purification Transformer}), uma defesa em
+\emph{streaming} treinada e avaliada sobre tráfego adversarial realizável do
+TANTGen, um gerador \emph{black-box} de uma dissertação irmã. O DEPT
+converte o tráfego numa representação mascarada e ao nível do bit, a duas
+granularidades temporais; uma \emph{Random Forest} e uma \emph{Temporal Convolutional Network},
+de famílias distintas, fundidas a cada pacote por um modelo de
+atenção, decidem se o fluxo foi manipulado; os fluxos sinalizados são corrigidos por
+um \emph{Transformer} causal de purificação e reescritos como pacotes enviáveis.
+Em dez fontes de tráfego de três conjuntos de dados públicos, manipuladas em
+três modos de perturbação, o DEPT dá um veredicto logo no primeiro pacote, onde a fusão é
+o melhor modelo disponível, e atinge uma AUROC final de 0,933; a \emph{Random Forest}
+isolada é superior a partir do segundo pacote, e o benefício da fusão está na
+precocidade e no maior custo para um atacante guiado por gradiente, que nunca evade
+a deteção em 74,5\% dos fluxos, contra 45,5\% no modelo sequencial.
+Avaliada pelo detetor independente visado por cada ataque,
+a purificação recupera 63\% da deteção destruída e reduz o sucesso do ataque de 21,1\%
+para 11,6\%, com 97,2\% dos pacotes reconstruídos aceites sem erros pelo
+\texttt{tshark} do Wireshark. A avaliação dá igual destaque às falhas: nos
+\emph{floods} de reflexão com perturbação de tamanho nenhum modelo supera os 50\%,
+e   purificar tráfego que não evadia baixa a deteção em vez de a restaurar.

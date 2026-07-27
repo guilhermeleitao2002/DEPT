@@ -1,0 +1,480 @@
+% #############################################################################
+% This is Chapter 2
+% !TEX root = ../main.tex
+% #############################################################################
+% Change the Name of the Chapter i the following line
+\fancychapter{Background}
+% The following line allows to ref this chapter
+\label{chap:back}
+
+DEPT combines three main ingredients: a bit-level representation of network traffic, a
+heterogeneous detection ensemble, and a generative purifier. This chapter presents the
+concepts that each of these components builds upon. Instead of a broad survey of machine
+learning for security, the focus is kept on the specific concepts that the system relies
+on, so that the design decisions of \Cref{chap:solution} follow from the principles
+introduced here. \Cref{sec:bg-ml-nids} covers learning-based intrusion detection, traffic
+representation, and the model architectures that DEPT composes. \Cref{sec:bg-aml}
+introduces adversarial machine learning and the realizability constraints that distinguish
+it in the network domain. \Cref{sec:bg-ensembles} presents ensemble learning and the
+transferability argument behind DEPT's detector, and \Cref{sec:bg-summary} ties the three
+parts together.
+
+% #############################################################################
+\section{Machine Learning for NIDS}\label{sec:bg-ml-nids}
+A \ac{NIDS} inspects network traffic in order to separate benign activity from attacks.
+Classical systems match traffic against hand-written signatures of known threats, which
+makes them precise on catalogued attacks but unable to detect anything absent from the rule
+set, including minor variants of existing malware. \ac{ML} reformulates detection as a
+data-driven problem: instead of enumerating signatures, a model learns the statistical
+structure that separates benign from malicious traffic, and can therefore generalize to
+variants and to previously unseen attacks~\cite{boutaba2018comprehensive,wang2021machine}.
+This shift supports a large body of modern detection
+research~\cite{xu2025deep,anis2025survey}, and it defines the setting in which DEPT
+operates: every component of the system is a learned model.
+
+\subsection{Learning Paradigms}\label{subsec:bg-paradigms}
+Learning-based intrusion detection is usually organized by the kind of supervision a model
+requires. Four paradigms recur in the literature, of which DEPT draws on two.
+
+\emph{Supervised learning} trains on labelled data, where each example is marked benign or
+malicious, and learns a mapping from input features to labels (\Cref{fig:bg-paradigms}).
+Random forests, support vector machines, and deep neural networks all follow this
+paradigm~\cite{boutaba2018comprehensive,sarker2021deep}, and it is the main approach in
+DEPT: the two base detectors, the meta-learner that fuses them, and the purifier are all
+trained under supervision. \emph{Unsupervised learning} uses no attack labels. It models
+the normal behaviour of a network and flags departures from that baseline as anomalies,
+which makes it attractive for catching zero-day attacks that a supervised model never saw
+during training. The canonical example in this domain is Kitsune, an ensemble of
+autoencoders that scores each packet by how poorly it reconstructs under a model of benign
+traffic~\cite{mirsky2018kitsune}. DEPT does not train a dedicated anomaly detector, but the
+same principle, learning the distribution of clean traffic and measuring deviation from it,
+reappears in its purifier. \emph{Semi-supervised learning} sits between the two, exploiting
+a small labelled set together with abundant unlabelled data; it is especially relevant in
+networking, where labelling traffic at scale is expensive. Finally, \emph{reinforcement
+learning} replaces the fixed dataset with an agent that learns by interacting with an
+environment and receiving rewards. DEPT employs neither of the last two, although
+reinforcement learning is the natural framework for the continuous-adaptation extension
+discussed in \Cref{chap:conclusion}.
+
+\begin{figure}[htbp]
+    \centering
+    \subfigure[Supervised learning: labelled flows train a model that maps a flow to a label.]{\includesvg[width=0.46\textwidth]{./Images/supervised_learning}}
+    \hfill
+    \subfigure[Unsupervised learning: with no labels, the model learns the structure of the traffic and flags what departs from it.]{\includesvg[width=0.46\textwidth]{./Images/unsupervised_learning}}
+    \caption[The two supervision regimes most relevant to DEPT.]{The two supervision regimes most relevant to DEPT, illustrated on network flows. All of DEPT's components are trained under supervision; the unsupervised idea of modelling normal behaviour and flagging deviations from it motivates the purification step.}
+    \label{fig:bg-paradigms}
+\end{figure}
+
+\subsection{Feature Engineering and Representation}\label{subsec:bg-features}
+The performance of a learned detector depends directly on the representation it consumes.
+Feature engineering, the process of turning raw packets into numerical vectors, places an
+upper bound on what any model can learn~\cite{salim2026feature,ning2024study}. Before
+discussing representations, one term should be fixed: throughout this document, a
+\emph{flow} is the sequence of packets that share the same five-tuple (source and
+destination \ac{IP} addresses, source and destination ports, and transport protocol), ordered by
+arrival time.
+
+Two axes organize the design space of traffic representations. The first is
+\emph{granularity}. \emph{Static}, packet-level features are read from individual headers
+(addresses, ports, flags); they are cheap enough to extract at line rate, but they carry no
+temporal context. \emph{Dynamic}, flow-level features aggregate a sequence of packets into
+statistics such as mean packet size, inter-arrival times, or flow duration. These capture
+behaviour, but at the cost of latency, since the system must wait for the flow to
+progress~\cite{apruzzese2023sok}. The second axis concerns the space in which a
+perturbation is expressed: the \emph{traffic-space} of actual packets on the wire versus
+the \emph{feature-space} of derived vectors. This distinction becomes central once
+adversaries are considered (\Cref{subsec:bg-realizability}). DEPT works at both
+granularities, and deliberately keeps its features close to the traffic-space so that its
+outputs can be turned back into real packets.
+
+Rather than hand-designing features, DEPT represents traffic with \textbf{nPrint}, a
+bit-level encoding of packet headers~\cite{holland2021nprint}. Hand-crafted feature sets
+usually assume in advance which fields matter, and they are tied to particular protocols: a
+tool that computes flow statistics for \ac{TCP} says nothing useful about an \ac{ICMP} flood. nPrint
+instead maps each bit of a packet's headers to one feature in a fixed-width vector, using a
+tri-state encoding: a value of $1$ or $0$ records a header bit that is set or unset, and
+$-1$ marks a field that belongs to a protocol layer absent from that packet. The
+representation is uniform across protocols, requires no manual feature design, and can be
+consumed directly by models that learn their own features. Bit-level encodings of this kind
+have proven effective for traffic analysis in settings where hand-crafted features
+generalize poorly~\cite{holland2021nprint,wang2017end,lotfollahi2020deep}. DEPT encodes the
+IPv4, TCP, \ac{UDP}, and ICMP headers, producing a $1088$-bit vector ($480 + 480 + 64 + 64$),
+and appends two derived per-packet scalars, the z-scored \ac{IPAT} and a direction bit, to
+obtain a $1090$-dimensional per-packet token. \Cref{fig:bg-nprint} illustrates the
+encoding. This choice places DEPT within a broader movement towards learned traffic
+representations, such as the byte-level Deep Packet~\cite{lotfollahi2020deep},
+one-dimensional convolutional encoders over raw flows~\cite{wang2017end}, and pre-trained
+datagram transformers~\cite{lin2022bert}.
+
+\begin{figure}[htbp]
+    \centering
+    \begin{tikzpicture}[font=\footnotesize,
+        blk/.style={draw, fill=blue!12, minimum height=9mm, text centered, inner sep=3pt, align=center},
+        drv/.style={draw, fill=orange!22, minimum height=9mm, text centered, inner sep=3pt, align=center},
+        msk/.style={draw, fill=black!22, minimum height=5mm, text centered, inner sep=2pt, align=center},
+    ]
+        \node[draw, rounded corners, minimum width=15mm, minimum height=10mm, align=center] (pkt) {Packet\\$p_i$};
+        \node[blk, minimum width=30mm, right=13mm of pkt.east, anchor=west] (ipv4) {IPv4\\480 b};
+        \node[blk, minimum width=30mm, right=0pt of ipv4.east, anchor=west] (tcp) {TCP\\480 b};
+        \node[blk, minimum width=13mm, right=0pt of tcp.east, anchor=west] (udp) {UDP\\64 b};
+        \node[blk, minimum width=13mm, right=0pt of udp.east, anchor=west] (icmp) {ICMP\\64 b};
+        \node[drv, minimum width=11mm, right=0pt of icmp.east, anchor=west] (ipat) {IPAT};
+        \node[drv, minimum width=11mm, right=0pt of ipat.east, anchor=west] (dir) {Dir.};
+        \draw[->, thick] (pkt.east) -- (ipv4.west);
+
+        \node[above=1mm of ipv4.north west, anchor=south west, font=\scriptsize] {\;$\underbrace{\hphantom{aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa}}_{\text{1088-bit nPrint header vector, tri-state }\{-1,0,1\}}$};
+
+        \node[msk, minimum width=16mm, below=8mm of ipv4.south] (mip) {src/dst IP, IP-ID};
+        \node[msk, minimum width=12mm, below=8mm of tcp.south] (mtcp) {ports};
+        \node[msk, minimum width=10mm, below=8mm of udp.south] (mudp) {ports};
+        \draw[->, black!55] (mip.north) -- (ipv4.south);
+        \draw[->, black!55] (mtcp.north) -- (tcp.south);
+        \draw[->, black!55] (mudp.north) -- (udp.south);
+        \node[below=1mm of mtcp.south, font=\scriptsize, align=center] (msklab) {identity masking: set to $0$};
+    \end{tikzpicture}
+    \caption[The nPrint per-packet representation with identity masking.]{The per-packet representation used by DEPT. Each packet's IPv4, TCP, UDP, and ICMP headers are encoded bit-by-bit into a fixed $1088$-bit vector following nPrint~\cite{holland2021nprint}: a cell holds $1$ or $0$ for a set or unset header bit and $-1$ when the corresponding layer is absent. High-entropy identity fields (source and destination IP, transport ports, and the IP identification field) are masked to zero. The z-scored inter-packet arrival time and a direction bit are appended, giving a $1090$-dimensional token.}
+    \label{fig:bg-nprint}
+\end{figure}
+
+A bit-level header vector inevitably includes fields that identify the particular hosts and
+ports of a capture: the source and destination IP addresses, the transport ports, and the
+IP identification field. If these fields are left intact, a model can reach high benchmark
+accuracy simply by memorizing which addresses and ports appear in the attack traces,
+instead of learning the attack behaviour itself; this shortcut inflates test scores but
+does not survive deployment on a different network~\cite{arp2022dos,apruzzese2023sok}. DEPT
+therefore \emph{masks} these identity fields, zeroing the $144$ bits that encode them
+(\Cref{fig:bg-nprint}). Masking forces the detectors to rely on behavioural structure, such
+as packet sizing and timing, and it directly supports the claim that detection transfers
+across deployments instead of overfitting to one capture. Field selection of exactly this
+kind is a first-class feature of the nPrint representation~\cite{holland2021nprint}.
+
+The same tokens feed two representations at different rates, a design choice matched to the
+two kinds of base learner that DEPT uses (\Cref{tab:bg-streams}). The \ac{TCN} consumes the
+full per-packet token stream, one $1090$-dimensional vector per packet. The random forest
+instead consumes \emph{prefix-checkpoint statistics}: at selected packet positions, six
+base features (inter-arrival time, packet size, payload length, payload entropy, TCP flags,
+and direction) are summarized by their mean, standard deviation, minimum, and maximum over
+the flow prefix seen so far, giving a compact $24$-dimensional vector. Checkpoints are
+emitted at packet~$2$ and then every tenth packet. The early checkpoint is deliberate: some
+attacks generate extremely short flows. A port scan, for example, averages roughly two
+packets per flow, typically a single SYN and its RST, so without the checkpoint at
+packet~$2$ the forest would never issue a verdict for precisely the flows that a scan
+consists of. Feeding one learner a dense per-packet sequence and the other a sparse,
+aggregated summary is also a source of the ensemble diversity that \Cref{sec:bg-ensembles}
+argues to be valuable.
+
+\begin{table}[htbp]
+    \centering
+    \caption{The two representations DEPT derives from the same masked nPrint tokens.}
+    \label{tab:bg-streams}
+    \begin{tabular}{@{}llll@{}}
+        \toprule
+        \textbf{Representation} & \textbf{Consumer} & \textbf{Emission rate} & \textbf{Dimension} \\
+        \midrule
+        Per-packet token   & TCN           & every packet                 & $1090$ (nPrint $+$ IPAT $+$ direction) \\
+        Prefix checkpoint  & random forest & packet $2$, then every $10$   & $24$ (mean/std/min/max of $6$ features) \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\subsection{Model Architectures Relevant to DEPT}\label{subsec:bg-architectures}
+DEPT combines three architecture families, chosen for complementary properties rather than
+for raw accuracy alone.
+
+\paragraph{Random forests.}
+A \ac{RF} is an ensemble of decision trees trained by bagging (\Cref{subsec:bg-ensemble-types}):
+each tree recursively partitions the feature space with axis-aligned threshold tests, and
+the forest averages their votes~\cite{breiman2001random,breiman1996bagging}. Forests are a
+strong, low-cost fit for tabular and statistical features and need no feature
+scaling~\cite{lucas2023comprehensive}, which is why DEPT applies one to the
+$24$-dimensional checkpoint vectors. Their decisive property for this work, however, is
+structural: a forest's decision function is constant over axis-aligned regions and
+therefore \emph{non-differentiable}. It exposes no informative gradient that an attacker
+can follow, a property whose relevance for adversarial robustness is developed in
+\Cref{subsec:bg-gradient-masking}.
+
+\paragraph{One-dimensional and temporal convolutional networks.}
+A \ac{CNN} slides learnable kernels over its input to detect local patterns; in one
+dimension it processes sequences, extracting recurring motifs from a packet stream such as
+header patterns or sizing signatures~\cite{wang2017end,lotfollahi2020deep}
+(\Cref{fig:bg-1dcnn}). A \ac{TCN} specializes this design for long sequences through two
+devices~\cite{bai2018empirical}. \emph{Dilated} convolutions insert a growing stride
+between kernel taps, so the receptive field expands with depth without a corresponding
+blow-up in parameters~\cite{oord2016wavenet}. \emph{Causal} convolutions pad the input so
+that the output at position $t$ depends only on positions $\leq t$, never on future
+packets. Causality is what makes the model valid for streaming inference: it can emit a
+verdict after each packet arrives. DEPT's TCN stacks three residual blocks of $128$
+channels with kernel size $k = 3$ at dilations $1$, $2$, and $4$, with two convolutions per
+block. Its receptive field is
+\begin{equation}
+    \mathrm{RF} \;=\; 1 + 2\,(k-1)\sum_{i=0}^{2} 2^{\,i}
+              \;=\; 1 + 2\cdot 2\cdot(1+2+4) \;=\; 29 \text{ packets},
+    \label{eq:bg-rf}
+\end{equation}
+so a verdict at any packet integrates evidence from up to the preceding $29$
+(\Cref{fig:bg-tcn}).
+
+\begin{figure}[htbp]
+    \centering
+    \includesvg[width=0.92\textwidth]{./Images/one_d_cnn}
+    \caption[The one-dimensional convolutional pipeline.]{A one-dimensional convolutional pipeline over a packet sequence: kernels slide along the sequence and produce per-position feature maps, which further layers, pooling, and a classification head turn into a verdict. DEPT's temporal convolutional network specializes this design with dilated, causal convolutions.}
+    \label{fig:bg-1dcnn}
+\end{figure}
+
+\begin{figure}[htbp]
+    \centering
+    \begin{tikzpicture}[font=\footnotesize, nd/.style={circle, draw, minimum size=4.4mm, inner sep=0pt, fill=black!6}, hi/.style={circle, draw, minimum size=4.4mm, inner sep=0pt, fill=blue!30}, hed/.style={draw=blue!65, thick}]
+        \def\dx{0.66}
+        \foreach \i in {0,...,12} {
+            \node[nd] (x\i) at (\i*\dx,0) {};
+            \node[nd] (a\i) at (\i*\dx,1.15) {};
+            \node[nd] (b\i) at (\i*\dx,2.30) {};
+            \node[nd] (c\i) at (\i*\dx,3.45) {};
+        }
+        \node[left=3mm of x0, align=right] {Input};
+        \node[left=3mm of a0, align=right] {$d=1$};
+        \node[left=3mm of b0, align=right] {$d=2$};
+        \node[left=3mm of c0, align=right] {$d=4$};
+        % highlight rightmost output cone
+        \node[hi] at (12*\dx,3.45) {};
+        \foreach \j in {12,8,4} {\draw[hed] (b\j.north) -- (c12.south); \node[hi] at (\j*\dx,2.30) {};}
+        \foreach \p/\q in {12/12,12/10,12/8, 8/8,8/6,8/4, 4/4,4/2,4/0} {\draw[hed] (a\q.north) -- (b\p.south); \node[hi] at (\q*\dx,1.15) {};}
+        \foreach \p in {12,10,8,6,4,2,0} {
+            \draw[hed] (x\p.north) -- (a\p.south);
+            \pgfmathtruncatemacro{\pm}{max(\p-1,0)}\draw[hed] (x\pm.north) -- (a\p.south);
+            \pgfmathtruncatemacro{\pn}{max(\p-2,0)}\draw[hed] (x\pn.north) -- (a\p.south);
+        }
+        \foreach \i in {0,...,12} {\node[hi] at (\i*\dx,0) {};}
+        \node[below=5mm of x6, align=center] {receptive field grows as $\{1,2,4\}$ per block $\Rightarrow$ $\mathrm{RF}=29$ packets (\Cref{eq:bg-rf})};
+    \end{tikzpicture}
+    \caption[Dilated causal convolutions and the TCN receptive field.]{Dilated causal convolutions in a temporal convolutional network. Highlighted nodes trace the dependency cone of the rightmost output: each layer's kernel skips inputs at a growing dilation ($1$, then $2$, then $4$), so the receptive field expands with depth while every output still depends only on the present and past. The figure is schematic (one convolution per block is drawn); DEPT stacks two convolutions per block, giving the $29$-packet receptive field of \Cref{eq:bg-rf}.}
+    \label{fig:bg-tcn}
+\end{figure}
+
+\paragraph{Transformers.}
+The self-attention mechanism lets every position in a sequence attend to every other
+position, weighting them by a learned measure of
+relevance~\cite{vaswani2017attention}. Each input position is projected into a query, a
+key, and a value vector; collecting these as the rows of matrices $Q$, $K$, and $V$,
+attention computes
+\begin{equation}
+    \mathrm{Attention}(Q, K, V) \;=\; \mathrm{softmax}\!\left(\frac{QK^{\top}}{\sqrt{d_k}}\right)V,
+    \label{eq:bg-attention}
+\end{equation}
+where $d_k$ is the key dimension, so the output at each position is a weighted combination
+of the values of the positions it attends to. This captures long-range dependencies that a
+fixed convolution window cannot. Two arrangements are relevant here. \emph{Encoder-only}
+models attend bidirectionally over the entire sequence, which suits classification and
+representation tasks, including learned traffic
+analysers~\cite{lin2022bert,ghadermazi2025gtae}. \emph{Decoder-only} models apply a causal
+mask so that each position attends only to the past, which suits autoregressive and
+streaming generation (\Cref{fig:bg-transformer}). Causality also enables \emph{key--value
+caching}: since the keys and values of past positions in \Cref{eq:bg-attention} do not
+change when new tokens arrive, they can be stored and reused, and producing each new token
+then costs work proportional to the current length instead of reprocessing the whole
+prefix. This property is what keeps causal, autoregressive inference tractable under tight
+latency budgets. DEPT adopts the causal arrangement in both of its Transformer components:
+the meta-learner is a compact, causally-masked encoder that fuses the base detectors'
+per-packet outputs (\Cref{subsec:bg-ensemble-types}), and the purifier is a decoder-style
+sequence model whose causal masking keeps it amenable to key--value caching for streaming
+deployment (\Cref{chap:solution}).
+
+\begin{figure}[htbp]
+    \centering
+    \includesvg[width=0.42\textwidth]{./Images/decoder_only_transformer}
+    \caption[The decoder-only Transformer block.]{A decoder-only Transformer block over a stream of packet tokens: masked (causal) self-attention followed by a feed-forward sublayer, with residual connections and layer normalization, stacked $N$ times. The causal mask restricts each position to its past, which makes the design valid for streaming inference and amenable to key--value caching.}
+    \label{fig:bg-transformer}
+\end{figure}
+
+% #############################################################################
+\section{Adversarial Machine Learning}\label{sec:bg-aml}
+The same flexibility that lets a learned model generalize also exposes it to manipulation.
+An \emph{adversarial example} is an input perturbed by a small, deliberate amount so that
+the model misclassifies it, often while remaining nearly indistinguishable from a clean
+input~\cite{szegedy2014intriguing,goodfellow2014explaining}. For a \ac{NIDS}, adversarial
+examples are the mechanism of \emph{evasion}: an attacker reshapes malicious traffic just
+enough for it to be labelled benign~\cite{he2023adversarial,ennaji2025adversarial}.
+\ac{AML} studies both how such manipulations are constructed and how models can be hardened
+against them.
+
+\subsection{Threat Taxonomy}\label{subsec:bg-threat-taxonomy}
+Attacks are classified along two axes: what the adversary knows, and what the adversary
+wants.
+
+Along the knowledge axis, a \emph{white-box} attacker has full access to the model,
+including its architecture and weights, and can compute gradients of the loss with respect
+to the input to craft precise perturbations. A \emph{gray-box} attacker knows only part of
+the pipeline, such as the feature set. A \emph{black-box} attacker can only query the
+system and observe its outputs. The black-box setting is the realistic one for a deployed
+\ac{NIDS}, which an attacker probes as an oracle, and such attacks typically rely on
+\emph{transferability}: an adversarial example crafted against a substitute model often
+fools the target as well~\cite{papernot2017practical}. Along the goal axis, \emph{poisoning}
+corrupts the model during training, whereas \emph{evasion} manipulates inputs at inference
+time against an already-trained model. DEPT is designed for the black-box evasion threat,
+which is the case that dominates real deployments (\Cref{chap:solution}).
+
+Network intrusion detection is harder to attack, and to defend, than the image
+classification setting where adversarial examples were first studied, because of a
+constraint with no analogue in the pixel domain. Any pixel of an image can be modified
+slightly and the result is still a valid image. A network feature vector cannot be modified
+freely: a perturbation must correspond to a packet or flow that is actually valid on the
+wire. Recovering a realizable packet from a desired feature vector is the \textbf{\ac{IFM}}
+problem, and it is frequently constrained or computationally
+intractable~\cite{pierazzi2020intriguing,hashemi2019towards,sun2023gpmt}. The \ac{IFM}
+problem is the defining difficulty of network adversarial machine learning, and it shapes
+attacks and defenses alike. In particular, the gradient-based methods that dominate the
+image setting, such as the \ac{FGSM} and
+\ac{PGD}~\cite{goodfellow2014explaining,madry2018towards}, produce feature perturbations
+that need not correspond to any sendable packet, which limits their direct applicability in
+this domain.
+
+\subsection{Defense Paradigms}\label{subsec:bg-defense-paradigms}
+Defenses against evasion fall into a few broad families, with different strengths for
+traffic data. \emph{Adversarial training} augments the training set with adversarial
+examples so that the model learns to classify them correctly~\cite{madry2018towards}. It is
+effective against the perturbations it is trained on, but it is costly, it can depress
+accuracy on clean traffic, and in networking it is only meaningful if the adversarial
+examples are themselves realizable rather than impossible feature vectors. DEPT follows
+this line in spirit, since its detectors are trained on realizable adversarial traffic
+rather than on synthetic feature perturbations (\Cref{chap:solution}); the fundamental
+difference is that DEPT's goal is to distinguish naturally occurring traffic from
+adversarially perturbed traffic, not to classify both as malicious.
+
+\emph{Input transformation}, or \emph{purification}, is the family DEPT builds its purifier
+on. Instead of hardening the classifier, it transforms each input before classification in
+order to remove the perturbation, projecting the sample back onto the manifold of normal
+traffic, as \Cref{fig:bg-purification} illustrates. The idea originates with Defense-GAN,
+which projects each input onto the manifold captured by a generative adversarial
+network~\cite{samangouei2018defense}, and it has since been realized in the network domain
+with diffusion models~\cite{alhussien2024advpurrec,li2025adbm} and reconstruction-based
+Transformer autoencoders~\cite{ghadermazi2025gtae}. DEPT's purifier is a causal Transformer denoiser in
+this tradition (\Cref{chap:solution}).
+
+\begin{figure}[htbp]
+    \centering
+    \includesvg[width=0.80\textwidth]{./Images/purification_manifold}
+    \caption[Purification as projection onto the benign manifold.]{Purification as projection onto the benign manifold. An adversarial perturbation $\delta$ moves a clean flow $x$ off the manifold of benign traffic; without purification, the perturbed flow $x'$ is misclassified by the downstream detector. The purifier $g$, trained on the benign distribution, projects $x'$ back onto the manifold, and the detector then receives an input close to the original $x$. The idea originates with generative-model defenses such as Defense-GAN~\cite{samangouei2018defense}.}
+    \label{fig:bg-purification}
+\end{figure}
+
+Two further families should be mentioned, although DEPT adopts neither. \emph{Defensive
+distillation} trains a second model on the softened probability outputs of a first one,
+smoothing the decision surface so that useful gradients become harder to
+find~\cite{papernot2016distillation}; it has been largely circumvented and does not address
+realizability. \emph{Certified robustness} provides provable guarantees that no
+perturbation within a bounded region can change a prediction, through randomized
+smoothing~\cite{cohen2019certified,yan2025certta} or Lipschitz and edit-distance
+bounds~\cite{abad2025lipslev}. Such guarantees are valuable, but they are difficult to
+scale to the high-dimensional, discrete, and sequential structure of network traffic, and
+they secure a formal radius rather than the traffic-space validity that is central to this
+work.
+
+\subsection{Realizability and Protocol Constraints}\label{subsec:bg-realizability}
+The gap between a \emph{valid feature vector} and a \emph{valid packet} is the central
+difficulty of network adversarial machine learning. A perturbation can move a feature
+vector anywhere in $\mathbb{R}^{n}$, but a packet must satisfy hard structural constraints:
+checksums must match the bytes they cover, header-length fields must equal the actual
+lengths, control flags must be mutually consistent, and sequence numbers must be ordered. A
+perturbation that ignores these constraints is \emph{unrealizable}: it describes no packet
+that can be sent, so evaluating a detector against it overstates the real
+threat~\cite{pierazzi2020intriguing,hashemi2019towards}. Recent attack research enforces
+realizability explicitly, whether by verifying every perturbation against protocol
+constraints with an SMT solver, as in PANTS~\cite{jin2025robustifying}, or by generating
+traffic that is protocol-compliant by construction, as in GPMT~\cite{sun2023gpmt} and
+TANTGen~\cite{pissarra2026tantgen}.
+
+It is important to note that the constraint applies to both sides, and this is what makes
+it a design concern for DEPT rather than a property of attacks alone. A defense that
+\emph{edits} traffic, as a purifier does, must itself re-emit valid packets; otherwise its
+output is unusable, or is trivially detected as malformed. The step from feature-space back
+to traffic-space, which we call \emph{realization}, is therefore treated as a first-class
+part of the design rather than a mere afterthought. The nPrint representation is an asset
+here: because it is close to a bijective, bit-level image of the packet headers, a purified
+nPrint vector can be decoded back into a concrete packet and checked for on-the-wire
+validity, which DEPT does with packet-level tooling (\Cref{chap:solution}). The same
+protocol constraints can even be turned into a detector, by flagging inter-field
+inconsistencies~\cite{kumar2025nids}; DEPT does not adopt this approach, but it underlines
+how central protocol structure is to the problem.
+
+% #############################################################################
+\section{Ensemble Learning for Robustness}\label{sec:bg-ensembles}
+An \emph{ensemble} combines several base models into a single predictor, on the premise
+that a collective decision is more accurate and more robust than that of any single
+learner~\cite{lucas2023comprehensive,bibers2025ensemble}. Beyond accuracy, ensembles are of
+particular interest for security, because diversity among the base models can be turned
+directly against adversarial transferability.
+
+\subsection{Bagging, Boosting, Stacking}\label{subsec:bg-ensemble-types}
+Three combination strategies dominate (\Cref{fig:bg-ensembles}). \emph{Bagging} trains
+homogeneous models in parallel on bootstrap resamples of the data and averages their
+predictions, which reduces variance; the random forest is bagging applied to decision
+trees~\cite{breiman1996bagging,breiman2001random}. \emph{Boosting} trains models
+sequentially, each one focusing on the examples its predecessors got wrong, which reduces
+bias~\cite{freund1997decision}. \emph{Stacking} trains \emph{heterogeneous} base learners
+and then trains a separate \emph{meta-learner} to combine their
+outputs~\cite{wolpert1992stacked}. Stacking is most effective precisely when the base
+learners are diverse and make different kinds of error, so that their combination covers
+more of the input space than any of them alone.
+
+\begin{figure}[htbp]
+    \centering
+    \subfigure[Bagging: parallel homogeneous models on resampled data, averaged.]{\includesvg[width=0.31\textwidth]{./Images/bagging}}
+    \hfill
+    \subfigure[Boosting: sequential models, each correcting the last.]{\includesvg[width=0.31\textwidth]{./Images/boosting}}
+    \hfill
+    \subfigure[Stacking: heterogeneous models fused by a meta-learner.]{\includesvg[width=0.31\textwidth]{./Images/stacking}}
+    \caption[The three classical ensemble strategies.]{The three classical ensemble strategies. DEPT's detector is a stacking ensemble, chosen because its base learners are architecturally heterogeneous and emit predictions at different rates.}
+    \label{fig:bg-ensembles}
+\end{figure}
+
+DEPT stacks a random forest and a temporal convolutional network, which is precisely the
+setting stacking was designed for. The two learners are heterogeneous in architecture and
+asynchronous in operation: the network emits a dense verdict on every packet, while the
+forest emits a sparse verdict only at its checkpoints, starting at packet~$2$. A fixed
+combination rule, such as averaging or majority voting, cannot express when each learner
+should be trusted. A learned meta-learner can: by assigning input- and position-dependent
+weights to each base output, it acts as a dynamic gating mechanism rather than a static
+average~\cite{yang2025novel,gungor2022stewart}. DEPT implements this meta-learner as a
+small attention model over the fused per-packet outputs, a choice that is further motivated
+by the transferability argument below and detailed in \Cref{chap:solution}.
+
+\subsection{Gradient Masking and Transferability}\label{subsec:bg-gradient-masking}
+Transferability is what makes black-box evasion practical: an attacker who cannot see the
+target model builds a differentiable substitute, crafts a perturbation against it with a
+gradient method such as \ac{PGD} or the \ac{FGSM}, and relies on that perturbation carrying
+over to the target~\cite{papernot2017practical}. Heterogeneous stacking acts directly on
+this mechanism. A differentiable member, such as the \ac{TCN}, exposes a gradient that an
+attacker can follow. An \ac{RF} does not: its decision function is constant over
+axis-aligned regions, so there is no gradient direction to exploit. Combining a
+differentiable and a non-differentiable model yields what the literature calls a rugged
+decision boundary, in which a perturbation optimized against the differentiable member does
+not necessarily move the forest's discrete verdict, and therefore transfers poorly across
+the ensemble, raising the attacker's
+cost~\cite{yang2021trs,gungor2022stewart,biggio2011bagging,chen2022collective}.
+
+This argument must be stated carefully, because the absence of a usable gradient is a form
+of \emph{gradient masking}, and gradient masking is not robustness in the general case. A
+determined white-box adversary can estimate gradients numerically or fall back on
+gradient-free search, and masked gradients have repeatedly produced a false sense of
+security when mistaken for genuine robustness~\cite{athalye2018obfuscated}. The argument
+holds for DEPT precisely because its threat model is black-box: the value of a
+non-differentiable member is not an absolute barrier, but a measurable reduction in the
+transferability from whatever substitute the attacker is able to build without direct
+gradient access. Robustness is therefore treated as a property to be evaluated empirically,
+not as a guarantee to be assumed, a distinction that \Cref{chap:evaluation} takes up.
+
+% #############################################################################
+\section{Summary}\label{sec:bg-summary}
+The concepts in this chapter compose into the three pillars of DEPT.
+\emph{Representation}: a bit-level nPrint encoding, stripped of identity fields and emitted
+at two rates, gives heterogeneous learners a shared, behaviour-focused, and realizable view
+of traffic (\Cref{subsec:bg-features}). \emph{Ensembling}: heterogeneous stacking, fused by
+an attention meta-learner, combines a differentiable network with a non-differentiable
+forest to resist transferable gradient attacks under a black-box threat model
+(\Cref{sec:bg-ensembles}). \emph{Purification}: an input-transformation defense, built as a
+causal Transformer, projects flagged traffic back onto the benign manifold while respecting
+the protocol constraints that keep its output realizable
+(\Cref{subsec:bg-defense-paradigms,subsec:bg-realizability}). These three elements are the
+building blocks of the architecture presented in \Cref{chap:solution}. The prior work that
+each of them draws on, and the gap that DEPT's particular combination fills, are the
+subject of \Cref{chap:related}.

@@ -1,4 +1,4 @@
-dissertation/
+dissertation/*
 !Chapters/
 !Images/
 !*.tex

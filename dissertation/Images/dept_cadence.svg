@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-90 0 1590 560" font-family="Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="arrAx" markerWidth="10" markerHeight="10" refX="7" refY="3.5" orient="auto">
+      <path d="M0,0 L8,3.5 L0,7 Z" fill="#5a6673"/>
+    </marker>
+    <marker id="arrFuse" markerWidth="9" markerHeight="9" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L7,3 L0,6 Z" fill="#8a949e"/>
+    </marker>
+  </defs>
+
+  <!-- checkpoint bands: packets 2, 10, 20 -->
+  <rect x="237" y="118" width="56" height="350" fill="#eaf1f8"/>
+  <rect x="997" y="118" width="56" height="350" fill="#eaf1f8"/>
+  <rect x="1317" y="118" width="56" height="350" fill="#eaf1f8"/>
+  <text x="265" y="108" text-anchor="middle" font-size="18" fill="#2c5f8a">checkpoint</text>
+  <text x="1025" y="108" text-anchor="middle" font-size="18" fill="#2c5f8a">checkpoint</text>
+  <text x="1345" y="108" text-anchor="middle" font-size="18" fill="#2c5f8a">checkpoint</text>
+
+  <!-- row labels -->
+  <text x="135" y="163" text-anchor="end" font-size="24" font-weight="bold" fill="#1a1a1a">TCN</text>
+  <text x="135" y="190" text-anchor="end" font-size="20" fill="#5a6673">dense</text>
+  <text x="135" y="270" text-anchor="end" font-size="17" fill="#8a949e">rf_age</text>
+  <text x="135" y="300" text-anchor="end" font-size="24" font-weight="bold" fill="#1a1a1a">Random Forest</text>
+  <text x="135" y="327" text-anchor="end" font-size="20" fill="#5a6673">sparse</text>
+  <text x="135" y="430" text-anchor="end" font-size="24" font-weight="bold" fill="#1a1a1a">Meta-learner</text>
+  <text x="135" y="457" text-anchor="end" font-size="20" fill="#5a6673">fused</text>
+
+  <!-- TCN circles: every packet -->
+  <g fill="#2c5f8a" stroke="#16344c" stroke-width="1.5">
+    <circle cx="170" cy="170" r="13"/><circle cx="265" cy="170" r="13"/>
+    <circle cx="360" cy="170" r="13"/><circle cx="455" cy="170" r="13"/>
+    <circle cx="550" cy="170" r="13"/><circle cx="645" cy="170" r="13"/>
+    <circle cx="740" cy="170" r="13"/><circle cx="835" cy="170" r="13"/>
+    <circle cx="930" cy="170" r="13"/><circle cx="1025" cy="170" r="13"/>
+    <circle cx="1120" cy="170" r="13"/><circle cx="1215" cy="170" r="13"/>
+    <circle cx="1345" cy="170" r="13"/>
+  </g>
+
+  <!-- rf_age digits -->
+  <g font-size="17" fill="#8a949e" text-anchor="middle">
+    <text x="265" y="270">0</text><text x="360" y="270">1</text>
+    <text x="455" y="270">2</text><text x="550" y="270">3</text>
+    <text x="645" y="270">4</text><text x="740" y="270">5</text>
+    <text x="835" y="270">6</text><text x="930" y="270">7</text>
+    <text x="1025" y="270">0</text><text x="1120" y="270">1</text>
+    <text x="1215" y="270">2</text><text x="1345" y="270">0</text>
+  </g>
+
+  <!-- RF squares -->
+  <!-- packet 1: no verdict yet -->
+  <rect x="157" y="287" width="26" height="26" fill="none" stroke="#8a949e" stroke-width="2" stroke-dasharray="4,3"/>
+  <!-- fresh checkpoints -->
+  <g fill="#2c5f8a" stroke="#16344c" stroke-width="1.5">
+    <rect x="252" y="287" width="26" height="26"/>
+    <rect x="1012" y="287" width="26" height="26"/>
+    <rect x="1332" y="287" width="26" height="26"/>
+  </g>
+  <!-- carried forward -->
+  <g fill="#d7e4f2" stroke="#2c5f8a" stroke-width="1.8">
+    <rect x="347" y="287" width="26" height="26"/><rect x="442" y="287" width="26" height="26"/>
+    <rect x="537" y="287" width="26" height="26"/><rect x="632" y="287" width="26" height="26"/>
+    <rect x="727" y="287" width="26" height="26"/><rect x="822" y="287" width="26" height="26"/>
+    <rect x="917" y="287" width="26" height="26"/>
+    <rect x="1107" y="287" width="26" height="26"/><rect x="1202" y="287" width="26" height="26"/>
+  </g>
+  <text x="170" y="348" text-anchor="middle" font-size="18" fill="#8a949e">none yet</text>
+  <text x="447" y="352" text-anchor="middle" font-size="19" fill="#5a6673">last logit carried forward</text>
+
+  <!-- fusion arrows at packet 6 (x=645) -->
+  <line x1="633" y1="185" x2="633" y2="408" stroke="#8a949e" stroke-width="1.8" marker-end="url(#arrFuse)"/>
+  <line x1="657" y1="317" x2="657" y2="408" stroke="#8a949e" stroke-width="1.8" marker-end="url(#arrFuse)"/>
+
+  <!-- Meta diamonds: every packet -->
+  <g fill="#2a9d8f" stroke="#14544c" stroke-width="1.5">
+    <polygon points="170,415 185,430 170,445 155,430"/>
+    <polygon points="265,415 280,430 265,445 250,430"/>
+    <polygon points="360,415 375,430 360,445 345,430"/>
+    <polygon points="455,415 470,430 455,445 440,430"/>
+    <polygon points="550,415 565,430 550,445 535,430"/>
+    <polygon points="645,415 660,430 645,445 630,430"/>
+    <polygon points="740,415 755,430 740,445 725,430"/>
+    <polygon points="835,415 850,430 835,445 820,430"/>
+    <polygon points="930,415 945,430 930,445 915,430"/>
+    <polygon points="1025,415 1040,430 1025,445 1010,430"/>
+    <polygon points="1120,415 1135,430 1120,445 1105,430"/>
+    <polygon points="1215,415 1230,430 1215,445 1200,430"/>
+    <polygon points="1345,415 1360,430 1345,445 1330,430"/>
+  </g>
+  <text x="795" y="390" text-anchor="start" font-size="19" fill="#5a6673">both streams fused at every packet</text>
+
+  <!-- packet axis -->
+  <line x1="140" y1="490" x2="1420" y2="490" stroke="#5a6673" stroke-width="2.5" marker-end="url(#arrAx)"/>
+  <g stroke="#5a6673" stroke-width="2">
+    <line x1="170" y1="484" x2="170" y2="496"/><line x1="265" y1="484" x2="265" y2="496"/>
+    <line x1="360" y1="484" x2="360" y2="496"/><line x1="455" y1="484" x2="455" y2="496"/>
+    <line x1="550" y1="484" x2="550" y2="496"/><line x1="645" y1="484" x2="645" y2="496"/>
+    <line x1="740" y1="484" x2="740" y2="496"/><line x1="835" y1="484" x2="835" y2="496"/>
+    <line x1="930" y1="484" x2="930" y2="496"/><line x1="1025" y1="484" x2="1025" y2="496"/>
+    <line x1="1120" y1="484" x2="1120" y2="496"/><line x1="1215" y1="484" x2="1215" y2="496"/>
+    <line x1="1345" y1="484" x2="1345" y2="496"/>
+  </g>
+  <g font-size="20" fill="#1a1a1a" text-anchor="middle">
+    <text x="170" y="525">1</text><text x="265" y="525">2</text>
+    <text x="360" y="525">3</text><text x="455" y="525">4</text>
+    <text x="550" y="525">5</text><text x="645" y="525">6</text>
+    <text x="740" y="525">7</text><text x="835" y="525">8</text>
+    <text x="930" y="525">9</text><text x="1025" y="525">10</text>
+    <text x="1120" y="525">11</text><text x="1215" y="525">12</text>
+    <text x="1280" y="525">&#8943;</text>
+    <text x="1345" y="525">20</text>
+    <text x="1455" y="525" font-size="19" fill="#5a6673">packet</text>
+  </g>
+</svg>

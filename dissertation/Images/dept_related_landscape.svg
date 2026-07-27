@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1500 720" font-family="Helvetica, Arial, sans-serif">
+
+  <!-- column headers (phase axis) -->
+  <text x="485" y="52" text-anchor="middle" font-size="30" font-weight="bold" fill="#3a444e">training time</text>
+  <text x="1135" y="52" text-anchor="middle" font-size="30" font-weight="bold" fill="#3a444e">inference time</text>
+
+  <!-- outer frame -->
+  <rect x="160" y="80" width="1300" height="620" fill="none" stroke="#3a444e" stroke-width="2.5"/>
+  <!-- internal separators -->
+  <line x1="810" y1="80" x2="810" y2="700" stroke="#5a6673" stroke-width="2" stroke-dasharray="9,7"/>
+  <line x1="160" y1="390" x2="1460" y2="390" stroke="#5a6673" stroke-width="2" stroke-dasharray="9,7"/>
+
+  <!-- row labels (space axis) -->
+  <text transform="rotate(-90 120 235)" x="120" y="235" text-anchor="middle" font-size="30" font-weight="bold" fill="#3a444e">traffic-space</text>
+  <text transform="rotate(-90 120 545)" x="120" y="545" text-anchor="middle" font-size="30" font-weight="bold" fill="#3a444e">feature-space</text>
+
+  <!-- ============ traffic-space row ============ -->
+  <!-- PANTS (training x traffic) -->
+  <g>
+    <rect x="375" y="150" width="220" height="62" rx="12" fill="#d7e4f2" stroke="#2c5f8a" stroke-width="2.5"/>
+    <text x="485" y="189" text-anchor="middle" font-size="26" fill="#1a1a1a">PANTS '25</text>
+  </g>
+
+  <!-- CertTA (inference x traffic) -->
+  <g>
+    <rect x="1025" y="150" width="220" height="62" rx="12" fill="#d7e4f2" stroke="#2c5f8a" stroke-width="2.5"/>
+    <text x="1135" y="189" text-anchor="middle" font-size="26" fill="#1a1a1a">CertTA '25</text>
+  </g>
+
+  <!-- DEPT chip spanning both phases -->
+  <g>
+    <rect x="260" y="272" width="1100" height="82" rx="14" fill="#dff0ed" stroke="#2a9d8f" stroke-width="4"/>
+    <text x="810" y="307" text-anchor="middle" font-size="28" font-weight="bold" fill="#1a1a1a">DEPT (this thesis)</text>
+    <text x="810" y="340" text-anchor="middle" font-size="23" fill="#3a444e">realizable training corpus &#183; heterogeneous stacking &#183; purification realized into valid packets</text>
+  </g>
+
+  <!-- ============ feature-space row, training column ============ -->
+  <g>
+    <rect x="270" y="432" width="205" height="56" rx="12" fill="#d7e4f2" stroke="#2c5f8a" stroke-width="2.5"/>
+    <text x="372" y="468" text-anchor="middle" font-size="24" fill="#1a1a1a">Antidote '09</text>
+  </g>
+  <g>
+    <rect x="495" y="432" width="205" height="56" rx="12" fill="#d7e4f2" stroke="#2c5f8a" stroke-width="2.5"/>
+    <text x="597" y="468" text-anchor="middle" font-size="24" fill="#1a1a1a">Bagging '11/'22</text>
+  </g>
+  <g>
+    <rect x="270" y="512" width="205" height="56" rx="12" fill="#d7e4f2" stroke="#2c5f8a" stroke-width="2.5"/>
+    <text x="372" y="548" text-anchor="middle" font-size="24" fill="#1a1a1a">Tiki-Taka '20</text>
+  </g>
+  <g>
+    <rect x="495" y="512" width="205" height="56" rx="12" fill="#d7e4f2" stroke="#2c5f8a" stroke-width="2.5"/>
+    <text x="597" y="548" text-anchor="middle" font-size="24" fill="#1a1a1a">TRS '21</text>
+  </g>
+  <g>
+    <rect x="270" y="592" width="205" height="56" rx="12" fill="#d7e4f2" stroke="#2c5f8a" stroke-width="2.5"/>
+    <text x="372" y="628" text-anchor="middle" font-size="24" fill="#1a1a1a">CrowdGuard '24</text>
+  </g>
+  <g>
+    <rect x="495" y="592" width="205" height="56" rx="12" fill="#d7e4f2" stroke="#2c5f8a" stroke-width="2.5"/>
+    <text x="597" y="628" text-anchor="middle" font-size="24" fill="#1a1a1a">PBP '25</text>
+  </g>
+
+  <!-- ============ feature-space row, inference column ============ -->
+  <g>
+    <rect x="880" y="418" width="240" height="56" rx="12" fill="#d7e4f2" stroke="#2c5f8a" stroke-width="2.5"/>
+    <text x="1000" y="454" text-anchor="middle" font-size="24" fill="#1a1a1a">Defense-GAN '18</text>
+  </g>
+  <g>
+    <rect x="1150" y="418" width="230" height="56" rx="12" fill="#d7e4f2" stroke="#2c5f8a" stroke-width="2.5"/>
+    <text x="1265" y="454" text-anchor="middle" font-size="24" fill="#1a1a1a">AdvPurRec '24</text>
+  </g>
+  <g>
+    <rect x="880" y="498" width="240" height="56" rx="12" fill="#d7e4f2" stroke="#2c5f8a" stroke-width="2.5"/>
+    <text x="1000" y="534" text-anchor="middle" font-size="24" fill="#1a1a1a">GTAE-IDS '25</text>
+  </g>
+  <g>
+    <rect x="1150" y="498" width="230" height="56" rx="12" fill="#d7e4f2" stroke="#2c5f8a" stroke-width="2.5"/>
+    <text x="1265" y="534" text-anchor="middle" font-size="24" fill="#1a1a1a">LipsLev '25</text>
+  </g>
+  <g>
+    <rect x="880" y="578" width="240" height="56" rx="12" fill="#d7e4f2" stroke="#2c5f8a" stroke-width="2.5"/>
+    <text x="1000" y="614" text-anchor="middle" font-size="24" fill="#1a1a1a">NIDS-CBAD '25</text>
+  </g>
+  <g>
+    <rect x="1150" y="578" width="230" height="56" rx="12" fill="#d7e4f2" stroke="#2c5f8a" stroke-width="2.5"/>
+    <text x="1265" y="614" text-anchor="middle" font-size="24" fill="#1a1a1a">AMDS '26</text>
+  </g>
+  <!-- vision / text domain purifiers, muted -->
+  <g>
+    <rect x="880" y="654" width="500" height="38" rx="10" fill="#eef1f4" stroke="#5a6673" stroke-width="2"/>
+    <text x="1130" y="680" text-anchor="middle" font-size="21" fill="#5a6673">ADBM &#183; CausalDiff &#183; DiffuseDef  (vision / text domains)</text>
+  </g>
+
+</svg>
