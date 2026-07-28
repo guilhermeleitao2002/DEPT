@@ -81,35 +81,53 @@
 % -----------------------------------------------------------------------------
 % DIRECT SVG FIGURES (\includesvg):
 % -----------------------------------------------------------------------------
-% pdflatex cannot embed SVG, and Inkscape (required by the 'svg' package) is not
-% installed on the build host. Instead we keep the SVG sources as the single
-% source of truth and let cairosvg convert each referenced figure to a cached
-% PDF at compile time. The cache lives in ./Images/.svgcache/ and a figure is
-% reconverted only when its .svg is newer than the cached .pdf, so editing an
-% SVG is reflected on the next build with no manual "svg -> pdf" step -- and
-% untouched figures cost nothing (a full 3-pass build would otherwise redo all
-% ~22 conversions three times over).
+% The ./Images/*.svg files are the single source of truth for every figure.
+% pdflatex cannot embed SVG, so the 'svg' package drives Inkscape to convert
+% each referenced figure at compile time. Conversion output is cached in
+% ./Images/.svgcache/ and only redone when the .svg is newer, so editing an SVG
+% is reflected on the next build with no manual "svg -> pdf" step.
 %
 % REQUIRES pdflatex to be run with -shell-escape, e.g.:
 %     pdflatex -shell-escape main
-% The converter can be overridden if cairosvg is not on PATH, e.g.:
-%     \renewcommand{\svgconverter}{../venv/bin/cairosvg}
-% Usage mirrors the 'svg' package -- give the name WITHOUT the .svg extension:
+% (already configured in ../.vscode/settings.json for the VSCode build button)
+%
+% Text handling: with the default inkscapelatex=true, Inkscape strips the text
+% out of the SVG and LaTeX typesets it, so figure labels use the thesis font.
+% Set inkscapelatex=false to have Inkscape render the text itself instead.
+%
+% Usage -- give the name WITHOUT the .svg extension:
 %     \includesvg[width=0.8\textwidth]{./Images/figure}
-\newcommand{\svgconverter}{cairosvg}
-\makeatletter
-\newcommand{\includesvg}[2][]{%
-  \filename@parse{#2}%
-  \edef\isvg@dir{\filename@area.svgcache}%
-  \edef\isvg@pdf{\isvg@dir/\filename@base.pdf}%
-  \ifdefined\pdfshellescape
-    \ifnum\pdfshellescape>0
-      \immediate\write18{mkdir -p "\isvg@dir" && ( [ "\isvg@pdf" -nt "#2.svg" ] || \svgconverter\space "#2.svg" -o "\isvg@pdf" )}%
-    \fi
-  \fi
-  \includegraphics[#1]{\isvg@pdf}%
-}
-\makeatother
+\usepackage{svg}
+\svgsetup{inkscapepath=./Images/.svgcache}
+%
+% Because LaTeX (not Inkscape) now typesets the figure labels, any character
+% used in an SVG label must be one pdflatex can set in TEXT mode. Two classes
+% of label content need help:
+%
+%  1. Maths symbols typed literally in the SVG. T1 has no text glyph for these,
+%     so map each to its maths equivalent. Extend this list if a new figure
+%     introduces another symbol (the error reads "Unicode character ... not set
+%     up for use with LaTeX").
+\usepackage{newunicodechar}
+\newunicodechar{′}{\ensuremath{{}^{\prime}}}
+\newunicodechar{Δ}{\ensuremath{\Delta}}
+\newunicodechar{δ}{\ensuremath{\delta}}
+\newunicodechar{Ψ}{\ensuremath{\Psi}}
+\newunicodechar{≈}{\ensuremath{\approx}}
+\newunicodechar{≤}{\ensuremath{\leq}}
+\newunicodechar{≡}{\ensuremath{\equiv}}
+\newunicodechar{⋯}{\ensuremath{\cdots}}
+%
+%  2. Underscores in feature/metric names (rf_age, fpr_0.05). In text mode "_"
+%     means subscript and errors with "Missing $ inserted". 'pretex' runs just
+%     before each figure is read, so making "_" an ordinary character there
+%     prints it literally -- and only inside figures, leaving the rest of the
+%     document's maths untouched.
+%     (wrapped in a macro: a bare \catcode`\_=12 does not survive svgsetup's
+%     key=value parsing -- the backtick is mangled and every \includesvg then
+%     fails with "Missing number, treated as zero".)
+\newcommand{\svgliteralunderscore}{\catcode`\_=12\relax}
+\svgsetup{pretex=\svgliteralunderscore}
 %
 % -----------------------------------------------------------------------------
 % PACKAGE caption:
