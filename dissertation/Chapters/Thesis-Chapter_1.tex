@@ -58,18 +58,18 @@ of network traffic, in contrast, is only a threat if some sendable sequence of p
 actually produces it. Recovering concrete traffic from a desired feature vector is the
 \ac{IFM} problem, and it is often intractable, since packets must keep their checksums,
 lengths, and protocol semantics consistent~\cite{pierazzi2020intriguing,hashemi2019towards}.
-A realistic attacker is further confined to the \emph{black-box} setting: it can probe a
+A realistic attacker is then confined to the \emph{black-box} setting: it can probe a
 deployed detector and observe outcomes, but it holds neither the model's architecture
 nor its gradients~\cite{papernot2017practical,apruzzese2023sok}. Much of the defensive
-literature sidesteps one or both of these constraints, assuming white-box access or
+literature sets aside one or both of these constraints, assuming white-box access or
 training against feature-space perturbations that no real packet sequence can produce,
 and so ends up measuring robustness against a threat that cannot occur as measured;
 \Cref{chap:related} examines this mismatch in detail.
 
 This mismatch is what the present work, together with its sibling thesis, set out to
-remove. TANTGen~\cite{pissarra2026tantgen}, developed in the sibling thesis of this one,
+remove. TANTGen~\cite{pissarra2026tantgen}
 closes the realism gap on the attack side: it is a Transformer-based generator that
-manipulates live attack traffic under black-box constraints, altering only packet timing
+manipulates attack traffic under black-box constraints, altering only packet timing
 and packet size, and the traffic it emits is protocol-compliant by construction. DEPT is
 the defense side of the same effort. It is trained on, and evaluated against, the
 realizable adversarial traffic that TANTGen produces, so that every claim made about the
