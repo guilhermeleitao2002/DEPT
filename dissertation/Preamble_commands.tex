@@ -91,18 +91,28 @@
 %     pdflatex -shell-escape main
 % (already configured in ../.vscode/settings.json for the VSCode build button)
 %
-% Text handling: with the default inkscapelatex=true, Inkscape strips the text
-% out of the SVG and LaTeX typesets it, so figure labels use the thesis font.
-% Set inkscapelatex=false to have Inkscape render the text itself instead.
+% Text handling: inkscapelatex=false is REQUIRED here. With the package default
+% (inkscapelatex=true) Inkscape strips the text out of the SVG and LaTeX
+% typesets it from a .pdf_tex overlay -- but that overlay only records each
+% label's *position*, never its font-size, so every label comes out at the
+% surrounding document size no matter what the SVG asked for and no matter how
+% far the figure is scaled down. Labels then overflow their boxes and collide
+% (worst on the \subfigure grids included at ~0.31\textwidth). With
+% inkscapelatex=false Inkscape renders the text into the PDF itself, so a figure
+% prints exactly as it looks when the .svg is opened directly. The figure font
+% is then the SVG's (Helvetica/Arial, substituted by the metric-compatible
+% Nimbus Sans/Arimo) rather than the thesis font, which is the intended
+% trade-off.
 %
 % Usage -- give the name WITHOUT the .svg extension:
 %     \includesvg[width=0.8\textwidth]{./Images/figure}
 \usepackage{svg}
-\svgsetup{inkscapepath=./Images/.svgcache}
+\svgsetup{inkscapepath=./Images/.svgcache, inkscapelatex=false}
 %
-% Because LaTeX (not Inkscape) now typesets the figure labels, any character
-% used in an SVG label must be one pdflatex can set in TEXT mode. Two classes
-% of label content need help:
+% The two blocks below only bite while inkscapelatex=true, i.e. while pdflatex
+% is the one setting the figure labels. They are kept because the same
+% characters can appear in ordinary body text, and because they are what makes
+% inkscapelatex=true survivable if a figure ever needs to go back to it.
 %
 %  1. Maths symbols typed literally in the SVG. T1 has no text glyph for these,
 %     so map each to its maths equivalent. Extend this list if a new figure
