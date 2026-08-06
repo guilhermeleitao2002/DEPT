@@ -171,7 +171,7 @@ contradicts the system's own premise. The meta-learner is beaten by its own Rand
 on the aggregate streaming axis and by a wide margin on several sources
 (\Cref{sec:eval-meta}); a stacker should be no worse than its best base learner, and this
 one is worse. The cause was identified, namely that the carry-forward \ac{RF} logit enters
-the fusion token as a single sparsely updated feature that the attention encoder
+the fusion token as a single sparsely updated feature that the meta-learner's attention
 under-weights against the dense \ac{TCN} stream, and the per-attack comparison
 (\Cref{subsec:eval-perattack}) shows the pathology worsening when the fusion has less
 source diversity to learn from. What the fusion does buy, the packet-$1$ verdict and the
@@ -289,7 +289,7 @@ this thesis delivers is the static defense the adaptive one would start from.
 In closing, this work argued that a defense for learning-based intrusion detection is
 only worth measuring against an attack that can exist on the wire, and it built and
 evaluated one under that discipline end to end: a shared traffic representation,
-architecturally heterogeneous detection, and generative purification that returns real,
+architecturally heterogeneous detection, and purification that returns real,
 protocol-compliant packets. Within its stated limits, the delivered system detects a
 realistic black-box manipulation from the first packet and undoes it before the
 protected system consumes the flow, and where it fails, it fails for reasons the

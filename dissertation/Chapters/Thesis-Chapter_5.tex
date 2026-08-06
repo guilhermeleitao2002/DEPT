@@ -406,8 +406,8 @@ so on those sources it discards most of a signal it was handed. The mechanism is
 one anticipated in \Cref{subsec:sol-meta}: the carry-forward RF logit enters the
 per-packet fusion token as a single, sparsely updated feature, refreshed only at
 checkpoints and absent before packet~$2$, where a learnable placeholder stands in,
-whereas the dense TCN logit is present and updated at every timestep, so the attention
-encoder systematically under-weights the intermittent evidence. A stacker should be no
+whereas the dense TCN logit is present and updated at every timestep, so the
+meta-learner's attention systematically under-weights the intermittent evidence. A stacker should be no
 worse than its best base learner; this one is worse on several sources and on the
 aggregate, and that is the clearest single target for future work on the detection
 stage (\Cref{sec:eval-discussion}).

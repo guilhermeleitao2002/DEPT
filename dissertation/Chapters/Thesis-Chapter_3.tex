@@ -245,8 +245,8 @@ purifiers, more diffusion noise removes more of the perturbation but degrades cl
 accuracy, and \textbf{GTAE-IDS}~\cite{ghadermazi2025gtae} applies a graph-Transformer
 autoencoder to reconstruct traffic representations for real-time detection.
 
-DEPT's reconstructor (\Cref{sec:sol-reconstructor}) sits in this family but departs
-from it on three axes, each a deliberate choice rather than an oversight. The first is
+DEPT's reconstructor (\Cref{sec:sol-reconstructor}) shares this family's goal but
+departs from it on three axes, each a deliberate choice rather than an oversight. The first is
 architectural: diffusion purifiers pay an iterative denoising chain, tens of forward
 passes, for every input, which sits poorly with a per-packet latency budget, whereas
 DEPT uses a causal Transformer that produces its correction in a single pass and
@@ -341,7 +341,7 @@ The gap this thesis addresses is the combination. Of the surveyed works, none br
 together (a) training data that is realizable and generated under a black-box threat
 model, (b) an ensemble that is heterogeneous across architectural families, pairing a
 non-differentiable with a differentiable learner to resist transfer, and (c) a
-generative purification stage whose output is realized back into protocol-compliant
+purification stage whose output is realized back into protocol-compliant
 packets. Each property exists in isolation: PANTS holds (a) but hardens classifiers
 and performs no purification, TRS and Stewart hold (b) within homogeneous
 differentiable families or outside the network domain, and AdvPurRec and GTAE-IDS hold

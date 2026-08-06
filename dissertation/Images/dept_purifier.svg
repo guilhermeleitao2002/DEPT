@@ -27,7 +27,7 @@
 
   <!-- causal encoder -->
   <rect x="150" y="167" width="360" height="100" rx="10" fill="#d7e4f2" stroke="#2c5f8a" stroke-width="2.5"/>
-  <text x="330" y="207" text-anchor="middle" font-size="24" font-weight="bold" fill="#16344c">causal Transformer encoder</text>
+  <text x="330" y="207" text-anchor="middle" font-size="24" font-weight="bold" fill="#16344c">decoder-only Transformer</text>
   <text x="330" y="238" text-anchor="middle" font-size="20" fill="#16344c">3 pre-norm blocks, causal mask</text>
 
   <line x1="330" y1="267" x2="330" y2="309" stroke="#3a444e" stroke-width="3" marker-end="url(#pArr)"/>

@@ -8,7 +8,7 @@
 \label{chap:back}
 
 DEPT combines three main ingredients: a bit-level representation of network traffic, a
-heterogeneous detection ensemble, and a generative purifier. This chapter presents the
+heterogeneous detection ensemble, and a learned purifier. This chapter presents the
 concepts that each of these components builds upon. Instead of a broad survey of machine
 learning for security, the focus is kept on the specific concepts that the system relies
 on, so that the design decisions of \Cref{chap:solution} follow from the principles
@@ -59,7 +59,7 @@ discussed in \Cref{chap:conclusion}.
     \subfigure[Supervised learning: labelled flows train a model that maps a flow to a label.]{\includesvg[width=0.46\textwidth]{./Images/supervised_learning}}
     \hfill
     \subfigure[Unsupervised learning: with no labels, the model learns the structure of the traffic and flags what departs from it.]{\includesvg[width=0.46\textwidth]{./Images/unsupervised_learning}}
-    \caption[The two supervision regimes most relevant to DEPT.]{The two supervision regimes most relevant to DEPT, illustrated on network flows. All of DEPT's components are trained under supervision; the unsupervised idea of modelling normal behaviour and flagging deviations from it motivates the purification step.}
+    \caption[The two supervision regimes most relevant to DEPT.]{The two supervision regimes most relevant to DEPT, illustrated on network flows. All of DEPT's components are trained under supervision; the unsupervised idea of modelling normal behaviour and flagging deviations from it motivates the purification literature DEPT draws on, though its own purifier learns from matched pairs.}
     \label{fig:bg-paradigms}
 \end{figure}
 
@@ -264,22 +264,25 @@ fixed convolution window cannot. Two arrangements are relevant here. \emph{Encod
 models attend bidirectionally over the entire sequence, which suits classification and
 representation tasks, including learned traffic
 analysis~\cite{lin2022bert,ghadermazi2025gtae}. \emph{Decoder-only} models apply a causal
-mask so that each position attends only to the past, which suits autoregressive and
-streaming generation (\Cref{fig:bg-transformer}). Causality also enables \emph{key--value
+mask so that each position attends only to the past (\Cref{fig:bg-transformer}); this is
+the arrangement behind autoregressive generation, but the mask is what any task whose
+output at a position may depend only on that position's past requires, generative or not.
+Causality also enables \emph{key--value
 caching}: since the keys and values of past positions in \Cref{eq:bg-attention} do not
 change when new tokens arrive, they can be stored and reused, and producing each new token
 then costs work proportional to the current length instead of reprocessing the whole
-prefix. This property is what keeps causal, autoregressive inference tractable under tight
-latency budgets. DEPT adopts both in its Transformer components:
-the meta-learner is a compact encoder that fuses the base detectors'
-per-packet outputs (\Cref{subsec:bg-ensemble-types}), and the purifier is a decoder-style
-sequence model whose causal masking keeps it compatible with key--value caching for streaming
-deployment (\Cref{chap:solution}).
+prefix. This property is what keeps causal inference tractable under tight
+latency budgets. Both of DEPT's Transformer components are decoder-only stacks, since both
+must act on a packet with only its predecessors in hand: the meta-learner fuses the base
+detectors' per-packet outputs (\Cref{subsec:bg-ensemble-types}) and the purifier rewrites a
+perturbed packet sequence (\Cref{chap:solution}). Neither is autoregressive, as neither
+feeds its own output back as input; each emits one output per input position, so causality
+buys them streaming validity and key--value cacheability rather than generation.
 
 \begin{figure}[htbp]
     \centering
     \includesvg[width=0.42\textwidth]{./Images/decoder_only_transformer}
-    \caption[The decoder-only Transformer block.]{A decoder-only Transformer block over a stream of packet tokens: masked (causal) self-attention followed by a feed-forward sublayer, with residual connections and layer normalization, stacked $N$ times. The causal mask restricts each position to its past, which makes the design valid for streaming inference and compatible for key--value caching.}
+    \caption[The decoder-only Transformer block.]{A decoder-only Transformer block over a stream of packet tokens: masked (causal) self-attention followed by a feed-forward sublayer, with residual connections and layer normalization, stacked $N$ times. The causal mask restricts each position to its past, which makes the design valid for streaming inference and compatible with key--value caching. Each position produces its own output, so the arrangement covers both autoregressive generation and, as in DEPT, a single-pass causal mapping of an input sequence.}
     \label{fig:bg-transformer}
 \end{figure}
 
@@ -344,12 +347,15 @@ traffic, as \Cref{fig:bg-purification} illustrates. The idea originates with Def
 which projects each input onto the manifold captured by a generative adversarial
 network~\cite{samangouei2018defense}, and it has since been realized in the network domain
 with diffusion models~\cite{alhussien2024advpurrec,li2025adbm} and reconstruction-based
-Transformer autoencoders~\cite{ghadermazi2025gtae}. DEPT's purifier is a causal Transformer denoiser (\Cref{chap:solution}).
+Transformer autoencoders~\cite{ghadermazi2025gtae}. DEPT's purifier pursues the same
+goal without being a generative model itself: it is a causal Transformer denoiser,
+trained on matched adversarial-to-clean pairs rather than on a model of the benign
+distribution it could sample from (\Cref{chap:solution}).
 
 \begin{figure}[htbp]
     \centering
     \includesvg[width=0.80\textwidth]{./Images/purification_manifold}
-    \caption[Purification as projection onto the benign manifold.]{Purification as projection onto the benign manifold. An adversarial perturbation $\delta$ moves a clean flow $x$ off the manifold of benign traffic; without purification, the perturbed flow $x'$ is misclassified by the downstream detector. The purifier $g$, trained on the benign distribution, projects $x'$ back onto the manifold, and the detector then receives an input close to the original $x$. The idea originates with generative-model defenses such as Defense-GAN~\cite{samangouei2018defense}.}
+    \caption[Purification as projection onto the benign manifold.]{Purification as projection onto the benign manifold. An adversarial perturbation $\delta$ moves a clean flow $x$ off the manifold of benign traffic; without purification, the perturbed flow $x'$ is misclassified by the downstream detector. The purifier $g$, in the classical formulation trained on the benign distribution, projects $x'$ back onto the manifold, and the detector then receives an input close to the original $x$. The idea originates with generative-model defenses such as Defense-GAN~\cite{samangouei2018defense}.}
     \label{fig:bg-purification}
 \end{figure}
 

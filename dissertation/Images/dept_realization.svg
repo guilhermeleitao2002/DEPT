@@ -41,8 +41,8 @@
 
   <!-- rebuild -->
   <line x1="380" y1="292" x2="380" y2="336" stroke="#3a444e" stroke-width="3" marker-end="url(#rArr)"/>
-  <rect x="150" y="343" width="460" height="64" rx="10" fill="#f7f9fa" stroke="#5a6673" stroke-width="2"/>
-  <text x="380" y="383" text-anchor="middle" font-size="21" fill="#1a1a1a">scapy rebuild: checksums and length fields recomputed</text>
+  <rect x="120" y="343" width="540" height="64" rx="10" fill="#f7f9fa" stroke="#5a6673" stroke-width="2"/>
+  <text x="380" y="383" text-anchor="middle" font-size="21" fill="#1a1a1a">scapy rebuild: checksums and lengths recomputed</text>
 
   <line x1="380" y1="407" x2="380" y2="451" stroke="#3a444e" stroke-width="3" marker-end="url(#rArr)"/>
 

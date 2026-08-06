@@ -58,7 +58,6 @@
   <path d="M910,210 H1005 V228" fill="none" stroke="#2a9d8f" stroke-width="4"/>
   <path d="M905,305 H1005 V282" fill="none" stroke="#3a444e" stroke-width="3"/>
   <line x1="1005" y1="255" x2="1075" y2="255" stroke="#2a9d8f" stroke-width="4" marker-end="url(#arrT)"/>
-  <text x="1010" y="178" text-anchor="middle" font-size="22" fill="#14544c">clean or</text>
   <text x="1010" y="204" text-anchor="middle" font-size="22" fill="#14544c">purified flow</text>
 
   <!-- protected NIDS -->
