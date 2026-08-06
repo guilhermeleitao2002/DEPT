@@ -49,7 +49,8 @@ prominence, and taken up in \Cref{sec:concl-limitations}.
 The third contribution is the purification stage of \Cref{sec:sol-reconstructor}: a
 causal Transformer that predicts a residual correction over a flagged flow, coupled to an
 explicit realization step that writes the corrected features back into packets and
-validates them with a standard dissector. Scored through the independent \ac{NIDS} each
+validates them with a standard dissector, off the per-packet detection path and scoped
+to the two axes this threat model perturbs. Scored through the independent \ac{NIDS} each
 attack was built to evade, purification recovers $63.0\%$ of the detection TANTGen had
 destroyed, rising to $99.9\%$ on the Kitsune-native sources where the evasion had
 genuinely succeeded, at a \texttt{tshark} pass rate of $97.2\%$ over realizable packets
@@ -190,13 +191,24 @@ clean original attack, which makes its rows uninformative in either direction; a
 Kitsune's detection rate, being partly volumetric, is read only on the full streams the
 baseline feeds. None of these reintroduces the self-reference the TCN-only metric carried.
 
-The fifth limitation is the feature scope. DEPT observes packet headers, inter-arrival
+The fifth limitation is scope, of two kinds. The first is what DEPT can \emph{write
+back}: the purifier is attack-agnostic by construction, correcting all $1090$ dimensions
+without being told which the attacker moved, but the realization step that returns it to
+the wire is not, since it overlays exactly the two quantities this threat model
+perturbs, packet size and inter-arrival time (\Cref{subsec:sol-realization}). Against an
+adversary that moved some other header field, the feature-space correction would survive
+and the traffic-space one would not. Realization sits off the per-packet detection path,
+so this bounds what the system can hand back rather than what it can detect, but the
+``attack-agnostic'' label belongs to the denoiser alone and is not a property of the
+purification stage as a whole.
+
+The second is the feature scope. DEPT observes packet headers, inter-arrival
 timing, and direction; it carries no representation of payload content. This choice was
 deliberate, since header and timing behaviour remain observable as the share of
 \ac{TLS}- and QUIC-encrypted traffic grows while payload inspection does not, but it means
 that a manipulation expressed purely in application-layer content, on traffic where
 payloads are still readable, would be invisible to the present system. It is also a
-candidate explanation for the first limitation above, since what separates a padded
+candidate explanation for the representational blind spot above, since what separates a padded
 single-response flood from an unpadded one may live precisely in the bytes DEPT declines
 to look at.
 
@@ -247,6 +259,15 @@ is more interesting than what it closed.
     for this flow, which is a supervisable quantity since the evaluation harness already
     computes it for every test flow. That change is small, well-specified, and would
     convert several of the reported losses into no-ops.
+    \item \textbf{An attack-agnostic realization step.} The purifier learns which
+    dimensions to correct without being told; the overlay that returns its output to the
+    wire is hand-written for two of them. Closing that gap means deriving the fields to
+    edit from the residual $\Delta$ itself, editing whichever header fields it moves
+    beyond a threshold and reconciling the result against the protocol's own
+    constraints, in the spirit of the SMT-checked perturbations of
+    PANTS~\cite{jin2025robustifying}, so that the defense re-emits traffic for
+    manipulations it was never designed around. This is the step that would make the
+    whole purification path, and not only its model, independent of the attacker.
     \item \textbf{A fusion that never falls below its best base learner.} The
     meta-learner's failure to match its own Random Forest
     (\Cref{sec:concl-limitations}) suggests concrete revisions, from representing the

@@ -428,11 +428,14 @@ it delimits what the auxiliary loss can be expected to do.
 The reconstructor was trained on $1{,}796{,}542$ five-tuple-matched
 $(\text{adversarial}\rightarrow\text{clean})$ flow pairs, of $2{,}566{,}489$ paired in
 total, and evaluated on the held-out $384{,}963$-pair test split (seed~$42$, unseen by
-any base learner). It is an attack-agnostic denoiser: it is trained with uniform-weight
-reconstruction over all feature dimensions, so it is given no hint of where TANTGen
-perturbed a flow (a perturbation-weighted variant was explored as an ablation during
-development and dropped from the final implementation). \Cref{tab:eval-purif} summarizes
-the metric families overall.
+any base learner). In feature space it is an attack-agnostic denoiser: it is trained with
+uniform-weight reconstruction over all feature dimensions, so it is given no hint of where
+TANTGen perturbed a flow (a perturbation-weighted variant was explored as an ablation during
+development and dropped from the final implementation). The traffic-space realization that
+follows is not agnostic in the same sense, being fixed to this threat model's two
+perturbation axes (\Cref{subsec:sol-realization}); it is off the detection path, but it
+does bound the compliance and independent-NIDS figures below.
+\Cref{tab:eval-purif} summarizes the metric families overall.
 
 \begin{table}[t]
 \centering

@@ -14,14 +14,15 @@
   </defs>
 
   <!-- purified quantities -->
-  <rect x="120" y="36" width="520" height="64" rx="10" fill="#dff0ed" stroke="#2a9d8f" stroke-width="2.5" stroke-dasharray="8,6"/>
-  <text x="380" y="76" text-anchor="middle" font-size="22" fill="#14544c">purified quantities:  IPv4 total length,  IPAT</text>
+  <rect x="120" y="30" width="520" height="76" rx="10" fill="#dff0ed" stroke="#2a9d8f" stroke-width="2.5" stroke-dasharray="8,6"/>
+  <text x="380" y="63" text-anchor="middle" font-size="22" fill="#14544c">purified quantities:  IPv4 total length,  IPAT</text>
+  <text x="380" y="89" text-anchor="middle" font-size="16" fill="#14544c">overlay fixed to the threat model&#8217;s two axes</text>
 
   <!-- edit arrows -->
-  <line x1="255" y1="100" x2="180" y2="182" stroke="#2a9d8f" stroke-width="2.5" marker-end="url(#rArrT)"/>
+  <line x1="250" y1="106" x2="180" y2="182" stroke="#2a9d8f" stroke-width="2.5" marker-end="url(#rArrT)"/>
   <text x="150" y="140" text-anchor="middle" font-size="19" fill="#14544c">rewrite</text>
   <text x="150" y="162" text-anchor="middle" font-size="19" fill="#14544c">timestamp</text>
-  <line x1="510" y1="100" x2="576" y2="182" stroke="#2a9d8f" stroke-width="2.5" marker-end="url(#rArrT)"/>
+  <line x1="515" y1="106" x2="576" y2="182" stroke="#2a9d8f" stroke-width="2.5" marker-end="url(#rArrT)"/>
   <text x="632" y="140" text-anchor="middle" font-size="19" fill="#14544c">trim / pad</text>
   <text x="632" y="162" text-anchor="middle" font-size="19" fill="#14544c">payload</text>
 

@@ -362,7 +362,7 @@ time its score crosses it, which is also the event the earliest-detection metric
 % #############################################################################
 \section{Input Purification: Reconstructor}\label{sec:sol-reconstructor}
 Detection alone would leave only a blunt response to a flagged flow, dropping it, which
-turns every false positive into denial of service for a legitimate client. DEPT's
+turns every false positive into a denial of service for a legitimate client. DEPT's
 second stage takes the purification route of \Cref{subsec:bg-defense-paradigms}
 instead: undo the manipulation and let the repaired flow proceed. The reconstructor is a
 causal Transformer denoiser operating directly on the per-packet token sequence, trained
@@ -383,9 +383,12 @@ correction directly.
         \includesvg[width=0.44\textwidth]{./Images/dept_realization}
         \label{fig:sol-purifier-b}}
     \caption[The purification stage.]{The purification stage. Purification happens in
-    feature space (a); whenever concrete packets are needed, realization (b) overlays
+    feature space (a), over all $1090$ dimensions and with no knowledge of which the
+    attacker moved; whenever concrete packets are needed, realization (b) overlays
     the two purified quantities onto the original adversarial packets, preserving
-    identity and payload content, and recomputes the dependent header fields.}
+    identity and payload content, and recomputes the dependent header fields. Only (a)
+    is attack-agnostic: the overlay in (b) is fixed to this threat model's two axes
+    (\Cref{subsec:sol-realization}).}
     \label{fig:sol-purifier}
 \end{figure}
 
@@ -396,13 +399,13 @@ mask, with sinusoidal positions, scaled up to three layers, four
 heads, and $d_{\text{model}}=128$ (about $678$K parameters), with the $1090$-dimensional
 token as both input and output. Its head, however, does not predict the clean sequence
 directly: it predicts a per-dimension \emph{residual} $\Delta$, and the output is the
-input plus $\Delta$. This residual formulation encodes the right prior for the problem---an adversarial example is, by definition, a very small perturbation of a clean sample.
+input plus $\Delta$. This residual formulation encodes the right principle for the problem---an adversarial example is, by definition, a very small perturbation of a clean sample.
 TANTGen's manipulations are no different: they touch only two physical quantities, timing and size, so out of the
 $1090$ dimensions of a token only a handful actually need correcting; with a residual
 head, the identity map is the easy default ($\Delta \approx 0$), the untouched
-$\sim\!1050$ header bits are preserved for free, and the model's capacity is spent on
+$\sim\!1050$ header bits are preserved, and the model's capacity is spent on
 the localized corrections that matter. The causal mask, in turn, keeps the purifier
-valid for streaming use and, as discussed there, makes it amenable to key--value caching. The decoder-only label is architectural, not a claim of autoregression: the purifier
+valid for streaming use and, as discussed previously, makes it amenable to key--value caching. The decoder-only label is architectural, not a claim of autoregression: the purifier
 never consumes its own output, but corrects every input position in a single pass, each
 from packets $\leq t$ alone.
 
@@ -423,11 +426,13 @@ over a plain squared error for its robustness to the occasional large deviation.
 One further choice deserves emphasis: the loss weights all $1090$ dimensions
 \emph{uniformly}. The training signal contains no hint of where TANTGen's perturbation
 lives, so the model must discover for itself which dimensions are trustworthy and
-which have been tampered with. This keeps the purifier \emph{attack-agnostic}: nothing
-in its objective is specific to TANTGen's footprint (even though we know it). During development a variant
+which have been tampered with. This keeps the purification \emph{model}
+\emph{attack-agnostic}: nothing in its objective is specific to TANTGen's footprint
+(even though we know it). During development a variant
 weighted towards the known perturbed dimensions was also explored, and it was dropped
 from the final design precisely because it ties the defense to one attacker's
-signature; the honest, deployable configuration is the uniform one.
+signature. This agnosticism is a property of this feature-space stage, not of the whole
+purification path, and \Cref{subsec:sol-realization} states where it stops.
 
 \subsection{Traffic-Space Realization and Validation}\label{subsec:sol-realization}
 A purifier that edits traffic inherits the realizability obligation of
@@ -435,10 +440,10 @@ A purifier that edits traffic inherits the realizability obligation of
 DEPT assumes this obligation with an explicit \emph{realization} step
 (\Cref{fig:sol-purifier-b}). Rebuilding packets from scratch out of the purified
 tensors would be both impossible, as nPrint encodes only headers and the
-identity fields are masked to zero. Realization therefore works by \emph{overlay}: it
-keeps each original adversarial packet, with its identity and payload content intact,
-and writes back only the two quantities purification may have changed. The purified
-IPv4 total length is decoded from its sixteen header bits and applied by trimming or padding the application payload, which
+identity fields are masked to zero. Realization therefore works by \emph{overlay}: we
+keep each original adversarial packet, with its identity and payload content intact,
+and write back only the two quantities purification may have changed. The purified
+IPv4 total length is decoded from its sixteen header bits and applied by trimming the application payload, which
 is the inverse of TANTGen's size perturbation; the purified inter-arrival time is
 de-normalized and applied to the packet's capture timestamp. The packets are then
 re-serialized with scapy, which recomputes the checksums and length fields that depend
@@ -446,18 +451,32 @@ on the edit. Alignment between tensor rows and packets reuses the pipeline's can
 flow grouping, giving a one-to-one correspondence; any flow whose packet count fails to
 match its tensor length is skipped and counted, not silenced.
 
+This is where the defense stops being attack-agnostic, and the asymmetry should be
+stated plainly. The reconstructor of \Cref{subsec:sol-rec-training} corrects all $1090$
+dimensions without being told which ones the attacker moved; realization writes back
+exactly two, because those are the two axes the threat model of \Cref{sec:sol-threat}
+admits. An adversary that instead perturbed, for example, the \ac{TTL}, the TCP window, or the
+option layout would still be denoised in feature space, but its correction would be
+discarded on the way back to the wire, since no overlay rule exists for those fields.
+The overlay is therefore a per-dimension fix, not a general decoder, and generalizing
+it, by deriving the fields to edit from the purifier's own residual rather than fixing
+them in advance, is left as future work (\Cref{sec:concl-future}).
+
 Every realized packet is finally passed through the \texttt{tshark} dissector, and
 protocol compliance is scored as the fraction of packets parsed without a
 malformed-packet complaint. One structural caveat is worth stating already here: for
 application-layer \emph{text} protocols, such as the SSDP \texttt{M-SEARCH} messages
-that dominate one source, a byte-level size edit necessarily corrupts the L7 grammar
+that dominate one source, a size edit necessarily corrupts the L7 grammar
 even when all IP and UDP fields remain consistent, so such packets cannot be faithfully
 realized by overlay at all. They are reported separately rather than scored as
 compliance failures, and \Cref{sec:eval-purification} gives the full accounting.
-Realization runs off the inference path by design: the protected detector consumes the
-purified flow in feature space, while PCAP emission serves validation, forensics, and
-any downstream system that requires concrete packets, without adding to the per-packet
-latency budget.
+Realization runs off the \emph{detection} path by design: DEPT's per-packet verdicts and
+the reconstructor's correction are both computed entirely in feature space, so nothing in
+the streaming loop of \Cref{sec:sol-overview} waits on packets being rebuilt. It is
+invoked when the protected system downstream consumes traffic rather than tensors, which
+is the configuration the deployment baseline of \Cref{subsec:eval-e2e-detect} measures,
+and it also serves validation and forensics. That placement is what contains the
+attack-specificity above: it bounds what DEPT can hand back, not what it can detect.
 
 Finally, the evaluation harness embeds the \emph{independent} protected detectors
 that complement the \ac{TCN}-based purification measurements: a Kitsune instance

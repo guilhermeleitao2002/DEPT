@@ -101,8 +101,9 @@
 
   <!-- realization -->
   <rect x="975" y="995" width="335" height="90" rx="10" fill="#dff0ed" stroke="#2a9d8f" stroke-width="2.5"/>
-  <text x="1142" y="1032" text-anchor="middle" font-size="25" font-weight="bold" fill="#14544c">Realization &#936;</text>
-  <text x="1142" y="1061" text-anchor="middle" font-size="21" fill="#14544c">purified packets rebuilt</text>
+  <text x="1142" y="1026" text-anchor="middle" font-size="25" font-weight="bold" fill="#14544c">Realization &#936;</text>
+  <text x="1142" y="1052" text-anchor="middle" font-size="20" fill="#14544c">purified packets rebuilt</text>
+  <text x="1142" y="1074" text-anchor="middle" font-size="17" fill="#14544c">size and timing only</text>
 
   <!-- purified to NIDS -->
   <path d="M1310,1040 H1340 V972" fill="none" stroke="#2a9d8f" stroke-width="3" marker-end="url(#arrTeal)"/>
