@@ -49,8 +49,9 @@ prominence, and taken up in \Cref{sec:concl-limitations}.
 The third contribution is the purification stage of \Cref{sec:sol-reconstructor}: a
 causal Transformer that predicts a residual correction over a flagged flow, coupled to an
 explicit realization step that writes the corrected features back into packets and
-validates them with a standard dissector, off the per-packet detection path and scoped
-to the two axes this threat model perturbs. Scored through the independent \ac{NIDS} each
+validates them with a standard dissector. Realization closes the inference path, so what
+the protected \ac{NIDS} receives is traffic rather than tensors, at the cost of being
+scoped to the two axes this threat model perturbs. Scored through the independent \ac{NIDS} each
 attack was built to evade, purification recovers $63.0\%$ of the detection TANTGen had
 destroyed, rising to $99.9\%$ on the Kitsune-native sources where the evasion had
 genuinely succeeded, at a \texttt{tshark} pass rate of $97.2\%$ over realizable packets
@@ -197,10 +198,10 @@ without being told which the attacker moved, but the realization step that retur
 the wire is not, since it overlays exactly the two quantities this threat model
 perturbs, packet size and inter-arrival time (\Cref{subsec:sol-realization}). Against an
 adversary that moved some other header field, the feature-space correction would survive
-and the traffic-space one would not. Realization sits off the per-packet detection path,
-so this bounds what the system can hand back rather than what it can detect, but the
-``attack-agnostic'' label belongs to the denoiser alone and is not a property of the
-purification stage as a whole.
+and the traffic-space one would not, and because realization is the stage that feeds the
+protected \ac{NIDS}, that flow would arrive unrepaired: the system would still flag it
+but would have nothing to hand back. The ``attack-agnostic'' label therefore belongs to
+detection and to the denoiser, not to the deployed pipeline as a whole.
 
 The second is the feature scope. DEPT observes packet headers, inter-arrival
 timing, and direction; it carries no representation of payload content. This choice was

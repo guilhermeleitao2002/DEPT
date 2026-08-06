@@ -433,8 +433,9 @@ uniform-weight reconstruction over all feature dimensions, so it is given no hin
 TANTGen perturbed a flow (a perturbation-weighted variant was explored as an ablation during
 development and dropped from the final implementation). The traffic-space realization that
 follows is not agnostic in the same sense, being fixed to this threat model's two
-perturbation axes (\Cref{subsec:sol-realization}); it is off the detection path, but it
-does bound the compliance and independent-NIDS figures below.
+perturbation axes (\Cref{subsec:sol-realization}); since it is also the stage that feeds
+the protected NIDS, it bounds the compliance and independent-NIDS figures below, which
+are measured on the packets it emits.
 \Cref{tab:eval-purif} summarizes the metric families overall.
 
 \begin{table}[t]

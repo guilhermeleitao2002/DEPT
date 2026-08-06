@@ -97,7 +97,7 @@
   <text x="760" y="1061" text-anchor="middle" font-size="21" fill="#14544c">causal purification Transformer</text>
 
   <!-- purification to realization, on the inference path -->
-  <line x1="910" y1="1040" x2="968" y2="1040" stroke="#2a9d8f" stroke-width="3" marker-end="url(#arrTeal)" stroke-dasharray="8,6"/>
+  <line x1="910" y1="1040" x2="968" y2="1040" stroke="#2a9d8f" stroke-width="3" marker-end="url(#arrTeal)"/>
 
   <!-- realization -->
   <rect x="975" y="995" width="335" height="90" rx="10" fill="#dff0ed" stroke="#2a9d8f" stroke-width="2.5"/>
