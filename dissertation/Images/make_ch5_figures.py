@@ -16,7 +16,8 @@ Mode glyphs: both=circle, iat=triangle, size=square.
 """
 import json, math, os
 
-ROOT = "/mnt/nas/inesc/gleitao/DEPT"
+ROOT = os.environ.get("DEPT_ROOT") or os.path.abspath(
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
 OUT = os.path.join(ROOT, "dissertation", "Images")
 
 BLUE, BLUE_D = "#2c5f8a", "#16344c"
@@ -273,38 +274,58 @@ def fig_scatter():
         mse = d["reconstruction"]["perturbed_mse_before"]
         gain = d["purification"]["gain"]
         if mse is None or gain is None:
-            continue  # syn_ddos_both: no perturbed-dim footprint recorded
+            continue  # ldap/ntp/ssdp_ddos size: no perturbed-dim footprint recorded
         pts.append((base, mode, mse, gain))
 
     W, H = 1240, 700
     x0, x1, y0, y1 = 170, 1130, 590, 70
-    xmin, xmax = -0.03, 1.05
+    # The mirai pairs sit at a footprint of 1.6-2.5, far off the [0, 1] range the
+    # other 24 pairs occupy; they go in a broken-off panel on the right so the
+    # main panel keeps its resolution and no mark falls outside the viewBox.
+    xmin, xmax = -0.03, 1.05        # main panel data range
+    omin, omax = 1.40, 2.60         # off-scale panel data range
+    xb, xo = 972, 1012              # main panel ends / off-scale panel starts
     ymin, ymax = -0.06, 1.0
-    def X(v): return x0 + (v - xmin) * (x1 - x0) / (xmax - xmin)
+    def X(v): return x0 + (v - xmin) * (xb - x0) / (xmax - xmin)
+    def XO(v): return xo + (v - omin) * (x1 - xo) / (omax - omin)
+    def XA(v): return X(v) if v <= xmax else XO(v)
     def Y(v): return y0 + (v - ymin) * (y1 - y0) / (ymax - ymin)
 
     p = []
     p.append(f'<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {H}" font-family="Helvetica, Arial, sans-serif">')
 
+    # off-scale panel ground, so the discontinuity reads at a glance
+    p.append(f'  <rect x="{xo}" y="{y1-8}" width="{x1-xo}" height="{fmt(Y(ymin)-y1+8)}" fill="#f6f8fa"/>')
+
     # grid
     for v in [0, 0.2, 0.4, 0.6, 0.8, 1.0]:
         p.append(f'  <line x1="{fmt(X(v))}" y1="{fmt(Y(ymin))}" x2="{fmt(X(v))}" y2="{y1}" stroke="{GRID}" stroke-width="1.5"/>')
         p.append(f'  <text x="{fmt(X(v))}" y="{fmt(Y(ymin)+30)}" text-anchor="middle" font-size="19" fill="{GREY}">{v:g}</text>')
-        p.append(f'  <line x1="{x0}" y1="{fmt(Y(v))}" x2="{x1}" y2="{fmt(Y(v))}" stroke="{GRID}" stroke-width="1.5"/>')
+        p.append(f'  <line x1="{x0}" y1="{fmt(Y(v))}" x2="{xb}" y2="{fmt(Y(v))}" stroke="{GRID}" stroke-width="1.5"/>')
+        p.append(f'  <line x1="{xo}" y1="{fmt(Y(v))}" x2="{x1}" y2="{fmt(Y(v))}" stroke="{GRID}" stroke-width="1.5"/>')
         p.append(f'  <text x="{x0-14}" y="{fmt(Y(v)+6)}" text-anchor="end" font-size="19" fill="{GREY}">{v:g}</text>')
+    for v in [1.5, 2.0, 2.5]:
+        p.append(f'  <line x1="{fmt(XO(v))}" y1="{fmt(Y(ymin))}" x2="{fmt(XO(v))}" y2="{y1}" stroke="{GRID}" stroke-width="1.5"/>')
+        p.append(f'  <text x="{fmt(XO(v))}" y="{fmt(Y(ymin)+30)}" text-anchor="middle" font-size="19" fill="{GREY}">{v:g}</text>')
     # zero gain line slightly darker
-    p.append(f'  <line x1="{x0}" y1="{fmt(Y(0))}" x2="{x1}" y2="{fmt(Y(0))}" stroke="{MUT}" stroke-width="1.5"/>')
-    # axes
-    p.append(f'  <line x1="{x0}" y1="{fmt(Y(ymin))}" x2="{x1}" y2="{fmt(Y(ymin))}" stroke="{GREY_D}" stroke-width="2"/>')
+    p.append(f'  <line x1="{x0}" y1="{fmt(Y(0))}" x2="{xb}" y2="{fmt(Y(0))}" stroke="{MUT}" stroke-width="1.5"/>')
+    p.append(f'  <line x1="{xo}" y1="{fmt(Y(0))}" x2="{x1}" y2="{fmt(Y(0))}" stroke="{MUT}" stroke-width="1.5"/>')
+    # axes, broken between the two panels
+    p.append(f'  <line x1="{x0}" y1="{fmt(Y(ymin))}" x2="{xb}" y2="{fmt(Y(ymin))}" stroke="{GREY_D}" stroke-width="2"/>')
+    p.append(f'  <line x1="{xo}" y1="{fmt(Y(ymin))}" x2="{x1}" y2="{fmt(Y(ymin))}" stroke="{GREY_D}" stroke-width="2"/>')
     p.append(f'  <line x1="{x0}" y1="{fmt(Y(ymin))}" x2="{x0}" y2="{y1-8}" stroke="{GREY_D}" stroke-width="2"/>')
-    p.append(f'  <text x="{(x0+x1)//2}" y="{fmt(Y(ymin)+66)}" text-anchor="middle" font-size="21" fill="{INK}">perturbation footprint: reconstruction MSE on perturbed dimensions, before purification</text>')
+    for dx in (-6, 6):
+        cx = (xb + xo) / 2 + dx
+        p.append(f'  <line x1="{fmt(cx-7)}" y1="{fmt(Y(ymin)+9)}" x2="{fmt(cx+7)}" y2="{fmt(Y(ymin)-9)}" stroke="{GREY_D}" stroke-width="2"/>')
+    p.append(f'  <text x="{(x0+xb)//2}" y="{fmt(Y(ymin)+66)}" text-anchor="middle" font-size="21" fill="{INK}">perturbation footprint: reconstruction MSE on perturbed dimensions, before purification</text>')
     p.append(f'  <text x="52" y="{(y0+y1)//2}" text-anchor="middle" font-size="21" fill="{INK}" transform="rotate(-90 52 {(y0+y1)//2})">purification gain  &#916;P(adv)</text>')
 
     # regime annotations (drawn under the marks)
     p.append(f'  <text x="{fmt(X(0.05))}" y="{fmt(Y(0.17))}" font-size="19" font-style="italic" fill="{MUT}">no footprint:</text>')
     p.append(f'  <text x="{fmt(X(0.05))}" y="{fmt(Y(0.135))}" font-size="19" font-style="italic" fill="{MUT}">nothing to undo</text>')
-    p.append(f'  <text x="{fmt(X(0.56))}" y="{fmt(Y(0.90))}" font-size="19" font-style="italic" fill="{MUT}">footprint erased,</text>')
-    p.append(f'  <text x="{fmt(X(0.56))}" y="{fmt(Y(0.865))}" font-size="19" font-style="italic" fill="{MUT}">detection gap closed</text>')
+    # kept a band below the top-right cluster so it never runs into its callouts
+    p.append(f'  <text x="{fmt(X(0.56))}" y="{fmt(Y(0.70))}" font-size="19" font-style="italic" fill="{MUT}">footprint erased,</text>')
+    p.append(f'  <text x="{fmt(X(0.56))}" y="{fmt(Y(0.665))}" font-size="19" font-style="italic" fill="{MUT}">detection gap closed</text>')
     p.append(f'  <text x="{fmt(X(0.60))}" y="{fmt(Y(0.185))}" font-size="19" font-style="italic" fill="{MUT}">footprint, but detector near chance:</text>')
     p.append(f'  <text x="{fmt(X(0.60))}" y="{fmt(Y(0.15))}" font-size="19" font-style="italic" fill="{MUT}">no detection gap to close</text>')
 
@@ -313,10 +334,8 @@ def fig_scatter():
     n_origin = sum(1 for _, _, mse, gain in pts if mse < 0.05 and abs(gain) < 0.02)
     n_right = sum(1 for _, _, mse, gain in pts if mse > 0.95 and abs(gain) < 0.02)
     for base, mode, mse, gain in sorted(pts, key=lambda r: (r[2], r[3])):
-        xx, yy = X(mse), Y(gain)
+        xx, yy = XA(mse), Y(gain)
         p.append("  " + mode_mark(mode, xx, yy))
-        if base == "mirai" and mode == "iat":
-            ann.append((xx, yy, "mirai (iat)", "left"))
         if base == "portscan" and mode == "both":
             ann.append((xx, yy, "portscan (both)", "left"))
         if base == "syn_ddos" and mode == "size":
@@ -330,6 +349,11 @@ def fig_scatter():
     # box so they never collide with the x tick labels below the axis
     p.append(f'  <text x="{fmt(X(0.05))}" y="{fmt(Y(0)-30)}" font-size="18" fill="{GREY}">{n_origin} source-mode pairs</text>')
     p.append(f'  <text x="{fmt(X(0.985))}" y="{fmt(Y(0)-30)}" text-anchor="end" font-size="18" fill="{GREY}">{n_right} pairs (reflection floods, size)</text>')
+
+    # the off-scale panel holds exactly the three mirai pairs; name them once
+    n_off = sum(1 for _, _, mse, _ in pts if mse > xmax)
+    p.append(f'  <text x="{fmt((xo+x1)/2)}" y="{fmt(Y(0.42))}" text-anchor="middle" font-size="18" font-style="italic" fill="{MUT}">mirai</text>')
+    p.append(f'  <text x="{fmt((xo+x1)/2)}" y="{fmt(Y(0.385))}" text-anchor="middle" font-size="18" font-style="italic" fill="{MUT}">({n_off} modes)</text>')
 
     # legend
     lx, ly = x0 + 20, y1 + 18

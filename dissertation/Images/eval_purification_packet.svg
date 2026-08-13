@@ -15,7 +15,7 @@
 
   <!-- header: real flow identity -->
   <text x="410" y="30" text-anchor="middle" font-size="18" fill="#1a1a1a">
-    Mirai SYN-flood micro-flow &#8226; 192.168.2.108:35220 &#8594; 52.25.66.250:8280 &#8226; 4 packets (size variant)</text>
+    Mirai SYN-flood flow (partly) &#8226; 192.168.2.108:35220 &#8594; 52.25.66.250:8280 &#8226; 4 packets (size variant)</text>
 
   <!-- ===================== ORIGINAL (before TANTGen) ===================== -->
   <text x="205" y="86" text-anchor="end" font-size="17" fill="#1a1a1a">Original</text>
