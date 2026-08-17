@@ -192,6 +192,10 @@
 % BIBLIOGRAPHY
 % Add the Bibliography to the PDF table of contents (not the document table of contents)
 %\pdfbookmark[0]{Bibliography}{bib}
+% The \clearpage must come first: without it \addcontentsline records the page that is
+% still current (the last page of Chapter 6) rather than the page the bibliography
+% actually starts on, putting the Contents entry one page out.
+\clearpage
 \addcontentsline{toc}{chapter}{Bibliography}
 % The bibliography style sheet
 % Chose your preferences on the format of the entries and the Labels:
