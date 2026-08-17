@@ -1005,45 +1005,37 @@ localizes it in the feature representation rather than in the training scope.
 % #############################################################################
 \section{Discussion and Limitations}\label{sec:eval-discussion}
 
-\paragraph{The research questions.} RQ1 is answered affirmatively: an adversary handed the
-\ac{TCN}'s gradients, and nothing for the forest because a forest has nothing to give, pays
-more to evade the fused stack than either component at every plausible budget, and
-$74.5\%$ of flows never evade it at all against $45.5\%$ for the \ac{TCN}
-(\Cref{sec:eval-gradablation}, bounded by \Cref{subsec:eval-gradablation}). RQ2 is
-answered affirmatively but conditionally: through the independent NIDS each attack was
-built to evade, purification recovers $63.0\%$ of the destroyed detection, $99.9\%$ of it
-where the evasion had actually succeeded, while emitting $97.2\%$ compliant packets. The
-condition is that the attack left a footprint the protected detector could see; where it
-did not, purification ranges from inert to actively harmful. Wall-clock cost is not
-measured here (\Cref{chap:conclusion}).
+\paragraph{The research questions.} Both are answered affirmatively: RQ1 outright
+(\Cref{sec:eval-gradablation}, bounded by \Cref{subsec:eval-gradablation}), and RQ2 under
+an explicit condition, that the attack left a footprint the protected detector could see.
+Where it did not, purification ranges from inert to actively harmful, which the rest of
+this section takes up. \Cref{sec:concl-rqs} states both answers in full. Wall-clock cost
+is not measured here (\Cref{chap:conclusion}).
 
 \paragraph{Purification without a good gate can subtract as well as add.} The evaluation's
 most consequential negative finding, and one visible only under an independent detector:
 where TANTGen never actually evaded, purifying \emph{lowers} the protected NIDS's
-detection, by $22.5$ and $22.7$ points on \texttt{dns\_ddos} \texttt{both}/\texttt{iat},
-$18.2$ on \texttt{portscan\_iat} and $12.2$ on \texttt{ddos\_iat}, because there the
-attack's fingerprint and the clean manifold were never far apart, so what the denoiser
-correctly removes is signal the NIDS was presumably using. The gate fails to prevent this, flagging
+detection, by up to $22.7$ points (\Cref{tab:eval-baseline}), because there the attack's
+fingerprint and the clean manifold were never far apart, so what the denoiser correctly
+removes is signal the NIDS was still using. The gate fails to prevent this, flagging
 nearly all flood traffic, so gated and ungated pipelines reach $0.8836$ and $0.8831$
 detection: it predicts whether a flow is adversarial, where the pipeline needs a predictor
 of whether purifying \emph{this} flow will help.
 
 \paragraph{The reflection floods' \texttt{size} variants fail below chance.} On
 \texttt{dns\_ddos}, \texttt{ldap\_ddos}, \texttt{ntp\_ddos} and \texttt{ssdp\_ddos} they
-score $0.213$--$0.476$ for the forest and $0.443$--$0.497$ for the meta-learner against
-same-source benign flows (\Cref{tab:eval-persource}), so such a flow resembles generic
-benign traffic \emph{more} than that flood's own unedited flows do. The cause is the
-feature representation rather than capacity, tuning or training scope: the per-attack
-specialists fail on the same slices (\Cref{tab:eval-perattack}), the purifier cuts the
-footprint sharply ($1.000 \rightarrow 0.302$ on \texttt{dns\_ddos\_size}) without moving
-any verdict, and the deployed gate flags under $1\%$ of these flows. DEPT's $24$ prefix
-statistics and $1088$ header bits cannot express whatever separates a padded
-single-response UDP flood from an unpadded one.
+score below chance for both the forest and the meta-learner against same-source benign
+flows (\Cref{tab:eval-persource}), so such a flow resembles generic benign traffic
+\emph{more} than that flood's own unedited flows do. The cause is the feature
+representation rather than capacity, tuning or training scope: the per-attack specialists
+fail on the same slices (\Cref{tab:eval-perattack}), the purifier cuts the footprint
+sharply without moving any verdict, and the deployed gate flags under $1\%$ of these
+flows. DEPT's $24$ prefix statistics and $1088$ header bits cannot express whatever
+separates a padded single-response UDP flood from an unpadded one.
 
 \paragraph{A stacker beaten by its own base learner.} The meta-learner's $0.9334$ AUROC
 sits below the forest's $0.9813$ at every horizon from packet~$2$ onward
-(\Cref{tab:eval-streaming}), widening per source to $0.653$ against $0.999$ on
-\texttt{ntp\_ddos} and $0.927$ against $1.000$ on \texttt{ssdp\_ddos}; the cause is likely
+(\Cref{tab:eval-streaming}), and the gap widens on several sources; the cause is likely
 \Cref{sec:eval-meta}'s under-weighted forest logit, and the specialist stacks reproduce it
 (\Cref{subsec:eval-perattack}). Fusion still buys the only packet-$1$ verdict available,
 worth nearly ten AUROC points over the \ac{TCN} alone, and the evasion robustness of
@@ -1074,7 +1066,5 @@ Four boundaries limit what \Cref{sec:eval-gradablation} accomplishes.
     component raises evasion cost; gradient attacks are not therefore weak in general.
 \end{itemize}
 
-So the result stands as the following: one perturbation crafted
-against the \ac{TCN} costs the attacker materially more against the stack than against
-either component, and the meta-learner's reliance migrates toward the learner the attacker
-cannot differentiate.
+Within those boundaries the result stands as stated at the head of
+\Cref{subsec:eval-gradablation-results}.
