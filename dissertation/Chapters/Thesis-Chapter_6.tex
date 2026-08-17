@@ -7,312 +7,236 @@
 % The following line allows to ref this chapter
 \label{chap:conclusion}
 
-This thesis set out to defend a learning-based \ac{NIDS} against the adversarial threat
-in its most realistic form: a black-box attacker that reshapes live attack traffic into
-protocol-compliant flows the detector labels benign. The answer it proposed is DEPT, a
-streaming defense that detects the manipulation while the flow is still in progress and
-undoes it before the protected system consumes the flow. This closing chapter summarizes
-what was delivered (\Cref{sec:concl-summary}), answers the research questions that
-organized the evaluation (\Cref{sec:concl-rqs}), states the limitations of the delivered
-system (\Cref{sec:concl-limitations}), and lays out the directions in which the work most
-naturally continues (\Cref{sec:concl-future}).
+This thesis set out to defend a learning-based \ac{NIDS} against a black-box attacker that
+reshapes live attack traffic into protocol-compliant flows the detector labels benign. Its
+answer is DEPT, a streaming defense that detects the manipulation mid-flow and undoes it
+before the protected system consumes it. This chapter summarizes what was delivered
+(\Cref{sec:concl-summary}), answers the research questions (\Cref{sec:concl-rqs}), states the
+limitations (\Cref{sec:concl-limitations}), and lays out where the work continues
+(\Cref{sec:concl-future}).
 
 % #############################################################################
 \section{Summary of Contributions}\label{sec:concl-summary}
 
 Five contributions were announced in \Cref{sec:intro-contributions}; each can now be
-restated against the chapters that substantiate it.
+restated against the chapters that substantiated them.
 
-The first contribution is the streaming packet-to-tensor pipeline of
-\Cref{sec:sol-pipeline}. Raw captures are turned into a masked, bit-level representation
-of each flow, in which identity fields are removed so that the models learn behaviour
-rather than addresses, and the same representation is emitted at two temporal
-granularities, a dense per-packet sequence for the \ac{TCN} and sparse aggregated
-checkpoints for the \ac{RF}. Because every model in the system, from the base learners to
-the reconstructor, is trained and evaluated on the same flow-atomic split of the same
-tensors, the cross-model comparisons of \Cref{chap:evaluation} are like-for-like by
-construction, which is a property the pipeline was explicitly designed to provide.
+The first is the packet-to-tensor pipeline of \Cref{sec:sol-pipeline}, which turns
+raw captures into a masked, bit-level representation of each flow, identity fields removed so
+that the models learn behaviour rather than addresses, at two granularities: a dense
+per-packet sequence for the \ac{TCN} and sparse aggregated checkpoints for the \ac{RF}. Every
+model is trained and evaluated on the same flow-atomic split of the same tensors, so the
+comparisons of \Cref{chap:evaluation} are like-for-like by construction.
 
-The second contribution is the heterogeneous detection ensemble of
-\Cref{sec:sol-ensemble}, an \ac{RF} and a \ac{TCN} from deliberately different
-architectural families, fused at every packet by a small attention-based meta-learner,
-together with the streaming evaluation axis that scores every model by how early, and not
-only how well, it separates manipulated from clean flows. What that axis showed was not
-what the design predicted, and the evaluation reports it as measured: the Random Forest
-alone ranks flows best from packet~$2$ onward, and the fusion's advantages are narrower
-and more specific, namely the only available verdict at packet~$1$, an improvement of
-nearly ten AUROC points over using the \ac{TCN} alone, and a measurably higher cost to a
-gradient-guided attacker (\Cref{tab:eval-streaming}, \Cref{tab:eval-gradablation}). The
-cases where the fusion falls short of its stronger member are recorded with the same
-prominence, and taken up in \Cref{sec:concl-limitations}.
+The second is the heterogeneous detection ensemble of \Cref{sec:sol-ensemble}, an \ac{RF} and
+a \ac{TCN} from deliberately different architectural families fused at (almost) every packet by a small
+attention-based meta-learner, together with the streaming axis that scores every model by how
+early, and not only how well, it separates manipulated from clean flows. That axis did not
+show what the design had predicted, and the evaluation reports it as measured: the Random Forest
+alone ranks flows best from packet~$2$ onward, and the fusion's advantages are narrower, the
+packet~$1$ verdict and a higher cost to a gradient-guided attacker
+(\Cref{tab:eval-streaming}, \Cref{tab:eval-gradablation}).
 
-The third contribution is the purification stage of \Cref{sec:sol-reconstructor}: a
-causal Transformer that predicts a residual correction over a flagged flow, coupled to an
-explicit realization step that writes the corrected features back into packets and
-validates them with a standard dissector. Realization closes the inference path, so what
-the protected \ac{NIDS} receives is traffic rather than tensors, at the cost of being
-scoped to the two axes this threat model perturbs. Scored through the independent \ac{NIDS} each
-attack was built to evade, purification recovers $63.0\%$ of the detection TANTGen had
-destroyed, rising to $99.9\%$ on the Kitsune-native sources where the evasion had
-genuinely succeeded, at a \texttt{tshark} pass rate of $97.2\%$ over realizable packets
-(\Cref{tab:eval-purif}). The defense therefore does not stop at feature space; it hands
-back traffic, which was one of the constraints the problem statement imposed from the
-start.
+The third is the purification stage of \Cref{sec:sol-reconstructor}: a causal Transformer that
+predicts a residual correction over a flagged flow, linked afterwards to a realization step that writes
+the corrected features back into packets and validates them with a dissector
+(\Cref{tab:eval-purif}). Realization closes the inference path, so the protected \ac{NIDS}
+receives traffic rather than tensors, at the cost of being scoped to the two axes this threat
+model perturbs. The defense therefore does not stop at feature space, as the problem statement
+required from the start.
 
-The fourth contribution is the deployment baseline of \Cref{subsec:eval-e2e-detect}:
-an end-to-end measurement of DEPT as what it is, a defense placed in front of a
-protected \ac{NIDS}. The full gated detect-then-purify pipeline is run over clean,
-TANTGen-perturbed, and DEPT-defended traffic, and each stream is scored through the
-real \ac{NIDS} the attack was built to evade, Kitsune for the Kitsune-native attacks
-and TANTGen's ML-NIDS for the CIC attacks, so that the end-to-end claim rests on an
-independent judge rather than on DEPT grading itself.
+The fourth is the deployment baseline of \Cref{subsec:eval-e2e-detect}, which measures DEPT as
+what it is, a defense in front of a protected \ac{NIDS}: the gated pipeline is run over clean,
+TANTGen-perturbed, and DEPT-defended traffic, each stream scored through the real \ac{NIDS}
+the attack was built to evade, so that the end-to-end claim rests on an independent judge
+rather than on DEPT grading it itself.
 
-The fifth contribution is the evaluation corpus and its accounting: ten benign traffic
-sources drawn from three public datasets, each manipulated by TANTGen in three
-perturbation modes, and evaluated per
-source and per mode rather than only in aggregate
-(\Cref{chap:evaluation}). The corpus itself is reusable for future defense work, and the
-per-source analysis is, in the view of this thesis, as much a contribution as the
-headline numbers, because it shows that the aggregate hides two very different
-populations: sources on which the defense is essentially solved and sources on which no
-model rises much above chance.
+The fifth is the evaluation corpus and its insightful accounting: ten benign sources from three public
+datasets, each manipulated by TANTGen in three perturbation modes and evaluated per source and
+per mode rather than only in aggregate (\Cref{chap:evaluation}). The corpus is reusable, and
+the per-source analysis is as much a contribution as the headline numbers, because the
+aggregate hides two very different populations: sources on which the defense is essentially
+solved and sources on which no model rises much above chance.
 
 % #############################################################################
 \section{Answers to Research Questions}\label{sec:concl-rqs}
 
-\Cref{sec:eval-rqs} fixed two research questions, one per pillar of the system. They
-can now be answered in turn, with the honesty the evaluation aimed for.
+\Cref{sec:eval-rqs} fixed two research questions, one per pillar of the system; both can now
+be answered, with the honesty we aimed for.
 
-\textbf{RQ1 (ensemble robustness)} asked whether heterogeneous stacking measurably
-raises the cost of a transferable, gradient-guided evasion attack. The answer is
-affirmative, and it is measured rather than inferred. Since TANTGen is gradient-free and
-therefore structurally unable to price a gradient path, the evaluation admitted a second,
-stronger adversary: one given white-box access to the \ac{TCN}, given nothing for the
-\ac{RF} because a forest has no gradient to give, and required to spend a single
-perturbation against all three targets at once (\Cref{sec:eval-gradablation}). Under it,
-the perturbation that breaks the \ac{TCN} it was crafted against transfers poorly to the
-forest, and the fused stack is costlier still: at the three smallest budgets it concedes
-$1.7\%$, $4.7\%$, and $8.5\%$ attack success against the forest's $8.6\%$, $10.7\%$, and
-$13.1\%$ and the \ac{TCN}'s $40.5\%$, $50.1\%$, and $52.2\%$, and $74.5\%$ of flows never
-evade it at any budget against $45.5\%$ for the \ac{TCN} alone. The design's own
-prediction, that the meta-learner would lean on the \ac{RF} as the \ac{TCN} is degraded,
-was restated as a falsifiable ablation and survived it: the share of the stack's verdict
-attributable to the forest goes from zero at rest to $0.53$ as soon as the attacker
-spends anything, and stays there.
+\textbf{RQ1 (ensemble robustness)} asked whether heterogeneous stacking measurably raises the
+cost of a transferable, gradient-guided evasion attack. It measurably does. Because TANTGen is gradient-free and cannot measure a gradient path, the evaluation
+employed a stronger adversary: white-box access to the \ac{TCN}, nothing for the \ac{RF} since
+a forest has no gradient to give, and a single perturbation spent against all three targets at
+once (\Cref{sec:eval-gradablation}). That perturbation transfers poorly from the \ac{TCN} to
+the forest, and the fused stack is costlier still: at the three smallest budgets it concedes $1.7\%$, $4.7\%$, and $8.5\%$ attack success against the forest's
+$8.6\%$, $10.7\%$, and $13.1\%$ and the \ac{TCN}'s $40.5\%$, $50.1\%$, and $52.2\%$, and
+$74.5\%$ of flows never evade it at any budget against $45.5\%$ for the \ac{TCN} alone. The
+design's prediction that the meta-learner would lean on the \ac{RF} as the \ac{TCN} degrades survived: the forest's share of the stack's
+verdict goes from zero at the beginning to $0.53$ as soon as the attacker spends anything, and stays
+there.
 
-Three qualifications keep this from being a broader claim than it is. The ordering is not
-uniform across the whole budget grid, since the stack and the forest are level at $512$
-bytes before the stack pulls ahead again. The question is only well-posed where the base
-learners detect the flow at all, which excludes several sources outright, and on some
-sources the models' confidence is simply too large for padding and delay to overcome at
-any budget (\Cref{subsec:eval-gradablation}). And, against the grain of RQ1's own
-phrasing, the gradient turned out to buy this attacker nothing: query-matched random
-search \emph{beats} \ac{PGD} at every budget, because nPrint's binary total-length
-encoding makes the loss surface over packet size jagged. What was demonstrated is
-therefore that a non-differentiable component raises evasion cost against a strong
-search-based attacker, which is a finding about the representation as much as about the
-ensemble, and a lead worth pulling (\Cref{sec:concl-future}).
+Three qualifications bound the claim. The ordering is not uniform: stack and forest are level
+at $512$ bytes before the stack pulls ahead again; the question is only well-posed where the
+base learners detect the flow at all, which excludes several sources, and elsewhere confidence
+is too large for padding and delay to overcome at any budget
+(\Cref{subsec:eval-gradablation}); and, against RQ1's own phrasing,
+the gradient bought this attacker nothing, since query-matched random search \emph{beats}
+\ac{PGD} at every budget because nPrint's binary total-length encoding makes the loss surface
+over packet size jagged. What was demonstrated is therefore that a non-differentiable
+component raises evasion cost against a strong search-based attacker, a finding highly attributed to
+representation as much as the ensemble architecture (\Cref{sec:concl-future}).
 
-\textbf{RQ2 (purification effectiveness)} asked whether the reconstructor moves a
-flagged flow back onto the benign manifold while emitting a realizable packet sequence.
-The answer is affirmative, under a condition the evaluation made explicit, and it does
-not rest on DEPT grading itself. Scored through the \emph{independent} \ac{NIDS} each
-attack was built to evade, purification recovers $63.0\%$ of the destroyed detection
-overall and $99.9\%$ on the Kitsune-native sources where TANTGen's evasion had actually
-succeeded, while reconstruction error on the perturbed dimensions falls by $17.0\times$
-and the realized packets pass \texttt{tshark} $97.2\%$ of the time
-(\Cref{sec:eval-purification}). End to end, the gated pipeline cuts the protected
-\ac{NIDS}'s attack-success rate from $21.1\%$ to $11.6\%$
+\textbf{RQ2 (purification effectiveness)} asked whether the reconstructor moves a flagged flow
+back onto the benign manifold while emitting a realizable packet sequence. It does, under a
+condition the evaluation made explicit, and the answer does not rest on DEPT grading alone.
+Scored through the \emph{independent} \ac{NIDS} each attack was built to evade, purification
+recovers $63.0\%$ of the destroyed detection overall and $99.9\%$ on the Kitsune-native
+sources where TANTGen's evasion had actually succeeded, while reconstruction error on the
+perturbed dimensions falls by $17.0\times$ and the realized packets pass \texttt{tshark}
+$97.2\%$ of the time (\Cref{sec:eval-purification}). End to end, the gated pipeline cuts the
+protected \ac{NIDS}'s attack-success rate from $21.1\%$ to $11.6\%$
 (\Cref{subsec:eval-e2e-detect}).
 
-The condition is sharper than earlier drafts of this work assumed, and it is what the
-independent judge revealed. Where TANTGen barely moved the features, the purifier is
-correctly inert; but where TANTGen moved them without ever evading, purifying the flow
-\emph{lowers} the protected detector's detection, by as much as $22$ points on
-\texttt{dns\_ddos} and $18$ on \texttt{portscan\_iat}, because what the denoiser removes
-is signal the \ac{NIDS} was still using. The aggregate gain is therefore a net of large
-recoveries on six source--mode combinations against real regressions on five others, and
-the gate that was supposed to prevent the latter does not, since it predicts whether a
-flow is adversarial rather than whether purifying it will help. RQ2 is answered
-affirmatively for the flows a defense would actually want to purify, and the qualifier
-is load-bearing.
+The condition is, however, specific. Where TANTGen barely moved the features the purifier is correctly unmoved; where it moved them
+without evading, purifying actually \emph{lowers} the protected detector's detection, by as much
+as $22$ points on \texttt{dns\_ddos} and $18$ on \texttt{portscan\_iat}, because what the
+denoiser removes is signal the \ac{NIDS} was still using. The aggregate gain is therefore a
+net of large recoveries on six source--mode combinations against real regressions on five
+others, and the gate meant to prevent the latter does not, since it predicts whether a flow is
+adversarial rather than whether purifying it will help. RQ2 is answered affirmatively only for the
+flows a defense would actually want to purify.
 
 % #############################################################################
 \section{System Limitations}\label{sec:concl-limitations}
 
-The evaluation surfaced six limitations, which are collected here without the
-surrounding numbers (\Cref{sec:eval-discussion} carries the full account).
+The evaluation surfaced six limitations, collected here without their numbers
+(\Cref{sec:eval-discussion} carries the full analysis).
 
-The first is a representational blind spot, and it is the sharpest negative result of
-this work. On the \texttt{size} variants of the DNS, NTP, SSDP, and LDAP reflection
-floods, every model scores \emph{below chance} against same-source benign flows, meaning
-a manipulated flow of these floods resembles generic benign traffic more closely than
-that flood's own unmanipulated flows do. Three independent observations place the cause
-in the feature representation rather than in capacity, tuning, or training scope: models
-trained on each attack alone fail on exactly the same slices, the purifier substantially
-reduces the perturbation footprint on these sources without moving any detector's verdict,
-and the deployed gate flags under $1\%$ of their flows. Whatever distinguishes a padded
-single-response \ac{UDP} flood from an unpadded one is not expressible in the $24$ prefix
-statistics and $1088$ header bits DEPT observes. Because these floods dominate the corpus
-by flow count, the honest reading of every aggregate in
-\Cref{chap:evaluation} is an average over near-perfect and below-chance
-sub-populations, not a uniform competence.
+The first is a representational blind spot. On the
+\texttt{size} variants of the DNS, NTP, SSDP, and LDAP reflection floods, every model scores
+\emph{below chance} against same-source benign flows: a manipulated flow resembles generic
+benign traffic more closely than that flood's own unmanipulated flows do. Three independent
+observations place the cause in the representation rather than in capacity, tuning, or
+training scope: models trained on each attack alone fail on exactly the same slices, the
+purifier reduces the perturbation footprint there without moving any verdict, and the deployed
+gate flags under $1\%$ of their flows. Whatever distinguishes a padded single-response \ac{UDP}
+flood from an unpadded one is not expressible in the $24$ prefix statistics and $1088$ header
+bits DEPT observes. Since these floods dominate the corpus by flow count, every aggregate in
+\Cref{chap:evaluation} is an average over near-perfect and below-chance sub-populations, not
+uniform competence.
 
-The second limitation is that purification without an adequate gate can subtract as well
-as add. On sources where TANTGen never succeeded in evading, running the purifier
-\emph{lowers} the protected \ac{NIDS}'s detection, so the end-to-end gain is a net of
-large recoveries on a few source--mode combinations against real regressions on others.
-The gate as built barely gates, since purifying every flow yields almost the same
-end-to-end result as the gated pipeline, and the underlying problem is that it answers
-the wrong question: it predicts whether a flow is adversarial, whereas the pipeline needs
-a predictor of whether purification will improve that flow's detectability. This is a
-design limitation with a clear remedy, and it is taken up in \Cref{sec:concl-future}.
+The second is that purification without an adequate gate can subtract as well as add, as RQ2's
+discussion showed. The gate as built barely gates, since purifying every flow yields almost the
+same end-to-end result, and it answers arguably the wrong question: whether a flow is adversarial, not
+whether purification will improve its detectability.
 
-The third limitation belongs to the fusion design, and it is the one that most directly
-contradicts the system's own premise. The meta-learner is beaten by its own Random Forest
-on the aggregate streaming axis and by a wide margin on several sources
-(\Cref{sec:eval-meta}); a stacker should be no worse than its best base learner, and this
-one is worse. The cause was identified, namely that the carry-forward \ac{RF} logit enters
-the fusion token as a single sparsely updated feature that the meta-learner's attention
-under-weights against the dense \ac{TCN} stream, and the per-attack comparison
-(\Cref{subsec:eval-perattack}) shows the pathology worsening when the fusion has less
-source diversity to learn from. What the fusion does buy, the packet-$1$ verdict and the
-evasion robustness of RQ1, is real but narrower than the design claimed.
+The third belongs to the fusion design, and most directly contradicts the system's own
+premise: the meta-learner is beaten by its own Random Forest on the aggregate streaming axis,
+and by a wide margin on several sources (\Cref{sec:eval-meta}), where a stacker should be no
+worse than its best base learner. The carry-forward \ac{RF} logit enters the fusion token as a
+single sparsely updated feature that attention under-weights against the dense \ac{TCN}
+stream, and the per-attack comparison (\Cref{subsec:eval-perattack}) shows the pathology
+worsening even more so with less source diversity. What the fusion does buy, the packet-$1$ verdict and the
+robustness of RQ1, is real but narrower than the design hoped to achieve.
 
-The fourth limitation is methodological, and narrower than it was in earlier drafts. The
-purification gain and residual gap measured through DEPT's own \ac{TCN} are circular, but
-the end-to-end claim no longer rests on them: the deployment baseline
-(\Cref{subsec:eval-e2e-detect}) scores the clean, adversarial, and DEPT-defended streams
-through the independent NIDS each attack was built to evade, Kitsune or TANTGen's
-ML-NIDS. What remains is a residual honesty caveat rather than an open question. The
-defended full-stream figures run DEPT's models over some flows seen in training, so they
-are paired with a held-out-test breakdown; each attack is judged by a single target NIDS
-rather than a panel; on \texttt{mirai} that target detects almost nothing even on the
-clean original attack, which makes its rows uninformative in either direction; and
-Kitsune's detection rate, being partly volumetric, is read only on the full streams the
-baseline feeds. None of these reintroduces the self-reference the TCN-only metric carried.
+The fourth is methodological, but narrower than the previous ones. Purification gain and
+residual gap measured through DEPT's own \ac{TCN} are circular, but the end-to-end claim
+does not rest on them: the deployment baseline (\Cref{subsec:eval-e2e-detect}) scores clean,
+adversarial, and defended streams through the independent NIDS each attack targets. What
+remains is a specific weaker check: the defended full-stream figures run DEPT's models over
+some flows seen in training, so they do falter in this regard; each attack is
+judged by a single target NIDS rather than a panel of them; on \texttt{mirai} that target detects
+almost nothing even on the clean attack, leaving its rows uninformative; and Kitsune's partly
+volumetric detection rate is read only on full streams.
 
-The fifth limitation is scope, of two kinds. The first is what DEPT can \emph{write
-back}: the purifier is attack-agnostic by construction, correcting all $1090$ dimensions
-without being told which the attacker moved, but the realization step that returns it to
-the wire is not, since it overlays exactly the two quantities this threat model
-perturbs, packet size and inter-arrival time (\Cref{subsec:sol-realization}). Against an
-adversary that moved some other header field, the feature-space correction would survive
-and the traffic-space one would not, and because realization is the stage that feeds the
-protected \ac{NIDS}, that flow would arrive unrepaired: the system would still flag it
-but would have nothing to hand back. The ``attack-agnostic'' label therefore belongs to
-detection and to the denoiser, not to the deployed pipeline as a whole.
+The fifth is scope, of two kinds. The purifier is attack-agnostic, correcting all $1090$
+dimensions without being told which the attacker moved, but the realization step overlays
+exactly the two quantities this threat model perturbs, packet size and inter-arrival time
+(\Cref{subsec:sol-realization}). Against an adversary that
+moved another header field, the feature-space correction would survive and the traffic-space
+one would not, and that flow would reach the protected \ac{NIDS} unrepaired, flagged with
+nothing to hand back; the ``attack-agnostic'' label therefore belongs to detection and to the
+denoiser, not to the deployed pipeline as a whole. The feature space is bounded too: DEPT observes
+headers, timing, and direction, with no direct representation of payload. That was deliberate, since
+header and timing behaviour remain observable as encrypted traffic grows while payload
+inspection does not, but a manipulation expressed purely in application-layer content would be
+invisible, and payload may be exactly where the blind spot above lives.
 
-The second is the feature scope. DEPT observes packet headers, inter-arrival
-timing, and direction; it carries no representation of payload content. This choice was
-deliberate, since header and timing behaviour remain observable as the share of
-\ac{TLS}- and QUIC-encrypted traffic grows while payload inspection does not, but it means
-that a manipulation expressed purely in application-layer content, on traffic where
-payloads are still readable, would be invisible to the present system. It is also a
-candidate explanation for the representational blind spot above, since what separates a padded
-single-response flood from an unpadded one may live precisely in the bytes DEPT declines
-to look at.
-
-The sixth is an engineering limitation. The tensorization front-end is pure Python,
-far slower than the native nPrint tool whose encoding it reimplements, and every
-learned stage runs a whole-flow forward pass, since no incremental or KV-cached
-inference path was implemented. Neither bound is conceptual, nPrint encoding in
-particular is fixed-offset bit slicing that the native tool performs at line rate, but
-as delivered they define the system's throughput envelope; quantifying that envelope
-is part of the latency and overhead study deferred to \Cref{sec:concl-future}.
+The sixth is engineering. The tensorization front-end is pure Python, far slower than the
+native nPrint tool whose encoding it reimplements, and every neural stage runs a whole-flow
+forward pass, since no incremental or KV-cached inference path was implemented. Neither bound
+is conceptual, nPrint encoding being fixed-offset bit slicing the native tool performs at line
+rate, but as delivered they define the system's throughput floor
+(\Cref{sec:concl-future}).
 
 % #############################################################################
 \section{Future Work}\label{sec:concl-future}
 
-The limitations above set most of the agenda. Both runs that earlier drafts deferred are
-now delivered: the independent-\ac{NIDS} validation of RQ2, as the deployment baseline of
-\Cref{subsec:eval-e2e-detect}, and the direct gradient-ablation experiment for RQ1, as
-\Cref{sec:eval-gradablation}. What remains on the first is breadth, scoring each attack
-against a panel of \ac{NIDS} rather than its single true target; what the second opened up
-is more interesting than what it closed.
+The limitations above set most of the agenda. Both runs that earlier drafts deferred to this section are now
+delivered: the independent-\ac{NIDS} validation of RQ2 (\Cref{subsec:eval-e2e-detect}) and the
+direct gradient ablation for RQ1 (\Cref{sec:eval-gradablation}). What remains on the first is
+breadth, a panel of \ac{NIDS} rather than each attack's single true target; what the second
+opened up is arguably more interesting than what it closed.
 
 \begin{itemize}
-    \item \textbf{Is nPrint's encoding hiding the gradient?} The gradient ablation
-    found that a gradient-guided attacker barely outperforms random search on the packet-size
-    channel, and traced it to nPrint representing size as $16$ binary columns, so that
-    adjacent byte counts sit far apart in the model's input space and the loss surface is
-    jagged. This is uncomfortably close to \emph{gradient masking}
-    (\Cref{subsec:bg-gradient-masking}): an apparent robustness that reflects an attacker's
-    difficulty in optimizing rather than a defended decision boundary. Re-running the study
-    against a model that consumes packet size as a scalar would separate the two, and the
-    answer matters well beyond DEPT, since nPrint-style bit encodings are widely used in
-    learned traffic analysis.
-    \item \textbf{A stronger attacker for the forest.} The present attacker has no gradient
-    into the \ac{RF} by construction, which is the point, but it also means the forest is
-    only ever attacked by transfer. A gradient-based attack on a differentiable surrogate
-    distilled from the forest, or a decision-tree-specific attack, would test whether the
-    forest's resistance is heterogeneity or merely distance from the \ac{TCN}'s gradient.
-    \item \textbf{Latency and overhead evaluation.} This thesis confines its
-    evaluation to detection and purification quality; the wall-clock side of the
-    system, per-flow inference latency, sustained throughput, and the overhead
-    purification adds to the detect path, is left to a dedicated follow-on study,
-    which will also settle whether the detect-then-purify cycle fits the real-time
-    budget the problem statement imposes (\Cref{sec:intro-problem}).
-    \item \textbf{A gate that predicts benefit rather than adversariality.} The
-    end-to-end regressions of \Cref{sec:concl-limitations} all follow from purifying
-    flows that were still being detected. The remedy is a gate trained on a different
-    target, namely whether purification raises or lowers the protected detector's score
-    for this flow, which is a supervisable quantity since the evaluation harness already
-    computes it for every test flow. That change is small, well-specified, and would
-    convert several of the reported losses into no-ops.
-    \item \textbf{An attack-agnostic realization step.} The purifier learns which
-    dimensions to correct without being told; the overlay that returns its output to the
-    wire is hand-written for two of them. Closing that gap means deriving the fields to
-    edit from the residual $\Delta$ itself, editing whichever header fields it moves
-    beyond a threshold and reconciling the result against the protocol's own
-    constraints, in the spirit of the SMT-checked perturbations of
-    PANTS~\cite{jin2025robustifying}, so that the defense re-emits traffic for
-    manipulations it was never designed around. This is the step that would make the
-    whole purification path, and not only its model, independent of the attacker.
-    \item \textbf{A fusion that never falls below its best base learner.} The
-    meta-learner's failure to match its own Random Forest
-    (\Cref{sec:concl-limitations}) suggests concrete revisions, from representing the
-    \ac{RF} evidence more insistently in the fusion token, for instance by re-emitting
-    it at every packet with an explicit staleness weight rather than a single carry-forward
-    slot, to gating the stacker so that it can fall back to the stronger base opinion when
-    the two diverge.
-    \item \textbf{Finding what separates a padded flood from an unpadded one.} The
-    below-chance results on the reflection floods' \texttt{size} variants were localized
-    to the feature representation rather than to model capacity or training scope, which
-    turns a vague failure into a specific question: which observable quantity, absent from
-    the $24$ prefix statistics and the $1088$ header bits, distinguishes these flows?
-    Answering it would repair the single largest hole in the system's coverage.
-    \item \textbf{Payload-aware representation.} Extending the feature space beyond
-    headers and timing, where the traffic still permits it, would widen the class of
-    manipulations the defense can observe, and is the natural representation-side
-    complement to the encryption trend discussed above.
-    \item \textbf{A deployment-grade front-end.} Replacing the Python tensorization
-    with a native implementation, and giving the models an incremental inference path,
-    would let a deployment study test the pipeline against sustained line-rate
-    traffic.
+    \item \textbf{Is nPrint's encoding hiding the gradient?} The ablation found a
+    gradient-guided attacker barely outperforming random search on the packet-size channel,
+    and traced it to nPrint encoding size as $16$ binary columns, so that adjacent byte counts
+    sit far apart and the loss surface is jagged. This is uncomfortably close to \emph{gradient
+    masking} (\Cref{subsec:bg-gradient-masking}); re-running the study against a model that
+    consumes size as a scalar would separate the two, and the answer matters beyond just DEPT, but to anywhere
+    nPrint-style bit encodings are used.
+    \item \textbf{A stronger attacker for the forest.} The forest, having no gradient by
+    construction, is only ever attacked by transfer. A gradient-based attack on a differentiable
+    surrogate distilled from it would test whether its resistance is actually heterogeneity or merely
+    distance from the \ac{TCN}'s gradient.
+    \item \textbf{Latency and overhead evaluation.} Per-flow and per-packet inference latency, sustained
+    throughput, and the overhead purification adds to the detect path are left to a following
+    study, which would also settle whether the detect-then-purify cycle fits the real-time
+    budget of \Cref{sec:intro-problem}.
+    \item \textbf{A gate that predicts benefit rather than pure adversariality.} The end-to-end
+    regressions above all follow from purifying flows that were still being detected. A gate
+    trained instead on whether purification raises or lowers the protected detector's score, a
+    measure the system already computes for every test flow, would convert several reported
+    losses into simple no-ops, leveling the end-to-end performance across all sources and modes.
+    \item \textbf{An attack-agnostic realization step.} The purifier learns which dimensions
+    to correct without being told; the overlay that returns its output to the wire is
+    hand-written for two of them. Closing that gap means deriving the fields to edit from the
+    residual $\Delta$ itself and reconciling them against the protocol's constraints, in the
+    spirit of PANTS's SMT-checked perturbations~\cite{jin2025robustifying}, so that the defense
+    re-emits traffic for manipulations it was never designed around. This would fully realize the attack-agnostic claim.
+    \item \textbf{A fusion that never falls below its best base learner.} The meta-learner's
+    failure to match its own Random Forest suggests re-emitting the \ac{RF} evidence at every
+    packet with an explicit staleness weight rather than in a single carry-forward slot, or
+    gating the stacker so that it falls back to the stronger base opinion when the two diverge.
+    \item \textbf{Finding what separates a padded flood from an unpadded one.} Narrowing down the
+    below-chance results to the feature representation turns a failure into a specific
+    question: which observable quantity, absent from the $24$ prefix statistics and the $1088$
+    header bits, distinguishes these flows? Answering it would repair the largest hole in the
+    system's coverage.
+    \item \textbf{Payload-aware representation.} Extending the feature space beyond headers and
+    timing, where the traffic still permits it, would widen the class of manipulations the
+    defense can observe.
+    \item \textbf{A deployment-grade front-end.} Replacing the Python tensorization with a
+    native implementation, like DPDK, and giving the models an incremental inference path, would let a
+    deployment study test the pipeline against sustained line-rate traffic.
 \end{itemize}
 
-Beyond these, the direction this thesis considers most significant is
-\textbf{continuous adaptation of the defense}. DEPT, once trained, is a static defense,
-and a static defense is a fixed target: an adversary that probes it for long enough can
-eventually learn its blind spots and route around it, as the arms-race framing of
-\Cref{chap:related} makes clear. The natural next step is to close the loop, casting the
-defense as a \ac{RL} agent for which detection outcomes are the reward
-signal~\cite{sutton2018reinforcement,nguyen2021deep,caminero2019adversarial}. Framed as
-a \ac{MDP}, such an agent would sit outside the per-packet critical path, observe the
-ensemble's verdicts and the drift in the attacker's behaviour, and retune the defense
-over time against a generator, such as TANTGen, that is itself evolving. Its success
-would be measured not at a single point but across attacker generations, as a slower
-degradation of detection quality and a lower end-to-end attack success rate than a
-frozen copy of the present system. Every component DEPT already has, the streaming
-verdicts, the purifier, and the paired corpus, is a building block of that loop; what
-this thesis delivers is the static defense the adaptive one would start from.
+Beyond these, the direction this thesis considers most significant is \textbf{continuous
+adaptation of the defense}. A static defense, which is what DEPT is once trained, is a fixed
+target: an adversary that probes it long enough learns its blind spots and routes around it,
+as the arms-race framing of \Cref{chap:related} makes clear. The natural next step is to close
+the loop, casting the defense as a \ac{RL} agent for which detection outcomes are the reward
+signal~\cite{sutton2018reinforcement,nguyen2021deep,caminero2019adversarial}. Framed as a
+\ac{MDP}, it would sit outside the per-packet critical path, observe the ensemble's verdicts
+and the attacker's drift, and retune the defense against an evolving generator such as
+TANTGen, its success measured across attacker generations rather than at a single point. Every component DEPT already has is a building block of that loop; what this thesis
+delivers is the static defense the adaptive one would start from.
 
-In closing, this work argued that a defense for learning-based intrusion detection is
-only worth measuring against an attack that can exist on the wire, and it built and
-evaluated one under that discipline end to end: a shared traffic representation,
-architecturally heterogeneous detection, and purification that returns real,
-protocol-compliant packets. Within its stated limits, the delivered system detects a
-realistic black-box manipulation from the first packet and undoes it before the
-protected system consumes the flow, and where it fails, it fails for reasons the
-evaluation identifies rather than hides. That, for a defense meant to be built upon, seemed the right place to leave it.
+In closing, this work argued that a defense for learning-based intrusion detection is only
+worth measuring against an attack that can exist on the wire, and it built and evaluated one
+under that principle end to end. Within its stated limits, DEPT detects a realistic black-box
+manipulation from the first packet and undoes it before the protected system consumes the
+flow; where it fails, it fails for reasons the evaluation identifies rather than hides. At the end of the day, it is a
+defense meant to be built upon, and \ac{RL} seems the right place to leave it.
