@@ -622,7 +622,7 @@ granularity of one packet, this $44 \rightarrow 73 \rightarrow 44$ restoration.
 % (PGD u random) attacker under the monotone envelope.
 
 Every result so far was produced against TANTGen, and TANTGen cannot answer RQ1. It is
-black-box and gradient-free, so it leverages no gradient path; measuring it tells us the
+black-box and gradient-free, so it exercises no gradient path; measuring it tells us the
 ensemble detects \emph{its} perturbations, not what the ensemble's heterogeneity is worth
 against an adversary that differentiates. This section supplies that adversary.
 
@@ -699,7 +699,7 @@ faltering rather than the defense strengthening.
         (B/pkt) & (B/pkt) & (ms/pkt) & (B/flow) & & & \\
         \midrule
         $\delta = 0$ & $0$     & $0$      & $0$     & $0.0\%$  & $0.0\%$  & $0.0\%$ \\
-        $8$          & $3.0$   & $0.004$  & $13$    & $8.6\%$  & $40.5\%$ & $\mathbf{1.7\%}$ \\
+        $8$          & $3.0$   & $0.004$  & $13$    & $8.5\%$  & $40.5\%$ & $\mathbf{1.7\%}$ \\
         $32$         & $14.0$  & $0.041$  & $47$    & $10.7\%$ & $50.1\%$ & $\mathbf{4.7\%}$ \\
         $128$        & $49.5$  & $0.419$  & $167$   & $13.1\%$ & $52.2\%$ & $\mathbf{8.5\%}$ \\
         $512$        & $159.8$ & $3.677$  & $537$   & $\mathbf{18.4\%}$ & $53.3\%$ & $18.9\%$ \\
@@ -726,19 +726,24 @@ faltering rather than the defense strengthening.
 \paragraph{The stack costs the attacker more than either base learner alone, at every
 budget an attacker would plausibly pay.} This is RQ1's answer. At the three smallest
 non-zero budgets the fused stack concedes $1.7\%$, $4.7\%$, and $8.5\%$ attack success
-against the forest's $8.6\%$, $10.7\%$, and $13.1\%$ and the \ac{TCN}'s $40.5\%$,
+against the forest's $8.5\%$, $10.7\%$, and $13.1\%$ and the \ac{TCN}'s $40.5\%$,
 $50.1\%$, and $52.2\%$; across the whole grid $74.5\%$ of flows never evade the stack at
 any budget, against $64.0\%$ for the forest and $45.5\%$ for the \ac{TCN}, whose median
 evading flow needs only the smallest budget on the grid. The perturbation that breaks the
 \ac{TCN} it was crafted against transfers poorly to the forest, and the fusion of the two
-is harder than either. For scale, TANTGen's own edits average about $29$ to $32$ padding
-bytes per packet on the sources where it perturbs most, which places a realistic attacker
-in the $32$ to $128$ byte region of the grid, where the stack concedes at most $8.5\%$.
+is harder than either. For scale, TANTGen's own per-packet padding varies widely by
+source and mode, from under a byte to about $290$ bytes: \texttt{mirai\_size} and
+\texttt{portscan\_both} average $32$ and $29$ bytes, placing them in the $32$ to $128$
+byte region where the stack concedes at most $8.5\%$, whereas the \texttt{size} variants
+of \texttt{ddos}, \texttt{ssdp\_flood} and \texttt{portscan} average $289$, $265$ and
+$246$ bytes, which puts them nearer the $512$-byte grid point.
 
-One qualification belongs here as well. The ordering is not uniform across the
+That upper end is where the qualification belongs. The ordering is not uniform across the
 whole grid: at $512$ bytes the stack ($18.9\%$) and the forest ($18.4\%$) are level, and
-the stack pulls ahead again only at $1460$ bytes ($25.5\%$ against $36.0\%$). The claim is therefore that the stack strictly dominates the \ac{TCN} everywhere
-and the forest everywhere except one grid point, where they are roughly equal.
+the stack pulls ahead again only at $1460$ bytes ($25.5\%$ against $36.0\%$). The claim is
+therefore that the stack strictly dominates the \ac{TCN} everywhere and the forest
+everywhere except around that one grid point, where they are roughly equal --- and that
+grid point is precisely where TANTGen's heaviest-padding sources sit.
 
 \paragraph{The meta-learner shifts its reliance onto the Random Forest as the TCN is
 degraded.} This is the design claim of \Cref{subsec:sol-meta} stated as a prediction, and it survives the test. Ablating the meta-learner's two base-learner token
