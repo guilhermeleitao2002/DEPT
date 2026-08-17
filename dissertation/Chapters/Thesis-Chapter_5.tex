@@ -409,22 +409,18 @@ Five-tuple matching (\Cref{subsec:sol-rec-training}) yields $2{,}566{,}489$
 $(\text{adversarial}\rightarrow\text{clean})$ flow pairs across the corpus, which the
 shared $70/15/15$ split (seed~$42$) divides into $1{,}796{,}542$ training pairs and a
 held-out $384{,}963$ test split, unseen by any base learner; the reconstructor was
-trained and evaluated accordingly. In feature space it is an attack-agnostic denoiser: it is trained with
-uniform-weight reconstruction over all feature dimensions, so it is given no hint of where
-TANTGen perturbed a flow. The traffic-space realization that
-follows is not agnostic in the same sense, being fixed to this threat model's two
-perturbation axes (\Cref{subsec:sol-realization}); since it is also the stage that feeds
-the protected NIDS, it enforces the compliance and drives the independent-NIDS figures below, which
-are measured on the packets it emits.
+trained and evaluated accordingly. As established in \Cref{subsec:sol-realization}, the
+denoiser is attack-agnostic in feature space while the realization that follows it is
+not; since realization is also the stage that feeds the protected NIDS, the compliance
+and independent-NIDS figures below are measured on the packets it emits.
 \Cref{tab:eval-purif} summarizes the metric families overall.
 
 \begin{table}[t]
 \centering
-\caption[Purification results (overall)]{Purification results on the $384{,}963$-pair test set,
-overall. Reconstruction MSE is over the perturbed feature dimensions; the purification gain and
-residual gap are a \emph{secondary} diagnostic measured through DEPT's own TCN
-(circular by construction, which is why the independent-NIDS restoration is the headline
-efficacy quantity); compliance is over realizable packets.}
+\caption[Purification results (overall)]{Purification results on the $384{,}963$-pair test
+set. Reconstruction MSE is over the perturbed feature dimensions; the purification gain
+is the \emph{secondary}, circular diagnostic through DEPT's own TCN; compliance is over
+realizable packets.}
 \label{tab:eval-purif}
 \begin{tabular}{llc}
 \toprule
@@ -463,11 +459,9 @@ cleaner demonstration because TANTGen had genuinely destroyed detection there; t
 ML-NIDS average is diluted by the many sources where detection was never lost and there
 was consequently little to restore.
 
-The in-distribution diagnostic agrees as well: through DEPT's own TCN, the mean
-$P(\text{adv})$ falls from $0.675$ on the adversarial flow to $0.428$ on the
-reconstruction, against $0.421$ for a genuinely clean flow, a residual gap of $0.007$.
-This is reported as a sanity check only, since the judge belongs to the family the loop
-was trained on.
+The in-distribution diagnostic agrees, for what it is worth: DEPT's own TCN puts the
+reconstruction at $0.428$ against $0.421$ for a genuinely clean flow, a residual gap of
+$0.007$.
 
 As with detection, the effect is strongly attack-dependent, and the per-source view is
 where the honest reading lives. \Cref{tab:eval-purifsrc} gives the rows that carry the
@@ -476,12 +470,11 @@ perturbation footprint (the pre-purification MSE on the perturbed dimensions) ag
 the gain purification achieves on it. Four regimes are visible, three of them
 anticipated and one not.
 
-Purification is large precisely on the structurally perturbed sources: \texttt{ddos}
-(gain $0.93$ on \texttt{both}, $0.94$ on \texttt{size}), \texttt{syn\_ddos} ($0.92$ and
-$0.93$), \texttt{portscan} ($0.84$ on both), and, in independent-NIDS terms, these are
-the same rows where detection is genuinely rescued: \texttt{ddos\_both} from $0.080$ to
-$0.865$, \texttt{ddos\_size} from $0.005$ to $0.817$, \texttt{portscan\_both} from
-$0.011$ to $0.679$, \texttt{ssdp\_flood\_iat} from $0.001$ to $1.000$. It is correctly
+Purification is large precisely on the structurally perturbed sources, and these are the
+same rows where the independent NIDS records detection genuinely rescued:
+\texttt{ddos\_both} from $0.080$ to $0.865$, \texttt{ddos\_size} from $0.005$ to
+$0.817$, \texttt{portscan\_both} from $0.011$ to $0.679$, \texttt{ssdp\_flood\_iat} from
+$0.001$ to $1.000$. It is correctly
 inert where TANTGen barely moved the features, namely the \texttt{both} and
 \texttt{iat} variants of the reflection floods, whose pre-purification MSE is already
 near zero. On the \texttt{size} variants of \texttt{ldap\_ddos}, \texttt{ntp\_ddos} and
@@ -563,16 +556,13 @@ all L7-unrealizable.}
     \includesvg[width=0.88\textwidth]{./Images/eval_purification_scatter}
     \caption[Purification gain against perturbation footprint.]{Purification gain
     against perturbation footprint, one mark per source--mode pair ($27$ of $30$; the
-    three pairs whose pairing records no perturbed-dimension MSE are omitted). Top
-    right: the footprint is erased and the detection gap closed. Bottom left: TANTGen
-    barely moved the features, so purification is correctly inert. Bottom right: the
-    \texttt{size} variants of the reflection floods carry a full footprint, but the TCN
-    is near chance on them, so no gain is measurable through this judge. The three
-    \texttt{mirai} pairs sit at footprints of $1.6$--$2.5$ and are shown in the broken-off
-    panel on the right, past the axis break. Note that the
-    axis is the in-distribution gain, so the sources on which purification \emph{harms}
-    independent-NIDS detection are not distinguishable here; \Cref{tab:eval-purifsrc}
-    reports that separately.}
+    three pairs recording no perturbed-dimension MSE are omitted). Top right: footprint
+    erased, detection gap closed. Bottom left: TANTGen barely moved the features, so
+    purification is correctly inert. Bottom right: a full footprint the TCN is near
+    chance on, so no gain is measurable through this judge. The three \texttt{mirai}
+    pairs sit past the axis break. The vertical axis is the in-distribution gain, so the
+    sources purification \emph{harms} are not visible here; \Cref{tab:eval-purifsrc}
+    reports those separately.}
     \label{fig:eval-purifscatter}
 \end{figure}
 
@@ -615,13 +605,10 @@ granularity of one packet, this $44 \rightarrow 73 \rightarrow 44$ restoration.
     \centering
     \includesvg[width=0.96\textwidth]{./Images/eval_purification_packet}
     \caption[A single real packet through the purification pipeline.]{A single real
-    packet through the purification pipeline, drawn from the held-out test split. Under
-    the \texttt{size} variant, TANTGen appends $29$~payload bytes to each Mirai SYN
-    packet, inflating the IPv4 total length from $44$ to $73$~bytes; the reconstructor
-    restores the length and the realization trims the padding, returning the datagram to
-    $44$~bytes with zero residual on the manipulated field. Every stage passes
-    \texttt{tshark} dissection. Byte counts and the appended bytes are read directly from
-    the three captures with \texttt{packet\_example/extract\_packet\_example.sh}.}
+    packet through the purification pipeline, drawn from the held-out test split: the
+    $44 \rightarrow 73 \rightarrow 44$ byte restoration described in the text. Byte
+    counts are read directly from the three captures with
+    \texttt{packet\_example/extract\_packet\_example.sh}.}
     \label{fig:eval-purifpacket}
 \end{figure}
 
