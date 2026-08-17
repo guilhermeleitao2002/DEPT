@@ -406,7 +406,7 @@ mask, with sinusoidal positions, scaled up to three layers, four
 heads, and $d_{\text{model}}=128$ (about $678$K parameters), with the $1090$-dimensional
 token as both input and output. Its head, however, does not predict the clean sequence
 directly: it predicts a per-dimension \emph{residual} $\Delta$, and the output is the
-input plus $\Delta$. This residual formulation encodes the right principle for the
+input plus $\Delta$ (\Cref{fig:sol-purifier-a}). This residual formulation encodes the right principle for the
 problem. An adversarial example is a perturbation of a clean sample, and TANTGen's
 manipulations touch only two physical quantities, timing and size, so out of the
 $1090$ dimensions of a token only a handful actually need correcting; with a residual

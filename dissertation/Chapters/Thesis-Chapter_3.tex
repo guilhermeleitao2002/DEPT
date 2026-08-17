@@ -145,9 +145,10 @@ accuracy one.
 
 \paragraph{Federated and backdoor defenses.}
 As \ac{NIDS} deployments move towards \ac{FL} for privacy, a parallel line defends the
-training pipeline itself, detecting backdoors in the model updates clients
-contribute~\cite{wan2025energy,xu2025detecting,rieger2024crowdguard} and unlearning them
-from weights already compromised~\cite{zhu2023selective,kumari2023baybfed,nguyen2025pbp}.
+training pipeline itself, detecting backdoors in the model updates clients contribute,
+in one case by having clients validate candidates inside \acp{TEE}~\cite{wan2025energy,xu2025detecting,rieger2024crowdguard},
+and unlearning them from weights already
+compromised~\cite{zhu2023selective,kumari2023baybfed,nguyen2025pbp}.
 DEPT excludes poisoning from its threat model (\Cref{sec:sol-threat}), so these defend a
 different adversary and are complementary rather than competing.
 
@@ -321,7 +322,7 @@ and performs no purification, TRS and Stewart hold (b) within homogeneous
 differentiable families or outside the network domain, and AdvPurRec and GTAE-IDS hold
 (c) up to the feature vector, on single datasets and without a streaming constraint.
 DEPT composes all three and is evaluated end to end, against a live generative
-adversary rather than replayed perturbations, on a corpus built over ten benign
+adversary rather than replayed perturbations, on a corpus built over ten
 traffic sources and three perturbation modes, with metrics that respect the streaming setting
 (\Cref{chap:evaluation}). One further line is acknowledged but not pursued:
 reinforcement learning is increasingly used to make security responses
