@@ -18,13 +18,7 @@
 This chapter evaluates DEPT against the threat model of \Cref{sec:sol-threat}: a
 black-box, protocol-compliant adversary, concretely the TANTGen generator of
 \Cref{sec:sol-pipeline} treated as the red team, that manipulates a streaming
-flow so as to evade a downstream NIDS. The chapter first fixes the research questions
-(\Cref{sec:eval-rqs}), the corpus and environment (\Cref{sec:eval-setup}), and the
-metric definitions (\Cref{sec:eval-metrics}). It then reports the two base learners
-(\Cref{sec:eval-base}), their attention-based fusion (\Cref{sec:eval-meta}), and the
-purification stage (\Cref{sec:eval-purification}), before turning to the end-to-end
-system (\Cref{sec:eval-e2e}) and to an explicit accounting of the limitations
-(\Cref{sec:eval-discussion}). Throughout, the results are reported as measured,
+flow so as to evade a downstream NIDS. Throughout, the results are reported as measured,
 including the sources and perturbation modes on which DEPT performs poorly.
 
 % #############################################################################
@@ -50,12 +44,12 @@ deployment baseline that scores the defense against the independent \ac{NIDS} ea
 attack was built to evade (\Cref{sec:eval-e2e}).
 
 RQ1 needs an adversary TANTGen cannot supply. TANTGen is black-box and gradient-free by
-design, so it leverages no gradient path and cannot say what heterogeneity is worth against
-it. \Cref{sec:eval-gradablation} therefore introduces a second,
-complementary adversary that differentiates the \ac{TCN} directly and whose perturbation
-is then scored, unchanged, against the Random Forest, the \ac{TCN}, and the fused stack.
-The asymmetry is the point: the attacker has an exact gradient into one half of the
-ensemble and none into the other, which is the situation RQ1 describes.
+design, so it exercises no gradient path and cannot say what heterogeneity is worth
+against it. \Cref{sec:eval-gradablation} therefore introduces a second adversary that
+differentiates the \ac{TCN} directly and whose perturbation is then scored, unchanged,
+against the Random Forest, the \ac{TCN}, and the fused stack. The asymmetry is the point:
+an exact gradient into one half of the ensemble and none into the other is the situation
+RQ1 describes.
 
 A third natural question, whether the detect-then-purify pipeline stays within a
 real-time inference budget, is deliberately not addressed here: the wall-clock latency
@@ -73,15 +67,10 @@ CIC-DDoS-2019 reflection and amplification floods, namely NTP, DNS, SSDP, SYN, a
 LDAP), each paired with three TANTGen adversarial variants: \texttt{both} (timing and
 size), \texttt{iat} (inter-arrival timing only), and \texttt{size} (payload/size
 only). The per-source detection tables of this chapter therefore cover ten sources and
-thirty source--mode combinations. Under
-DEPT's label convention (\Cref{sec:sol-pipeline}), every raw-capture flow
-is labelled \emph{benign}, since the upstream NIDS is responsible for the datasets'
-native attacks, and every TANTGen-generated flow is labelled \emph{adversarial}. The
-task DEPT is measured on is therefore precise: distinguish a flow that TANTGen has
-manipulated from one it has not, and undo that manipulation. This framing is a
-deliberate choice, and its consequences (in particular, that a source on which TANTGen
-barely perturbs the features is essentially unlabelable) are analysed in
-\Cref{sec:eval-discussion}.
+thirty source--mode combinations. DEPT's label convention applies throughout
+(\Cref{sec:sol-pipeline}): raw-capture flows are \emph{benign}, TANTGen-generated flows
+are \emph{adversarial}. Its consequence, that a source on which TANTGen barely perturbs
+the features is essentially unlabelable, is analysed in \Cref{sec:eval-discussion}.
 
 The corpus as tensorized comprises $8{,}624{,}958$ flows and $61{,}516{,}406$ packets
 across the forty sources (ten benign and thirty adversarial). All models share a single
@@ -111,16 +100,14 @@ realization, and protocol-compliance checking.
 The full pipeline is expensive to run end to end, and the cost is worth recording since
 it bounds how much exploration a project of this size can afford. Generating the thirty
 adversarial captures with TANTGen took $26.7$\,h, dominated by the NTP flood alone
-($11.9$\,h), and
-tensorizing the forty sources took a further $11.2$\,h. Of the model stages, the RF
-completed its eighteen-point grid search and final fit in $2.7$\,h on CPU; the TCN trained for $24.7$\,h,
-early-stopping after ten of twenty planned epochs with the best epoch at~$6$; the
-meta-learner for $3.4$\,h, best epoch $17$ of $20$; and the reconstructor for $10$\,h,
-best epoch $19$ of $20$. The two comparison studies of \Cref{sec:eval-gradablation} and
-\Cref{sec:eval-e2e} cost $4.3$\,h and $33.6$\,h respectively, the latter because it
-scores $2{,}704{,}816$ realized flows through the independent detectors. Repeating the
-four model stages once per attack, as \Cref{subsec:eval-perattack} does, adds roughly
-$28$\,h more.
+($11.9$\,h), and tensorizing the forty sources a further $11.2$\,h. Among the model
+stages, the RF completed its eighteen-point grid search and final fit in $2.7$\,h on CPU,
+the TCN trained for $24.7$\,h (early-stopping after ten of twenty planned epochs, best
+at~$6$), the meta-learner for $3.4$\,h (best epoch $17$ of $20$), and the reconstructor
+for $10$\,h (best epoch $19$ of $20$). The two comparison studies cost $4.3$\,h and
+$33.6$\,h, the latter because it scores $2{,}704{,}816$ realized flows through the
+independent detectors. Repeating the four model stages once per attack
+(\Cref{subsec:eval-perattack}) adds roughly $28$\,h.
 
 % #############################################################################
 \section{Metrics}\label{sec:eval-metrics}
