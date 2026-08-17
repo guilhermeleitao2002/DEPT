@@ -10,14 +10,9 @@
 The tension between learning-based detection and adversarial evasion has produced a
 large body of research on both sides. \Cref{chap:back} introduced the concepts this
 work builds on; this chapter surveys the concrete systems, and reads each of them
-against the questions DEPT has to answer: what realistic attacks against a \ac{NIDS}
-look like (\Cref{sec:rel-attacks}), what can be done before deployment to harden a
-model (\Cref{sec:rel-training}), and what can be done at inference time on the inputs
-themselves (\Cref{sec:rel-inference}). The survey is deliberately selective rather
-than exhaustive: most works are included when they shape a design decision of DEPT, or when some part of
-DEPT departs from them.
-\Cref{sec:rel-positioning} closes the chapter by placing the surveyed defenses and
-DEPT on a common map and stating the gap this thesis addresses.
+against the questions DEPT has to answer. The survey is deliberately selective rather
+than exhaustive: works are included when they shape a design decision of DEPT, or when
+some part of DEPT departs from them.
 
 % #############################################################################
 \section{Adversarial Attacks against ML-based NIDS}\label{sec:rel-attacks}
@@ -108,22 +103,14 @@ complementary adversary drawn from the standard adversarial-\ac{ML} toolkit.
 The canonical instrument is \emph{\ac{PGD}}~\cite{madry2018towards}, which takes
 repeated gradient steps against a model's loss and projects each iterate back onto a
 feasible set. Its strength as an evaluation tool is that the projection step states the
-attacker's budget outright: the set of admissible perturbations is written down as an
-operator applied at every iteration, instead of being whatever the optimizer happens to
-produce once its hyperparameters are fixed. That explicitness matters because the
-opposite failure is easy to fall into. An attack whose step size or iteration count is
-badly chosen will fail to find perturbations that do exist, and the defense it was
-pointed at will look more robust than it is; in the reported numbers, a weak attack and
-a strong defense are indistinguishable. Robustness evaluations therefore cross-check a
-hand-configured attack against an optimizer with no such knobs to
-misconfigure: \emph{AutoPGD}~\cite{croce2020reliable} adapts its own step size as the
-attack proceeds, and both it and \ac{PGD} are available in the \ac{ART}
-library~\cite{nicolae2018adversarial}. The literature on this failure mode is
-unambiguous: many published defenses have been shown to owe their apparent robustness to
-weak or badly-adapted attacks rather than to any real
-property~\cite{carlini2019evaluating, tramer2020adaptive}, which is why the evaluation
-of \Cref{sec:eval-gradablation} reports its attack-strength controls alongside its results
-rather than in a footnote.
+attacker's budget outright, rather than leaving it to be whatever the optimizer happens
+to produce once its hyperparameters are fixed. This matters because a weak attack and a
+strong defense are indistinguishable in the reported numbers, and many published
+defenses have been shown to owe their apparent robustness to badly-configured attacks
+rather than to any real property~\cite{carlini2019evaluating, tramer2020adaptive}.
+\Cref{sec:eval-gradablation} therefore reports its attack-strength controls alongside
+its results, including a cross-check against the parameter-free
+\emph{AutoPGD}~\cite{croce2020reliable} of the \ac{ART} library~\cite{nicolae2018adversarial}.
 
 Two features of the network-traffic setting keep this from being a routine application
 of those tools. The perturbation is not a free vector in the model's input space: it must
@@ -157,18 +144,12 @@ inference time, that ensemble diversity is a robustness mechanism in it of itsel
 accuracy one.
 
 \paragraph{Federated and backdoor defenses.}
-As \ac{NIDS} deployments move towards \ac{FL} for privacy, the defensive focus shifts
-from the data to the model updates that clients contribute.
-\textbf{FedTGE}~\cite{wan2025energy} detects backdoors in federated graph learning
-through the topological energy of client models, \textbf{AlignIns}~\cite{xu2025detecting}
-inspects the directional alignment of local updates, and
-\textbf{CrowdGuard}~\cite{rieger2024crowdguard} has clients validate candidate models
-against their private data inside trusted execution environments. When a model is
-found already compromised, unlearning techniques such as \textbf{SEAM}~\cite{zhu2023selective},
-\textbf{BayBFed}~\cite{kumari2023baybfed}, and \textbf{PBP}~\cite{nguyen2025pbp}
-scrub the backdoor from the weights at a fraction of the cost of retraining. All of
-these defend the training pipeline against an insider or a poisoning adversary; they are surveyed for completeness
-and treated as complementary rather than as alternatives.
+As \ac{NIDS} deployments move towards \ac{FL} for privacy, a parallel line defends the
+training pipeline itself, detecting backdoors in the model updates clients
+contribute~\cite{wan2025energy,xu2025detecting,rieger2024crowdguard} and unlearning them
+from weights already compromised~\cite{zhu2023selective,kumari2023baybfed,nguyen2025pbp}.
+DEPT excludes poisoning from its threat model (\Cref{sec:sol-threat}), so these defend a
+different adversary and are complementary rather than competing.
 
 \paragraph{Ensemble-based hardening.}
 A third line builds robustness into the model by combining several learners, which is
@@ -230,14 +211,10 @@ large amounts while remaining perfectly realizable.
 \paragraph{Generative purification.}
 The purification family goes back to \textbf{Defense-GAN}~\cite{samangouei2018defense},
 which projects each input onto the manifold captured by a generative model before
-classification. Its modern descendants are mostly diffusion-based, and mostly proven
-in the image and text domains: \textbf{ADBM}~\cite{li2025adbm} constructs a direct
-reverse bridge from the adversarial to the clean distribution,
-\textbf{CausalDiff}~\cite{zhang2024causaldiff} disassociates attack-specific factors
-from label-causal ones during generation (its notion of causality concerns factor
-attribution, not the temporal masking DEPT uses), and
-\textbf{DiffuseDef}~\cite{li2025diffusedef} iteratively denoises the hidden states of
-a text classifier. In the network domain the idea has been instantiated more
+classification. Its modern descendants are mostly diffusion-based and mostly proven in
+the image and text domains~\cite{li2025adbm,zhang2024causaldiff,li2025diffusedef}, where
+``causal'' denotes factor attribution rather than the temporal masking DEPT uses. In the
+network domain the idea has been instantiated more
 recently: \textbf{AdvPurRec}~\cite{alhussien2024advpurrec} reconstructs traffic
 features with a diffusion model before they reach the \ac{NIDS}, Merzouk et
 al.~\cite{merzouk2024diffusion} systematically maps the trade-offs that governs such
@@ -296,12 +273,9 @@ manipulation.
     \centering
     \includesvg[width=0.92\textwidth]{./Images/dept_related_landscape}
     \caption[The surveyed defenses on the phase and space axes.]{The surveyed defenses
-    arranged by the phase at which they act (training time against inference time) and
-    the space they operate in (feature-space against traffic-space). Prior defenses
-    cluster in the feature-space row; PANTS brings realizability to training, and
-    CertTA to certification. DEPT spans both phases in the traffic-space row: it is
-    trained on realizable adversarial traffic and purifies flagged flows back into
-    valid packets at inference time.}
+    arranged by the phase at which they act and the space they operate in. Prior work
+    clusters in the feature-space row, with PANTS and CertTA the exceptions; DEPT spans
+    both phases in the traffic-space row.}
     \label{fig:rel-landscape}
 \end{figure}
 
@@ -349,10 +323,8 @@ differentiable families or outside the network domain, and AdvPurRec and GTAE-ID
 DEPT composes all three and is evaluated end to end, against a live generative
 adversary rather than replayed perturbations, on a corpus built over ten benign
 traffic sources and three perturbation modes, with metrics that respect the streaming setting
-(\Cref{chap:evaluation}). One further line of the literature is acknowledged but not
-pursued: reinforcement learning is increasingly used to make security responses
-adaptive~\cite{ren2025arcs,wilson2025pro,qiao2025slot}, and a defense that retrains
-against an evolving generator is the natural continuation of this work; DEPT as
-delivered is a static defense, and \Cref{chap:conclusion} frames that continuation as
-future work. The architecture that occupies this gap is the subject of
-\Cref{chap:solution}.
+(\Cref{chap:evaluation}). One further line is acknowledged but not pursued:
+reinforcement learning is increasingly used to make security responses
+adaptive~\cite{ren2025arcs,wilson2025pro,qiao2025slot}, and retraining against an
+evolving generator is the natural continuation of this work. DEPT as delivered is a
+static defense.
