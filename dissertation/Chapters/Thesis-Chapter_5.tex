@@ -786,28 +786,22 @@ weak in general.
 
 \subsection{Detect-then-Purify, End to End}\label{subsec:eval-e2e-detect}
 
-Composing the stages, the end-to-end effect of DEPT can be measured either through the
-protected detector's own verdicts or through an independent one. The internal view is
-reported first, and briefly, because it is the weaker of the two: through DEPT's own TCN,
-the mean $P(\text{adv})$ on a purified flow falls from $0.675$ to $0.428$ against a
-clean-flow level of $0.421$, so purification returns flagged flows to the benign
-space as our own detector sees it. On the structurally perturbed sources this
-is the difference between a near-certain detection ($P(\text{adv})\approx0.99$ on
-\texttt{portscan} and \texttt{ddos}) and a near-certain pass ($\approx0.06$--$0.15$).
-
-These figures are measured through DEPT's own TCN standing in for the protected NIDS,
-which makes them an \emph{internal} view: they show that purification returns a flow to
-the manifold as scored by the same detector family the loop was trained around. The credible end-to-end question is
-different, and this thesis answers it directly rather than deferring it: what is
-TANTGen's attack-success rate against the \emph{independent} NIDS each attack was
-actually built to evade, before and after DEPT is placed in front of it?
+Composing the stages, the end-to-end effect of DEPT can be measured through its own
+detector or through an independent one. The internal view repeats
+\Cref{sec:eval-purification}'s purification gain and carries the same circularity; its
+one addition is that on the structurally perturbed sources purification is the difference
+between near-certain detection ($P(\text{adv})\approx0.99$ on \texttt{portscan} and
+\texttt{ddos}) and a near-certain pass ($\approx0.06$--$0.15$). This section therefore
+goes to the credible question: what is TANTGen's attack-success rate against the
+\emph{independent} NIDS each attack was built to evade, before and after DEPT is placed
+in front of it?
 
 \Cref{tab:eval-baseline} reports that deployment baseline. For every attack, three
 realized full streams are scored through its true target NIDS: \textbf{Kitsune}
 (KitNET~+~AfterImage) for the two Kitsune-native attacks, and TANTGen's own
 \textbf{ML-NIDS} (the per-attack CICFlowMeter flow classifiers) for the eight
 CIC-IDS2017 and CIC-DDoS-2019 attacks, reusing in each case the very model TANTGen
-calibrated its evasion against, so that no DEPT component is ever asked to grade itself (again).
+calibrated its evasion against, so that no DEPT component is ever asked to grade itself.
 The \emph{clean} stream carries the original-attack size and timing and states the theoretical
 ceiling (the NIDS working as intended); the \emph{adversarial} stream carries TANTGen's
 perturbation and in principle falls to the evasion floor; and the \emph{DEPT-defended} stream is
@@ -889,7 +883,7 @@ worse.} \texttt{dns\_ddos} loses $22.5$ points on \texttt{both} and $22.7$ on
 identified: the gate flags essentially all flood traffic, so flows the NIDS was still
 catching get purified, and purification removes signals it was using.
 
-The gate's behaviour is a concerning cause and is worth quantifying. Its flag rate is close to $100\%$ on every flood source
+The gate's behaviour is worth quantifying. Its flag rate is close to $100\%$ on every flood source
 and close to zero on several \texttt{size} variants ($0.0\%$ on \texttt{ssdp\_ddos},
 $0.2\%$ on \texttt{ntp\_ddos}, $0.8\%$ on \texttt{ldap\_ddos}, $0.9\%$ on
 \texttt{dns\_ddos}), which is the same reflection-flood \texttt{size} blind spot the base
@@ -898,16 +892,16 @@ consequence is that the gated pipeline and an ungated one that purifies everythi
 nearly indistinguishable here: the \texttt{purified\_all} upper bound reaches $0.8831$
 detection against the gated $0.8836$. The gate as built is therefore not doing much work,
 and the finding that matters is not that the gate is imperfect but that it is answering
-the wrong question. It predicts \emph{whether a flow is adversarial}; what this pipeline specifically
-needs is a predictor of \emph{whether purifying this flow will help}, which we have seen is a different story.
+the wrong question. It predicts \emph{whether a flow is adversarial}; what this pipeline
+needs is a predictor of \emph{whether purifying this flow will help}, which the rows above
+show is not the same thing.
 
 Split by detector family, the two halves diverge: the eight ML-NIDS sources gain $9.9$
 points of \ac{ASR} reduction over $2{,}622{,}023$ flows, while the two Kitsune sources
 lose $1.7$ points over $82{,}793$. The Kitsune figure rests almost entirely on
 \texttt{mirai\_size}, where TANTGen's size edit had inadvertently \emph{raised} Kitsune's
 detection from $0.003$ to $0.242$ and DEPT removed that self-sabotage, returning it to
-$0.003$. This is the purifier working correctly and the defense losing by it, which is certainly
-an instructive combination to say the least.
+$0.003$. This is the purifier working correctly and the defense losing by it.
 
 Two methodological notes come with these numbers. First, because the defended stream runs
 DEPT's detector and purifier over all of an attack's flows for full-volume realism, some
@@ -924,8 +918,8 @@ way.
 
 Every result so far concerns a single set of models trained across all ten sources at
 once. That was a design decision assumed at the beginning, and it invites the obvious
-question: would ten specialists, as per usual in the literature, each trained on one attack's own benign and adversarial
-flows, do better? The four model stages were therefore re-run once per attack, giving ten
+question: would ten specialists, as is common in the literature, each trained on one
+attack's own benign and adversarial flows, do better? The four model stages were therefore re-run once per attack, giving ten
 independent RF/TCN/meta-learner/reconstructor sets, and \Cref{tab:eval-perattack} compares
 each specialist meta-learner against the global one on the same slice and the same axis.
 
