@@ -100,11 +100,11 @@ realizability problem from the attacker to the defender.
 Two boundaries complete the statement. DEPT complements the protected \ac{NIDS}, it does
 not replace it: recognizing the underlying attacks themselves (a flood, a scan, a
 brute-force attempt) remains the downstream system's task, and DEPT answers only the
-narrower question of whether a flow has been tampered with on its way in. And since the
-defense sits inline, its decisions must fit a real-time latency budget: the per-flow
-cost of detection, and of purification when it triggers, has to remain relatively low. This budget shapes the design choices of
-\Cref{chap:solution}; measuring the delivered system against it is deliberately left
-to future work (\Cref{sec:concl-future}).
+narrower question of whether a flow has been tampered with on its way in. Since the
+defense sits inline, its decisions must also fit a real-time latency budget: the per-flow
+cost of detection, and of purification when it triggers, has to stay low. This budget
+shapes the design choices of \Cref{chap:solution}; measuring the delivered system against
+it is left to future work (\Cref{sec:concl-future}).
 
 % #############################################################################
 \section{Work Objectives and Challenges}\label{sec:intro-objectives}
@@ -179,11 +179,11 @@ Against this rationale, the thesis makes five contributions:
     manipulated from clean flows (\Cref{sec:sol-ensemble,sec:eval-meta}).
     \item A causal purification Transformer coupled to an explicit realization step:
     flagged flows are corrected in feature space, written back into protocol-compliant
-    packets, and validated with a standard dissector --- \texttt{tshark}. On the sources where the
-    manipulation leaves a footprint the protected detector can see, purification recovers
-    most of the detection the attack destroyed, and this is confirmed not through DEPT's
-    own detector but through the \emph{independent} NIDS each attack was built to evade
-    (\Cref{sec:sol-reconstructor,sec:eval-purification}).
+    packets, and validated with a standard protocol dissector (\texttt{tshark}). On the
+    sources where the manipulation leaves a footprint the protected detector can see,
+    purification recovers most of the detection the attack destroyed, confirmed not
+    through DEPT's own detector but through the \emph{independent} NIDS each attack was
+    built to evade (\Cref{sec:sol-reconstructor,sec:eval-purification}).
     \item An end-to-end deployment baseline that measures DEPT as what it is, a defense
     placed in front of a protected NIDS: the full pipeline is run
     over clean, TANTGen-perturbed, and DEPT-defended traffic, and each is scored through
@@ -201,19 +201,14 @@ Against this rationale, the thesis makes five contributions:
 % #############################################################################
 \section{Organization of the Document}\label{sec:intro-organization}
 The remainder of this document is organized as follows. \Cref{chap:back} presents the
-background this work builds on: learning-based intrusion detection and traffic
-representation, adversarial machine learning and the realizability constraints that
-distinguish it in the network domain, and the ensemble concepts behind DEPT's detector.
-\Cref{chap:related} surveys the related work on both the attack and the defense sides,
-gives TANTGen the closer treatment that its role in this thesis requires, and closes by
-positioning DEPT against the surveyed defenses and stating the gap it fills.
-\Cref{chap:solution} presents DEPT itself: the threat
-model, the system overview, the construction of the corpus and of the packet-to-tensor
-pipeline, the detection ensemble, and the purification and realization stages, together
-with the implementation. \Cref{chap:evaluation} evaluates the delivered system against
-two research questions derived from the objectives above, covering streaming
-detection and purification, and reporting the cases where the system does
-poorly with the same weight as those where it excels. \Cref{chap:conclusion} closes
-with the summary of contributions, the answers to the research questions, the system's
-limitations, and future work, of which the continuous adaptation of the defense against
-an evolving attacker is the main direction.
+background: learning-based intrusion detection and traffic representation, adversarial
+machine learning and the realizability constraints that distinguish it in the network
+domain, and the ensemble concepts behind DEPT's detector. \Cref{chap:related} surveys
+related work on the attack and the defense sides, treats TANTGen in the detail its role
+here requires, and states the gap DEPT fills. \Cref{chap:solution} presents DEPT itself:
+the threat model, the system overview, the corpus and packet-to-tensor pipeline, the
+detection ensemble, and the purification and realization stages. \Cref{chap:evaluation}
+evaluates the delivered system against two research questions, reporting the cases where
+it does poorly with the same weight as those where it excels. \Cref{chap:conclusion}
+closes with the answers to the research questions, the system's limitations, and future
+work.
