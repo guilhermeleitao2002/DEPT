@@ -188,15 +188,14 @@ Recall (benign)      & \textbf{0.9847} & 0.6606          & 0.9947 \\
 \end{table}
 
 All three models are precision-first at threshold $0.5$, and the differences between
-them are differences of recall. The Random Forest flags $88.3\%$ of adversarial
-checkpoints while misclassifying only $1.5\%$ of benign ones. The meta-learner is the
-most conservative of the three, with the highest adversarial precision ($0.9985$: just
-$1{,}115$ of $211{,}151$ benign test flows are flagged) but the lowest adversarial recall
-($0.7076$). The TCN is the weakest on both sides, and notably weak on the benign class
-($0.6606$ recall), which is what drags its macro-$F_1$ to $0.6608$ despite a respectable
-$0.9592$ PR~AUC. Neither ordering should be over-interpreted from this table alone,
-because the RF's lead is measured on the checkpoint population that most favours it, and
-because macro-$F_1$ at a fixed threshold may confuse ranking quality with calibration.
+them are differences of recall. The meta-learner is the most conservative, with the
+highest adversarial precision ($0.9985$: just $1{,}115$ of $211{,}151$ benign test flows
+are flagged) and the lowest adversarial recall ($0.7076$). The TCN is the weakest on both
+sides, and notably weak on the benign class ($0.6606$ recall), which drags its
+macro-$F_1$ to $0.6608$ despite a respectable $0.9592$ PR~AUC. Neither ordering should be
+over-interpreted from this table alone: the RF's lead is measured on the checkpoint
+population that most favours it, and macro-$F_1$ at a fixed threshold may confuse ranking
+quality with calibration.
 
 The more informative view is per source and per perturbation mode.
 \Cref{tab:eval-persource} gives the end-of-flow streaming AUROC@\textsc{max} for all
@@ -211,7 +210,7 @@ The distribution is clearly not unimodal. Most combinations are ``solved'': $21$
 $30$ reach $\ge\!0.99$ for the Random Forest and $13$ for the meta-learner. But a
 cluster of four sits \emph{below chance} for every model, namely the \texttt{size}
 variants of the DNS, NTP, SSDP, and LDAP reflection floods, where the RF scores
-$0.214$--$0.476$ and the meta-learner $0.443$--$0.497$. Below chance is a strong
+$0.213$--$0.476$ and the meta-learner $0.443$--$0.497$. Below chance is a strong
 statement and it should be read literally: on those source--mode pairs a TANTGen-edited
 flow looks \emph{more} like generic benign traffic than that flood's own unedited flows
 do, so a detector that inverted its verdict there would do better than the one that was
@@ -293,10 +292,9 @@ chance, are marked with $\dagger$. \texttt{b}/\texttt{i}/\texttt{s} denote the
     \includesvg[width=0.95\textwidth]{./Images/eval_persource_strip}
     \caption[Per-source AUROC distribution.]{The $30$ source--mode AUROC@\textsc{max}
     values of \Cref{tab:eval-persource}, one mark per combination and one row per
-    model. The structure is bimodal for all three models: a dense cluster of solved
-    combinations at $\approx\!1.0$, and, separated from it, the \texttt{size} variants
-    of the four reflection floods, which fall below the chance line. The TCN's row is the widest spread of the three, reflecting that it
-    is at chance on every reflection-flood mode.}
+    model. The structure is bimodal: a dense cluster of solved combinations at
+    $\approx\!1.0$ and, separated from it, the \texttt{size} variants of the four
+    reflection floods, below the chance line.}
     \label{fig:eval-persource}
 \end{figure}
 
@@ -310,7 +308,7 @@ ensemble was built on, though in the opposite direction to the one originally ex
 Second, the TCN is not merely weak but \emph{blind} on the four reflection floods: it
 sits at $0.494$--$0.552$ on every mode of \texttt{dns\_ddos}, \texttt{ldap\_ddos},
 \texttt{ntp\_ddos}, and \texttt{ssdp\_ddos}, and on \texttt{ldap\_ddos}, the largest of
-them, it reads $0.500$ to three decimals in all three modes, which is the typical of a
+them, it reads $0.500$ to three decimals in all three modes, which is typical of a
 model whose score carries no information about the label. These floods are one- and
 two-packet UDP exchanges, and a receptive field of $29$ packets has nothing to convolve
 over. Third, \texttt{mirai} fails differently from the floods rather than more severely:
@@ -354,10 +352,9 @@ Detection rate      & \textbf{88.99\%} & 78.40\%        & 77.69\% \\
     \centering
     \includesvg[width=0.82\textwidth]{./Images/eval_streaming_auroc}
     \caption[Streaming AUROC@$t$ trajectories.]{Flow-level AUROC@$t$ as a function of
-    the packets seen, for all measured checkpoints. The TCN and the meta-learner alone
-    have a verdict at packet~$1$; the Random Forest joins at packet~$2$, immediately at
-    $0.98$, and stays the strongest single stream thereafter. The meta-learner rises
-    steeply between packets $1$ and $5$ and then stabilizes between the two base learners.}
+    the packets seen. Only the TCN and the meta-learner have a verdict at packet~$1$; the
+    Random Forest joins at packet~$2$, immediately at $0.98$, and stays the strongest
+    single stream thereafter.}
     \label{fig:eval-streaming}
 \end{figure}
 
@@ -386,22 +383,21 @@ meta-learner's per-source behaviour tracks whichever base learner is stronger on
 source, but not reliably: on \texttt{ssdp\_ddos} \texttt{both}/\texttt{iat} it reaches
 $0.927$ where the forest reaches $1.000$, and on \texttt{ntp\_ddos}
 \texttt{both}/\texttt{iat} it reaches $0.653$--$0.654$ against the forest's $0.999$,
-so on those sources it discards most of a signal it was handed. The mechanism is the
-one anticipated in \Cref{subsec:sol-meta}: the carry-forward RF logit enters the
-per-packet fusion token as a single, sparsely updated feature, refreshed only at
-checkpoints and absent before packet~$2$, where a learnable placeholder stands in,
-whereas the dense TCN logit is present and updated at every timestep, so the
-meta-learner's attention systematically under-weights the intermittent evidence. A stacker should be no
-worse than its best base learner; this one is worse on several sources and on the
-aggregate, and that is the clearest single target for future work on the detection
-stage (\Cref{sec:eval-discussion}).
+so on those sources it discards most of a signal it was handed. The mechanism is the one
+anticipated in \Cref{subsec:sol-meta}: the RF logit enters the fusion token as a single,
+sparsely updated feature, refreshed only at checkpoints and absent before packet~$2$,
+whereas the dense TCN logit is updated at every timestep, so the meta-learner's attention
+systematically under-weights the intermittent evidence. A stacker should be no worse than
+its best base learner; this one is worse on several sources and on the aggregate, and
+that is the clearest single target for future work on the detection stage
+(\Cref{sec:eval-discussion}).
 
 A note on the auxiliary ``beat the best base'' loss (weight $0.5$,
 \Cref{subsec:sol-meta}) closes this section. Over training the auxiliary term falls from
 $0.0267$ to $0.0177$, so the meta-learner does move toward matching its best base
 learner's confidence; over the same twenty epochs the meta-validation AUROC@$10$ rises
-from $0.9197$ to $0.9333$, with essentially all of that gain in the first few epochs and
-under $10^{-3}$ of movement after epoch~$10$. The limit seems to be ranking, not
+from $0.9197$ to $0.9333$, with essentially all of that gain in the first few epochs and a
+net change of under $10^{-3}$ after epoch~$10$. The limit seems to be ranking, not
 confidence: AUROC depends only on how flows are ranked by predicted score, and matching
 the best base learner's confidences does not reorder flows that the $13$-dimensional
 fusion token cannot tell apart.
