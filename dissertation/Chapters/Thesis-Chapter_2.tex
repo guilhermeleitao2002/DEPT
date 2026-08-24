@@ -10,7 +10,7 @@
 DEPT combines three main ingredients: a bit-level representation of network traffic, a
 heterogeneous detection ensemble, and a learned purifier. This chapter presents the
 concepts each of them builds upon. Instead of a broad survey of machine learning for
-security, the focus is kept on what the system actually relies on, so that the design
+security, the focus is mostly kept on what the system actually relies on, so that the design
 decisions of \Cref{chap:solution} follow from the principles introduced here.
 
 % #############################################################################
@@ -48,6 +48,11 @@ exploiting a small labelled set together with abundant unlabelled data, and
 interacting with an environment. DEPT uses neither, although reinforcement learning is the
 natural framework for the continuous-adaptation extension discussed in
 \Cref{chap:conclusion}.
+\emph{Self-supervised learning} is a label-free variant of the second, deriving its
+training signal from the data itself rather than from annotations: TANTGen, the adversary
+DEPT is built against, is pre-trained to reconstruct masked packet sizes and inter-arrival
+times on unlabelled traffic, and only its surrogate detector head is trained under
+supervision~\cite{pissarra2026tantgen}.
 
 \begin{figure}[htbp]
     \centering
@@ -60,7 +65,7 @@ natural framework for the continuous-adaptation extension discussed in
 
 \subsection{Feature Engineering and Representation}\label{subsec:bg-features}
 The performance of a learned detector depends directly on the representation it consumes.
-Feature engineering, the process of turning raw packets into numerical vectors, places an
+Feature engineering --- in this case, the process of turning raw packets into numerical vectors --- places an
 upper bound on what any model can learn~\cite{salim2026feature,ning2024study}. Before
 discussing representations, one term should be fixed: throughout this document, a
 \emph{flow} is the sequence of packets that share the same five-tuple (source and
@@ -122,7 +127,7 @@ encoding.
         \draw[->, black!55] (mudp.north) -- (udp.south);
         \node[below=1mm of mtcp.south, font=\scriptsize, align=center] (msklab) {identity masking: set to $0$};
     \end{tikzpicture}
-    \caption[The nPrint per-packet representation with identity masking.]{The per-packet representation used by DEPT: the four header blocks encoded bit-by-bit into $1088$ tri-state cells following nPrint~\cite{holland2021nprint}, the identity fields masked to zero, and the two derived scalars appended to give a $1090$-dimensional token.}
+    \caption[The nPrint per-packet representation with identity masking.]{The per-packet representation used by DEPT: the four header blocks encoded bit-by-bit into $1088$ tri-state cells following nPrint~\cite{holland2021nprint}, the identity fields masked to zero, and the two derived scalars appended to give a $1090$-dimensional final token.}
     \label{fig:bg-nprint}
 \end{figure}
 
@@ -137,31 +142,35 @@ therefore \emph{masks} these identity fields, zeroing the $144$ bits that encode
 as packet sizing and timing, and it directly supports the claim that detection transfers
 across deployments instead of overfitting to one capture.
 
-The same tokens feed two representations at different rates, a design choice matched to the
+The same packets feed two representations at different rates, a design choice matched to the
 two kinds of base learner that DEPT uses (\Cref{tab:bg-streams}). The \ac{TCN} consumes the
 full per-packet token stream, one $1090$-dimensional vector per packet. The random forest
-instead consumes \emph{prefix-checkpoint statistics}: at selected packet positions, six
+instead consumes \emph{checkpoint statistics}, measured on the packets themselves rather
+than read back off the token: at selected packet positions, six
 base features (inter-arrival time, packet size, payload length, payload entropy, TCP flags,
 and direction) are summarized by their mean, standard deviation, minimum, and maximum over
-the flow prefix seen so far, giving a compact $24$-dimensional vector. Checkpoints are
+the flow prefix seen so far, giving a compact $24$-dimensional vector. None of the six
+encodes host or port identity, so this stream needs no masking of its own. Checkpoints are
 emitted at packet~$2$ and then every tenth packet. The early checkpoint is deliberate: some
 attacks generate extremely short flows. A port scan, for example, averages roughly two
 packets per flow, typically a single SYN and its RST, so without the checkpoint at
 packet~$2$ the forest would never issue a verdict for precisely the flows that a scan
-consists of. Feeding one learner a dense per-packet sequence and the other a sparse,
-aggregated summary is also a source of the ensemble diversity that \Cref{sec:bg-ensembles}
-argues to be valuable.
+consists of. The two streams also differ in content and not only in rate: nPrint encodes headers
+only, so the payload entropy the forest keys on is structurally invisible to the \ac{TCN}.
+Feeding one learner a dense per-packet sequence and the other a sparse,
+aggregated summary of a partly different view is also a source of the ensemble diversity
+that \Cref{sec:bg-ensembles} argues to be valuable.
 
 \begin{table}[htbp]
     \centering
-    \caption{The two representations DEPT derives from the same masked nPrint tokens.}
+    \caption{The two representations DEPT derives from the same packets.}
     \label{tab:bg-streams}
     \begin{tabular}{@{}llll@{}}
         \toprule
         \textbf{Representation} & \textbf{Consumer} & \textbf{Emission rate} & \textbf{Dimension} \\
         \midrule
         Per-packet token   & TCN           & every packet                 & $1090$ (nPrint $+$ IPAT $+$ direction) \\
-        Prefix checkpoint  & Random Forest & packet $2$, then every $10$   & $24$ (mean/std/min/max of $6$ features) \\
+        Prefix checkpoint  & Random Forest & packet $2$, then every $10th$   & $24$ (mean/std/min/max of $6$ features) \\
         \bottomrule
     \end{tabular}
 \end{table}
@@ -236,7 +245,7 @@ so a verdict at any packet integrates evidence from that packet and the $28$ pre
         \foreach \i in {0,...,12} {\node[hi] at (\i*\dx,0) {};}
         \node[below=5mm of x6, align=center] {receptive field grows as $\{1,2,4\}$ per block $\Rightarrow$ $\mathrm{RF}=29$ packets (\Cref{eq:bg-rf})};
     \end{tikzpicture}
-    \caption[Dilated causal convolutions and the TCN receptive field.]{Dilated causal convolutions. Highlighted nodes trace the dependency cone of the rightmost output: dilation grows with depth ($1$, $2$, $4$), so the receptive field widens while every output still depends only on the present and past. Schematic, with one convolution per block drawn; DEPT stacks two, giving the $29$ packets of \Cref{eq:bg-rf}.}
+    \caption[Dilated causal convolutions and the TCN receptive field.]{Dilated causal convolutions. Highlighted nodes trace the dependency cone of the rightmost output: dilation grows with depth ($1$, $2$, $4$), so the receptive field widens while every output still depends only on the present and past. This is a schematic representation, with one convolution per block drawn; DEPT stacks two, giving the $29$ packets of \Cref{eq:bg-rf}.}
     \label{fig:bg-tcn}
 \end{figure}
 
@@ -287,7 +296,7 @@ enough for it to be labelled benign~\cite{he2023adversarial,ennaji2025adversaria
 against them.
 
 \subsection{Threat Taxonomy}\label{subsec:bg-threat-taxonomy}
-Attacks are classified along two axes: what the adversary knows, and what the adversary
+Attacks are most commonly classified along two axes: what the adversary knows, and what the adversary
 wants.
 
 Along the knowledge axis, a \emph{white-box} attacker has full access to the model,
@@ -304,7 +313,7 @@ which is the case that dominates real deployments (\Cref{chap:solution}).
 
 Network intrusion detection is harder to attack, and to defend, than the image
 classification setting where adversarial examples were first studied, because of a
-constraint with no peer in the pixel domain. Any pixel of an image can be modified
+constraint with no equivalent in the pixel domain. Any pixel of an image can be modified
 slightly and the result is still a valid image. A network feature vector cannot be modified
 freely: a perturbation must correspond to a packet or flow that is actually valid on the
 wire. Recovering a realizable packet from a desired feature vector is the \textbf{\ac{IFM}}
@@ -321,7 +330,7 @@ this domain.
 Defenses against evasion fall into a few broad families, with different strengths for
 traffic data. \emph{Adversarial training} augments the training set with adversarial
 examples so that the model learns to classify them correctly~\cite{madry2018towards}. It is
-effective against the perturbations it is trained on, but it is costly, it can depress
+effective against the perturbations it is trained on, but it is costly, it can reduce
 accuracy on clean traffic, and in networking it is only meaningful if the adversarial
 examples are themselves realizable rather than impossible feature vectors. DEPT follows
 this line in spirit, since its detectors are trained on realizable adversarial traffic
@@ -369,7 +378,7 @@ that can be sent, so evaluating a detector against it overestimates the real
 threat~\cite{pierazzi2020intriguing,hashemi2019towards}. Recent attack research enforces
 realizability explicitly, whether by verifying every perturbation against protocol
 constraints with an SMT solver, as in PANTS~\cite{jin2025robustifying}, or by generating
-traffic that is protocol-compliant by construction, as in GPMT~\cite{sun2023gpmt} and
+traffic that is protocol-compliant by design, as in GPMT~\cite{sun2023gpmt} and
 TANTGen~\cite{pissarra2026tantgen}.
 
 The constraint applies to both sides, which is what makes it a design concern for DEPT
@@ -377,7 +386,7 @@ rather than a property of attacks alone. A defense that \emph{edits} traffic, as
 does, must itself re-emit valid packets; otherwise its output is unusable, or is trivially
 detected as malformed. The step from feature-space back to traffic-space, which we call
 \emph{realization}, is therefore treated as a first-class part of the design. The nPrint
-representation is an asset here: because it is close to a bijective, bit-level image of the
+representation is a valuable asset here: because it is close to a bijective, bit-level image of the
 packet headers, a purified nPrint vector can be decoded back into a concrete packet and
 checked for on-the-wire validity, which DEPT does with packet-level tools
 (\Cref{chap:solution}).
@@ -427,7 +436,7 @@ by the transferability argument below and detailed in \Cref{chap:solution}.
 \subsection{Gradient Masking and Transferability}\label{subsec:bg-gradient-masking}
 Transferability is what makes black-box evasion practical: an attacker who cannot see the
 target model builds a differentiable substitute, crafts a perturbation against it with a
-gradient method such as \ac{PGD} or the \ac{FGSM}, and relies on that perturbation carrying
+gradient method such as \ac{PGD} or \ac{FGSM}, and relies on that perturbation carrying
 over to the target~\cite{papernot2017practical}. Heterogeneous stacking acts directly on
 this mechanism. A differentiable member, such as the \ac{TCN}, exposes a gradient that an
 attacker can follow. An \ac{RF} does not: its decision function is constant over
@@ -439,9 +448,9 @@ the ensemble, raising the attacker's
 cost~\cite{yang2021trs,gungor2022stewart,biggio2011bagging,chen2022collective}.
 
 This argument must be stated carefully, because the absence of a usable gradient is a form
-of \emph{gradient masking}, and gradient masking is not robustness in the general case. A
+of \emph{gradient masking}, and gradient masking is not robustness in it of itself. A
 determined white-box adversary can estimate gradients numerically or resort to
-gradient-free search, and masked gradients have repeatedly produced a false sense of
+gradient-free search, and masked gradients can produce a false sense of
 security when mistaken for genuine robustness~\cite{athalye2018obfuscated}. The argument
 holds for DEPT precisely because its threat model is black-box: the value of a
 non-differentiable member is not an absolute barrier, but a measurable reduction in the
@@ -452,12 +461,12 @@ not as a guarantee to be assumed, a distinction that \Cref{chap:evaluation} take
 % #############################################################################
 \section{Summary}\label{sec:bg-summary}
 The concepts in this chapter compose into the three pillars of DEPT.
-\emph{Representation}: a bit-level nPrint encoding, stripped of identity fields and emitted
-at two rates, gives heterogeneous learners a shared, behaviour-focused, and realizable view
-of traffic (\Cref{subsec:bg-features}). \emph{Ensembling}: heterogeneous stacking, fused by
-an attention meta-learner, combines a differentiable network with a non-differentiable
-forest to resist transferable gradient attacks under a black-box threat model
-(\Cref{sec:bg-ensembles}). \emph{Purification}: an input-transformation defense, built as a
+\emph{Representation}: a bit-level nPrint encoding stripped of identity fields, paired with
+prefix statistics measured on the same packets, gives heterogeneous learners complementary
+behaviour-focused and realizable views of traffic (\Cref{subsec:bg-features}). \emph{Purification}: an input-transformation defense, built as a
 causal Transformer, projects flagged traffic back onto the benign manifold while respecting
 the protocol constraints that keep its output realizable
-(\Cref{subsec:bg-defense-paradigms,subsec:bg-realizability}).
+(\Cref{subsec:bg-defense-paradigms,subsec:bg-realizability}). \emph{Ensembling}: heterogeneous stacking, fused by
+an attention meta-learner, combines a differentiable network with a non-differentiable
+forest to resist transferable gradient attacks under a black-box threat model
+(\Cref{sec:bg-ensembles}). 
