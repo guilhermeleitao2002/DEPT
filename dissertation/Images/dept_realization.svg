@@ -23,7 +23,7 @@
   <text x="150" y="140" text-anchor="middle" font-size="19" fill="#14544c">rewrite</text>
   <text x="150" y="162" text-anchor="middle" font-size="19" fill="#14544c">timestamp</text>
   <line x1="515" y1="106" x2="576" y2="182" stroke="#2a9d8f" stroke-width="2.5" marker-end="url(#rArrT)"/>
-  <text x="632" y="140" text-anchor="middle" font-size="19" fill="#14544c">trim / pad</text>
+  <text x="632" y="140" text-anchor="middle" font-size="19" fill="#14544c">trim</text>
   <text x="632" y="162" text-anchor="middle" font-size="19" fill="#14544c">payload</text>
 
   <!-- original adversarial packet -->

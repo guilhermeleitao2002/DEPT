@@ -9,8 +9,8 @@
 
 This chapter presents DEPT (Defense via Ensemble and Purification Transformer), the
 system this thesis proposes and builds. DEPT composes the three pillars introduced in
-\Cref{chap:back} into a single streaming defense: a bit-level traffic representation
-emitted at two rates, a heterogeneous detection ensemble fused by an attention
+\Cref{chap:back} into a single streaming defense: two traffic representations
+emitted at different rates, a heterogeneous detection ensemble fused by an attention
 meta-learner, and a causal purification Transformer whose output is realized back into
 valid packets. The chapter is organized as follows.
 \Cref{sec:sol-threat} fixes the threat model, since later decisions are
@@ -55,7 +55,7 @@ outcomes while probing. It perturbs live attack traffic along two physical axes,
 timing of packets (their inter-arrival times) and their size (payload padding), which
 TANTGen exposes as three perturbation modes: \texttt{iat} (timing only), \texttt{size}
 (size only), and \texttt{both}. Crucially, the generated traffic is protocol-compliant
-by construction; it consists of packets that can actually be sent and that a dissector
+by design; it consists of packets that can actually be sent and that a dissector
 parses without complaint.
 
 We further adopt a \emph{functional realizability} assumption: attacks that violate
@@ -63,21 +63,21 @@ protocol semantics, for instance a broken checksum, a length field inconsistent 
 the bytes, or a negative inter-arrival time, are out of scope by design.
 This is a scoping decision rather than a weakness. As discussed in
 \Cref{subsec:bg-realizability}, a perturbation that describes no sendable packet is not
-a working evasion in the first place, and such malformed traffic is trivially rejected
+a valid working evasion, and such malformed traffic is trivially rejected
 by stateless checks well before any learned model needs to be involved.
 
 TANTGen fixes the threat model to the demonstrated capabilities, but it also sets an upper-bound on what
 that model can be used to prove. Being gradient-free, it cannot showcase a gradient path, and a
 central claim of this design, that fusing a non-differentiable learner with a
 differentiable one raises the cost of evasion, is a claim precisely about gradient
-paths. Establishing it needs an adversary that has one.
+paths. Establishing it needs an adversary that exploits one.
 
-We therefore admit a second, strictly stronger adversary alongside TANTGen, and evaluate
+We therefore admit a second, strictly focused adversary alongside TANTGen, and evaluate
 against it in \Cref{sec:eval-gradablation}. It is granted \emph{white-box access to the
 \ac{TCN}}: exact architecture, weights and gradients. It is granted nothing at all for
-the Random Forest, which is not merely withheld but non-differentiable, so no gradient
-exists to leak. This is the sharpest form of the heterogeneity question rather than a
-concession: the attacker holds one half of the ensemble exactly and must reach the other
+the Random Forest, which is non-differentiable regardless, so no gradient
+exists to leak. This is the ultimate goal of the heterogeneity question rather than a simple
+concession: the attacker holds one half of the ensemble and must reach the other
 half through the traffic they share. Its perturbations obey the same functional
 realizability assumption as TANTGen's and are further constrained to be
 \emph{increase-only}, since packets already on the wire may be padded or delayed but
@@ -85,7 +85,7 @@ never un-sent, and are measured in the units an attacker actually spends, bytes 
 padding and seconds of delay.
 
 Three non-goals complete the model. First, DEPT does not defend against
-\emph{poisoning}: its training data is curated offline from known sources, and the
+\emph{poisoning}: its training data is processed offline and obtained from known sources, and the
 training pipeline is trusted. Second, no claim is made against an adversary with
 gradient access to \emph{every} component, which for the Random Forest is not a
 realistic capability but an impossible one. Third, DEPT does not replace the protected
@@ -98,9 +98,9 @@ convention of \Cref{sec:sol-pipeline}.
 % #############################################################################
 \section{System Overview}\label{sec:sol-overview}
 \Cref{fig:sol-architecture} shows the complete architecture. Traffic enters through the
-\emph{Packet-to-Tensor pipeline}, which converts each flow into the masked nPrint
-representation of \Cref{subsec:bg-features} and emits it at two rates: a dense
-per-packet token stream and a sparse stream of prefix statistics. The two base learners
+\emph{Packet-to-Tensor pipeline}, which derives two views of each flow
+(\Cref{subsec:bg-features}) at two rates: a dense stream of masked nPrint per-packet
+tokens and a sparse stream of statistics measured on the packets themselves. The two base learners
 consume one stream each. The \ac{TCN} produces a verdict logit at every packet, from
 the very first one; the \ac{RF} produces a logit at packet~2 and then every tenth
 packet, on the aggregated prefix. A per-packet \emph{fusion token} joins the two
@@ -109,7 +109,7 @@ compact causal Transformer, turns that token stream into a per-packet probabilit
 the flow is adversarial. Flows that never cross the decision threshold are forwarded
 untouched. Flows that do are handed to the \emph{reconstructor}, a causal purification
 Transformer that undoes the manipulation in feature space, and a \emph{realization} step
-then writes that correction back onto the packets themselves. Realization is the last
+then writes that correction back onto the traffic space. Realization is the last
 stage of the inference path: what reaches the protected \ac{NIDS} is the realized
 traffic, not the purified tensors.
 
@@ -125,9 +125,9 @@ traffic, not the purified tensors.
 \end{figure}
 
 The shape of the system follows from the objectives stated in
-\Cref{sec:intro-objectives}. The shared representation and its dual emission cadence
-answer O1: both learners see the same masked, behaviour-focused view of a flow, each at
-the granularity it is suited for. The ensemble answers O2: the two base learners differ
+\Cref{sec:intro-objectives}. The dual representation and its emission cadence
+answer O1: both learners see the same flow through a behaviour-focused, identity-free
+view, each at the granularity it is suited for. The ensemble answers O2: the two base learners differ
 in architecture (non-differentiable trees against a differentiable network), in input
 (aggregated statistics against raw sequences), and in timing (sparse against dense),
 which is exactly the diversity that the transferability argument of
@@ -135,7 +135,7 @@ which is exactly the diversity that the transferability argument of
 answer O3, restoring flagged flows to the benign manifold and handing them on as
 sendable packets. The streaming nature that
 defines all of it, verdicts at every packet rather than at end of flow, is what
-O4's evaluation axis is later measured against.
+O4's evaluation axis would later be measured against.
 
 DEPT operates in two phases. In the \emph{training} phase, all components are fitted
 offline, in dependency order. The pipeline first tensorizes every source once. The two
@@ -149,7 +149,7 @@ flows. Its purification \emph{effect} is then quantified primarily against the
 (\Cref{sec:eval-e2e}), with the already-trained \ac{TCN} kept only as a secondary
 check; \Cref{sec:eval-purification} discusses why the external
 judge, not DEPT's own detector, carries the end-to-end claim. In the \emph{deployment}
-phase the flow of \Cref{fig:sol-architecture} runs continuously: tensorize each arriving
+phase the flow of \Cref{fig:sol-architecture} would run continuously: tensorize each arriving
 packet, run through both base learners, fuse, and decide. Purification is gated on the
 ensemble's flag, so the common case, clean traffic, never pays for it, and only the
 flows the detector marks adversarial are handed to the reconstructor and then realized
@@ -188,7 +188,7 @@ follows directly from the threat model: detecting a flood or a scan is the prote
 answer, ``did the generator touch this flow''. Throughout the rest of this document,
 \emph{benign} is used in this sense of \emph{unmanipulated}: the ten original sources are
 called benign even though they are drawn from attack captures. The convention has a measurable
-consequence, namely that a source whose features TANTGen barely moves is close to
+consequence, namely that a source whose features TANTGen barely moves (even less than for a regular adversarial example) is close to
 unlabellable no matter the detector, and \Cref{sec:eval-discussion} analyses this cost
 openly.
 
@@ -200,21 +200,16 @@ nPrint header bits plus the z-scored \ac{IPAT} and a direction bit (the normaliz
 statistics are computed at tensorization time and stored alongside the tensors, so that
 training and inference standardize identically). The per-flow token sequences are
 stored as one large ragged array with an offsets table, which keeps loading cheap and
-lets every downstream model share the same on-disk artifacts.
+lets every downstream component share the same on-disk artifacts.
 
-The same pass also produces the sparse representation for the \ac{RF}. At each
+The same pass also produces the sparse representation for the \ac{RF}, measured on the
+packets themselves rather than derived from the tokens. At each
 checkpoint, six base features (inter-arrival time, packet size, payload length, payload
 entropy, TCP flags, and direction) are summarized by their mean, standard deviation,
 minimum, and maximum over the whole prefix seen so far, a $24$-dimensional vector.
 These statistics are defined \emph{incrementally}, by Welford's online algorithm for
 means and variances together with running extremes, so that a flow never needs to be
-re-buffered: the cost per packet is constant, and the statistics available at a checkpoint
-are exactly those the forest would see at the same point of a live flow. Offline the
-whole capture is already in memory, so the pipeline takes a shortcut and computes the
-same statistics with vectorized per-flow cumulative sums, which is much faster and
-gives the same values. The incremental definition is
-still the one that matters in deployment, where a given input has only one packet at a
-time to work with. Checkpoints fire at packet~$2$ and
+re-buffered: the cost per packet is constant. Checkpoints fire at packet~$2$ and
 then every tenth packet, the cadence motivated in \Cref{subsec:bg-features}: without
 the early checkpoint, flows shorter than ten packets, which include essentially every
 port-scan flow, would end before the forest ever voted.
@@ -226,12 +221,12 @@ including the carry-forward behaviour that the fusion stage of
     \centering
     \includesvg[width=0.98\textwidth]{./Images/dept_cadence}
     \caption[The dual prediction cadence over a flow.]{The dual prediction cadence over
-    the first packets of a flow. The TCN (circles) emits a verdict at every packet,
-    starting at the first. The Random Forest (squares) emits only at prefix checkpoints
-    (packet $2$, then every tenth packet, shaded); between checkpoints its last logit
+    the first packets of a flow. The TCN emits a verdict at every packet,
+    starting at the first. The Random Forest emits only at checkpoints
+    (packet $2$, then every tenth packet); between checkpoints its last logit
     is carried forward, and before packet~$2$ it has no verdict at all. The
     \texttt{rf\_age} row shows the recency counter that the fusion token exposes to the
-    meta-learner. The meta-learner (diamonds) fuses both streams into a fresh verdict
+    meta-learner. The meta-learner fuses both streams into a fresh verdict
     at every packet.}
     \label{fig:sol-cadence}
 \end{figure}
@@ -242,7 +237,7 @@ The split is \emph{flow-atomic}: every row derived from a flow, be it a packet t
 checkpoint vector, or a reconstruction pair, lands on the same side, since splitting
 per row would leak near-duplicate prefixes of the same flow across sets. It is also
 \emph{stratified by source}, so each split preserves the corpus's source mixture, and
-it is reused verbatim by the \ac{RF}, the \ac{TCN}, the meta-learner, and the
+it is equally reused by the \ac{RF}, the \ac{TCN}, the meta-learner, and the
 reconstructor. This shared split is what later makes their comparison
 like-for-like, and it guarantees that the meta-learner, which consumes
 the base learners' outputs, is never evaluated on flows any base learner trained on.
@@ -255,7 +250,7 @@ and the neural losses.
 % #############################################################################
 \section{Primary Detection: Heterogeneous Stacking Ensemble}\label{sec:sol-ensemble}
 The detection stage instantiates the stacking pattern of \Cref{sec:bg-ensembles}: two
-deliberately dissimilar base learners and a learned combiner. The base learners are
+deliberately opposite base learners and a learned combiner. The base learners are
 described first, the fusion afterwards.
 
 \subsection{Random Forest Base Learner}\label{subsec:sol-rf}
@@ -264,7 +259,7 @@ checkpoint, whether the prefix statistics look manipulated. The choice of a fore
 this role is doubly motivated. Practically, forests are strong learners for small
 tabular inputs and require neither feature scaling nor much tuning
 (\Cref{subsec:bg-architectures}). Strategically, a forest's decision function is
-piecewise constant and non-differentiable, which makes it the gradient-free member that
+``piecewise'' constant and non-differentiable, which makes it the gradient-free member that
 the transferability argument of \Cref{subsec:bg-gradient-masking} requires: even a
 surrogate-based attacker obtains no smooth loss surface that comes from the forest's
 verdicts.
@@ -277,7 +272,7 @@ $20$ with at least $5$ samples per leaf. The search favoured the \emph{most} reg
 corner of the grid: with only $24$ input dimensions,
 deeper, unconstrained trees mostly memorize checkpoint idiosyncrasies, while a bounded
 depth and a non-trivial leaf size force better generalization across flows. At
-inference time the forest is queried exactly at the pipeline's checkpoints, so its
+inference time the forest is queried at the pipeline's checkpoints, so its
 verdict stream is sparse, delayed by design, and at the cadence of
 \Cref{fig:sol-cadence}.
 
@@ -289,7 +284,7 @@ with its first packet. The network instantiates the architecture of
 kernel size $3$, dilations $1$, $2$, and $4$, and dropout of $0.15$, closed by a
 per-timestep linear head; in total about $0.8$~million parameters. Causal padding keeps
 every output independent of future packets, which is the property that makes the model
-legitimate for streaming use, and the dilation schedule gives the receptive field of
+legitimate for streaming use, and the dilation schema gives the receptive field of
 $29$ packets derived in \Cref{eq:bg-rf}, enough context to cover several \ac{RF}
 checkpoint intervals (of roughly $10$) without inflating the parameter count.
 
@@ -302,7 +297,7 @@ therefore discards supervision beyond packet~$200$ rather than distorting it, wh
 consistent with the early-detection goal. Optimization
 uses AdamW with a cosine learning-rate schedule and early stopping on the validation
 split.
-The intended division of labour inside the ensemble is thus clear-cut: the \ac{TCN}
+The intended division of labour inside the ensemble is thus clear: the \ac{TCN}
 contributes an early, dense, but noisier signal, the forest a delayed, sparse, more
 accurate one, and neither is expected to be sufficient alone.
 
@@ -363,7 +358,7 @@ training signal; what this loss does and does not achieve in practice is reporte
 the ablations in \Cref{sec:eval-meta}. At deployment the meta-learner's per-packet
 probability is compared against a fixed threshold of $0.5$; a flow is flagged the first
 time its score crosses it, which is also the event the earliest-detection metric of
-\Cref{chap:evaluation} records.
+\Cref{chap:evaluation} employs.
 
 % #############################################################################
 \section{Input Purification: Reconstructor}\label{sec:sol-reconstructor}
@@ -404,7 +399,7 @@ The reconstructor shares the meta-learner's scaffold, the decoder-only stack of
 \Cref{subsec:bg-architectures}: pre-norm self-attention blocks under a strict causal
 mask, with sinusoidal positions, scaled up to three layers, four
 heads, and $d_{\text{model}}=128$ (about $678$K parameters), with the $1090$-dimensional
-token as both input and output. Its head, however, does not predict the clean sequence
+token as both input and output. Its head, however, does not predict the entire clean sequence
 directly: it predicts a per-dimension \emph{residual} $\Delta$, and the output is the
 input plus $\Delta$ (\Cref{fig:sol-purifier-a}). This residual formulation encodes the right principle for the
 problem. An adversarial example is a perturbation of a clean sample, and TANTGen's
@@ -413,7 +408,7 @@ $1090$ dimensions of a token only a handful actually need correcting; with a res
 head, the identity map is the easy default ($\Delta \approx 0$), the untouched
 $\sim\!1050$ header bits are preserved, and the model's capacity is spent on
 the localized corrections that matter. The causal mask, in turn, keeps the purifier
-valid for streaming use and, as discussed previously, makes it amenable to key--value caching. The decoder-only label is architectural, not a claim of autoregression: the purifier
+valid for streaming use and, as discussed previously, makes it compatible to key--value caching. The decoder-only label is architectural, not a claim of autoregression: the purifier
 never consumes its own output, but corrects every input position in a single pass, each
 from packets $\leq t$ alone.
 
@@ -424,7 +419,7 @@ the exact clean flow it was derived from by matching canonical five-tuple keys; 
 result is a corpus of (adversarial $\rightarrow$ clean) sequence pairs on which
 reconstruction is supervised directly. Pairs shorter than two packets are dropped,
 since a single packet carries no inter-arrival interval and thus no timing signal to
-restore. Pairs follow the same seed-$42$ flow-atomic split as everything else, keeping
+restore. Pairs follow the same seed-$42$ flow-atomic split as everything else described above, keeping
 the test pairs unseen by every base learner.
 
 The loss is a smooth-L1 distance between the reconstructed and the clean sequence,
@@ -432,14 +427,14 @@ masked over padding and averaged within each flow before averaging across flows,
 same length-normalization argument as in \Cref{subsec:sol-tcn}; smooth-L1 is preferred
 over a plain squared error for its robustness to the occasional large deviation.
 One further choice deserves emphasis: the loss weights all $1090$ dimensions
-\emph{uniformly}. The training signal contains no hint of where TANTGen's perturbation
+\emph{uniformly}. This means that the training signal contains no hint of where TANTGen's perturbation
 lives, so the model must discover for itself which dimensions are trustworthy and
-which have been tampered with. This keeps the purification \emph{model}
+which have been tampered with. This keeps the purification model
 \emph{attack-agnostic}: nothing in its objective is specific to TANTGen's footprint, even
 though that footprint is known here. During development a variant
 weighted towards the known perturbed dimensions was also explored, and it was dropped
 from the final design precisely because it ties the defense to one attacker's
-signature. This agnosticism is a property of this feature-space stage, not of the whole
+signature. This agnosticism is a property of this specific feature-space stage, not of the whole
 purification path, and \Cref{subsec:sol-realization} states where it stops.
 
 \subsection{Traffic-Space Realization and Validation}\label{subsec:sol-realization}
@@ -451,7 +446,7 @@ beside it: the protected \ac{NIDS} sits behind DEPT and consumes traffic, not te
 the realized packets \emph{are} the pipeline's output. Rebuilding packets from scratch out of the purified
 tensors would be impossible, as nPrint encodes only headers and the
 identity fields are masked to zero. Realization therefore works by \emph{overlay}: we
-keep each original adversarial packet, with its identity and payload content intact,
+keep each original packet, with its identity and payload content intact,
 and write back only the two quantities purification may have changed. The purified
 IPv4 total length is decoded from its sixteen header bits and applied by trimming the application payload, which
 is the inverse of TANTGen's size perturbation; the purified inter-arrival time is
@@ -459,12 +454,12 @@ de-normalized and applied to the packet's capture timestamp. The packets are the
 re-serialized with scapy, which recomputes the checksums and length fields that depend
 on the edit. Alignment between tensor rows and packets reuses the pipeline's canonical
 flow grouping, giving a one-to-one correspondence; any flow whose packet count fails to
-match its tensor length is skipped and counted, not silenced.
+match its tensor length is skipped, counted, and reported at the end.
 
-Placing the realization step in the pipeline has a price, and it is stated plainly here: the deployed pipeline is
+Placing the realization step in the pipeline has a price: the deployed pipeline is
 not attack-agnostic end-to-end. The reconstructor of \Cref{subsec:sol-rec-training}
 corrects all $1090$
-dimensions without being told which ones the attacker moved; realization writes back
+dimensions without being told which ones the attacker moved but realization writes back
 exactly two, because those are the two axes the threat model of \Cref{sec:sol-threat}
 admits. An adversary that instead perturbed, for example, the \ac{TTL}, the TCP window, or the
 option layout would still be flagged by the ensemble and denoised in feature space, but its correction would be
@@ -488,13 +483,13 @@ even when all IP and UDP fields remain consistent, so such packets cannot be fai
 realized by overlay at all. They are reported separately rather than scored as
 compliance failures, and \Cref{sec:eval-purification} gives the full accounting.
 
-Finally, the evaluation harness embeds the \emph{independent} protected detectors
-that complement the \ac{TCN}-based purification measurements: a Kitsune instance
+Finally, the evaluation process includes the \emph{independent} protected detectors
+that complete the \ac{TCN}-based purification measurements: a Kitsune instance
 (KitNET with the damped incremental statistics its reference implementation calls
 AfterImage~\cite{mirsky2018kitsune}) for the two Kitsune-native sources (Mirai and
 the SSDP flood), and TANTGen's own ML-NIDS flow classifiers for the eight CIC
 attacks, in every case the very detector TANTGen calibrated that attack's evasion
-against. The harness realizes matched adversarial, purified, and clean packet
+against. The process uses matched adversarial, purified, and clean packet
 triplets of the same flows and scores each through its attack's detector, so that
 purification can be assessed by a judge that shares nothing with DEPT's training
 loop; the measurement is reported in \Cref{subsec:eval-e2e-detect}.
@@ -545,10 +540,8 @@ stage plus one for the pipeline, with the two evaluation studies of
 configuration file each in the same pattern; every file fully determines its stage's
 data scope, architecture, and training settings, and a small runner script per stage
 executes it end to end. All stages read the same tensor artifacts and the same stored split, which is
-how the shared-split discipline of \Cref{sec:sol-pipeline} is enforced in practice,
-and derived artifacts are cached and fingerprinted against their upstream inputs (for
-instance, the meta-learner's token cache is invalidated whenever a base learner's
-checkpoint changes), so any partial re-run stays consistent. \Cref{tab:sol-hyper}
+how the shared-split principle of \Cref{sec:sol-pipeline} is enforced in practice,
+and derived artifacts are cached. \Cref{tab:sol-hyper}
 summarizes all four learned components. The source layout mirrors the stages, with the
 feature pipeline under \texttt{src/feature\_extraction}, the models under
 \texttt{src/models}, per-stage entry points under \texttt{scripts}, and configuration
