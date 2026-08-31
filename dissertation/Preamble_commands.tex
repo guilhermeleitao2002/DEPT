@@ -106,8 +106,41 @@
 %
 % Usage -- give the name WITHOUT the .svg extension:
 %     \includesvg[width=0.8\textwidth]{./Images/figure}
-\usepackage{svg}
-\svgsetup{inkscapepath=./Images/.svgcache, inkscapelatex=false}
+%
+% Overleaf, and any other build that cannot run Inkscape, takes the fallback
+% below instead -- see "NO-INKSCAPE FALLBACK".
+\newif\ifsvginkscape
+\ifdefined\pdfshellescape
+  \ifnum\pdfshellescape=1 \svginkscapetrue\fi
+\fi
+%
+% -----------------------------------------------------------------------------
+% NO-INKSCAPE FALLBACK (Overleaf):
+% -----------------------------------------------------------------------------
+% Overleaf ships no Inkscape and only grants *restricted* shell escape, so the
+% conversion above cannot happen there: every figure then fails with
+%     Package pdftex.def Error: File `./Images/.svgcache/<name>.pdf' not found
+% (and ./Images/.svgcache/ would not even survive the upload -- Overleaf drops
+% paths beginning with a dot).
+%
+% So when Inkscape is unavailable we do not load the 'svg' package at all and
+% redefine \includesvg to pull in a pre-exported ./Images/<name>.pdf. Those PDFs
+% are committed next to their .svg sources and regenerated with
+%     ./Images/export-svg-to-pdf.sh
+% which calls Inkscape exactly the way svg.sty does, so both paths embed
+% identical artwork. Re-run it (and re-upload) after editing any figure.
+%
+% \pdfshellescape: 1 = unrestricted (local, Inkscape can run), 2 = restricted
+% (Overleaf), 0 = disabled. Only 1 keeps the live-conversion path.
+\ifsvginkscape
+  \usepackage{svg}
+  \svgsetup{inkscapepath=./Images/.svgcache, inkscapelatex=false}
+\else
+  \newcommand*{\includesvg}[2][]{\includegraphics[#1]{#2.pdf}}
+  \typeout{^^J*** No unrestricted shell escape: Inkscape cannot be called.^^J%
+*** Falling back to the pre-exported ./Images/*.pdf figures.^^J%
+*** Refresh them with ./Images/export-svg-to-pdf.sh after editing an SVG.^^J}
+\fi
 %
 % The two blocks below only bite while inkscapelatex=true, i.e. while pdflatex
 % is the one setting the figure labels. They are kept because the same
@@ -137,7 +170,9 @@
 %     key=value parsing -- the backtick is mangled and every \includesvg then
 %     fails with "Missing number, treated as zero".)
 \newcommand{\svgliteralunderscore}{\catcode`\_=12\relax}
-\svgsetup{pretex=\svgliteralunderscore}
+\ifsvginkscape
+  \svgsetup{pretex=\svgliteralunderscore}
+\fi
 %
 % -----------------------------------------------------------------------------
 % PACKAGE caption:
