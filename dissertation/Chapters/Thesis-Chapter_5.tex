@@ -969,7 +969,9 @@ this section takes up. \Cref{sec:concl-rqs} states both answers in full.
 \paragraph{Purification without a good gate can subtract as well as add.} The evaluation's
 most consequential negative finding, and one visible only under an independent detector:
 where TANTGen never actually evaded, purifying \emph{lowers} the protected NIDS's
-detection, by up to $22.7$ points (\Cref{tab:eval-baseline}), because there the attack's
+detection, by as much as $22.7$ points on \texttt{dns\_ddos} and $23.9$ on
+\texttt{mirai\_size}, where it undoes TANTGen's own self-sabotage
+(\Cref{subsec:eval-e2e-detect}), because there the attack's
 fingerprint and the clean manifold were never far apart, so what the denoiser correctly
 removes is signal the NIDS was still using. The gate fails to prevent this, flagging
 nearly all flood traffic, so the gated and an ungated pipelines reach $0.8836$ and $0.8831$
@@ -982,10 +984,14 @@ score below chance for both the forest and the meta-learner against same-source 
 flows (\Cref{tab:eval-persource}), so such a flow resembles generic benign traffic
 \emph{more} than that flood's own unedited flows do. The cause is the feature
 representation rather than capacity, tuning or training scope: the per-attack specialists
-fail on the same slices (\Cref{tab:eval-perattack}), the purifier cuts the footprint
-sharply without moving any verdict, and the deployed gate flags under $1\%$ of these
-flows. DEPT's $24$ prefix statistics and $1088$ header bits cannot express whatever
-separates a padded single-response UDP flood from an unpadded one.
+fail on the same slices (\Cref{tab:eval-perattack}), and the deployed gate flags under
+$1\%$ of these flows. On three of the four the token view has nothing to see at all: on
+\texttt{ldap\_ddos}, \texttt{ntp\_ddos} and \texttt{ssdp\_ddos}, every matched test pair
+is bit-identical to its clean counterpart (\Cref{sec:eval-purification}). On the fourth,
+\texttt{dns\_ddos}, the purifier cuts a full footprint to under a third without moving
+DEPT's own verdict. DEPT's $24$ prefix statistics and $1088$ header bits cannot express
+whatever separates a \texttt{size}-mode flow of these single-response UDP floods from an
+unedited one.
 
 \paragraph{A stacker beaten by its own base learner.} The meta-learner's $0.9334$ AUROC
 sits below the forest's $0.9813$ at most views from packet~$2$ onward

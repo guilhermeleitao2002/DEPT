@@ -66,8 +66,9 @@ Six limitations bound the results, analysed in more detail in \Cref{sec:eval-dis
 representational. On the \texttt{size} variants of the DNS, NTP, SSDP and LDAP reflection floods,
 every model scores \emph{below chance} against same-source benign flows: a manipulated flow
 resembles generic benign traffic more closely than that flood's own unmanipulated flows to the detector.
-Per-attack specialists fail on the same slices, the purifier cuts the footprint there without
-moving a verdict, and the gate flags under $1\%$ of those flows: the cause is DEPT's $24$ prefix
+Per-attack specialists fail on the same slices and the gate flags under $1\%$ of those flows; on
+three of the four, the matched adversarial tokens are bit-identical to the clean ones, and on
+DNS the purifier cuts the footprint without moving DEPT's verdict: the cause is DEPT's $24$ prefix
 statistics and $1088$ header bits, not capacity, tuning or training scope. Since these floods
 dominate the corpus, every aggregate in \Cref{chap:evaluation} averages near-perfect and
 below-chance sub-populations.
@@ -109,7 +110,7 @@ The limitations above set most of the agenda; the gradient ablation potentially 
     \item \textbf{A gate that predicts benefit rather than adversariality.} The end-to-end
     regressions all follow from purifying flows that were still detected. A gate trained on
     whether purification raises or lowers the protected detector's score, which the system already
-    computes, would convert thoskeepinge losses into no-ops,  the gains and raising the overall end-to-end performance.
+    computes, would convert those losses into no-ops, keeping the gains and raising the overall end-to-end performance.
     \item \textbf{An attack-agnostic realization step.} Deriving the fields to edit from the
     residual $\Delta$ itself and reconciling them against the protocol's constraints, in the
     spirit of PANTS's SMT-checked perturbations~\cite{jin2025robustifying}, would generalize the
@@ -117,7 +118,7 @@ The limitations above set most of the agenda; the gradient ablation potentially 
     \item \textbf{A fusion that never falls below its best base learner.} Re-emitting the \ac{RF}
     evidence at every packet without an explicit staleness weight, or letting the stacker fall back
     to the stronger base opinion when the two diverge.
-    \item \textbf{What separates a padded flood from an unpadded one.} Which observable quantity,
+    \item \textbf{What separates a size-mode flood flow from an unedited one.} Which observable quantity,
     absent from the representation above, distinguishes these flows? Payload, excluded by design,
     is the first place to look.
 \end{itemize}
