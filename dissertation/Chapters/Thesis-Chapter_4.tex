@@ -67,7 +67,8 @@ a valid working evasion, and such malformed traffic is trivially rejected
 by stateless checks well before any learned model needs to be involved.
 
 TANTGen fixes the threat model to the demonstrated capabilities, but it also sets an upper-bound on what
-that model can be used to prove. Being gradient-free, it cannot showcase a gradient path, and a
+that model can be used to prove. Its gradients come from its own surrogate NIDS, never from
+DEPT's members, so it cannot showcase a gradient path into DEPT itself, and a
 central claim of this design, that fusing a non-differentiable learner with a
 differentiable one raises the cost of evasion, is a claim precisely about gradient
 paths. Establishing it needs an adversary that exploits one.

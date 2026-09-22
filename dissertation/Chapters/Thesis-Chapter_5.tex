@@ -43,8 +43,9 @@ reconstructor's own metrics (\Cref{sec:eval-purification}) and, end to end, thro
 deployment baseline that scores the defense against the independent \ac{NIDS} each
 attack was built to evade (\Cref{sec:eval-e2e}).
 
-RQ1 needs an adversary other than TANTGen. TANTGen is black-box and gradient-free by
-design, so it exploits no gradient path and cannot say what heterogeneity is worth
+RQ1 needs an adversary other than TANTGen. TANTGen is black-box by design: its gradients
+come from its own surrogate NIDS, never from DEPT, so it exploits no gradient path into
+DEPT and cannot say what heterogeneity is worth
 against it. \Cref{sec:eval-gradablation} therefore introduces a second adversary that
 differentiates the \ac{TCN} directly and whose perturbation is then scored, unchanged,
 against the Random Forest, the \ac{TCN}, and the fused stack.
@@ -609,9 +610,10 @@ granularity of this one packet, this $44 \rightarrow 73 \rightarrow 44$ restorat
 % (PGD u random) attacker under the monotone envelope.
 
 Every result so far was produced against TANTGen, and TANTGen cannot answer RQ1. It is
-black-box and gradient-free, so it exploits no gradient path; measuring it tells us the
-ensemble detects \emph{its} perturbations, not what the ensemble's heterogeneity is worth
-against an adversary that differentiates. This section supplies that adversary.
+black-box, its gradients coming from its own surrogate NIDS rather than from DEPT, so it
+exploits no gradient path into DEPT; measuring it tells us the ensemble detects \emph{its}
+perturbations, not what the ensemble's heterogeneity is worth against an adversary that
+differentiates one of the ensemble's own members. This section supplies that adversary.
 
 \subsection{The Attacker}\label{subsec:eval-gradablation-attacker}
 

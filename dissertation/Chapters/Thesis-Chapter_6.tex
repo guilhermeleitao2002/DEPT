@@ -33,7 +33,7 @@ corpus in three perturbation modes, reported per source and per mode.
 
 \textbf{RQ1 (ensemble robustness)}, from \Cref{sec:eval-rqs}, asked whether heterogeneous stacking
 measurably raises the cost of a transferable, gradient-guided evasion attack. It does. TANTGen
-being gradient-free, the evaluation employed a stronger adversary (\Cref{sec:eval-gradablation}):
+following only its own surrogate's gradients, the evaluation employed a stronger adversary (\Cref{sec:eval-gradablation}):
 white-box access to the \ac{TCN}, nothing for the \ac{RF} and meta-learner, one perturbation against
 all three at once. It transfers poorly to the forest, and the stack is costlier still: at the
 three smallest budgets it concedes at most $8.5\%$ attack success, against the forest's $13.1\%$
