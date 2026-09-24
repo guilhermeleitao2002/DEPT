@@ -152,7 +152,7 @@ check; \Cref{sec:eval-purification} discusses why the external
 judge, not DEPT's own detector, carries the end-to-end claim. In the \emph{deployment}
 phase the flow of \Cref{fig:sol-architecture} would run continuously: tensorize each arriving
 packet, run through both base learners, fuse, and decide. Purification is gated on the
-ensemble's flag, so the common case, clean traffic, never pays for it, and only the
+ensemble's flag, so the common case, unflagged clean traffic, never pays for it, and only the
 flows the detector marks adversarial are handed to the reconstructor and then realized
 back into packets before reaching the protected NIDS. This detect-then-purify cycle,
 realization included, is
@@ -376,7 +376,7 @@ correction directly.
 \begin{figure}[htbp]
     \centering
     \subfigure[Feature-space purification: a decoder-only Transformer predicts a
-    per-dimension residual correction $\Delta$, and the purified flow is $x + \Delta$.]{
+    per-dimension residual correction $\Delta$, and the purified flow is $x' + \Delta$.]{
         \includesvg[width=0.44\textwidth]{./Images/dept_purifier}
         \label{fig:sol-purifier-a}}
     \hfill
