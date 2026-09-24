@@ -348,7 +348,7 @@ def fig_scatter():
     # pile counts (marks coincide exactly at these two spots); kept inside the plot
     # box so they never collide with the x tick labels below the axis
     p.append(f'  <text x="{fmt(X(0.05))}" y="{fmt(Y(0)-30)}" font-size="18" fill="{GREY}">{n_origin} source-mode pairs</text>')
-    p.append(f'  <text x="{fmt(X(0.985))}" y="{fmt(Y(0)-30)}" text-anchor="end" font-size="18" fill="{GREY}">{n_right} pairs (reflection floods, size)</text>')
+    p.append(f'  <text x="{fmt(X(0.985))}" y="{fmt(Y(0)-30)}" text-anchor="end" font-size="18" fill="{GREY}">{n_right} pairs (dns ddos, brute force; size)</text>')
 
     # the off-scale panel holds exactly the three mirai pairs; name them once
     n_off = sum(1 for _, _, mse, _ in pts if mse > xmax)

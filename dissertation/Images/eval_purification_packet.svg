@@ -31,7 +31,7 @@
   <!-- transition 1: attack -->
   <line x1="150" y1="122" x2="150" y2="172" stroke="#c44536" stroke-width="2.5" marker-end="url(#pArrR)"/>
   <text x="176" y="142" text-anchor="start" font-size="15" fill="#7a2f26">TANTGen size attack &#8212; append 29 payload bytes</text>
-  <text x="176" y="163" text-anchor="start" font-size="15" fill="#7a2f26">IPv4 total length inflated 44 B &#8594; 73 B (evasion)</text>
+  <text x="176" y="163" text-anchor="start" font-size="15" fill="#7a2f26">IPv4 total length inflated 44 B &#8594; 73 B</text>
 
   <!-- ===================== ADVERSARIAL (after TANTGen) ===================== -->
   <text x="205" y="204" text-anchor="end" font-size="17" fill="#1a1a1a">Adversarial</text>

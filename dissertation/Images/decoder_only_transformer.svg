@@ -94,7 +94,7 @@
 
   <g font-size="20" fill="#5a6673">
     <text x="478" y="1042">K, V of past positions</text>
-    <text x="478" y="1068">are stored and reused</text>
+    <text x="478" y="1068">can be stored and reused</text>
     <text x="478" y="1094">(KV cache)</text>
   </g>
 </svg>

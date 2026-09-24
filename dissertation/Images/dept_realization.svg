@@ -60,5 +60,5 @@
   <text x="380" y="546" text-anchor="middle" font-size="21" fill="#1a1a1a">realized purified packet</text>
 
   <line x1="380" y1="560" x2="380" y2="586" stroke="#3a444e" stroke-width="3" marker-end="url(#rArr)"/>
-  <text x="380" y="622" text-anchor="middle" font-size="21" fill="#1a1a1a">tshark dissector check (protocol compliance)</text>
+  <text x="380" y="622" text-anchor="middle" font-size="21" fill="#1a1a1a">tshark dissector check (offline, protocol compliance)</text>
 </svg>

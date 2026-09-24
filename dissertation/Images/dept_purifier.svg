@@ -7,7 +7,7 @@
   </defs>
 
   <!-- input token row -->
-  <text x="330" y="48" text-anchor="middle" font-size="23" fill="#1a1a1a">adversarial flow  x</text>
+  <text x="330" y="48" text-anchor="middle" font-size="23" fill="#1a1a1a">adversarial flow  x&#8242;</text>
   <g stroke-width="2">
     <rect x="180" y="66" width="44" height="44" fill="#f7f9fa" stroke="#5a6673"/>
     <rect x="230" y="66" width="44" height="44" fill="#f7f9fa" stroke="#5a6673"/>
@@ -55,5 +55,5 @@
     <rect x="380" y="555" width="44" height="44" fill="#cdeae6" stroke="#2a9d8f"/>
     <rect x="430" y="555" width="44" height="44" fill="#f7f9fa" stroke="#5a6673"/>
   </g>
-  <text x="330" y="630" text-anchor="middle" font-size="23" fill="#1a1a1a">purified flow  x&#8242; = x + &#916;</text>
+  <text x="330" y="630" text-anchor="middle" font-size="23" fill="#1a1a1a">purified flow  x&#8242; + &#916;</text>
 </svg>
