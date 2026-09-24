@@ -380,7 +380,7 @@ def tantgen_budget(
     tensors_dir: Path,
     source: str,
     max_flows: int = 400,
-    ipat_std: float = 211047.5219908926,
+    ipat_std: float = 208.21998059319273,
 ) -> dict:
     """TANTGen's own per-packet spend on ``source``, paired to its clean base.
 

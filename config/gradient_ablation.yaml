@@ -60,7 +60,7 @@ seed: 42
 
 # ---- Attacker budget grid ----
 # In physical units, because an L-inf ball on the raw tensor is meaningless here:
-# the IPAT channel is z-scored with std=211047.5 s, so eps=0.01 would buy +/-2110
+# the IPAT channel is z-scored with std=208.2 s, so eps=0.01 would buy +/-2.08
 # SECONDS of delay while the nPrint bit channels are {-1,0,1}. See
 # src/models/gradient_ablation/attack.py.
 #

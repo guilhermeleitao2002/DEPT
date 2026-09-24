@@ -4,11 +4,11 @@ Why not an off-the-shelf epsilon-ball
 -------------------------------------
 The obvious move — hand the 1090-dim tensor to ART's PGD with an L-inf ball — is
 physically meaningless here, and the reason is worth stating because it shapes
-the whole module. The IPAT channel is z-scored with **std = 211047.5 seconds**
+the whole module. The IPAT channel is z-scored with **std = 208.2 seconds**
 (``data/tensors/mean_std.json``), while the 1088 nPrint channels are bits in
-``{-1, 0, 1}``. An ``eps = 0.01`` ball therefore buys the attacker **±2110
+``{-1, 0, 1}``. An ``eps = 0.01`` ball therefore buys the attacker **±2.08
 seconds** of delay and nothing at all in the bit channels. Any single epsilon
-prices the two channels five orders of magnitude apart.
+prices the two channels more than two orders of magnitude apart.
 
 So the optimisation variable here is the perturbation the attacker actually pays
 for: ``k`` bytes of padding and ``d`` seconds of delay, per packet. The budget is
@@ -27,7 +27,8 @@ positive class *is* "TANTGen-perturbed", so an attacker allowed to *reduce* the
 perturbation would evade by simply not perturbing, at zero cost and at the price
 of losing the evasion of the protected NIDS that motivated the perturbation. The
 constraint is also empirically what TANTGen itself does: every negative delta
-measured in its output is exactly one float32 ULP (-3.071e-06 s), i.e. round-off.
+measured in its output was exactly one float32 ULP of the z-scored channel
+(-1.551e-06 s at this std), i.e. round-off.
 
 Gradients through a 16-bit integer
 ----------------------------------
@@ -61,9 +62,11 @@ IDX_IPV4_TL = (16, 32)
 IDX_IPAT = 1088
 TL_BITS = 16
 
-# float32 ULP of the z-scored IPAT channel near its observed range, in seconds.
+# float32 ULP of the z-scored IPAT channel near its observed range, in seconds:
+# 2**-27 at |z| = mean/std ~ 0.124 (a near-zero IAT) times std = 208.22 s, i.e.
+# 1.5514e-06 s, rounded up so a one-ULP delta still reads as round-off.
 # Delays below this are unrepresentable in the tensor: they quantise to zero.
-IPAT_ULP_SECONDS = 3.071e-06
+IPAT_ULP_SECONDS = 1.552e-06
 
 # Ethernet MTU. A deployment choice, not a property of the data: Packet_Size_max
 # reaches 24874 in data/models/rf/dataset.npz (LRO/GRO-coalesced capture frames).
