@@ -10,8 +10,8 @@
 DEPT combines three main ingredients: a bit-level representation of network traffic, a
 heterogeneous detection ensemble, and a learned purifier. This chapter presents the
 concepts each of them builds upon. Instead of a broad survey of machine learning for
-security, the focus is mostly kept on what the system actually relies on, so that the design
-decisions of \Cref{chap:solution} follow from the principles introduced here.
+security, the focus is kept on what the system relies on, so that the design decisions of
+\Cref{chap:solution} follow from the principles introduced here.
 
 % #############################################################################
 \section{Machine Learning for NIDS}\label{sec:bg-ml-nids}
@@ -28,21 +28,20 @@ operates: every component of the system is a learned model.
 
 \subsection{Learning Paradigms}\label{subsec:bg-paradigms}
 Learning-based intrusion detection is usually organized by the kind of supervision a model
-requires. Four paradigms recur in the literature. Every component of DEPT is trained under
-the first; the second matters here because the independent \ac{NIDS} DEPT is evaluated in
-front of is an unsupervised one.
+requires.
 
 \emph{Supervised learning} trains on labelled data, where each example is marked benign or
 malicious, and learns a mapping from input features to labels (\Cref{fig:bg-paradigms}).
 Random forests, support vector machines, and deep neural networks all follow this
-paradigm~\cite{boutaba2018comprehensive,sarker2021deep}, and it is the main approach in
-DEPT: the two base detectors, the meta-learner that fuses them, and the purifier are all
-trained under supervision. \emph{Unsupervised learning} uses no attack labels. It models
+paradigm~\cite{boutaba2018comprehensive,sarker2021deep}, and every component of DEPT, the
+two base detectors, the meta-learner that fuses them, and the purifier, is trained under
+supervision. \emph{Unsupervised learning} uses no attack labels. It models
 the normal behaviour of a network and flags departures from that baseline as anomalies,
 which makes it attractive for catching zero-day attacks that a supervised model never saw
 during training. The canonical example in this domain is Kitsune, an ensemble of
 autoencoders that scores each packet by how poorly it reconstructs under a model of benign
-traffic~\cite{mirsky2018kitsune}. \emph{Semi-supervised learning} sits between the two,
+traffic~\cite{mirsky2018kitsune}; it is also one of the independent detectors DEPT is
+evaluated in front of in \Cref{chap:evaluation}. \emph{Semi-supervised learning} sits between the two,
 exploiting a small labelled set together with abundant unlabelled data, and
 \emph{reinforcement learning} replaces the fixed dataset with an agent that learns by
 interacting with an environment. DEPT uses neither, although reinforcement learning is the
@@ -139,8 +138,7 @@ instead of learning the attack behaviour itself; this shortcut inflates test sco
 does not survive deployment on a different network~\cite{arp2022dos,apruzzese2023sok}. DEPT
 therefore \emph{masks} these identity fields, zeroing the $144$ bits that encode them
 (\Cref{fig:bg-nprint}). Masking forces the detectors to rely on behavioural structure, such
-as packet sizing and timing, and it directly supports the claim that detection transfers
-across deployments instead of overfitting to one capture.
+as packet sizing and timing, rather than on the identity of the hosts of one capture.
 
 The same packets feed two representations at different rates, a design choice matched to the
 two kinds of base learner that DEPT uses (\Cref{tab:bg-streams}). The \ac{TCN} consumes the
@@ -266,16 +264,16 @@ models attend bidirectionally over the entire sequence, which suits classificati
 representation tasks, including learned traffic
 analysis~\cite{lin2022bert,ghadermazi2025gtae}. \emph{Decoder-only} models apply a causal
 mask so that each position attends only to the past (\Cref{fig:bg-transformer}); this is
-the arrangement behind autoregressive generation, but the mask is what any task whose
-output at a position may depend only on that position's past requires, generative or not.
+the arrangement behind autoregressive generation, but the mask is needed by any task whose
+output at a position may depend only on that position's past, generative or not.
 Causality also enables \emph{key--value caching}: the keys and values of past positions in
 \Cref{eq:bg-attention} do not change as new tokens arrive, so they can be stored and reused
 instead of reprocessing the whole prefix on every packet. Both of DEPT's Transformer
 components are decoder-only stacks, since both must act on a packet with only its
 predecessors in hand: the meta-learner fuses the base detectors' per-packet outputs
 (\Cref{subsec:bg-ensemble-types}) and the purifier rewrites a perturbed packet sequence
-(\Cref{chap:solution}). Neither is autoregressive, as neither feeds its own output back as
-input; causality buys them streaming validity rather than generation.
+(\Cref{chap:solution}). Neither is autoregressive, since neither feeds its own output back
+as input; the causal mask is there for streaming, not for generation.
 
 \begin{figure}[htbp]
     \centering
@@ -311,20 +309,17 @@ corrupts the model during training, whereas \emph{evasion} manipulates inputs at
 time against an already-trained model. DEPT is designed for the black-box evasion threat,
 which is the case that dominates real deployments (\Cref{chap:solution}).
 
-Network intrusion detection is harder to attack, and to defend, than the image
-classification setting where adversarial examples were first studied, because of a
-constraint with no equivalent in the pixel domain. Any pixel of an image can be modified
-slightly and the result is still a valid image. A network feature vector cannot be modified
-freely: a perturbation must correspond to a packet or flow that is actually valid on the
-wire. Recovering a realizable packet from a desired feature vector is the \textbf{\ac{IFM}}
-problem, and it is frequently constrained or computationally
-intractable~\cite{pierazzi2020intriguing,hashemi2019towards,sun2023gpmt}. The \ac{IFM}
-problem is the defining difficulty of network adversarial machine learning, and it shapes
-attacks and defenses alike. In particular, the gradient-based methods that dominate the
-image setting, such as the \ac{FGSM} and
+Network intrusion detection differs from the image classification setting, where
+adversarial examples were first studied, by a constraint with no equivalent in the pixel
+domain: a perturbed feature vector must correspond to a packet or flow that is actually
+valid on the wire. Recovering a realizable packet from a desired feature vector is the
+\textbf{\ac{IFM}} problem, and it is frequently constrained or computationally
+intractable~\cite{pierazzi2020intriguing,hashemi2019towards,sun2023gpmt};
+\Cref{subsec:bg-realizability} returns to it. In particular, the gradient-based methods
+that dominate the image setting, such as the \ac{FGSM} and
 \ac{PGD}~\cite{goodfellow2014explaining,madry2018towards}, produce feature perturbations
-that don't need to correspond to any sendable packet, which limits their direct applicability in
-this domain.
+that need not correspond to any sendable packet, which limits their direct use in this
+domain.
 
 \subsection{Defense Paradigms}\label{subsec:bg-defense-paradigms}
 Defenses against evasion fall into a few broad families, with different strengths for
@@ -332,11 +327,9 @@ traffic data. \emph{Adversarial training} augments the training set with adversa
 examples so that the model learns to classify them correctly~\cite{madry2018towards}. It is
 effective against the perturbations it is trained on, but it is costly, it can reduce
 accuracy on clean traffic, and in networking it is only meaningful if the adversarial
-examples are themselves realizable rather than impossible feature vectors. DEPT follows
-this line in spirit, since its detectors are trained on realizable adversarial traffic
-rather than on synthetic feature perturbations (\Cref{chap:solution}); the fundamental
-difference is that DEPT's goal is to distinguish naturally occurring traffic from
-adversarially perturbed traffic, not to classify both as malicious.
+examples are themselves realizable rather than impossible feature vectors. DEPT's
+detectors are likewise trained on realizable adversarial traffic, although with a
+different goal (\Cref{sec:rel-training}).
 
 \emph{Input transformation}, or \emph{purification}, is the family DEPT builds its purifier
 on. Instead of hardening the classifier, it transforms each input before classification in
@@ -386,10 +379,9 @@ rather than a property of attacks alone. A defense that \emph{edits} traffic, as
 does, must itself re-emit valid packets; otherwise its output is unusable, or is trivially
 detected as malformed. The step from feature-space back to traffic-space, which we call
 \emph{realization}, is therefore treated as a first-class part of the design. The nPrint
-representation is a valuable asset here: because it is close to a bijective, bit-level image of the
-packet headers, a purified nPrint vector can be decoded back into a concrete packet and
-checked for on-the-wire validity, which DEPT does with packet-level tools
-(\Cref{chap:solution}).
+representation helps here: because it is a bit-level image of the packet headers, a
+purified nPrint vector can be decoded back into a concrete packet and checked for
+on-the-wire validity, which DEPT does with packet-level tools (\Cref{chap:solution}).
 
 % #############################################################################
 \section{Ensemble Learning for Robustness}\label{sec:bg-ensembles}
@@ -407,7 +399,7 @@ trees~\cite{breiman1996bagging,breiman2001random}. \emph{Boosting} trains models
 sequentially, each one focusing on the examples its predecessors got wrong, which reduces
 bias~\cite{freund1997decision}. \emph{Stacking} trains \emph{heterogeneous} base learners
 and then trains a separate \emph{meta-learner} to combine their
-outputs~\cite{wolpert1992stacked}. Stacking is most effective precisely when the base
+outputs~\cite{wolpert1992stacked}. Stacking is most effective when the base
 learners are diverse and make different kinds of errors, so that their combination covers
 more of the input space than any of them alone.
 
@@ -422,8 +414,8 @@ more of the input space than any of them alone.
     \label{fig:bg-ensembles}
 \end{figure}
 
-DEPT stacks a random forest and a temporal convolutional network, which is precisely the
-setting stacking was designed for. The two learners are heterogeneous in architecture and
+DEPT stacks a random forest and a temporal convolutional network, which is the setting
+stacking was designed for. The two learners are heterogeneous in architecture and
 asynchronous in operation: the network emits a dense verdict on every packet, while the
 forest emits a sparse verdict only at its checkpoints, starting at packet~$2$. A fixed
 combination rule, such as averaging or majority voting, cannot express when each learner
@@ -440,15 +432,14 @@ gradient method such as \ac{PGD} or \ac{FGSM}, and relies on that perturbation c
 over to the target~\cite{papernot2017practical}. Heterogeneous stacking acts directly on
 this mechanism. A differentiable member, such as the \ac{TCN}, exposes a gradient that an
 attacker can follow. An \ac{RF} does not: its decision function is constant over
-axis-aligned regions, so there is no gradient direction to exploit. Combining a
-differentiable and a non-differentiable model yields what the literature calls a rugged
-decision boundary, in which a perturbation optimized against the differentiable member does
-not necessarily move the forest's discrete verdict, and therefore transfers poorly across
-the ensemble, raising the attacker's
+axis-aligned regions, so there is no gradient direction to exploit. When a differentiable
+and a non-differentiable model are combined, a perturbation optimized against the
+differentiable member does not necessarily move the forest's discrete verdict, so it
+transfers poorly across the ensemble and raises the attacker's
 cost~\cite{yang2021trs,gungor2022stewart,biggio2011bagging,chen2022collective}.
 
 This argument must be stated carefully, because the absence of a usable gradient is a form
-of \emph{gradient masking}, and gradient masking is not robustness in it of itself. A
+of \emph{gradient masking}, and gradient masking is not robustness in itself. A
 determined white-box adversary can estimate gradients numerically or resort to
 gradient-free search, and masked gradients can produce a false sense of
 security when mistaken for genuine robustness~\cite{athalye2018obfuscated}. The argument
@@ -456,7 +447,7 @@ holds for DEPT precisely because its threat model is black-box: the value of a
 non-differentiable member is not an absolute barrier, but a measurable reduction in the
 transferability from whatever substitute the attacker is able to build without direct
 gradient access. Robustness is therefore treated as a property to be evaluated empirically,
-not as a guarantee to be assumed, a distinction that \Cref{chap:evaluation} takes up thoroughly.
+not as a guarantee to be assumed, which is what \Cref{chap:evaluation} does.
 
 % #############################################################################
 \section{Summary}\label{sec:bg-summary}

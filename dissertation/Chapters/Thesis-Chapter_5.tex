@@ -43,12 +43,10 @@ reconstructor's own metrics (\Cref{sec:eval-purification}) and, end to end, thro
 deployment baseline that scores the defense against the independent \ac{NIDS} each
 attack was built to evade (\Cref{sec:eval-e2e}).
 
-RQ1 needs an adversary other than TANTGen. TANTGen is black-box by design: its gradients
-come from its own surrogate NIDS, never from DEPT, so it exploits no gradient path into
-DEPT and cannot say what heterogeneity is worth
-against it. \Cref{sec:eval-gradablation} therefore introduces a second adversary that
-differentiates the \ac{TCN} directly and whose perturbation is then scored, unchanged,
-against the Random Forest, the \ac{TCN}, and the fused stack.
+RQ1 needs the second adversary of \Cref{sec:sol-threat}, since TANTGen's gradients come
+from its own surrogate and never from DEPT: \Cref{sec:eval-gradablation} differentiates
+the \ac{TCN} directly and scores the resulting perturbation, unchanged, against the
+Random Forest, the \ac{TCN}, and the fused stack.
 
 A third natural question, whether the full pipeline stays within a
 real-time inference budget, is deliberately not addressed here: the wall-clock latency
@@ -60,22 +58,20 @@ and overhead evaluation of the delivered system is left to future work
 
 \subsection{Datasets and Threat Generation}\label{subsec:eval-datasets}
 
-The evaluation corpus combines ten benign traffic sources (Mirai and the SSDP flood
-from Kitsune; DDoS, Port Scan and Brute Force from CIC-IDS2017; and the five
-CIC-DDoS-2019 reflection and amplification floods, namely NTP, DNS, SSDP, SYN, and
-LDAP), each paired with three TANTGen adversarial variants: \texttt{both} (timing and
-size), \texttt{iat} (inter-arrival timing only), and \texttt{size} (payload/size
-only). The per-source detection tables of this chapter therefore cover ten clean sources and
-thirty adversarial source--mode combinations. DEPT's label convention applies throughout
-(\Cref{sec:sol-pipeline}): raw-capture flows are \emph{benign}, TANTGen-generated ones
-are \emph{adversarial}. Its consequence, that a source on which TANTGen barely perturbs
-the features is essentially unlabelable, is analysed in \Cref{sec:eval-discussion}.
+The evaluation corpus is the one of \Cref{sec:sol-pipeline}: ten benign traffic sources
+(Mirai and the SSDP flood from Kitsune; DDoS, Port Scan and Brute Force from
+CIC-IDS2017; and the five CIC-DDoS-2019 reflection and amplification floods, namely NTP,
+DNS, SSDP, SYN, and LDAP), each paired with three TANTGen adversarial variants, one per
+perturbation mode (\texttt{both}, \texttt{iat}, \texttt{size}). The per-source
+detection tables of this chapter therefore cover ten clean sources and thirty
+adversarial source--mode combinations. The label convention of \Cref{sec:sol-pipeline}
+applies throughout: raw-capture flows are \emph{benign}, TANTGen-generated ones are
+\emph{adversarial}.
 
 The corpus as tensorized comprises $8{,}624{,}958$ flows and $61{,}516{,}406$ packets
-across the forty sources (ten benign and thirty adversarial). All models share a single
-flow-atomic, source-stratified $70/15/15$ split (seed~$42$), so that the RF, TCN,
-meta-learner, and reconstructor are trained, validated, and tested on the same flows and
-their results are directly comparable. Because the CIC-DDoS-2019 reflection floods
+across the forty sources (ten benign and thirty adversarial). All models share the
+flow-level, source-stratified $70/15/15$ split (seed~$42$) of \Cref{sec:sol-pipeline},
+so their results are directly comparable. Because the CIC-DDoS-2019 reflection floods
 contribute the overwhelming majority of adversarial flows, the held-out test pool is
 adversarial-dominated: of the $1{,}293{,}737$ test flows seen by the TCN and
 meta-learner, $1{,}082{,}586$ ($83.7\%$) are adversarial and $211{,}151$ are benign. The
@@ -87,8 +83,9 @@ performed by base-rate-robust metrics (AUROC and PR~AUC) and on the
 streaming axis rather than on raw accuracy. The reconstructor is counted differently,
 since it consumes $(\text{adversarial}\rightarrow\text{clean})$ flow pairs rather than
 individual flows: out of the $7{,}217{,}272$ total
-adversarial flows, only $2{,}566{,}489$ have a matched five-tuple counterpart, of which the same split holds out $384{,}963$ test pairs
-(\Cref{sec:eval-purification}).
+adversarial flows, only $2{,}566{,}489$ have a matched five-tuple counterpart, of which
+the same split uses $1{,}796{,}542$ pairs for training and holds out $384{,}963$ test
+pairs (\Cref{sec:eval-purification}).
 
 \subsection{Implementation Environment}\label{subsec:eval-environment}
 
@@ -100,8 +97,8 @@ meta-learner, and reconstructor; scikit-learn for the Random Forest; and Scapy t
 with \texttt{tshark}/\texttt{editcap}/\texttt{tcpdump} for PCAP handling, feature
 realization, and protocol-compliance checking.
 
-The full pipeline is expensive to run end to end, and the cost is worth recording since
-it bounds how much exploration to expect when revising the implementation. Generating the thirty
+The full pipeline is expensive to run end to end, and the cost is worth recording.
+Generating the thirty
 adversarial captures with TANTGen took $26.7$\,h, dominated by the NTP flood alone
 ($11.9$\,h), and tensorizing the forty sources a further $11.2$\,h. Among the model
 stages, the RF completed its eighteen-point grid search and final fit in $2.7$\,h on CPU,
@@ -145,10 +142,11 @@ purified (or DEPT-defended) flows are scored through the real NIDS each attack w
 to evade, Kitsune or the ML-NIDS, and the \emph{restoration ratio}, the fraction of the
 adversarial-to-clean gap recovered, together with the \ac{ASR} before and after DEPT,
 report how much detection the defense returns (\Cref{sec:eval-e2e}). A secondary,
-``peace of mind'' metric is the \emph{purification gain}, the drop in DEPT's own TCN's
+sanity-check metric is the \emph{purification gain}, the drop in DEPT's own TCN's
 adversarial-probability $\Delta P(\text{adv})$ from the adversarial to the reconstructed
-flow, with its \emph{residual gap} to a genuinely clean flow; this is circular by
-design (the same detector the loop trained around) and is read mostly as a sanity check, not as an end-to-end claim. Finally, \emph{protocol
+flow, with its \emph{residual gap} to a genuinely clean flow; this is circular (the
+judge is a detector DEPT itself trained) and is not read as an end-to-end claim.
+Finally, \emph{protocol
 compliance} is the fraction of realized packets that \texttt{tshark} parses without a
 malformed-packet error, computed only over packets the realization step can faithfully
 emit.
@@ -205,18 +203,18 @@ $30$ source--mode combinations, and \Cref{fig:eval-persource} plots the same val
 one mark per combination. Both are computed against the \emph{same-source} benign flows,
 which is the axis that matches DEPT's task as posed: separate a manipulated flow of a
 given source from an unmanipulated flow \emph{of that same source}, rather than from
-generic benign traffic drawn from the other nine. It is also the strictest of the three
-axes the evaluation records, and the one on which the system's real failure becomes visible further down.
+generic benign traffic drawn from the other nine. It is also the strictest axis the
+evaluation records, and the one on which the system's real failure becomes visible.
 
 The distribution is clearly not unimodal. Most combinations are ``solved'': $21$ of the
 $30$ reach $\ge\!0.99$ for the Random Forest and $13$ for the meta-learner. But a
 cluster of four sits at or \emph{below chance} for every model, namely the \texttt{size}
 variants of the DNS, NTP, SSDP, and LDAP reflection floods, where the RF scores
-$0.213$--$0.476$, the meta-learner $0.443$--$0.497$, and the TCN $0.494$--$0.531$. Below chance is a strong
-statement and it should be read attentively: on those source--mode pairs a flow from TANTGen's output
-looks \emph{more} like generic benign traffic than that flood's own unedited flows
-do, so a detector that inverted its verdict there would do better than the one that was
-trained. \Cref{sec:eval-discussion} discusses this in more detail.
+$0.213$--$0.476$, the meta-learner $0.443$--$0.497$, and the TCN $0.494$--$0.531$. Below
+chance means that on those source--mode pairs a flow from TANTGen's output looks
+\emph{more} like generic benign traffic than that flood's own unedited flows do, so a
+detector that inverted its verdict there would do better than the one that was trained.
+\Cref{sec:eval-discussion} discusses this in more detail.
 
 \begin{table}[tp]
 \centering
@@ -297,7 +295,7 @@ chance, are marked with $\dagger$. \texttt{b}/\texttt{i}/\texttt{s} denote the
     \label{fig:eval-persource}
 \end{figure}
 
-Three pattern regularities emerge. First, the \texttt{iat}-only mode is harder \emph{for the TCN} and easier
+Three patterns emerge. First, the \texttt{iat}-only mode is harder \emph{for the TCN} and easier
 for the forest: \texttt{portscan\_iat} ($\text{TCN}\,0.652$ against $\text{RF}\,1.000$),
 \texttt{syn\_ddos\_iat} ($0.647$ against $1.000$), \texttt{ddos\_iat} ($0.924$ against
 $0.999$). Aggregated timing statistics capture a pure timing shift that the
@@ -312,7 +310,7 @@ two-packet UDP exchanges, and a receptive field of $29$ packets has nothing to c
 over. Third, \texttt{mirai} fails differently from the floods rather than more severely:
 it is the only source no model solves in any mode, its best cell reaching $0.926$ where
 every other source reaches $\ge\!0.99$ somewhere, yet it never falls below chance either
-($0.83$--$0.93$ RF, $0.68$--$0.72$ TCN, $0.72$--$0.73$ meta). It will reappear as the worse source for the purifier.
+($0.83$--$0.93$ RF, $0.68$--$0.72$ TCN, $0.72$--$0.73$ meta). It reappears as the worst source for the purifier.
 
 % #############################################################################
 \section{Meta-Learner Results}\label{sec:eval-meta}
@@ -356,25 +354,25 @@ Detection rate      & \textbf{88.99\%} & 78.40\%        & 77.69\% \\
     \label{fig:eval-streaming}
 \end{figure}
 
-The result on this axis is not the one the design predicted, and it is worth stating
-plainly before interpreting it. \emph{The Random Forest alone is the strongest stream
+The result on this axis is not the one the design predicted. \emph{The Random Forest
+alone is the strongest stream
 at every point from packet~$2$ onward}, reaching $0.9805$ at its first checkpoint and
 $0.9813$ thereafter, against the meta-learner's $0.9099$ to $0.9334$ and the TCN's
 $0.8225$ to $0.8386$. The meta-learner is not the best model in this system; it is
 the second-best, and its advantage over the forest is confined to the single first packet.
 
-What the fusion does deliver is precise, and it is a real advantage, but it is
-narrower than ``the stack beats its base learners''. It is threefold. First, at
+What the fusion does deliver is narrower than ``the stack beats its base learners'',
+and it is threefold. First, at
 packet~$1$, where the forest is silent by construction, the meta-learner has the best
 available verdict of any model, at $0.8373$ against the TCN's $0.8191$; a defense that
 must act on the first packet has only these two options, and fusion is the better one.
 Second, the meta-learner dominates the TCN at every step, by $8.7$ to $9.5$ AUROC
-points from packet~$2$ onward, so as a way of using a sequence model it is
-unambiguously better than using the sequence model alone. Third, and most consequential
+points from packet~$2$ onward, so it is clearly better than using the sequence model
+alone. Third, and most consequential
 for RQ1, the fused stack is measurably harder to evade than either component under a
 gradient-guided attacker, which \Cref{sec:eval-gradablation} quantifies: it is the only
 one of the three that keeps $74.5\%$ of flows unevaded at every budget. Robustness, not
-accuracy on TANTGen's traffic, is what the second base learner significantly buys.
+accuracy on TANTGen's traffic, is the main thing the second base learner adds.
 
 Two further observations complete the picture, and both cut against the fusion. The
 meta-learner's per-source behaviour tracks whichever base learner is stronger on that
@@ -385,8 +383,8 @@ so on those sources it discards most of a signal it was handed. The mechanism is
 anticipated in \Cref{subsec:sol-meta}: the RF logit enters the fusion token as a single,
 sparsely updated feature, refreshed only at checkpoints and absent before packet~$2$,
 whereas the dense TCN logit is updated at every timestep, so the meta-learner's attention
-systematically under-weights the intermittent evidence. A stacker should be no worse than
-its best base learner; this one is worse on several sources and on the aggregate, and
+systematically under-weights the intermittent evidence. A stacking ensemble should be no
+worse than its best base learner; this one is worse on several sources and on the aggregate, and
 that is the clearest single target for future work on the detection stage
 (\Cref{sec:eval-discussion}).
 
@@ -399,15 +397,11 @@ from $0.9197$ to $0.9333$, with essentially all of that gain in the first few ep
 % #############################################################################
 \section{Purification Results}\label{sec:eval-purification}
 
-Five-tuple matching (\Cref{subsec:sol-rec-training}) yields $2{,}566{,}489$
-$(\text{adversarial}\rightarrow\text{clean})$ flow pairs across the corpus, which the
-shared $70/15/15$ split (seed~$42$) divides into $1{,}796{,}542$ training pairs and a
-held-out $384{,}963$ test split, unseen by any base learner; the reconstructor was
-trained and evaluated accordingly. As established in \Cref{subsec:sol-realization}, the
-denoiser is attack-agnostic in feature space while the realization that follows it is
-not; since realization is also the stage that feeds the protected NIDS, the compliance
-and independent-NIDS figures below are measured on the packets it emits.
-\Cref{tab:eval-purif} summarizes the metric families overall.
+The reconstructor is evaluated on the $384{,}963$ held-out test pairs of
+\Cref{subsec:eval-datasets}, unseen by any base learner. Since realization is the stage
+that feeds the protected NIDS, the compliance and independent-NIDS figures below are
+measured on the packets it emits. \Cref{tab:eval-purif} summarizes the metric families
+overall.
 
 \begin{table}[t]
 \centering
@@ -455,18 +449,18 @@ that variant shows no evasion to recover. The
 ML-NIDS average is diluted by the many sources where detection was never lost and there
 was consequently little to restore.
 
-The sanity-check metric agrees, for what it is worth: DEPT's own TCN puts the
+The sanity-check metric agrees: DEPT's own TCN puts the
 reconstruction at $0.428$ against $0.421$ for a genuinely clean flow, a residual gap of
 $0.007$.
 
-As with detection, the effect is strongly attack-dependent, and the per-source view is
-where the honest reading lives. \Cref{tab:eval-purifsrc} gives the rows that carry the
+As with detection, the effect is strongly attack-dependent, so the per-source view is
+needed. \Cref{tab:eval-purifsrc} gives the rows that carry the
 argument, and \Cref{fig:eval-purifscatter} plots every source--mode pair by its
 perturbation footprint (the pre-purification MSE on the perturbed dimensions) against
 the gain purification achieves on it. Four outcomes are visible and organized in \Cref{tab:eval-purifsrc}.
 
-Purification is large precisely on the structurally perturbed sources, and these are the
-same rows where the independent NIDS records detection genuinely regained:
+Purification is large on the structurally perturbed sources, and these are the
+same rows where the independent NIDS records detection regained:
 \texttt{ddos\_both} from $0.080$ to $0.865$, \texttt{ddos\_size} from $0.005$ to
 $0.817$, \texttt{portscan\_both} from $0.011$ to $0.679$. It is correctly
 inert where TANTGen barely moved the features, namely the \texttt{both} and
@@ -488,8 +482,8 @@ other column is the one that fails---the footprint is all but erased ($1.000 \ri
 0.003$, gain $+0.549$), but the independent NIDS cannot be scored on that stream at all,
 because none of its packets survive L7 realization.
 
-The fourth outcome is the one the earlier framing missed, and it only becomes visible
-once an independent judge is used. On some sources where TANTGen never succeeded in evading,
+The fourth outcome only becomes visible once an independent judge is used. On some
+sources where TANTGen never succeeded in evading,
 purification actively \emph{harms} detection. Through the independent NIDS,
 \texttt{dns\_ddos} falls from $0.986$ to $0.762$ on \texttt{both} and from $0.993$ to
 $0.756$ on \texttt{iat}; \texttt{portscan\_iat} falls from $0.994$ to $0.811$;
@@ -573,8 +567,8 @@ flagged) and \texttt{syn\_ddos} \texttt{iat} at $0.178$.
 Every other source is at or above $0.99$. Neither is a claim about purification quality,
 but they do bound how far the traffic-space results can be pushed.
 
-To make these aggregates concrete, it is worth following a single real packet through
-the pipeline. \Cref{fig:eval-purifpacket} traces one flow drawn from the held-out test
+To make these aggregates concrete, one real flow is followed through the pipeline.
+\Cref{fig:eval-purifpacket} traces one flow drawn from the held-out test
 split, a four-packet Mirai SYN-flood burst from \texttt{192.168.2.108:35220} to
 \texttt{52.25.66.250:8280} under the \texttt{size} variant. In the original capture each
 datagram is $44$~bytes, a $20$-byte IPv4 header followed by a $24$-byte TCP header with
@@ -610,11 +604,11 @@ granularity of this one packet, this $44 \rightarrow 73 \rightarrow 44$ restorat
 % 9,000 flows = 300 per source x 30 sources, 6 budgets, policy fpr_0.05, best-of
 % (PGD u random) attacker under the monotone envelope.
 
-Every result so far was produced against TANTGen, and TANTGen cannot answer RQ1. It is
-black-box, its gradients coming from its own surrogate NIDS rather than from DEPT, so it
-exploits no gradient path into DEPT; measuring it tells us the ensemble detects \emph{its}
-perturbations, not what the ensemble's heterogeneity is worth against an adversary that
-differentiates one of the ensemble's own members. This section supplies that adversary.
+Every result so far was produced against TANTGen, which, as stated in
+\Cref{sec:sol-threat}, cannot answer RQ1 because it exercises no gradient path into
+DEPT: measuring it tells us the ensemble detects \emph{its} perturbations, not what
+heterogeneity is worth against an adversary that differentiates one of the ensemble's
+members. This section supplies that adversary.
 
 \subsection{The Attacker}\label{subsec:eval-gradablation-attacker}
 
@@ -622,8 +616,8 @@ The attacker is given white-box access to the \ac{TCN} (architecture, weights an
 gradients) and nothing for the Random Forest, whose non-differentiability means there is
 no gradient to target. It crafts \emph{one} perturbation against the \ac{TCN}, using
 \ac{PGD}~\cite{madry2018towards}, and that same perturbation is then replayed, unchanged,
-through each model and scored. This strategy is what makes the comparison valid: if the attacker was allowed to
-re-optimize per target, it would no longer be measuring transfer.
+through each model and scored. If the attacker re-optimized per target, it would no
+longer be measuring transfer.
 
 The perturbation is \emph{increase-only} padding and delay, per packet, applied on top of
 TANTGen's own, so the cost reported is the \emph{extra} budget an attacker must spend. The
@@ -648,7 +642,7 @@ optimizer.
 
 \subsection{How the Numbers Should Be Read}\label{subsec:eval-gradablation-reading}
 
-Two conventions are critical.
+Two conventions matter.
 
 \ac{ASR} is measured \emph{only over the flows a target detects unperturbed}. This is the
 standard robust-accuracy convention: of the $9{,}000$ sampled flows, the \ac{TCN} detects only $3{,}374$ at
@@ -664,8 +658,8 @@ $0.002$ for the stack, so a fixed threshold would reward whichever model happens
 $0.4535$, $0.9820$, and $0.3658$ respectively.
 
 Finally, the curves are reported as a monotone envelope over the budget grid. The feasible
-sets are nested, so an attacker permitted $1460$~bytes may simply spend $128$; a rational
-attacker's success must not fall as its budget grows, as we will see in \Cref{tab:eval-gradablation}. 
+sets are nested, so an attacker permitted $1460$~bytes may simply spend $128$, and a
+rational attacker's success cannot fall as its budget grows.
 
 \subsection{Results}\label{subsec:eval-gradablation-results}
 
@@ -718,15 +712,15 @@ $50.1\%$, and $52.2\%$; across the whole grid $74.5\%$ of flows never evade the 
 any budget, against $64.0\%$ for the forest and $45.5\%$ for the \ac{TCN}, whose median
 evading flow needs only the smallest budget on the grid. The perturbation that breaks the
 \ac{TCN} it was crafted against transfers poorly to the forest, and the fusion of the two
-is even harder still. For scale, TANTGen's own per-packet padding varies widely by
+is harder still. For scale, TANTGen's own per-packet padding varies widely by
 source and mode, from under a byte to about $290$ bytes: \texttt{mirai\_size} and
 \texttt{portscan\_both} average $32$ and $29$ bytes, placing them in the $32$ to $128$
 byte region where the stack concedes at most $8.5\%$, whereas the \texttt{size} variants
 of \texttt{ddos}, \texttt{ssdp\_flood} and \texttt{portscan} average $289$, $265$ and
 $246$ bytes, which puts them nearer the $512$-byte grid point.
 
-That upper end is where the qualification belongs. The ordering is not uniform across the
-whole grid: at $512$ bytes the stack ($18.9\%$) and the forest ($18.4\%$) are level, and
+The upper end needs a qualification. The ordering is not uniform across the whole
+grid: at $512$ bytes the stack ($18.9\%$) and the forest ($18.4\%$) are level, and
 the stack pulls ahead again only at $1460$ bytes ($25.5\%$ against $36.0\%$). The claim is
 therefore that the stack strictly dominates the \ac{TCN} everywhere and the forest
 everywhere except around that one grid point, where they are roughly equal --- and that
@@ -750,20 +744,21 @@ query-matched random search does not merely match \ac{PGD}, it beats it at every
 $40.1\%$ against $37.2\%$ at $8$ bytes, $52.8\%$ against $50.7\%$ at $1460$. Neither wins
 on every flow, though, and since the better of the two is taken per flow, the reported
 best-of curve exceeds both ($40.5\%$ and $54.5\%$ at those two budgets): \ac{PGD} does
-carry flows the random search misses, and even on those the random search wins, \ac{PGD} still achieves a respectable success rate, enough to be able to claim RQ1 as answered.
+carry flows the random search misses, which is why the reported attacker is the best of
+the two.
 
 % #############################################################################
 \section{End-to-End System Evaluation}\label{sec:eval-e2e}
 
 \subsection{Detect-then-Purify Pipeline}\label{subsec:eval-e2e-detect}
 
-Composing the stages, the end-to-end effect of DEPT can be measured through its own
-detector or through an independent one. The internal view repeats
-\Cref{sec:eval-purification}'s purification gain and carries the same circularity; its
-one addition is that on the structurally perturbed sources purification is the difference
-between near-certain detection ($P(\text{adv})\approx0.99$ on \texttt{portscan} and
-\texttt{ddos}) and a near-certain pass ($\approx0.06$--$0.15$). This section therefore
-goes to the credible question: what is TANTGen's attack-success rate against the
+The end-to-end effect of DEPT can be measured through its own detector or through an
+independent one. The internal view repeats the purification gain of
+\Cref{sec:eval-purification}, with the same circularity; its one addition is that on the
+structurally perturbed sources purification is the difference between near-certain
+detection ($P(\text{adv})\approx0.99$ on \texttt{portscan} and \texttt{ddos}) and a
+near-certain pass ($\approx0.06$--$0.15$). This section therefore goes to the credible
+question: what is TANTGen's attack-success rate against the
 \emph{independent} NIDS each attack was built to evade, before and after DEPT is placed
 in front of it?
 
@@ -832,8 +827,8 @@ the detection TANTGen had destroyed. That is the headline, but read
 alone it may overestimate the system, because the average is taken over thirty source--mode
 combinations whose individual outcomes differ significantly.
 
-\Cref{fig:eval-baseline} makes the structure plain, and it is worth targeting in three
-parts. \emph{The gain is real and large where TANTGen actually evaded.} On
+\Cref{fig:eval-baseline} shows the structure, which has three parts. \emph{The gain is
+real and large where TANTGen actually evaded.} On
 \texttt{ddos} the pipeline removes $38$ points of attack success and on \texttt{portscan}
 $32$, and at mode granularity the strongest cases are \texttt{ddos\_size} ($+67.4$
 points), \texttt{portscan\_both} ($+67.0$), \texttt{ddos\_both} ($+59.7$), and
@@ -850,25 +845,25 @@ worse.} \texttt{dns\_ddos} loses $22.5$ points on \texttt{both} and $22.7$ on
 identified: the gate flags essentially all flood traffic, so flows the NIDS was still
 catching get purified, and purification removes signals it was using.
 
-The gate's behaviour is worth quantifying. Its flag rate is close to $100\%$ on every flood source
+The gate's behaviour explains this. Its flag rate is close to $100\%$ on every flood source
 and close to zero on several \texttt{size} variants ($0.0\%$ on \texttt{ssdp\_ddos},
 $0.2\%$ on \texttt{ntp\_ddos}, $0.8\%$ on \texttt{ldap\_ddos}, $0.9\%$ on
 \texttt{dns\_ddos}), which is the same reflection-flood \texttt{size} blind spot the base
 learners showed in \Cref{tab:eval-persource}, now visible in the deployed pipeline. One
 consequence is that the gated pipeline and an ungated one that purifies everything are
 nearly indistinguishable here: the \texttt{purified\_all} upper bound reaches $0.8831$
-detection against the gated $0.8836$. The gate as built is therefore not doing much work for these sources,
-and the finding that matters is not that the gate is imperfect but that it is answering
-the wrong question. It predicts \emph{whether a flow is adversarial}; and after the results, we can say that what this pipeline
-needs is a predictor of \emph{whether purifying this flow will help}, which the rows above
-show is not the same thing.
+detection against the gated $0.8836$. The gate as built is therefore doing little work
+for these sources, and the finding that matters is that it answers the wrong question:
+it predicts \emph{whether a flow is adversarial}, whereas the pipeline needs a predictor
+of \emph{whether purifying this flow will help}, which the rows above show is not the
+same thing.
 
 Split by detector family, the two halves diverge: the eight ML-NIDS sources gain $9.9$
 points of \ac{ASR} reduction over $2{,}622{,}023$ flows, while the two Kitsune sources
 lose $1.7$ points over $82{,}793$. The Kitsune figure rests almost entirely on
 \texttt{mirai\_size}, where TANTGen's size edit had inadvertently \emph{raised} Kitsune's
-detection from $0.003$ to $0.242$ and DEPT removed that self-sabotage, returning it to
-$0.003$. This is the purifier working correctly but the defense losing by it.
+detection from $0.003$ to $0.242$, and DEPT undid it, returning detection to $0.003$.
+The purifier works correctly there, but the defense loses by it.
 
 Two methodological notes come with these numbers. First, because the defended stream runs
 DEPT's detector and purifier over all of an attack's flows for full-volume realism, some
@@ -882,15 +877,15 @@ rather than a subset.
 \subsection{One Global Model or Ten Specialists?}\label{subsec:eval-perattack}
 
 Every result so far concerns a single set of models trained across all ten sources at
-once. That was a design decision assumed at the beginning, and it invites the obvious
-question: would ten specialists, as is common in the literature, each trained on one
-attack's own benign and adversarial flows, do better? The four model stages were therefore re-run once per attack, giving ten
+once. This raises the question of whether ten specialists, each trained on one attack's
+own benign and adversarial flows, as is common in the literature, would do better. The
+four model stages were therefore re-run once per attack, giving ten
 independent RF/TCN/meta-learner/reconstructor sets, and \Cref{tab:eval-perattack} compares
 each specialist meta-learner against the global one on the same slice and the same axis.
 
 The re-run varies the training scope and holds everything else fixed. Each specialist sees
 only its own source's benign capture and that source's three adversarial variants, but
-inherits the architectures, the grid searches, and the flow-atomic, seed-$42$ $70/15/15$
+inherits the architectures, the grid searches, and the flow-level, seed-$42$ $70/15/15$
 split protocol of \Cref{subsec:eval-datasets}, so each is scored on exactly the flows the
 global model is scored on once its test set is restricted to that slice. The
 variable under test is only what a model may contrast a manipulated flow against, one
@@ -934,27 +929,29 @@ timing-only edits generally: \texttt{ntp\_ddos} gains $0.346$ and $0.347$,
 and \texttt{portscan\_iat} gains $0.066$. Training on one attack lets the model key on
 that source's own timing signature instead of averaging over nine unrelated benign pools.
 The global model wins on the reflection floods' \texttt{size} variants, but this is a
-``shallow'' victory on the slices where both regimes are already below chance: it is less
+weak victory, on slices where both regimes are already below chance: it is less
 confidently wrong ($0.443$ against $0.192$ on \texttt{dns\_ddos}), not right.
 
 Two findings from this comparison bear on the ensemble design rather than on the
-deployment choice. First, the stacking principle of \Cref{sec:eval-meta} reproduces itself
-for each specialist rather than being an artifact of training across sources.
-\texttt{mirai} is the one source where the global model is
-genuinely better ($+0.035$, $+0.033$), and it is also where the specialist stack fails
-its own base learner most profoundly: the per-attack meta-learner reaches $0.705$ overall
+deployment choice. First, the problem of \Cref{sec:eval-meta}, a meta-learner beaten by
+its own forest, reproduces itself in the specialists, so it is not an artifact of
+training across sources. \texttt{mirai} is the one source where the global model is
+genuinely better ($+0.035$, $+0.033$), and it is also where the specialist stack falls
+furthest below its own base learner: the per-attack meta-learner reaches $0.705$ overall
 while its own Random Forest reaches $0.889$. \texttt{portscan} shows the same sign more
 mildly ($0.939$ against $0.999$), and on the remaining eight sources the specialist
-stacker matches or beats its own forest, so narrowing the training scope neither worsens this problem nor fixes it. Second, the per-attack TCNs collapse
-entirely on the reflection floods, scoring exactly $0.500$ on \texttt{ldap\_ddos} and
-\texttt{ssdp\_ddos} and $0.507$ to $0.531$ on the others, so those specialist stacks are
-riding on their forest alone. On the sources whose flows are long enough to convolve over,
+meta-learner matches or beats its own forest, so narrowing the training scope neither
+worsens this problem nor fixes it. Second, the per-attack TCNs collapse entirely on the
+reflection floods, scoring exactly $0.500$ on \texttt{ldap\_ddos} and
+\texttt{ssdp\_ddos} and $0.507$ to $0.531$ on the others, so those specialist stacks
+rely on their forest alone. On the sources whose flows are long enough to convolve over,
 the same specialists are untroubled by the narrower pool ($0.990$ on \texttt{ddos},
 $1.000$ on \texttt{ssdp\_flood}, $0.980$ on \texttt{brute\_force}), which suggests the
-collapse is on flow length rather than on training scope, exactly where
+collapse is due to flow length rather than to training scope, exactly where
 \Cref{sec:eval-base} placed the global \ac{TCN}'s version of it.
 
-The practical conclusion is that a single global model is still the right default for this problem specifically. A specialist strategy needs a router that
+The practical conclusion is that a single global model is still the right default. A
+specialist strategy needs a router that
 names the attack before a model can be chosen, which is a version of the very
 classification problem the detector exists to solve. Specialists may be worth the trouble in
 the cases the table identifies, namely a known high-rate flood whose evasion is expressed
@@ -969,17 +966,15 @@ an explicit condition, that the attack left a footprint the protected detector c
 Where it did not, purification ranges from inert to actively harmful, which the rest of
 this section takes up. \Cref{sec:concl-rqs} states both answers in full.
 
-\paragraph{Purification without a good gate can subtract as well as add.} The evaluation's
-most consequential negative finding, and one visible only under an independent detector:
-where TANTGen never actually evaded, purifying \emph{lowers} the protected NIDS's
-detection, by as much as $22.7$ points on \texttt{dns\_ddos} and $23.9$ on
-\texttt{mirai\_size}, where it undoes TANTGen's own self-sabotage
-(\Cref{subsec:eval-e2e-detect}), because there the attack's
-fingerprint and the clean manifold were never far apart, so what the denoiser correctly
-removes is signal the NIDS was still using. The gate fails to prevent this, flagging
-nearly all flood traffic, so the gated and an ungated pipelines reach $0.8836$ and $0.8831$
-detection: it predicts whether a flow is adversarial, where the pipeline needs a predictor
-of whether purifying \emph{this} flow will help for these sources.
+\paragraph{Purification without a good gate can subtract as well as add.} This is the
+evaluation's most consequential negative finding, and it is visible only under an
+independent detector: where TANTGen never actually evaded, purifying \emph{lowers} the
+protected NIDS's detection, by up to $22.7$ points on \texttt{dns\_ddos} and $23.9$ on
+\texttt{mirai\_size} (\Cref{subsec:eval-e2e-detect}), because there the attack's
+fingerprint and the clean manifold were never far apart, so what the denoiser removes is
+signal the NIDS was still using. The gate does not prevent this, since it flags nearly
+all flood traffic: it predicts whether a flow is adversarial, where the pipeline needs to
+predict whether purifying the flow will help.
 
 \paragraph{The reflection floods' \texttt{size} variants fail below chance.} On
 \texttt{dns\_ddos}, \texttt{ldap\_ddos}, \texttt{ntp\_ddos} and \texttt{ssdp\_ddos} they
@@ -990,23 +985,24 @@ training scope: the per-attack specialists
 fail on the same slices (\Cref{tab:eval-perattack}), and the deployed gate flags under
 $1\%$ of these flows. On three of the four there is nothing to see at all: on
 \texttt{ldap\_ddos}, \texttt{ntp\_ddos} and \texttt{ssdp\_ddos}, every matched test pair
-is bit-identical to its clean counterpart (\Cref{sec:eval-purification}), so those slices
-are unlabellable by any detector, the cost the label convention of \Cref{sec:sol-pipeline}
-anticipates. On the fourth,
+is bit-identical to its clean counterpart (\Cref{sec:eval-purification}), so no detector
+can separate those slices, the cost anticipated by the label convention of
+\Cref{sec:sol-pipeline}. On the fourth,
 \texttt{dns\_ddos}, the purifier cuts a full footprint to under a third without moving
 DEPT's own verdict: there, DEPT's $24$ prefix statistics and $1088$ header bits cannot express
 whatever separates a \texttt{size}-mode flow of this single-response UDP flood from an
 unedited one.
 
-\paragraph{A stacker beaten by its own base learner.} The meta-learner's $0.9334$ AUROC
-sits below the forest's $0.9813$ at most views from packet~$2$ onward
-(\Cref{tab:eval-streaming}), and the gap widens on several sources; the cause is likely
-\Cref{sec:eval-meta}'s under-weighted forest logit, and the specialist stacks reproduce it
-(\Cref{subsec:eval-perattack}). Fusion still buys the only packet-$1$ verdict available and the evasion robustness of
-\Cref{sec:eval-gradablation}, but a fusion able to fall back to its best base learner is
-the clearest improvement available here.
+\paragraph{A meta-learner beaten by its own base learner.} The meta-learner's $0.9334$
+AUROC sits below the forest's $0.9813$ from packet~$2$ onward
+(\Cref{tab:eval-streaming}), and the gap widens on several sources; the likely cause is
+the under-weighted forest logit of \Cref{sec:eval-meta}, and the specialist stacks
+reproduce it (\Cref{subsec:eval-perattack}). Fusion still provides the only packet-$1$
+verdict available and the evasion robustness of \Cref{sec:eval-gradablation}, but a
+fusion able to fall back to its best base learner is the clearest improvement available
+here.
 
-\subsection{Scope of the Gradient-ablation Result (RQ1)}\label{subsec:eval-gradablation}
+\subsection{Scope of the Gradient-guided Attack Result (RQ1)}\label{subsec:eval-gradablation}
 
 Three boundaries limit what \Cref{sec:eval-gradablation} accomplishes.
 
@@ -1014,14 +1010,15 @@ Three boundaries limit what \Cref{sec:eval-gradablation} accomplishes.
     \item \ac{ASR} is measured over the flows a target detects unperturbed, and at
     $\delta = 0$ the \ac{TCN} detects between nothing and $2\%$ of flows on seven of the
     ten sources, leaving its \ac{ASR} undefined there; four sources have a median of two
-    packets against a receptive field of $29$. That arm of the comparison rests on a
-    minority of the corpus though.
+    packets against a receptive field of $29$. So that arm of the comparison rests on a
+    minority of the corpus.
     \item Some flows are unreachable at any budget. On the \texttt{both} and
     \texttt{size} modes of \texttt{ddos} and \texttt{portscan}, and on
     \texttt{ssdp\_flood\_size}, both the forest and the stack hold the attacker to $0\%$ through
     $1460$~bytes per packet, which says only that padding and delay alone cannot overcome that
     much model confidence.
-    \item What was measured is a search-based attacker with a gradient available to it, since query-matched random search beats \ac{PGD}
-    at every budget. Regardless we can still conclude that a non-differentiable
-    component does raise evasion cost.
+    \item Since query-matched random search beats \ac{PGD} at every budget, what was
+    measured is a search-based attacker that happens to have a gradient available, not
+    one that profits from it. The conclusion that a non-differentiable component raises
+    evasion cost still holds, since both searches were crafted against the \ac{TCN}.
 \end{itemize}

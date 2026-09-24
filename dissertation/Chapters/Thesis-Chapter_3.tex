@@ -10,9 +10,9 @@
 The tension between learning-based detection and adversarial evasion has produced a
 large body of research on both sides. \Cref{chap:back} introduced the concepts this
 work builds on; this chapter surveys the concrete systems, and reads each of them
-against the questions DEPT has to answer. The survey is deliberately selective rather
-than exhaustive: we try emphasizing works when they shape a design decision of DEPT, or when
-some part of DEPT departs from them.
+against the questions DEPT has to answer. The survey is selective rather than
+exhaustive: a work is emphasized when it shapes a design decision of DEPT, or when some
+part of DEPT departs from it.
 
 % #############################################################################
 \section{Adversarial Attacks against ML-based NIDS}\label{sec:rel-attacks}
@@ -42,7 +42,7 @@ reported evasion rates are therefore upper bounds obtained in a space an externa
 not control.
 
 \paragraph{Traffic-space attacks.}
-Following from this, the recent attack literature has therefore moved into the traffic-space, enforcing
+The recent attack literature has therefore moved into the traffic-space, enforcing
 realizability either by verification or by construction.
 \textbf{GPMT}~\cite{sun2023gpmt} generates practical malicious traffic with a \ac{GAN}
 under little prior knowledge of the target, constraining its perturbations so that the
@@ -62,19 +62,19 @@ thesis belongs.
 
 \subsection{TANTGen, the Attacker}\label{subsec:rel-tantgen}
 \textbf{TANTGen}~\cite{pissarra2026tantgen} is a Transformer-based adversarial network
-traffic generator developed in a sibling thesis, and it deserves a
-closer treatment than the works above because it is not merely related work: it is the
-concrete adversary that DEPT is trained against and evaluated on. Where GPMT and
+traffic generator developed in a sibling thesis, and it gets a closer treatment than the
+works above because it is the concrete adversary that DEPT is trained against and
+evaluated on. Where GPMT and
 DeepRed rely on \ac{GAN}s and PANTS on solver-checked perturbations, TANTGen uses
 self-attention to model the sequential dependencies between the packets of a flow, and
 generates its evasions in the traffic-space directly, so that protocol compliance
 holds by construction rather than only by after-the-fact verification. It operates in the
 black-box setting: it needs no access to the target detector's architecture, weights,
-or gradients, only to a surrogate NIDS of its own, trained on labelled traffic, whose gradients guide the generator, and its
-evasion capability was demonstrated against the detectors its generation was
-calibrated on: Kitsune~\cite{mirsky2018kitsune}, the anomaly-based detector, for its
-Kitsune-native attacks, and its own suite of ML-NIDS flow classifiers for the CIC
-attacks. The manipulation itself is
+or gradients, only to a surrogate \ac{NIDS} of its own, trained on labelled traffic, whose
+gradients guide the generator. Its evasion was demonstrated against the detectors its
+generation was calibrated on: Kitsune~\cite{mirsky2018kitsune}, an anomaly-based
+detector, for the Kitsune-native attacks, and its own ML-NIDS flow classifiers for the
+CIC attacks. The manipulation itself is
 confined to two quantities of live attack traffic, packet timing and packet
 size, exposed as three perturbation modes (\texttt{iat}, \texttt{size},
 \texttt{both}) that structure the corpus of \Cref{sec:sol-pipeline}.
@@ -84,26 +84,25 @@ First, since the adversarial traffic is protocol-compliant, a defense
 gains nothing from checking protocol validity; whatever signal exists must be found in
 the traffic's behaviour, its timing and sizing structure, which is what DEPT's
 learned detectors consume. Second, because the perturbation touches only timing and
-size, the detectable footprint can be thin, and in the timing-only mode genuinely
-faint; \Cref{chap:evaluation} quantifies this honestly. Third, the black-box setting
+size, the detectable footprint can be thin, especially in the timing-only mode;
+\Cref{chap:evaluation} quantifies this. Third, the black-box setting
 makes transferability the operative attack channel, which is the scenario the
 heterogeneity argument of \Cref{subsec:bg-gradient-masking} is aimed at. The threat
 model of \Cref{sec:sol-threat} formalizes these assumptions.
 
 \subsection{Gradient-guided Evasion, the Second Attacker}\label{subsec:rel-gradient}
 TANTGen is the adversary DEPT is trained on, but it cannot be the only one it is
-evaluated against, and the reason is thoroughness.
-DEPT's central design claim is that fusing a non-differentiable Random Forest with a
-differentiable \ac{TCN} raises the cost of evasion because an attacker's gradient
-reaches only one of the two. With TANTGen we can demonstrate that the ensemble detects its perturbations, but it cannot measure the
-mechanism this specific claim rests on. \Cref{sec:eval-gradablation} closes that gap with a
+evaluated against. DEPT's central design claim is that fusing a non-differentiable
+Random Forest with a differentiable \ac{TCN} raises the cost of evasion because an
+attacker's gradient reaches only one of the two. TANTGen's gradients come from its own
+surrogate, never from DEPT, so it can show that the ensemble detects its perturbations
+but not measure this claim. \Cref{sec:eval-gradablation} closes that gap with a
 complementary adversary drawn from the standard adversarial-\ac{ML} toolkit.
 
 The canonical instrument is \emph{\ac{PGD}}~\cite{madry2018towards}, which takes
 repeated gradient steps against a model's loss and projects each iterate back onto a
 feasible set. Its strength as an evaluation tool is that the projection step states the
-attacker's budget outright, rather than leaving it to be whatever the optimizer happens
-to produce once its hyperparameters are fixed. This matters because a weak attack and a
+attacker's budget explicitly. This matters because a weak attack and a
 strong defense are indistinguishable in the reported numbers, and many published
 defenses have been shown to owe their apparent robustness to badly-configured attacks
 rather than to any real property~\cite{carlini2019evaluating, tramer2020adaptive}.
@@ -117,7 +116,7 @@ remain a sendable packet, so the attacker's variables are bytes of padding and s
 delay, and the budget must be denominated in those units rather than in an $\ell_p$ ball. And the ensemble's two halves
 do not even read the same features, so a perturbation crafted against one must be
 replayed through the other's featurisation to be scored at all. \Cref{sec:eval-gradablation}
-takes both constraints seriously, and \Cref{subsec:eval-gradablation} discusses what they
+respects both constraints, and \Cref{subsec:eval-gradablation} discusses what they
 imply for how the result should be read.
 
 % #############################################################################
@@ -138,7 +137,7 @@ random subset of the data dilutes the influence of any individual poisoned sampl
 across the collective decision. DEPT excludes poisoning from its threat model
 (\Cref{sec:sol-threat}), so these defenses are not competitors; they matter here
 because they establish, from the training side, the same principle DEPT exploits at
-inference time, that ensemble diversity is a robustness mechanism in it of itself and not only an
+inference time, that ensemble diversity is a robustness mechanism in itself and not only an
 accuracy one.
 
 \paragraph{Federated and backdoor defenses.}
@@ -147,8 +146,8 @@ training pipeline itself, detecting backdoors in the model updates clients contr
 in one case by having clients validate candidates inside \acp{TEE}~\cite{wan2025energy,xu2025detecting,rieger2024crowdguard},
 and unlearning them from weights already
 compromised~\cite{zhu2023selective,kumari2023baybfed,nguyen2025pbp}.
-DEPT excludes poisoning from its threat model (\Cref{sec:sol-threat}), so these defend a
-different adversary and are complementary rather than competing.
+These too defend a different adversary than DEPT's, and are complementary rather than
+competing.
 
 \paragraph{Ensemble-based hardening.}
 A third line builds robustness into the model by combining several learners, which is
@@ -216,13 +215,13 @@ the image and text domains~\cite{li2025adbm,zhang2024causaldiff,li2025diffusedef
 network domain the idea has been instantiated more
 recently: \textbf{AdvPurRec}~\cite{alhussien2024advpurrec} reconstructs traffic
 features with a diffusion model before they reach the \ac{NIDS}, Merzouk et
-al.~\cite{merzouk2024diffusion} systematically maps the trade-offs that governs such
-purifiers, more diffusion noise removes more of the perturbation but degrades clean
-accuracy, and \textbf{GTAE-IDS}~\cite{ghadermazi2025gtae} applies a graph-Transformer
+al.~\cite{merzouk2024diffusion} map the trade-off that governs such purifiers, where
+more diffusion noise removes more of the perturbation but degrades clean accuracy, and
+\textbf{GTAE-IDS}~\cite{ghadermazi2025gtae} applies a graph-Transformer
 autoencoder to reconstruct traffic representations for real-time detection.
 
 DEPT's reconstructor (\Cref{sec:sol-reconstructor}) shares this family's goal but
-departs from it on three axes, each a deliberate choice rather than an oversight. The first is
+departs from it on three axes. The first is
 architectural: diffusion purifiers pay an iterative denoising chain, tens of forward
 passes, for every input, which sits poorly with a per-packet latency budget, whereas
 DEPT uses a causal Transformer that produces its correction in a single pass and
@@ -231,9 +230,8 @@ up the broad distribution coverage of a diffusion process in exchange for a mode
 fits streaming deployment. The second axis is supervision: purifiers in the
 Defense-GAN tradition learn from clean data alone and purify by projection, while DEPT
 exploits the matched adversarial-to-clean flow pairs its corpus provides, a stronger
-form of supervision that is normally unavailable in general but fortunately
-available in the paired-generator
-setting supplied by TANTGen. The third axis is the one this thesis considers decisive: every network
+form of supervision that is normally unavailable, but that the paired-generator setting
+of TANTGen provides. The third axis is the one this thesis considers decisive: every network
 purifier surveyed above stops at the feature vector, and none of them re-emits
 traffic. A purified vector that corresponds to no sendable packet sequence has simply
 moved the realizability problem from the attacker to the defender. DEPT treats the

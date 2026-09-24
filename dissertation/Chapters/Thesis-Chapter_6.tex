@@ -18,7 +18,7 @@ protected system consumes it.
 The five contributions of \Cref{sec:intro-contributions} stand as follows. The packet-to-tensor
 pipeline (\Cref{sec:sol-pipeline}) turns raw captures into a masked, bit-level view of each flow
 with identity fields removed, dense per packet for the \ac{TCN} and sparse statistics for the
-\ac{RF}, over one flow-atomic split that makes the comparisons of \Cref{chap:evaluation}
+\ac{RF}, over one flow-level split that makes the comparisons of \Cref{chap:evaluation}
 fair. The heterogeneous ensemble (\Cref{sec:sol-ensemble}) fuses the two at every packet
 through an attention-based meta-learner, scored on how early, not only how well, it separates
 manipulated from clean flows; the purification stage (\Cref{sec:sol-reconstructor}) pairs a causal
@@ -32,8 +32,8 @@ corpus in three perturbation modes, reported per source and per mode.
 \section{Answers to Research Questions}\label{sec:concl-rqs}
 
 \textbf{RQ1 (ensemble robustness)}, from \Cref{sec:eval-rqs}, asked whether heterogeneous stacking
-measurably raises the cost of a transferable, gradient-guided evasion attack. It does. TANTGen
-following only its own surrogate's gradients, the evaluation employed a stronger adversary (\Cref{sec:eval-gradablation}):
+measurably raises the cost of a transferable, gradient-guided evasion attack. It does. Since
+TANTGen follows only its own surrogate's gradients, the evaluation used a stronger adversary (\Cref{sec:eval-gradablation}):
 white-box access to the \ac{TCN}, nothing for the \ac{RF} and meta-learner, one perturbation against
 all three at once. It transfers poorly to the forest, and the stack is costlier still: at the
 three smallest budgets it concedes at most $8.5\%$ attack success, against the forest's $13.1\%$
@@ -63,15 +63,12 @@ defense would want to purify.
 
 Six limitations bound the results, analysed in more detail in \Cref{sec:eval-discussion}. The first is
 representational, and partly a labelling cost. On the \texttt{size} variants of the DNS, NTP, SSDP and LDAP reflection floods,
-every model scores at or \emph{below chance} against same-source benign flows: a flow from TANTGen's output
-resembles generic benign traffic at least as closely as that flood's own unmanipulated flows to the detector.
-Per-attack specialists fail on the same slices and the gate flags under $1\%$ of those flows. On
-three of the four, the matched adversarial tokens are bit-identical to the clean ones, so those
-slices are unlabellable by any detector; on
-DNS the purifier cuts the footprint without moving DEPT's verdict, and there the cause is DEPT's $24$ prefix
-statistics and $1088$ header bits, not capacity, tuning or training scope. Since these floods
-dominate the corpus, every aggregate in \Cref{chap:evaluation} averages near-perfect and
-below-chance sub-populations.
+every model scores at or \emph{below chance} against same-source benign flows, per-attack specialists
+included. On three of the four, the adversarial tokens are bit-identical to the clean ones, so no detector
+can separate them; on DNS the purifier cuts the footprint without moving DEPT's verdict, so the cause is the
+representation itself, its $24$ prefix statistics and $1088$ header bits, not capacity, tuning or training
+scope. Since these floods dominate the corpus, every aggregate in \Cref{chap:evaluation} averages
+near-perfect and below-chance sub-populations.
 
 The second is that purification without an adequate gate subtracts as well as adds, as RQ2's
 answer showed; the gate as built barely gates, since purifying every flow yields almost the same
@@ -79,10 +76,10 @@ end-to-end result.
 
 The third contradicts the system's own premise. The meta-learner is beaten by its own Random
 Forest on the aggregate streaming axis, widely so on several sources (\Cref{sec:eval-meta}), where
-a stacker should be no worse than its best base learner; the carry-forward \ac{RF} logit reaches
+a stacking ensemble should be no worse than its best base learner; the carry-forward \ac{RF} logit reaches
 the fusion token as one sparsely updated feature that attention under-weights against the dense
 \ac{TCN} stream. The fusion
-still buys the packet-$1$ verdict and RQ1's robustness, but less than the design hoped for.
+still provides the packet-$1$ verdict and RQ1's robustness, but less than the design hoped for.
 
 The fourth is validation. Purification gain measured through DEPT's own \ac{TCN} is
 circular, though the end-to-end claim does not rest on it; each attack is judged by one target
@@ -97,14 +94,14 @@ denoiser, not the full deployed pipeline. The feature space is bounded too, to h
 direction, and payload length and entropy, which stay observable as encrypted traffic grows; payload
 content is never parsed, by design, and may be exactly where the blind spot above lives.
 
-The sixth is efficency. The tensorization is pure Python, slower than the native
+The sixth is efficiency. The tensorization is pure Python, slower than the native
 nPrint tool it reimplements, setting the throughput floor, and the latency study that would
 settle the real-time budget of \Cref{sec:intro-problem} is left undone.
 
 % #############################################################################
 \section{Future Work}\label{sec:concl-future}
 
-The limitations above set most of the agenda; the gradient ablation potentially opened up more than it closed.
+The limitations above set most of the agenda.
 
 \begin{itemize}
     \item \textbf{A gate that predicts benefit rather than adversariality.} The end-to-end
@@ -116,7 +113,7 @@ The limitations above set most of the agenda; the gradient ablation potentially 
     spirit of PANTS's SMT-checked perturbations~\cite{jin2025robustifying}, would generalize the
     overlay beyond its two hardcoded dimensions.
     \item \textbf{A fusion that never falls below its best base learner.} Re-emitting the \ac{RF}
-    evidence at every packet without an explicit staleness weight, or letting the stacker fall back
+    evidence at every packet without an explicit staleness weight, or letting the meta-learner fall back
     to the stronger base opinion when the two diverge.
     \item \textbf{What separates a size-mode DNS flood flow from an unedited one.} Which observable quantity,
     absent from the representation above, distinguishes these flows? Payload content, never parsed by design,
@@ -135,4 +132,4 @@ across attacker generations rather than at one point.
 DEPT was built and evaluated on the principle that a defense for learning-based intrusion
 detection is only worth measuring against an attack that can exist on the wire. Where it fails, it
 fails for reasons the evaluation identifies rather than hides; it is a defense meant to be built
-upon, and \ac{RL} is the right place to pick up on it.
+upon, and \ac{RL} is the natural place to pick up from it.
