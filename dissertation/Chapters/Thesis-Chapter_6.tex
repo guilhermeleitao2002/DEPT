@@ -45,8 +45,7 @@ $0.53$ the moment the attacker spends anything.
 \textbf{RQ2 (purification effectiveness)} asked whether the reconstructor moves a flagged flow
 back onto the benign manifold while emitting a realizable packet sequence. It does, under a
 condition: scored through the \emph{independent} \ac{NIDS} each attack was built to evade,
-purification recovers $63.0\%$ of the destroyed detection overall and $99.9\%$ on the
-Kitsune-native sources where TANTGen's evasion had succeeded, while reconstruction error on the
+purification recovers $63.0\%$ of the destroyed detection overall, while reconstruction error on the
 perturbed dimensions falls by $17.0\times$ and the realized packets pass \texttt{tshark} $97.2\%$
 of the time (\Cref{sec:eval-purification}). End to end, the gated pipeline cuts the protected
 \ac{NIDS}'s attack-success rate from $21.1\%$ to $11.6\%$ (\Cref{subsec:eval-e2e-detect}).
@@ -63,12 +62,13 @@ defense would want to purify.
 \section{System Limitations}\label{sec:concl-limitations}
 
 Six limitations bound the results, analysed in more detail in \Cref{sec:eval-discussion}. The first is
-representational. On the \texttt{size} variants of the DNS, NTP, SSDP and LDAP reflection floods,
-every model scores \emph{below chance} against same-source benign flows: a manipulated flow
-resembles generic benign traffic more closely than that flood's own unmanipulated flows to the detector.
-Per-attack specialists fail on the same slices and the gate flags under $1\%$ of those flows; on
-three of the four, the matched adversarial tokens are bit-identical to the clean ones, and on
-DNS the purifier cuts the footprint without moving DEPT's verdict: the cause is DEPT's $24$ prefix
+representational, and partly a labelling cost. On the \texttt{size} variants of the DNS, NTP, SSDP and LDAP reflection floods,
+every model scores at or \emph{below chance} against same-source benign flows: a flow from TANTGen's output
+resembles generic benign traffic at least as closely as that flood's own unmanipulated flows to the detector.
+Per-attack specialists fail on the same slices and the gate flags under $1\%$ of those flows. On
+three of the four, the matched adversarial tokens are bit-identical to the clean ones, so those
+slices are unlabellable by any detector; on
+DNS the purifier cuts the footprint without moving DEPT's verdict, and there the cause is DEPT's $24$ prefix
 statistics and $1088$ header bits, not capacity, tuning or training scope. Since these floods
 dominate the corpus, every aggregate in \Cref{chap:evaluation} averages near-perfect and
 below-chance sub-populations.
@@ -93,9 +93,9 @@ The fifth is scope. The purifier corrects all $1090$ dimensions without being to
 attacker moved, but the realization step overlays only the two this threat model perturbs
 (\Cref{subsec:sol-realization}), so a flow manipulated in another header field would reach the
 protected \ac{NIDS} flagged but unrepaired: ``attack-agnostic'' describes the detection and the
-denoiser, not the full deployed pipeline. The feature space is bounded too, to headers, timing and
-direction, which stay observable as encrypted traffic grows; payload was excluded by design, and
-may be exactly where the blind spot above lives.
+denoiser, not the full deployed pipeline. The feature space is bounded too, to headers, timing,
+direction, and payload length and entropy, which stay observable as encrypted traffic grows; payload
+content is never parsed, by design, and may be exactly where the blind spot above lives.
 
 The sixth is efficency. The tensorization is pure Python, slower than the native
 nPrint tool it reimplements, setting the throughput floor, and the latency study that would
@@ -118,8 +118,8 @@ The limitations above set most of the agenda; the gradient ablation potentially 
     \item \textbf{A fusion that never falls below its best base learner.} Re-emitting the \ac{RF}
     evidence at every packet without an explicit staleness weight, or letting the stacker fall back
     to the stronger base opinion when the two diverge.
-    \item \textbf{What separates a size-mode flood flow from an unedited one.} Which observable quantity,
-    absent from the representation above, distinguishes these flows? Payload, excluded by design,
+    \item \textbf{What separates a size-mode DNS flood flow from an unedited one.} Which observable quantity,
+    absent from the representation above, distinguishes these flows? Payload content, never parsed by design,
     is the first place to look.
 \end{itemize}
 
