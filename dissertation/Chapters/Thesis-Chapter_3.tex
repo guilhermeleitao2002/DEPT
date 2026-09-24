@@ -70,7 +70,7 @@ self-attention to model the sequential dependencies between the packets of a flo
 generates its evasions in the traffic-space directly, so that protocol compliance
 holds by construction rather than only by after-the-fact verification. It operates in the
 black-box setting: it needs no access to the target detector's architecture, weights,
-or gradients, only to the detection outcomes it can observe while probing the respective surrogate NIDS, and its
+or gradients, only to a surrogate NIDS of its own, trained on labelled traffic, whose gradients guide the generator, and its
 evasion capability was demonstrated against the detectors its generation was
 calibrated on: Kitsune~\cite{mirsky2018kitsune}, the anomaly-based detector, for its
 Kitsune-native attacks, and its own suite of ML-NIDS flow classifiers for the CIC
