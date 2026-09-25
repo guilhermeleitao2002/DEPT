@@ -43,7 +43,7 @@ DEPT defends ML-based Network Intrusion Detection Systems against adversarial tr
 
 The base learners are **temporally complementary by design**: the TCN is dense and early, the RF sparse and precise. The meta-learner learns *when* to trust which — a sequential-fusion problem a transformer suits well.
 
-Per-module detail lives in each script's README: [packet_to_tensor](scripts/packet_to_tensor/README.md) · [adversarial_generation](scripts/adversarial_generation/README.md) · [rf](scripts/rf/README.md) · [tcn](scripts/tcn/README.md) · [metalearner](scripts/metalearner/README.md) · [reconstructor](scripts/reconstructor/README.md) · [gradient_ablation](scripts/gradient_ablation/README.md) · [baseline](scripts/baseline/README.md).
+Per-module detail lives in each script's README: [packet_to_tensor](scripts/packet_to_tensor/README.md) · [adversarial_generation](scripts/adversarial_generation/README.md) · [rf](scripts/rf/README.md) · [tcn](scripts/tcn/README.md) · [metalearner](scripts/metalearner/README.md) · [reconstructor](scripts/reconstructor/README.md) · [gradient_ablation](scripts/gradient_ablation/README.md) · [baseline](scripts/baseline/README.md) · [diffusion_purifier](scripts/diffusion_purifier/README.md).
 
 ## Dataset
 
@@ -103,7 +103,7 @@ Phases 3–6 were also run once per attack (`./run_pipeline.sh --per-attack`). S
 ## Quick start
 
 ```bash
-./run_pipeline.sh          # all 8 phases; --per-attack runs phases 3-6 per attack
+./run_pipeline.sh          # all 9 phases; --per-attack runs phases 3-6 per attack
 ```
 
 Or phase by phase:
@@ -117,9 +117,10 @@ python3 scripts/metalearner/run_metalearner.py                    # 5. meta-lear
 python3 scripts/reconstructor/run_reconstructor.py                # 6. purification transformer
 python3 scripts/gradient_ablation/run_gradient_ablation.py        # 7. RQ1 evasion cost
 python3 scripts/baseline/run_baseline.py                          # 8. deployment baseline
+python3 scripts/diffusion_purifier/run_diffusion_purifier.py      # 9. vs a published purifier
 ```
 
-Phases 3–6 share the same tensors and the same flow-level split (`seed=42`), so all results are directly comparable and no test flow leaks into any model's training set. Phases 7–8 are comparison studies over the global models (skipped in `--per-attack` runs): phase 7 asks whether heterogeneous stacking raises the cost of a *gradient-guided* attacker — something black-box TANTGen structurally cannot measure — and phase 8 asks whether DEPT in front of a real NIDS restores the detection TANTGen destroyed.
+Phases 3–6 share the same tensors and the same flow-level split (`seed=42`), so all results are directly comparable and no test flow leaks into any model's training set. Phases 7–9 are comparison studies over the global models (skipped in `--per-attack` runs): phase 7 asks whether heterogeneous stacking raises the cost of a *gradient-guided* attacker — something black-box TANTGen structurally cannot measure — phase 8 asks whether DEPT in front of a real NIDS restores the detection TANTGen destroyed, and phase 9 swaps DEPT's purifier for a published one (the diffusion purifier of Merzouk et al., DBSec 2025) in that same setting.
 
 ### Runtime of the full run
 
@@ -133,6 +134,7 @@ Phases 3–6 share the same tensors and the same flow-level split (`seed=42`), s
 | 6. Reconstructor | 10.0 h | + realization / NIDS evaluation |
 | 7. Gradient ablation | 4.3 h | 9,000 flows × 6 budgets × 3 targets × 2 attackers |
 | 8. Deployment baseline | 33.6 h | 2.70 M flow-scores through the independent NIDS |
+| 9. Diffusion-purifier comparison | — | not run yet (estimate 12–18 h) |
 
 A per-attack run of phases 3–6 over all ten attacks adds roughly 28 h (largest: `syn_ddos` 8.5 h; smallest: `mirai` 29 min), with artifacts under `data/models/per_attack/<attack>/<stage>/`.
 
@@ -141,13 +143,15 @@ A per-attack run of phases 3–6 over all ten attacks adds roughly 28 h (largest
 ```
 DEPT/
 ├── config/                    # one YAML per phase (pipeline, rf, tcn, metalearner,
-│                              #   reconstructor, baseline, gradient_ablation)
+│                              #   reconstructor, baseline, gradient_ablation,
+│                              #   diffusion_purifier)
 ├── data/
 │   ├── Kitsune/ CIC-IDS-2017/ CIC-DDoS-2019/   # raw captures
 │   ├── adversarial/           # TANTGen-generated adversarial PCAPs
 │   ├── tensors/               # pipeline output — ragged per-flow tensors
 │   └── models/                # rf/ tcn/ metalearner/ reconstructor/
-│                              #   baseline/ gradient_ablation/ per_attack/
+│                              #   baseline/ gradient_ablation/ diffusion_purifier/
+│                              #   per_attack/
 ├── scripts/                   # one runner + README per phase
 └── src/
     ├── feature_extraction/    # pipeline internals
@@ -156,7 +160,8 @@ DEPT/
         ├── rf/ tcn/ metalearner/ reconstructor/
         ├── nids/              # independent-NIDS registry (Kitsune / ML-NIDS)
         ├── baseline/          # gated detect-then-purify deployment pipeline
-        └── gradient_ablation/ # sidecar, attack, targets, pipeline, evaluate
+        ├── gradient_ablation/ # sidecar, attack, targets, pipeline, evaluate
+        └── diffusion_purifier/ # phase 9: published diffusion purifier in the phase-8 harness
 ```
 
 ## Requirements
