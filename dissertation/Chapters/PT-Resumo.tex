@@ -4,31 +4,45 @@
 % #############################################################################
 % reset acronyms
 \acresetall
+% the resumo environment does not switch language: set Portuguese hyphenation
+\begin{otherlanguage*}{portuguese}
 % use \noindent in firts paragraph
-\noindent A deteção de intrusões em rede assenta hoje em aprendizagem automática,
-trazendo uma fragilidade que as assinaturas não tinham que se preocupar tanto:
-o próprio detetor pode ser enganado.
-Um atacante que altere apenas tempos e tamanhos de pacotes, sem nunca
-violar o protocolo, faz um ataque em curso passar por benigno ao detetor.
-Muita da literatura de defesa mede a robustez contra perturbações que nenhum tráfego
-real consegue produzir. Esta dissertação propõe o DEPT
-(Defense via Ensemble and Purification Transformer), uma defesa em
-streaming treinada e avaliada sobre tráfego adversarial realizável do
-TANTGen, um gerador black-box de uma dissertação irmã. O DEPT
-converte o tráfego numa representação mascarada e ao nível do bit, a duas
-granularidades temporais; uma Random Forest e uma Temporal Convolutional Network,
-de famílias distintas, fundidas a cada pacote por um modelo de
-atenção, decidem se o fluxo foi manipulado; os fluxos sinalizados são corrigidos por
-um Transformer causal de purificação e reescritos como pacotes enviáveis.
-Em dez fontes de tráfego de três conjuntos de dados públicos, manipuladas em
-três modos de perturbação, o DEPT dá um veredicto logo no primeiro pacote, onde a fusão é
-o melhor modelo disponível, e atinge uma AUROC final de 0,933; a Random Forest
-isolada é superior a partir do segundo pacote, e o benefício da fusão está na
-precocidade e no maior custo para um atacante guiado por gradiente, que nunca evade
-a deteção em 74,5\% dos fluxos, contra 45,5\% no modelo sequencial.
-Avaliada pelo detetor independente visado por cada ataque,
-a purificação recupera 63\% da deteção destruída e reduz o sucesso do ataque de 21,1\%
-para 11,6\%, com 97,2\% dos pacotes reconstruídos aceites sem erros pelo
-\texttt{tshark} do Wireshark. A avaliação dá igual destaque às falhas: nos
-floods de reflexão com perturbação de tamanho nenhum modelo supera o acaso,
-e purificar tráfego que não evadia baixa a deteção em vez de a restaurar.
+\noindent Os detetores de intrusões em rede baseados em ML são
+vulneráveis à evasão adversarial. Um atacante que altere apenas a temporização e os
+tamanhos dos pacotes, preservando a conformidade com o protocolo e a funcionalidade do
+ataque, pode fazer com que um ataque em curso pareça benigno a um detetor em
+funcionamento. Grande parte da literatura sobre defesas mede a robustez face a
+perturbações no feature-space sem verificar se estas correspondem a
+sequências de pacotes realizáveis. Esta dissertação propõe o DEPT
+(\textit{Defense via Ensemble and Purification Transformer}), uma defesa em tempo real
+que deteta a manipulação adversarial e purifica o tráfego suspeito antes de este chegar
+a um detetor de intrusões protegido.
+
+O DEPT representa o tráfego através de bits ao nível do pacote e de
+estatísticas agregadas por fluxo, em duas granularidades temporais.
+Um attention-based meta-learner combina, a cada pacote, as previsões de dois
+classificadores com arquiteturas diferentes, uma \textit{Random Forest} e uma \textit{Temporal Convolutional Network}, para detetar fluxos com manipulação
+adversarial.
+Em seguida, um Transformer causal de purificação corrige, em feature-space,
+os fluxos sinalizados, e uma etapa de reconstrução aplica essas correções à temporização
+e ao tamanho dos pacotes, projetando-as de volta para traffic-space.
+
+O DEPT é treinado e avaliado com tráfego adversarial gerado pelo
+TANTGen~\cite{pissarra2026tantgen}, um gerador black-box, em dez fontes de tráfego
+provenientes de três conjuntos de dados públicos, cada uma manipulada em três modos de
+perturbação.
+Produz previsões a partir do primeiro pacote e atinge, no final do fluxo, uma area under the receiving operating curve (AUROC) de 0,933 na deteção de manipulação.
+Embora a Random Forest isolada obtenha uma AUROC superior a partir do segundo
+pacote, o \textit{ensemble} oferece previsões mais precoces e maior resistência aos
+ataques avaliados que visam o modelo sequencial.
+Avaliada pelo detetor independente visado por cada ataque, a purificação recupera 63\% da
+perda na taxa de deteção causada pela manipulação adversarial.
+Na avaliação do sistema completo, o DEPT reduz a taxa de sucesso dos ataques de 21,1\%
+para 11,6\%.
+Entre os pacotes classificados como realizáveis, 97,2\% são descodificados sem erros de
+malformação.
+No entanto, a eficácia varia consoante a fonte de tráfego: a deteção de manipulação
+mantém-se próxima ou abaixo do acaso nos ataques de reflection-flood com
+perturbação de tamanho, e a purificação pode reduzir a deteção quando a
+manipulação não provocou evasão.
+\end{otherlanguage*}
