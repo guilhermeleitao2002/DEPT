@@ -7,7 +7,6 @@ dissertation/*
 !Bibliography.bib
 
 venv/
-logs/
 .vscode/
 cache/
 __pycache__/
