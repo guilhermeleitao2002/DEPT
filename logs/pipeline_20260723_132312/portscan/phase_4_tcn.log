@@ -1,0 +1,100 @@
+
+════════════════════════════════════════════════════════════════════════════
+ DEPT — TCN  (mode: both)
+════════════════════════════════════════════════════════════════════════════
+ Config        /mnt/nas/inesc/gleitao/DEPT/config/tcn.yaml
+ Attack scope  portscan  (per-attack run — other attacks excluded)
+ Tensors dir   /mnt/nas/inesc/gleitao/DEPT/data/tensors
+ Adversarial   /mnt/nas/inesc/gleitao/DEPT/data/tensors/adversarial  (30 source(s) discovered)
+ Output dir    /mnt/nas/inesc/gleitao/DEPT/data/models/per_attack/portscan/tcn
+ Benign pool   1 source(s)  (portscan)
+ Benign cap    3.0× adversarial flows
+ Split         train=0.7  val=0.15  test=0.15  seed=42
+ Device        cuda (NVIDIA RTX 6000 Ada Generation)
+ Epochs        20  early_stop_patience=3
+ Batch         32  num_workers=auto
+ Channels      [128, 128, 128]  kernel=3  dropout=0.15
+ LR            0.001  wd=0.0001  sched=cosine
+ AMP           ON
+════════════════════════════════════════════════════════════════════════════
+
+────────────────────────────────────────────────────────────────────────────
+ [ 1 / 2 ]  Training Temporal Convolutional Network
+────────────────────────────────────────────────────────────────────────────
+  ✓ Trained in 1998.5s  (33.3 min)
+
+ Split summary
+ ───────────────────────────────────────────────────────────────────────────
+ Split           Flows       Benign   Adversarial    Adv %
+ -------- ------------ ------------ ------------- --------
+ train         494,319      161,109       333,210    67.4%
+ val           105,927       34,524        71,403    67.4%
+ test          105,923       34,523        71,400    67.4%
+ -------- ------------ ------------ ------------- --------
+ total         706,169      230,156       476,013    67.4%
+
+ Training curves
+ ───────────────────────────────────────────────────────────────────────────
+ Params 805,762 Best epoch 3 → val_f1 0.7678
+
+  epoch   train_loss   val_loss    val_f1         lr     sec
+  ----- ------------ ---------- --------- ---------- -------
+      0       0.3318     0.3434    0.7663   9.94e-04   321.3
+      1       0.3286     0.3281    0.7672   9.76e-04   279.2
+      2       0.3283     0.3278    0.7676   9.46e-04   278.6
+★     3       0.3281     0.3277    0.7678   9.05e-04   278.0
+      4       0.3281     0.3278    0.7663   8.54e-04   276.3
+      5       0.3281     0.3279    0.7677   7.94e-04   274.1
+      6       0.3280     0.3277    0.7674   7.27e-04   274.9
+
+────────────────────────────────────────────────────────────────────────────
+ [ 2 / 2 ]  Evaluating on held-out test split
+────────────────────────────────────────────────────────────────────────────
+  ✓ Evaluated in 53.2s
+
+ Overall metrics (test)
+ ───────────────────────────────────────────────────────────────────────────
+ Acc 0.7704   Macro F1 0.7669   ROC AUC 0.8826   PR AUC 0.9165
+
+ class         precision     recall         f1    support
+ ------------ ---------- ---------- ---------- ----------
+ benign           0.5872     0.9947     0.7385     34,523
+ adversarial      0.9961     0.6620     0.7954     71,400
+
+ Per-adversarial-source metrics  (3 variant(s))
+ ───────────────────────────────────────────────────────────────────────────
+ precision/recall/f1 computed against a balanced benign subsample (K × n_adv); roc_auc/pr_auc use all test benign.
+
+ variant                     precision     recall         f1    roc_auc     pr_auc    n_adv
+ -------------------------- ---------- ---------- ---------- ---------- ---------- --------
+ portscan  both                 0.9923     0.9887     0.9905     0.9960     0.9944   23,800
+ portscan  iat                  0.4756     0.0070     0.0137     0.6553     0.4997   23,800
+ portscan  size                 0.9923     0.9902     0.9913     0.9966     0.9951   23,800
+
+============================================================================
+ DEPT × TCN — Summary
+============================================================================
+ Macro F1 0.7669   ROC AUC 0.8826   PR AUC 0.9165   Recall-adv 0.6620
+ ---------------------------------------------------------------------------
+ Train time    1998.5s  (33.3 min)
+ Eval  time      53.2s
+ Total time    2051.7s  (34.2 min)
+
+ Artifacts  → /mnt/nas/inesc/gleitao/DEPT/data/models/per_attack/portscan/tcn
+ ───────────────────────────────────────────────────────────────────────────
+   ✓ tcn.pt                   (    3.1 MB)  trained model state_dict
+   ✓ tcn_config.json          (   517.0 B)  resolved model + training config
+   ✓ split.npz                (    5.4 MB)  train/val/test indices
+   ✓ dataset_index.npz        (   14.8 MB)  per-flow index (no payload)
+   ✓ split_summary.json       (   734.0 B)  split counts
+   ✓ training_info.json       (    3.0 KB)  best epoch, durations, device
+   ✓ training_curves.json     (    1.4 KB)  per-epoch loss + val macro-F1
+   ✓ metrics.json             (    7.9 KB)  full metrics (overall/per-adversarial-source)
+   ✓ confusion_matrix.png     (   27.9 KB)  binary confusion matrix
+   ✓ roc_curve.png            (   34.1 KB)  ROC curve
+   ✓ pr_curve.png             (   30.5 KB)  precision-recall curve
+   ✓ training_curves.png      (   50.6 KB)  loss + macro-F1 over epochs
+ ───────────────────────────────────────────────────────────────────────────
+   Total  12/12 files, 23.4 MB
+============================================================================
+

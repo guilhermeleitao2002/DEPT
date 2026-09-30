@@ -1,0 +1,104 @@
+
+════════════════════════════════════════════════════════════════════════════
+ DEPT — Reconstructor  (mode: both)
+════════════════════════════════════════════════════════════════════════════
+ Config            /mnt/nas/inesc/gleitao/DEPT/config/reconstructor.yaml
+ Attack scope      brute_force  (per-attack run — other attacks excluded)
+ Tensors dir       /mnt/nas/inesc/gleitao/DEPT/data/tensors
+ TCN model dir     /mnt/nas/inesc/gleitao/DEPT/data/models/per_attack/brute_force/tcn
+ Output dir        /mnt/nas/inesc/gleitao/DEPT/data/models/per_attack/brute_force/reconstructor
+════════════════════════════════════════════════════════════════════════════
+
+────────────────────────────────────────────────────────────────────────────
+ [ 1 / 2 ]  Training reconstructor (causal residual denoiser)
+────────────────────────────────────────────────────────────────────────────
+  ✓ Trained in 297.3s
+  pairs: 20,076  train/val/test: 14,052/3,012/3,012
+  best epoch: 19  val loss: 0.00004  params: 677,698
+
+────────────────────────────────────────────────────────────────────────────
+ [ 2 / 2 ]  Evaluating on held-out test pairs
+────────────────────────────────────────────────────────────────────────────
+[Parallel(n_jobs=1)]: Done  49 tasks      | elapsed:    0.0s
+[Parallel(n_jobs=1)]: Done 199 tasks      | elapsed:    0.0s
+[Parallel(n_jobs=1)]: Done 200 out of 200 | elapsed:    0.0s finished
+[Parallel(n_jobs=1)]: Done  49 tasks      | elapsed:    0.0s
+[Parallel(n_jobs=1)]: Done 199 tasks      | elapsed:    0.0s
+[Parallel(n_jobs=1)]: Done 200 out of 200 | elapsed:    0.0s finished
+[Parallel(n_jobs=1)]: Done  49 tasks      | elapsed:    0.0s
+[Parallel(n_jobs=1)]: Done 199 tasks      | elapsed:    0.0s
+[Parallel(n_jobs=1)]: Done 200 out of 200 | elapsed:    0.0s finished
+[Parallel(n_jobs=1)]: Done  49 tasks      | elapsed:    0.0s
+[Parallel(n_jobs=1)]: Done 199 tasks      | elapsed:    0.0s
+[Parallel(n_jobs=1)]: Done 200 out of 200 | elapsed:    0.0s finished
+[Parallel(n_jobs=1)]: Done  49 tasks      | elapsed:    0.0s
+[Parallel(n_jobs=1)]: Done 199 tasks      | elapsed:    0.0s
+[Parallel(n_jobs=1)]: Done 200 out of 200 | elapsed:    0.0s finished
+[Parallel(n_jobs=1)]: Done  49 tasks      | elapsed:    0.0s
+[Parallel(n_jobs=1)]: Done 199 tasks      | elapsed:    0.0s
+[Parallel(n_jobs=1)]: Done 200 out of 200 | elapsed:    0.0s finished
+[Parallel(n_jobs=1)]: Done  49 tasks      | elapsed:    0.0s
+[Parallel(n_jobs=1)]: Done 199 tasks      | elapsed:    0.0s
+[Parallel(n_jobs=1)]: Done 200 out of 200 | elapsed:    0.0s finished
+[Parallel(n_jobs=1)]: Done  49 tasks      | elapsed:    0.0s
+[Parallel(n_jobs=1)]: Done 199 tasks      | elapsed:    0.0s
+[Parallel(n_jobs=1)]: Done 200 out of 200 | elapsed:    0.0s finished
+[Parallel(n_jobs=1)]: Done  49 tasks      | elapsed:    0.0s
+[Parallel(n_jobs=1)]: Done 199 tasks      | elapsed:    0.0s
+[Parallel(n_jobs=1)]: Done 200 out of 200 | elapsed:    0.0s finished
+[Parallel(n_jobs=1)]: Done  49 tasks      | elapsed:    0.0s
+[Parallel(n_jobs=1)]: Done 199 tasks      | elapsed:    0.0s
+[Parallel(n_jobs=1)]: Done 200 out of 200 | elapsed:    0.0s finished
+[Parallel(n_jobs=1)]: Done  49 tasks      | elapsed:    0.0s
+[Parallel(n_jobs=1)]: Done 199 tasks      | elapsed:    0.0s
+[Parallel(n_jobs=1)]: Done 200 out of 200 | elapsed:    0.0s finished
+[Parallel(n_jobs=1)]: Done  49 tasks      | elapsed:    0.0s
+[Parallel(n_jobs=1)]: Done 199 tasks      | elapsed:    0.0s
+[Parallel(n_jobs=1)]: Done 200 out of 200 | elapsed:    0.0s finished
+[Parallel(n_jobs=1)]: Done  49 tasks      | elapsed:    0.0s
+[Parallel(n_jobs=1)]: Done 199 tasks      | elapsed:    0.0s
+[Parallel(n_jobs=1)]: Done 200 out of 200 | elapsed:    0.0s finished
+[Parallel(n_jobs=1)]: Done  49 tasks      | elapsed:    0.0s
+[Parallel(n_jobs=1)]: Done 199 tasks      | elapsed:    0.0s
+[Parallel(n_jobs=1)]: Done 200 out of 200 | elapsed:    0.0s finished
+[Parallel(n_jobs=1)]: Done  49 tasks      | elapsed:    0.0s
+[Parallel(n_jobs=1)]: Done 199 tasks      | elapsed:    0.0s
+[Parallel(n_jobs=1)]: Done 200 out of 200 | elapsed:    0.0s finished
+[Parallel(n_jobs=1)]: Done  49 tasks      | elapsed:    0.0s
+[Parallel(n_jobs=1)]: Done 199 tasks      | elapsed:    0.0s
+[Parallel(n_jobs=1)]: Done 200 out of 200 | elapsed:    0.0s finished
+[Parallel(n_jobs=1)]: Done  49 tasks      | elapsed:    0.0s
+[Parallel(n_jobs=1)]: Done 199 tasks      | elapsed:    0.0s
+[Parallel(n_jobs=1)]: Done 200 out of 200 | elapsed:    0.0s finished
+[Parallel(n_jobs=1)]: Done  49 tasks      | elapsed:    0.0s
+[Parallel(n_jobs=1)]: Done 199 tasks      | elapsed:    0.0s
+[Parallel(n_jobs=1)]: Done 200 out of 200 | elapsed:    0.0s finished
+  ✓ Evaluated in 1110.1s
+
+ Reconstruction (perturbed dims)
+   MSE before 0.801213   after 0.118997   reduction 6.7×
+
+ Purification efficacy (independent NIDS — the headline metric)
+   detection restored: adv (evaded) → purified → clean (oracle)
+   detection rate  adv 0.9936  purified 0.9957  clean 0.9956
+   detection restoration 101.7%   (rate-based; aggregates Kitsune + ML-NIDS)
+   ml_nids score restoration 125.1%   mean score adv/pur/clean 0.993/0.995/0.994
+
+ Purification gain (through TCN — internal sanity check, circular)
+   P(adv|adv) 0.9445   P(adv|recon) 0.9444   P(adv|clean) 0.9444
+   gain 0.0000   residual gap -0.0000
+
+ Protocol compliance
+   tshark 1.0000
+
+ Per-source  (3 variant(s))
+   variant                   mse_after    nids  det_adv  det_pur  det_cln  restor  tshark
+   brute_force_adv_both        0.00000 ml_nids    0.993    0.996    0.995    5.12   1.000
+   brute_force_adv_iat         0.00000 ml_nids    0.997    0.997    0.997    0.51   1.000
+   brute_force_adv_size        0.14852 ml_nids    0.991    0.994    0.995    0.83   1.000
+
+════════════════════════════════════════════════════════════════════════════
+ DEPT × Reconstructor — Done  Total 1407.4s
+ Artifacts  /mnt/nas/inesc/gleitao/DEPT/data/models/per_attack/brute_force/reconstructor
+════════════════════════════════════════════════════════════════════════════
+

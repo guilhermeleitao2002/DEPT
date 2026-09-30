@@ -1,0 +1,100 @@
+
+════════════════════════════════════════════════════════════════════════════
+ DEPT — TCN  (mode: both)
+════════════════════════════════════════════════════════════════════════════
+ Config        /mnt/nas/inesc/gleitao/DEPT/config/tcn.yaml
+ Attack scope  mirai  (per-attack run — other attacks excluded)
+ Tensors dir   /mnt/nas/inesc/gleitao/DEPT/data/tensors
+ Adversarial   /mnt/nas/inesc/gleitao/DEPT/data/tensors/adversarial  (30 source(s) discovered)
+ Output dir    /mnt/nas/inesc/gleitao/DEPT/data/models/per_attack/mirai/tcn
+ Benign pool   1 source(s)  (mirai)
+ Benign cap    3.0× adversarial flows
+ Split         train=0.7  val=0.15  test=0.15  seed=42
+ Device        cuda (NVIDIA RTX 6000 Ada Generation)
+ Epochs        20  early_stop_patience=3
+ Batch         32  num_workers=auto
+ Channels      [128, 128, 128]  kernel=3  dropout=0.15
+ LR            0.001  wd=0.0001  sched=cosine
+ AMP           ON
+════════════════════════════════════════════════════════════════════════════
+
+────────────────────────────────────────────────────────────────────────────
+ [ 1 / 2 ]  Training Temporal Convolutional Network
+────────────────────────────────────────────────────────────────────────────
+  ✓ Trained in 461.3s  (7.7 min)
+
+ Split summary
+ ───────────────────────────────────────────────────────────────────────────
+ Split           Flows       Benign   Adversarial    Adv %
+ -------- ------------ ------------ ------------- --------
+ train          50,441       23,045        27,396    54.3%
+ val            10,809        4,938         5,871    54.3%
+ test           10,809        4,938         5,871    54.3%
+ -------- ------------ ------------ ------------- --------
+ total          72,059       32,921        39,138    54.3%
+
+ Training curves
+ ───────────────────────────────────────────────────────────────────────────
+ Params 805,762 Best epoch 3 → val_f1 0.6046
+
+  epoch   train_loss   val_loss    val_f1         lr     sec
+  ----- ------------ ---------- --------- ---------- -------
+      0       0.6504     0.6194    0.5961   9.94e-04   197.8
+      1       0.6195     0.5979    0.6034   9.76e-04    42.3
+      2       0.6085     0.5965    0.5983   9.46e-04    43.5
+★     3       0.6045     0.6015    0.6046   9.05e-04    39.5
+      4       0.5982     0.5947    0.5691   8.54e-04    50.6
+      5       0.5990     0.5917    0.5983   7.94e-04    37.9
+      6       0.5937     0.5957    0.5978   7.27e-04    43.5
+
+────────────────────────────────────────────────────────────────────────────
+ [ 2 / 2 ]  Evaluating on held-out test split
+────────────────────────────────────────────────────────────────────────────
+  ✓ Evaluated in 60.0s
+
+ Overall metrics (test)
+ ───────────────────────────────────────────────────────────────────────────
+ Acc 0.6335   Macro F1 0.5944   ROC AUC 0.6781   PR AUC 0.6938
+
+ class         precision     recall         f1    support
+ ------------ ---------- ---------- ---------- ----------
+ benign           0.6940     0.3536     0.4685      4,938
+ adversarial      0.6151     0.8688     0.7203      5,871
+
+ Per-adversarial-source metrics  (3 variant(s))
+ ───────────────────────────────────────────────────────────────────────────
+ precision/recall/f1 computed against a balanced benign subsample (K × n_adv); roc_auc/pr_auc use all test benign.
+
+ variant                     precision     recall         f1    roc_auc     pr_auc    n_adv
+ -------------------------- ---------- ---------- ---------- ---------- ---------- --------
+ mirai  both                    0.3405     0.8421     0.4849     0.6548     0.3847    1,957
+ mirai  iat                     0.3409     0.8436     0.4856     0.6539     0.3853    1,957
+ mirai  size                    0.3608     0.9208     0.5185     0.7257     0.5533    1,957
+
+============================================================================
+ DEPT × TCN — Summary
+============================================================================
+ Macro F1 0.5944   ROC AUC 0.6781   PR AUC 0.6938   Recall-adv 0.8688
+ ---------------------------------------------------------------------------
+ Train time     461.3s  (7.7 min)
+ Eval  time      60.0s
+ Total time     521.3s  (8.7 min)
+
+ Artifacts  → /mnt/nas/inesc/gleitao/DEPT/data/models/per_attack/mirai/tcn
+ ───────────────────────────────────────────────────────────────────────────
+   ✓ tcn.pt                   (    3.1 MB)  trained model state_dict
+   ✓ tcn_config.json          (   517.0 B)  resolved model + training config
+   ✓ split.npz                (  563.7 KB)  train/val/test indices
+   ✓ dataset_index.npz        (    1.5 MB)  per-flow index (no payload)
+   ✓ split_summary.json       (   674.0 B)  split counts
+   ✓ training_info.json       (    2.9 KB)  best epoch, durations, device
+   ✓ training_curves.json     (    1.4 KB)  per-epoch loss + val macro-F1
+   ✓ metrics.json             (    7.8 KB)  full metrics (overall/per-adversarial-source)
+   ✓ confusion_matrix.png     (   26.6 KB)  binary confusion matrix
+   ✓ roc_curve.png            (   37.2 KB)  ROC curve
+   ✓ pr_curve.png             (   30.1 KB)  precision-recall curve
+   ✓ training_curves.png      (   54.8 KB)  loss + macro-F1 over epochs
+ ───────────────────────────────────────────────────────────────────────────
+   Total  12/12 files, 5.3 MB
+============================================================================
+

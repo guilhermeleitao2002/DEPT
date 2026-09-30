@@ -1,0 +1,94 @@
+
+════════════════════════════════════════════════════════════════════════════
+ DEPT — Random Forest  (mode: both)
+════════════════════════════════════════════════════════════════════════════
+ Config        /mnt/nas/inesc/gleitao/DEPT/config/rf.yaml
+ Attack scope  ntp_ddos  (per-attack run — other attacks excluded)
+ Tensors dir   /mnt/nas/inesc/gleitao/DEPT/data/tensors
+ Adversarial   /mnt/nas/inesc/gleitao/DEPT/data/tensors/adversarial  (30 source(s) discovered)
+ Output dir    /mnt/nas/inesc/gleitao/DEPT/data/models/per_attack/ntp_ddos/rf
+ Benign pool   1 source(s)  (ntp_ddos)
+ Benign cap    3.0× adversarial windows
+ Split         train=0.7  val=0.15  test=0.15  seed=42
+ Grid search   ON
+════════════════════════════════════════════════════════════════════════════
+
+────────────────────────────────────────────────────────────────────────────
+ [ 1 / 2 ]  Training Random Forest
+────────────────────────────────────────────────────────────────────────────
+  ✓ Trained in 498.7s  (8.3 min)
+
+ Split summary  (rows = RF checkpoints, multi-scale prefixes)
+ ───────────────────────────────────────────────────────────────────────────
+ Split           Ckpts      Flows       Benign   Adversarial    Adv %
+ -------- ------------ ---------- ------------ ------------- --------
+ train         305,722     39,292       76,365       229,357    75.0%
+ val            63,863      8,420       16,222        47,641    74.6%
+ test           65,791      8,420       16,278        49,513    75.3%
+ -------- ------------ ---------- ------------ ------------- --------
+ total         435,376     56,132      108,865       326,511    75.0%
+
+ Grid search
+ ───────────────────────────────────────────────────────────────────────────
+ Top 5 of 18 configuration(s):
+
+    rank   n_est  max_depth  min_leaf     val_f1     fit_s
+    ----  ------ ---------- ---------  ---------  --------
+  ★    1     200         20         5     0.7215      17.3
+       2     400         20         5     0.7213      35.2
+       3     400         20         2     0.7164      35.4
+       4     200         20         2     0.7160      17.8
+       5     200         20         1     0.7137      17.9
+
+ Best params  {'n_estimators': 200, 'max_depth': 20, 'min_samples_leaf': 5}
+
+────────────────────────────────────────────────────────────────────────────
+ [ 2 / 2 ]  Evaluating on held-out test split
+────────────────────────────────────────────────────────────────────────────
+  ✓ Evaluated in 5.7s
+
+ Overall metrics (test)
+ ───────────────────────────────────────────────────────────────────────────
+ Acc 0.7443   Macro F1 0.7253   ROC AUC 0.7010   PR AUC 0.9137
+
+ class         precision     recall         f1    support
+ ------------ ---------- ---------- ---------- ----------
+ benign           0.4915     0.9728     0.6531     16,278
+ adversarial      0.9868     0.6691     0.7975     49,513
+
+ Per-adversarial-source metrics  (3 variant(s))
+ ───────────────────────────────────────────────────────────────────────────
+ precision/recall/f1 computed against a balanced benign subsample (K × n_adv); roc_auc/pr_auc use all test benign.
+
+ variant                     precision     recall         f1    roc_auc     pr_auc    n_adv
+ -------------------------- ---------- ---------- ---------- ---------- ---------- --------
+ ntp_ddos  both                 0.9743     0.9996     0.9868     0.9999     0.9998   16,765
+ ntp_ddos  iat                  0.9736     0.9999     0.9866     0.9999     0.9999   16,323
+ ntp_ddos  size                 0.1016     0.0030     0.0059     0.0990     0.3209   16,425
+
+============================================================================
+ DEPT × Random Forest — Summary
+============================================================================
+ Macro F1 0.7253   ROC AUC 0.7010   PR AUC 0.9137   Recall-adv 0.6691
+ ---------------------------------------------------------------------------
+ Train time     498.7s  (8.3 min)
+ Eval  time       5.7s
+ Total time     504.4s  (8.4 min)
+
+ Artifacts  → /mnt/nas/inesc/gleitao/DEPT/data/models/per_attack/ntp_ddos/rf
+ ───────────────────────────────────────────────────────────────────────────
+   ✓ rf.joblib                (   54.1 MB)  trained classifier
+   ✓ split.npz                (    3.3 MB)  train/val/test indices
+   ✓ dataset.npz              (  156.5 MB)  merged dataset snapshot
+   ✓ feature_names.json       (   446.0 B)  RF stat names (24)
+   ✓ split_summary.json       (   809.0 B)  split counts
+   ✓ training_info.json       (    5.7 KB)  grid search + best params
+   ✓ metrics.json             (    7.8 KB)  full metrics (overall/per-adversarial-source)
+   ✓ confusion_matrix.png     (   28.5 KB)  binary confusion matrix
+   ✓ roc_curve.png            (   32.9 KB)  ROC curve
+   ✓ pr_curve.png             (   28.9 KB)  precision-recall curve
+   ✓ feature_importance.png   (   83.7 KB)  Gini importances
+ ───────────────────────────────────────────────────────────────────────────
+   Total  11/11 files, 214.2 MB
+============================================================================
+

@@ -1,0 +1,111 @@
+
+════════════════════════════════════════════════════════════════════════════
+ DEPT — TCN  (mode: both)
+════════════════════════════════════════════════════════════════════════════
+ Config        /mnt/nas/inesc/gleitao/DEPT/config/tcn.yaml
+ Attack scope  ssdp_flood  (per-attack run — other attacks excluded)
+ Tensors dir   /mnt/nas/inesc/gleitao/DEPT/data/tensors
+ Adversarial   /mnt/nas/inesc/gleitao/DEPT/data/tensors/adversarial  (30 source(s) discovered)
+ Output dir    /mnt/nas/inesc/gleitao/DEPT/data/models/per_attack/ssdp_flood/tcn
+ Benign pool   1 source(s)  (ssdp_flood)
+ Benign cap    3.0× adversarial flows
+ Split         train=0.7  val=0.15  test=0.15  seed=42
+ Device        cuda (NVIDIA RTX 6000 Ada Generation)
+ Epochs        20  early_stop_patience=3
+ Batch         32  num_workers=auto
+ Channels      [128, 128, 128]  kernel=3  dropout=0.15
+ LR            0.001  wd=0.0001  sched=cosine
+ AMP           ON
+════════════════════════════════════════════════════════════════════════════
+
+────────────────────────────────────────────────────────────────────────────
+ [ 1 / 2 ]  Training Temporal Convolutional Network
+────────────────────────────────────────────────────────────────────────────
+  ✓ Trained in 3000.9s  (50.0 min)
+
+ Split summary
+ ───────────────────────────────────────────────────────────────────────────
+ Split           Flows       Benign   Adversarial    Adv %
+ -------- ------------ ------------ ------------- --------
+ train         183,644       46,016       137,628    74.9%
+ val            39,354        9,861        29,493    74.9%
+ test           39,354        9,861        29,493    74.9%
+ -------- ------------ ------------ ------------- --------
+ total         262,352       65,738       196,614    74.9%
+
+ Training curves
+ ───────────────────────────────────────────────────────────────────────────
+ Params 805,762 Best epoch 14 → val_f1 0.9997
+
+  epoch   train_loss   val_loss    val_f1         lr     sec
+  ----- ------------ ---------- --------- ---------- -------
+      0       0.3472     0.0920    0.9940   9.94e-04   661.8
+      1       0.1182     0.0724    0.9978   9.76e-04   242.6
+      2       0.0805     0.0637    0.9983   9.46e-04   155.6
+      3       0.0739     0.0665    0.9974   9.05e-04   129.4
+      4       0.0736     0.0702    0.9982   8.54e-04   131.5
+      5       0.0667     0.0595    0.9990   7.94e-04   131.5
+      6       0.0682     0.0830    0.9979   7.27e-04   131.7
+      7       0.0668     0.0634    0.9985   6.55e-04   130.5
+      8       0.0635     0.0646    0.9990   5.78e-04   130.2
+      9       0.0616     0.0581    0.9992   5.00e-04   126.3
+     10       0.0610     0.0658    0.9991   4.22e-04   129.6
+     11       0.0574     0.0534    0.9994   3.45e-04   127.8
+     12       0.0555     0.0584    0.9995   2.73e-04   129.4
+     13       0.0541     0.0522    0.9995   2.06e-04   128.3
+★    14       0.0529     0.0527    0.9997   1.46e-04   126.6
+     15       0.0520     0.0522    0.9996   9.55e-05   124.8
+     16       0.0512     0.0503    0.9996   5.45e-05   126.1
+     17       0.0506     0.0503    0.9996   2.45e-05   127.9
+
+────────────────────────────────────────────────────────────────────────────
+ [ 2 / 2 ]  Evaluating on held-out test split
+────────────────────────────────────────────────────────────────────────────
+  ✓ Evaluated in 29.2s
+
+ Overall metrics (test)
+ ───────────────────────────────────────────────────────────────────────────
+ Acc 0.9998   Macro F1 0.9997   ROC AUC 1.0000   PR AUC 1.0000
+
+ class         precision     recall         f1    support
+ ------------ ---------- ---------- ---------- ----------
+ benign           0.9999     0.9992     0.9995      9,861
+ adversarial      0.9997     1.0000     0.9998     29,493
+
+ Per-adversarial-source metrics  (3 variant(s))
+ ───────────────────────────────────────────────────────────────────────────
+ precision/recall/f1 computed against a balanced benign subsample (K × n_adv); roc_auc/pr_auc use all test benign.
+
+ variant                     precision     recall         f1    roc_auc     pr_auc    n_adv
+ -------------------------- ---------- ---------- ---------- ---------- ---------- --------
+ ssdp_flood  both               0.9992     1.0000     0.9996     1.0000     1.0000    9,831
+ ssdp_flood  iat                0.9992     0.9999     0.9995     1.0000     1.0000    9,831
+ ssdp_flood  size               0.9992     1.0000     0.9996     1.0000     0.9999    9,831
+
+============================================================================
+ DEPT × TCN — Summary
+============================================================================
+ Macro F1 0.9997   ROC AUC 1.0000   PR AUC 1.0000   Recall-adv 1.0000
+ ---------------------------------------------------------------------------
+ Train time    3000.9s  (50.0 min)
+ Eval  time      29.2s
+ Total time    3030.1s  (50.5 min)
+
+ Artifacts  → /mnt/nas/inesc/gleitao/DEPT/data/models/per_attack/ssdp_flood/tcn
+ ───────────────────────────────────────────────────────────────────────────
+   ✓ tcn.pt                   (    3.1 MB)  trained model state_dict
+   ✓ tcn_config.json          (   517.0 B)  resolved model + training config
+   ✓ split.npz                (    2.0 MB)  train/val/test indices
+   ✓ dataset_index.npz        (    5.5 MB)  per-flow index (no payload)
+   ✓ split_summary.json       (   741.0 B)  split counts
+   ✓ training_info.json       (    3.0 KB)  best epoch, durations, device
+   ✓ training_curves.json     (    3.7 KB)  per-epoch loss + val macro-F1
+   ✓ metrics.json             (    7.7 KB)  full metrics (overall/per-adversarial-source)
+   ✓ confusion_matrix.png     (   26.4 KB)  binary confusion matrix
+   ✓ roc_curve.png            (   29.4 KB)  ROC curve
+   ✓ pr_curve.png             (   23.7 KB)  precision-recall curve
+   ✓ training_curves.png      (   47.9 KB)  loss + macro-F1 over epochs
+ ───────────────────────────────────────────────────────────────────────────
+   Total  12/12 files, 10.7 MB
+============================================================================
+

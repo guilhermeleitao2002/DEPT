@@ -1,0 +1,55 @@
+
+════════════════════════════════════════════════════════════════════════════
+ DEPT — Reconstructor  (mode: both)
+════════════════════════════════════════════════════════════════════════════
+ Config            /mnt/nas/inesc/gleitao/DEPT/config/reconstructor.yaml
+ Attack scope      ssdp_flood  (per-attack run — other attacks excluded)
+ Tensors dir       /mnt/nas/inesc/gleitao/DEPT/data/tensors
+ TCN model dir     /mnt/nas/inesc/gleitao/DEPT/data/models/per_attack/ssdp_flood/tcn
+ Output dir        /mnt/nas/inesc/gleitao/DEPT/data/models/per_attack/ssdp_flood/reconstructor
+════════════════════════════════════════════════════════════════════════════
+
+────────────────────────────────────────────────────────────────────────────
+ [ 1 / 2 ]  Training reconstructor (causal residual denoiser)
+────────────────────────────────────────────────────────────────────────────
+  ✓ Trained in 1606.8s
+  pairs: 196,608  train/val/test: 137,625/29,493/29,490
+  best epoch: 7  val loss: 0.00004  params: 677,698
+
+────────────────────────────────────────────────────────────────────────────
+ [ 2 / 2 ]  Evaluating on held-out test pairs
+────────────────────────────────────────────────────────────────────────────
+Importing AfterImage Cython Library
+Importing Scapy Library
+## mapping(v) has been loaded from file...
+## ensembleLayer has been loaded from file...
+## outputLayer has been loaded from file...
+  ✓ Evaluated in 2626.2s
+
+ Reconstruction (perturbed dims)
+   MSE before 0.963352   after 0.004027   reduction 239.2×
+
+ Purification efficacy (independent NIDS — the headline metric)
+   detection restored: adv (evaded) → purified → clean (oracle)
+   detection rate  adv 0.0011  purified 1.0000  clean 0.9999
+   detection restoration 100.0%   (rate-based; aggregates Kitsune + ML-NIDS)
+   kitsune score restoration 113.8%   mean score adv/pur/clean 0.311/2.243/2.008
+
+ Purification gain (through TCN — internal sanity check, circular)
+   P(adv|adv) 0.9999   P(adv|recon) 0.0007   P(adv|clean) 0.0011
+   gain 0.9993   residual gap -0.0004
+
+ Protocol compliance
+   tshark 0.9996
+
+ Per-source  (3 variant(s))
+   variant                   mse_after    nids  det_adv  det_pur  det_cln  restor  tshark
+   ssdp_flood_adv_both         0.00256 kitsune    1.000    1.000    1.000    4.91   1.000
+   ssdp_flood_adv_iat          0.07515 kitsune    0.001    1.000    1.000    1.11   1.000
+   ssdp_flood_adv_size         0.00241       —        —        —        —       —       —
+
+════════════════════════════════════════════════════════════════════════════
+ DEPT × Reconstructor — Done  Total 4232.9s
+ Artifacts  /mnt/nas/inesc/gleitao/DEPT/data/models/per_attack/ssdp_flood/reconstructor
+════════════════════════════════════════════════════════════════════════════
+

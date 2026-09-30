@@ -1,0 +1,94 @@
+
+════════════════════════════════════════════════════════════════════════════
+ DEPT — Random Forest  (mode: both)
+════════════════════════════════════════════════════════════════════════════
+ Config        /mnt/nas/inesc/gleitao/DEPT/config/rf.yaml
+ Attack scope  mirai  (per-attack run — other attacks excluded)
+ Tensors dir   /mnt/nas/inesc/gleitao/DEPT/data/tensors
+ Adversarial   /mnt/nas/inesc/gleitao/DEPT/data/tensors/adversarial  (30 source(s) discovered)
+ Output dir    /mnt/nas/inesc/gleitao/DEPT/data/models/per_attack/mirai/rf
+ Benign pool   1 source(s)  (mirai)
+ Benign cap    3.0× adversarial windows
+ Split         train=0.7  val=0.15  test=0.15  seed=42
+ Grid search   ON
+════════════════════════════════════════════════════════════════════════════
+
+────────────────────────────────────────────────────────────────────────────
+ [ 1 / 2 ]  Training Random Forest
+────────────────────────────────────────────────────────────────────────────
+  ✓ Trained in 382.0s  (6.4 min)
+
+ Split summary  (rows = RF checkpoints, multi-scale prefixes)
+ ───────────────────────────────────────────────────────────────────────────
+ Split           Ckpts      Flows       Benign   Adversarial    Adv %
+ -------- ------------ ---------- ------------ ------------- --------
+ train         211,364     21,922       76,165       135,199    64.0%
+ val             9,621      4,698        3,942         5,679    59.0%
+ test           64,314      4,698        3,211        61,103    95.0%
+ -------- ------------ ---------- ------------ ------------- --------
+ total         285,299     31,318       83,318       201,981    70.8%
+
+ Grid search
+ ───────────────────────────────────────────────────────────────────────────
+ Top 5 of 18 configuration(s):
+
+    rank   n_est  max_depth  min_leaf     val_f1     fit_s
+    ----  ------ ---------- ---------  ---------  --------
+  ★    1     400       None         5     0.7845      25.9
+       2     400         20         5     0.7844      25.6
+       3     400         40         5     0.7839      25.5
+       4     200         20         5     0.7837      12.5
+       5     200         20         2     0.7828      12.8
+
+ Best params  {'n_estimators': 400, 'max_depth': None, 'min_samples_leaf': 5}
+
+────────────────────────────────────────────────────────────────────────────
+ [ 2 / 2 ]  Evaluating on held-out test split
+────────────────────────────────────────────────────────────────────────────
+  ✓ Evaluated in 5.1s
+
+ Overall metrics (test)
+ ───────────────────────────────────────────────────────────────────────────
+ Acc 0.9835   Macro F1 0.9198   ROC AUC 0.9957   PR AUC 0.9998
+
+ class         precision     recall         f1    support
+ ------------ ---------- ---------- ---------- ----------
+ benign           0.7831     0.9256     0.8484      3,211
+ adversarial      0.9961     0.9865     0.9913     61,103
+
+ Per-adversarial-source metrics  (3 variant(s))
+ ───────────────────────────────────────────────────────────────────────────
+ precision/recall/f1 computed against a balanced benign subsample (K × n_adv); roc_auc/pr_auc use all test benign.
+
+ variant                     precision     recall         f1    roc_auc     pr_auc    n_adv
+ -------------------------- ---------- ---------- ---------- ---------- ---------- --------
+ mirai  both                    0.9959     0.9966     0.9963     0.9990     0.9999   58,390
+ mirai  iat                     0.7427     0.7701     0.7562     0.9323     0.8675      896
+ mirai  size                    0.8541     0.7700     0.8098     0.9185     0.9009    1,817
+
+============================================================================
+ DEPT × Random Forest — Summary
+============================================================================
+ Macro F1 0.9198   ROC AUC 0.9957   PR AUC 0.9998   Recall-adv 0.9865
+ ---------------------------------------------------------------------------
+ Train time     382.0s  (6.4 min)
+ Eval  time       5.1s
+ Total time     387.1s  (6.5 min)
+
+ Artifacts  → /mnt/nas/inesc/gleitao/DEPT/data/models/per_attack/mirai/rf
+ ───────────────────────────────────────────────────────────────────────────
+   ✓ rf.joblib                (   85.5 MB)  trained classifier
+   ✓ split.npz                (    2.2 MB)  train/val/test indices
+   ✓ dataset.npz              (  103.7 MB)  merged dataset snapshot
+   ✓ feature_names.json       (   446.0 B)  RF stat names (24)
+   ✓ split_summary.json       (   760.0 B)  split counts
+   ✓ training_info.json       (    5.7 KB)  grid search + best params
+   ✓ metrics.json             (    7.7 KB)  full metrics (overall/per-adversarial-source)
+   ✓ confusion_matrix.png     (   27.8 KB)  binary confusion matrix
+   ✓ roc_curve.png            (   30.9 KB)  ROC curve
+   ✓ pr_curve.png             (   26.4 KB)  precision-recall curve
+   ✓ feature_importance.png   (   84.6 KB)  Gini importances
+ ───────────────────────────────────────────────────────────────────────────
+   Total  11/11 files, 191.5 MB
+============================================================================
+

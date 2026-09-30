@@ -1,0 +1,94 @@
+
+════════════════════════════════════════════════════════════════════════════
+ DEPT — Random Forest  (mode: both)
+════════════════════════════════════════════════════════════════════════════
+ Config        /mnt/nas/inesc/gleitao/DEPT/config/rf.yaml
+ Attack scope  ssdp_flood  (per-attack run — other attacks excluded)
+ Tensors dir   /mnt/nas/inesc/gleitao/DEPT/data/tensors
+ Adversarial   /mnt/nas/inesc/gleitao/DEPT/data/tensors/adversarial  (30 source(s) discovered)
+ Output dir    /mnt/nas/inesc/gleitao/DEPT/data/models/per_attack/ssdp_flood/rf
+ Benign pool   1 source(s)  (ssdp_flood)
+ Benign cap    3.0× adversarial windows
+ Split         train=0.7  val=0.15  test=0.15  seed=42
+ Grid search   ON
+════════════════════════════════════════════════════════════════════════════
+
+────────────────────────────────────────────────────────────────────────────
+ [ 1 / 2 ]  Training Random Forest
+────────────────────────────────────────────────────────────────────────────
+  ✓ Trained in 944.1s  (15.7 min)
+
+ Split summary  (rows = RF checkpoints, multi-scale prefixes)
+ ───────────────────────────────────────────────────────────────────────────
+ Split           Ckpts      Flows       Benign   Adversarial    Adv %
+ -------- ------------ ---------- ------------ ------------- --------
+ train         740,311    183,640      362,061       378,250    51.1%
+ val           136,198     39,353       54,993        81,205    59.6%
+ test          108,082     39,350       27,012        81,070    75.0%
+ -------- ------------ ---------- ------------ ------------- --------
+ total         984,591    262,343      444,066       540,525    54.9%
+
+ Grid search
+ ───────────────────────────────────────────────────────────────────────────
+ Top 5 of 18 configuration(s):
+
+    rank   n_est  max_depth  min_leaf     val_f1     fit_s
+    ----  ------ ---------- ---------  ---------  --------
+  ★    1     400         20         5     0.9797      63.8
+       2     200         20         5     0.9797      32.5
+       3     400         20         2     0.9795      63.2
+       4     200         20         2     0.9795      32.0
+       5     400         20         1     0.9794      62.5
+
+ Best params  {'n_estimators': 400, 'max_depth': 20, 'min_samples_leaf': 5}
+
+────────────────────────────────────────────────────────────────────────────
+ [ 2 / 2 ]  Evaluating on held-out test split
+────────────────────────────────────────────────────────────────────────────
+  ✓ Evaluated in 15.5s
+
+ Overall metrics (test)
+ ───────────────────────────────────────────────────────────────────────────
+ Acc 0.9748   Macro F1 0.9672   ROC AUC 0.9963   PR AUC 0.9988
+
+ class         precision     recall         f1    support
+ ------------ ---------- ---------- ---------- ----------
+ benign           0.9215     0.9830     0.9513     27,012
+ adversarial      0.9942     0.9721     0.9830     81,070
+
+ Per-adversarial-source metrics  (3 variant(s))
+ ───────────────────────────────────────────────────────────────────────────
+ precision/recall/f1 computed against a balanced benign subsample (K × n_adv); roc_auc/pr_auc use all test benign.
+
+ variant                     precision     recall         f1    roc_auc     pr_auc    n_adv
+ -------------------------- ---------- ---------- ---------- ---------- ---------- --------
+ ssdp_flood  both               0.9833     1.0000     0.9916     1.0000     1.0000   27,089
+ ssdp_flood  iat                0.9818     0.9163     0.9479     0.9888     0.9902   26,978
+ ssdp_flood  size               0.9833     0.9999     0.9915     1.0000     1.0000   27,003
+
+============================================================================
+ DEPT × Random Forest — Summary
+============================================================================
+ Macro F1 0.9672   ROC AUC 0.9963   PR AUC 0.9988   Recall-adv 0.9721
+ ---------------------------------------------------------------------------
+ Train time     944.1s  (15.7 min)
+ Eval  time      15.5s
+ Total time     959.6s  (16.0 min)
+
+ Artifacts  → /mnt/nas/inesc/gleitao/DEPT/data/models/per_attack/ssdp_flood/rf
+ ───────────────────────────────────────────────────────────────────────────
+   ✓ rf.joblib                (   65.8 MB)  trained classifier
+   ✓ split.npz                (    7.5 MB)  train/val/test indices
+   ✓ dataset.npz              (  372.8 MB)  merged dataset snapshot
+   ✓ feature_names.json       (   446.0 B)  RF stat names (24)
+   ✓ split_summary.json       (   843.0 B)  split counts
+   ✓ training_info.json       (    5.7 KB)  grid search + best params
+   ✓ metrics.json             (    7.7 KB)  full metrics (overall/per-adversarial-source)
+   ✓ confusion_matrix.png     (   28.5 KB)  binary confusion matrix
+   ✓ roc_curve.png            (   30.7 KB)  ROC curve
+   ✓ pr_curve.png             (   25.8 KB)  precision-recall curve
+   ✓ feature_importance.png   (   86.6 KB)  Gini importances
+ ───────────────────────────────────────────────────────────────────────────
+   Total  11/11 files, 446.3 MB
+============================================================================
+
