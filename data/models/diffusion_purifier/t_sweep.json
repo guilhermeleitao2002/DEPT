@@ -1,0 +1,1735 @@
+{
+  "model_id": "8303b146ce24c6ed",
+  "grid": [
+    2,
+    5,
+    10,
+    20,
+    30,
+    45,
+    60,
+    90,
+    150
+  ],
+  "mse": {
+    "n_flows": 50622,
+    "adversarial": {
+      "size": 0.003794183488935232,
+      "ipat": 0.009271797724068165,
+      "total": 0.013065981213003397,
+      "by_mode": {
+        "both": {
+          "size": 0.00015141439507715404,
+          "ipat": 0.016543373465538025,
+          "total": 0.01669478786061518
+        },
+        "iat": {
+          "size": 3.310170995973749e-06,
+          "ipat": 0.011003723368048668,
+          "total": 0.011007033539044642
+        },
+        "size": {
+          "size": 0.011307544074952602,
+          "ipat": 0.00013743856106884778,
+          "total": 0.01144498263602145
+        }
+      }
+    },
+    "dept": {
+      "size": 4.0516219996789005e-06,
+      "ipat": 0.013752635568380356,
+      "total": 0.013756687190380035,
+      "by_mode": {
+        "both": {
+          "size": 4.389953573991079e-06,
+          "ipat": 0.01413377933204174,
+          "total": 0.014138169285615731
+        },
+        "iat": {
+          "size": 3.358639787620632e-06,
+          "ipat": 0.012966210953891277,
+          "total": 0.012969569593678898
+        },
+        "size": {
+          "size": 4.403931598062627e-06,
+          "ipat": 0.014155304059386253,
+          "total": 0.014159707990984316
+        }
+      }
+    },
+    "t2": {
+      "size": 0.0037479419261217117,
+      "ipat": 0.00926748476922512,
+      "total": 0.013015426695346832,
+      "by_mode": {
+        "both": {
+          "size": 0.00031096520251594484,
+          "ipat": 0.01649649813771248,
+          "total": 0.016807463340228423
+        },
+        "iat": {
+          "size": 0.0001882139331428334,
+          "ipat": 0.010843981988728046,
+          "total": 0.01103219592187088
+        },
+        "size": {
+          "size": 0.01081977877765894,
+          "ipat": 0.000332585972500965,
+          "total": 0.011152364750159904
+        }
+      }
+    },
+    "t5": {
+      "size": 0.0039039645344018936,
+      "ipat": 0.009584542363882065,
+      "total": 0.013488506898283958,
+      "by_mode": {
+        "both": {
+          "size": 0.0009771633194759488,
+          "ipat": 0.016718238592147827,
+          "total": 0.017695401911623776
+        },
+        "iat": {
+          "size": 0.0008816579938866198,
+          "ipat": 0.010786926373839378,
+          "total": 0.011668584367725998
+        },
+        "size": {
+          "size": 0.009917007759213448,
+          "ipat": 0.0011224886402487755,
+          "total": 0.011039496399462223
+        }
+      }
+    },
+    "t10": {
+      "size": 0.004779847804456949,
+      "ipat": 0.010827966034412384,
+      "total": 0.015607813838869333,
+      "by_mode": {
+        "both": {
+          "size": 0.002575803082436323,
+          "ipat": 0.01793447881937027,
+          "total": 0.020510281901806593
+        },
+        "iat": {
+          "size": 0.002453776076436043,
+          "ipat": 0.011476878076791763,
+          "total": 0.013930654153227806
+        },
+        "size": {
+          "size": 0.009358357638120651,
+          "ipat": 0.002949705347418785,
+          "total": 0.012308062985539436
+        }
+      }
+    },
+    "t20": {
+      "size": 0.008888733573257923,
+      "ipat": 0.015544291585683823,
+      "total": 0.024433025158941746,
+      "by_mode": {
+        "both": {
+          "size": 0.007588936947286129,
+          "ipat": 0.023030821233987808,
+          "total": 0.030619758181273937
+        },
+        "iat": {
+          "size": 0.007392683066427708,
+          "ipat": 0.015227803029119968,
+          "total": 0.022620486095547676
+        },
+        "size": {
+          "size": 0.011713707819581032,
+          "ipat": 0.00824968796223402,
+          "total": 0.019963395781815052
+        }
+      }
+    },
+    "t30": {
+      "size": 0.016055159270763397,
+      "ipat": 0.02260354720056057,
+      "total": 0.03865870647132397,
+      "by_mode": {
+        "both": {
+          "size": 0.015077578835189342,
+          "ipat": 0.030527211725711823,
+          "total": 0.045604790560901165
+        },
+        "iat": {
+          "size": 0.01487231906503439,
+          "ipat": 0.021504277363419533,
+          "total": 0.03637659642845392
+        },
+        "size": {
+          "size": 0.01823776587843895,
+          "ipat": 0.015651019290089607,
+          "total": 0.03388878516852856
+        }
+      }
+    },
+    "t45": {
+      "size": 0.03188810497522354,
+      "ipat": 0.036753617227077484,
+      "total": 0.06864172220230103,
+      "by_mode": {
+        "both": {
+          "size": 0.0313497856259346,
+          "ipat": 0.044690750539302826,
+          "total": 0.07604053616523743
+        },
+        "iat": {
+          "size": 0.030758941546082497,
+          "ipat": 0.03475028648972511,
+          "total": 0.06550922803580761
+        },
+        "size": {
+          "size": 0.03357014060020447,
+          "ipat": 0.03069583885371685,
+          "total": 0.06426597945392132
+        }
+      }
+    },
+    "t60": {
+      "size": 0.053711410611867905,
+      "ipat": 0.05617687106132507,
+      "total": 0.10988828167319298,
+      "by_mode": {
+        "both": {
+          "size": 0.05333640053868294,
+          "ipat": 0.06250885128974915,
+          "total": 0.11584525182843208
+        },
+        "iat": {
+          "size": 0.052830856293439865,
+          "ipat": 0.05410334840416908,
+          "total": 0.10693420469760895
+        },
+        "size": {
+          "size": 0.05497755482792854,
+          "ipat": 0.05182180181145668,
+          "total": 0.10679935663938522
+        }
+      }
+    },
+    "t90": {
+      "size": 0.11733084917068481,
+      "ipat": 0.11400344967842102,
+      "total": 0.23133429884910583,
+      "by_mode": {
+        "both": {
+          "size": 0.11708013713359833,
+          "ipat": 0.11789765954017639,
+          "total": 0.23497779667377472
+        },
+        "iat": {
+          "size": 0.11611234396696091,
+          "ipat": 0.11263270676136017,
+          "total": 0.22874505072832108
+        },
+        "size": {
+          "size": 0.11881013214588165,
+          "ipat": 0.11142101138830185,
+          "total": 0.2302311435341835
+        }
+      }
+    },
+    "t150": {
+      "size": 0.33593276143074036,
+      "ipat": 0.3208432197570801,
+      "total": 0.6567759811878204,
+      "by_mode": {
+        "both": {
+          "size": 0.336997389793396,
+          "ipat": 0.32366275787353516,
+          "total": 0.6606601476669312
+        },
+        "iat": {
+          "size": 0.33553749322891235,
+          "ipat": 0.32159143686294556,
+          "total": 0.6571289300918579
+        },
+        "size": {
+          "size": 0.33524763584136963,
+          "ipat": 0.31722432374954224,
+          "total": 0.6524719595909119
+        }
+      }
+    }
+  },
+  "nids": {
+    "detection_rate": {
+      "adv": 0.7340484557055669,
+      "clean": 0.9461977186311787,
+      "dept": 0.8201085938962741,
+      "t2": 0.6477320307048151,
+      "t5": 0.6380315744559807,
+      "t10": 0.6339570537542256,
+      "t20": 0.5574435587800105,
+      "t30": 0.4421982253473966,
+      "t45": 0.32473279324664717,
+      "t60": 0.2797426808454772,
+      "t90": 0.2973476545374836,
+      "t150": 0.4359676237481997
+    },
+    "n_flows": {
+      "adv": 21628,
+      "clean": 21040,
+      "dept": 26705,
+      "t2": 21495,
+      "t5": 21093,
+      "t10": 21003,
+      "t20": 20951,
+      "t30": 23892,
+      "t45": 29378,
+      "t60": 38085,
+      "t90": 63868,
+      "t150": 118729
+    },
+    "per_source": {
+      "brute_force_adv_both": {
+        "realize": {
+          "target_flows": 1000,
+          "realized_flows": 1000,
+          "miss_len": 0,
+          "unmatched": 0,
+          "unrealizable_l7": 0,
+          "pcap_packets_read": 274882,
+          "pcap_packets_kept": 38534,
+          "packets_per_branch": 38534
+        },
+        "adv": {
+          "n": 1059,
+          "detected": 1057
+        },
+        "clean": {
+          "n": 1125,
+          "detected": 1123
+        },
+        "dept": {
+          "n": 1070,
+          "detected": 1057
+        },
+        "t2": {
+          "n": 1068,
+          "detected": 1064
+        },
+        "t5": {
+          "n": 1079,
+          "detected": 1074
+        },
+        "t10": {
+          "n": 1099,
+          "detected": 1092
+        },
+        "t20": {
+          "n": 1082,
+          "detected": 1076
+        },
+        "t30": {
+          "n": 1078,
+          "detected": 1006
+        },
+        "t45": {
+          "n": 1212,
+          "detected": 833
+        },
+        "t60": {
+          "n": 1393,
+          "detected": 742
+        },
+        "t90": {
+          "n": 2112,
+          "detected": 777
+        },
+        "t150": {
+          "n": 3620,
+          "detected": 692
+        }
+      },
+      "brute_force_adv_iat": {
+        "realize": {
+          "target_flows": 1000,
+          "realized_flows": 999,
+          "miss_len": 1,
+          "unmatched": 0,
+          "unrealizable_l7": 0,
+          "pcap_packets_read": 274882,
+          "pcap_packets_kept": 38646,
+          "packets_per_branch": 38588
+        },
+        "adv": {
+          "n": 1064,
+          "detected": 1059
+        },
+        "clean": {
+          "n": 1066,
+          "detected": 1061
+        },
+        "dept": {
+          "n": 1070,
+          "detected": 1055
+        },
+        "t2": {
+          "n": 1117,
+          "detected": 1109
+        },
+        "t5": {
+          "n": 1091,
+          "detected": 1083
+        },
+        "t10": {
+          "n": 1065,
+          "detected": 1057
+        },
+        "t20": {
+          "n": 1051,
+          "detected": 1043
+        },
+        "t30": {
+          "n": 1057,
+          "detected": 974
+        },
+        "t45": {
+          "n": 1108,
+          "detected": 741
+        },
+        "t60": {
+          "n": 1414,
+          "detected": 747
+        },
+        "t90": {
+          "n": 2125,
+          "detected": 741
+        },
+        "t150": {
+          "n": 3639,
+          "detected": 690
+        }
+      },
+      "brute_force_adv_size": {
+        "realize": {
+          "target_flows": 1000,
+          "realized_flows": 999,
+          "miss_len": 1,
+          "unmatched": 0,
+          "unrealizable_l7": 0,
+          "pcap_packets_read": 274882,
+          "pcap_packets_kept": 38099,
+          "packets_per_branch": 38041
+        },
+        "adv": {
+          "n": 1072,
+          "detected": 1070
+        },
+        "clean": {
+          "n": 1043,
+          "detected": 1041
+        },
+        "dept": {
+          "n": 1062,
+          "detected": 1053
+        },
+        "t2": {
+          "n": 1058,
+          "detected": 1049
+        },
+        "t5": {
+          "n": 1113,
+          "detected": 1108
+        },
+        "t10": {
+          "n": 1105,
+          "detected": 1089
+        },
+        "t20": {
+          "n": 1052,
+          "detected": 1044
+        },
+        "t30": {
+          "n": 1078,
+          "detected": 1014
+        },
+        "t45": {
+          "n": 1128,
+          "detected": 775
+        },
+        "t60": {
+          "n": 1389,
+          "detected": 732
+        },
+        "t90": {
+          "n": 2061,
+          "detected": 768
+        },
+        "t150": {
+          "n": 3557,
+          "detected": 682
+        }
+      },
+      "ddos_adv_both": {
+        "realize": {
+          "target_flows": 1000,
+          "realized_flows": 1000,
+          "miss_len": 0,
+          "unmatched": 0,
+          "unrealizable_l7": 3894,
+          "pcap_packets_read": 1000000,
+          "pcap_packets_kept": 26105,
+          "packets_per_branch": 22211
+        },
+        "adv": {
+          "n": 1853,
+          "detected": 37
+        },
+        "clean": {
+          "n": 1593,
+          "detected": 1198
+        },
+        "dept": {
+          "n": 1608,
+          "detected": 948
+        },
+        "t2": {
+          "n": 1855,
+          "detected": 17
+        },
+        "t5": {
+          "n": 1774,
+          "detected": 4
+        },
+        "t10": {
+          "n": 1760,
+          "detected": 13
+        },
+        "t20": {
+          "n": 1655,
+          "detected": 4
+        },
+        "t30": {
+          "n": 1733,
+          "detected": 0
+        },
+        "t45": {
+          "n": 1855,
+          "detected": 4
+        },
+        "t60": {
+          "n": 1888,
+          "detected": 3
+        },
+        "t90": {
+          "n": 2229,
+          "detected": 0
+        },
+        "t150": {
+          "n": 3003,
+          "detected": 2
+        }
+      },
+      "ddos_adv_iat": {
+        "realize": {
+          "target_flows": 1000,
+          "realized_flows": 1000,
+          "miss_len": 0,
+          "unmatched": 0,
+          "unrealizable_l7": 3756,
+          "pcap_packets_read": 1000000,
+          "pcap_packets_kept": 25119,
+          "packets_per_branch": 21363
+        },
+        "adv": {
+          "n": 1876,
+          "detected": 1304
+        },
+        "clean": {
+          "n": 1442,
+          "detected": 1098
+        },
+        "dept": {
+          "n": 1663,
+          "detected": 1072
+        },
+        "t2": {
+          "n": 1866,
+          "detected": 139
+        },
+        "t5": {
+          "n": 1833,
+          "detected": 90
+        },
+        "t10": {
+          "n": 1841,
+          "detected": 104
+        },
+        "t20": {
+          "n": 1829,
+          "detected": 112
+        },
+        "t30": {
+          "n": 1749,
+          "detected": 109
+        },
+        "t45": {
+          "n": 1741,
+          "detected": 107
+        },
+        "t60": {
+          "n": 1854,
+          "detected": 125
+        },
+        "t90": {
+          "n": 2179,
+          "detected": 170
+        },
+        "t150": {
+          "n": 2834,
+          "detected": 275
+        }
+      },
+      "ddos_adv_size": {
+        "realize": {
+          "target_flows": 1000,
+          "realized_flows": 1000,
+          "miss_len": 0,
+          "unmatched": 0,
+          "unrealizable_l7": 3353,
+          "pcap_packets_read": 740859,
+          "pcap_packets_kept": 22496,
+          "packets_per_branch": 19143
+        },
+        "adv": {
+          "n": 1274,
+          "detected": 4
+        },
+        "clean": {
+          "n": 1327,
+          "detected": 998
+        },
+        "dept": {
+          "n": 1552,
+          "detected": 891
+        },
+        "t2": {
+          "n": 1160,
+          "detected": 0
+        },
+        "t5": {
+          "n": 1202,
+          "detected": 1
+        },
+        "t10": {
+          "n": 1265,
+          "detected": 2
+        },
+        "t20": {
+          "n": 1408,
+          "detected": 0
+        },
+        "t30": {
+          "n": 1325,
+          "detected": 2
+        },
+        "t45": {
+          "n": 1346,
+          "detected": 1
+        },
+        "t60": {
+          "n": 1464,
+          "detected": 1
+        },
+        "t90": {
+          "n": 1669,
+          "detected": 3
+        },
+        "t150": {
+          "n": 2080,
+          "detected": 9
+        }
+      },
+      "dns_ddos_adv_both": {
+        "realize": {
+          "target_flows": 1000,
+          "realized_flows": 996,
+          "miss_len": 4,
+          "unmatched": 0,
+          "unrealizable_l7": 20,
+          "pcap_packets_read": 1000000,
+          "pcap_packets_kept": 146774,
+          "packets_per_branch": 145496
+        },
+        "adv": {
+          "n": 1207,
+          "detected": 1194
+        },
+        "clean": {
+          "n": 1220,
+          "detected": 1209
+        },
+        "dept": {
+          "n": 2444,
+          "detected": 1847
+        },
+        "t2": {
+          "n": 1228,
+          "detected": 1214
+        },
+        "t5": {
+          "n": 1247,
+          "detected": 1233
+        },
+        "t10": {
+          "n": 1173,
+          "detected": 1157
+        },
+        "t20": {
+          "n": 1102,
+          "detected": 903
+        },
+        "t30": {
+          "n": 1970,
+          "detected": 717
+        },
+        "t45": {
+          "n": 2927,
+          "detected": 383
+        },
+        "t60": {
+          "n": 4944,
+          "detected": 478
+        },
+        "t90": {
+          "n": 10442,
+          "detected": 1513
+        },
+        "t150": {
+          "n": 22016,
+          "detected": 7953
+        }
+      },
+      "dns_ddos_adv_iat": {
+        "realize": {
+          "target_flows": 1000,
+          "realized_flows": 990,
+          "miss_len": 10,
+          "unmatched": 0,
+          "unrealizable_l7": 16,
+          "pcap_packets_read": 1000000,
+          "pcap_packets_kept": 146364,
+          "packets_per_branch": 143708
+        },
+        "adv": {
+          "n": 1191,
+          "detected": 1164
+        },
+        "clean": {
+          "n": 1225,
+          "detected": 1215
+        },
+        "dept": {
+          "n": 2420,
+          "detected": 1820
+        },
+        "t2": {
+          "n": 1234,
+          "detected": 1203
+        },
+        "t5": {
+          "n": 1241,
+          "detected": 1207
+        },
+        "t10": {
+          "n": 1153,
+          "detected": 1120
+        },
+        "t20": {
+          "n": 1129,
+          "detected": 902
+        },
+        "t30": {
+          "n": 1871,
+          "detected": 656
+        },
+        "t45": {
+          "n": 3201,
+          "detected": 556
+        },
+        "t60": {
+          "n": 4896,
+          "detected": 483
+        },
+        "t90": {
+          "n": 10239,
+          "detected": 1441
+        },
+        "t150": {
+          "n": 21501,
+          "detected": 7631
+        }
+      },
+      "dns_ddos_adv_size": {
+        "realize": {
+          "target_flows": 1000,
+          "realized_flows": 994,
+          "miss_len": 6,
+          "unmatched": 0,
+          "unrealizable_l7": 28,
+          "pcap_packets_read": 1000000,
+          "pcap_packets_kept": 147306,
+          "packets_per_branch": 144916
+        },
+        "adv": {
+          "n": 1002,
+          "detected": 993
+        },
+        "clean": {
+          "n": 1000,
+          "detected": 991
+        },
+        "dept": {
+          "n": 2638,
+          "detected": 2027
+        },
+        "t2": {
+          "n": 1005,
+          "detected": 994
+        },
+        "t5": {
+          "n": 1001,
+          "detected": 993
+        },
+        "t10": {
+          "n": 1000,
+          "detected": 988
+        },
+        "t20": {
+          "n": 1042,
+          "detected": 863
+        },
+        "t30": {
+          "n": 2044,
+          "detected": 830
+        },
+        "t45": {
+          "n": 3384,
+          "detected": 694
+        },
+        "t60": {
+          "n": 4965,
+          "detected": 514
+        },
+        "t90": {
+          "n": 10418,
+          "detected": 1526
+        },
+        "t150": {
+          "n": 21774,
+          "detected": 7778
+        }
+      },
+      "ldap_ddos_adv_both": {
+        "realize": {
+          "target_flows": 1000,
+          "realized_flows": 999,
+          "miss_len": 1,
+          "unmatched": 0,
+          "unrealizable_l7": 0,
+          "pcap_packets_read": 1000000,
+          "pcap_packets_kept": 2010,
+          "packets_per_branch": 2006
+        },
+        "adv": {
+          "n": 999,
+          "detected": 999
+        },
+        "clean": {
+          "n": 999,
+          "detected": 999
+        },
+        "dept": {
+          "n": 999,
+          "detected": 999
+        },
+        "t2": {
+          "n": 999,
+          "detected": 999
+        },
+        "t5": {
+          "n": 999,
+          "detected": 999
+        },
+        "t10": {
+          "n": 999,
+          "detected": 999
+        },
+        "t20": {
+          "n": 1000,
+          "detected": 1000
+        },
+        "t30": {
+          "n": 1000,
+          "detected": 1000
+        },
+        "t45": {
+          "n": 999,
+          "detected": 998
+        },
+        "t60": {
+          "n": 999,
+          "detected": 994
+        },
+        "t90": {
+          "n": 1000,
+          "detected": 950
+        },
+        "t150": {
+          "n": 999,
+          "detected": 822
+        }
+      },
+      "ldap_ddos_adv_iat": {
+        "realize": {
+          "target_flows": 1000,
+          "realized_flows": 998,
+          "miss_len": 2,
+          "unmatched": 0,
+          "unrealizable_l7": 0,
+          "pcap_packets_read": 1000000,
+          "pcap_packets_kept": 2004,
+          "packets_per_branch": 1996
+        },
+        "adv": {
+          "n": 998,
+          "detected": 998
+        },
+        "clean": {
+          "n": 998,
+          "detected": 998
+        },
+        "dept": {
+          "n": 998,
+          "detected": 998
+        },
+        "t2": {
+          "n": 998,
+          "detected": 998
+        },
+        "t5": {
+          "n": 998,
+          "detected": 997
+        },
+        "t10": {
+          "n": 998,
+          "detected": 998
+        },
+        "t20": {
+          "n": 998,
+          "detected": 998
+        },
+        "t30": {
+          "n": 998,
+          "detected": 998
+        },
+        "t45": {
+          "n": 998,
+          "detected": 997
+        },
+        "t60": {
+          "n": 998,
+          "detected": 991
+        },
+        "t90": {
+          "n": 998,
+          "detected": 950
+        },
+        "t150": {
+          "n": 998,
+          "detected": 825
+        }
+      },
+      "ldap_ddos_adv_size": {
+        "realize": {
+          "target_flows": 1000,
+          "realized_flows": 998,
+          "miss_len": 2,
+          "unmatched": 0,
+          "unrealizable_l7": 0,
+          "pcap_packets_read": 1000000,
+          "pcap_packets_kept": 2014,
+          "packets_per_branch": 2006
+        },
+        "adv": {
+          "n": 998,
+          "detected": 998
+        },
+        "clean": {
+          "n": 998,
+          "detected": 998
+        },
+        "dept": {
+          "n": 998,
+          "detected": 998
+        },
+        "t2": {
+          "n": 998,
+          "detected": 998
+        },
+        "t5": {
+          "n": 998,
+          "detected": 998
+        },
+        "t10": {
+          "n": 998,
+          "detected": 998
+        },
+        "t20": {
+          "n": 998,
+          "detected": 998
+        },
+        "t30": {
+          "n": 998,
+          "detected": 997
+        },
+        "t45": {
+          "n": 998,
+          "detected": 995
+        },
+        "t60": {
+          "n": 998,
+          "detected": 991
+        },
+        "t90": {
+          "n": 998,
+          "detected": 944
+        },
+        "t150": {
+          "n": 998,
+          "detected": 820
+        }
+      },
+      "ntp_ddos_adv_both": {
+        "realize": {
+          "target_flows": 1000,
+          "realized_flows": 997,
+          "miss_len": 3,
+          "unmatched": 0,
+          "unrealizable_l7": 0,
+          "pcap_packets_read": 1000000,
+          "pcap_packets_kept": 70298,
+          "packets_per_branch": 70014
+        },
+        "adv": {
+          "n": 1080,
+          "detected": 1062
+        },
+        "clean": {
+          "n": 1195,
+          "detected": 1189
+        },
+        "dept": {
+          "n": 1492,
+          "detected": 1473
+        },
+        "t2": {
+          "n": 1193,
+          "detected": 1132
+        },
+        "t5": {
+          "n": 1056,
+          "detected": 974
+        },
+        "t10": {
+          "n": 1082,
+          "detected": 985
+        },
+        "t20": {
+          "n": 1171,
+          "detected": 729
+        },
+        "t30": {
+          "n": 1213,
+          "detected": 476
+        },
+        "t45": {
+          "n": 1641,
+          "detected": 513
+        },
+        "t60": {
+          "n": 2477,
+          "detected": 1025
+        },
+        "t90": {
+          "n": 4674,
+          "detected": 2834
+        },
+        "t150": {
+          "n": 9405,
+          "detected": 7626
+        }
+      },
+      "ntp_ddos_adv_iat": {
+        "realize": {
+          "target_flows": 1000,
+          "realized_flows": 999,
+          "miss_len": 1,
+          "unmatched": 0,
+          "unrealizable_l7": 0,
+          "pcap_packets_read": 1000000,
+          "pcap_packets_kept": 68682,
+          "packets_per_branch": 68466
+        },
+        "adv": {
+          "n": 1199,
+          "detected": 1180
+        },
+        "clean": {
+          "n": 1049,
+          "detected": 1046
+        },
+        "dept": {
+          "n": 1541,
+          "detected": 1521
+        },
+        "t2": {
+          "n": 1188,
+          "detected": 1128
+        },
+        "t5": {
+          "n": 1058,
+          "detected": 976
+        },
+        "t10": {
+          "n": 1170,
+          "detected": 1070
+        },
+        "t20": {
+          "n": 1146,
+          "detected": 700
+        },
+        "t30": {
+          "n": 1224,
+          "detected": 504
+        },
+        "t45": {
+          "n": 1683,
+          "detected": 584
+        },
+        "t60": {
+          "n": 2434,
+          "detected": 1052
+        },
+        "t90": {
+          "n": 4575,
+          "detected": 2761
+        },
+        "t150": {
+          "n": 9182,
+          "detected": 7419
+        }
+      },
+      "ntp_ddos_adv_size": {
+        "realize": {
+          "target_flows": 1000,
+          "realized_flows": 996,
+          "miss_len": 4,
+          "unmatched": 0,
+          "unrealizable_l7": 0,
+          "pcap_packets_read": 1000000,
+          "pcap_packets_kept": 73827,
+          "packets_per_branch": 72813
+        },
+        "adv": {
+          "n": 1466,
+          "detected": 1459
+        },
+        "clean": {
+          "n": 1474,
+          "detected": 1467
+        },
+        "dept": {
+          "n": 1864,
+          "detected": 1839
+        },
+        "t2": {
+          "n": 1238,
+          "detected": 1187
+        },
+        "t5": {
+          "n": 1115,
+          "detected": 1052
+        },
+        "t10": {
+          "n": 1009,
+          "detected": 925
+        },
+        "t20": {
+          "n": 1001,
+          "detected": 615
+        },
+        "t30": {
+          "n": 1267,
+          "detected": 496
+        },
+        "t45": {
+          "n": 1872,
+          "detected": 662
+        },
+        "t60": {
+          "n": 2687,
+          "detected": 1111
+        },
+        "t90": {
+          "n": 4862,
+          "detected": 2947
+        },
+        "t150": {
+          "n": 9838,
+          "detected": 7968
+        }
+      },
+      "portscan_adv_both": {
+        "realize": {
+          "target_flows": 1000,
+          "realized_flows": 1000,
+          "miss_len": 0,
+          "unmatched": 0,
+          "unrealizable_l7": 0,
+          "pcap_packets_read": 321444,
+          "pcap_packets_kept": 2041,
+          "packets_per_branch": 2041
+        },
+        "adv": {
+          "n": 1003,
+          "detected": 13
+        },
+        "clean": {
+          "n": 1002,
+          "detected": 997
+        },
+        "dept": {
+          "n": 1003,
+          "detected": 675
+        },
+        "t2": {
+          "n": 1003,
+          "detected": 45
+        },
+        "t5": {
+          "n": 1004,
+          "detected": 84
+        },
+        "t10": {
+          "n": 1003,
+          "detected": 89
+        },
+        "t20": {
+          "n": 1003,
+          "detected": 88
+        },
+        "t30": {
+          "n": 1003,
+          "detected": 80
+        },
+        "t45": {
+          "n": 1002,
+          "detected": 91
+        },
+        "t60": {
+          "n": 1003,
+          "detected": 72
+        },
+        "t90": {
+          "n": 1002,
+          "detected": 79
+        },
+        "t150": {
+          "n": 1002,
+          "detected": 66
+        }
+      },
+      "portscan_adv_iat": {
+        "realize": {
+          "target_flows": 1000,
+          "realized_flows": 1000,
+          "miss_len": 0,
+          "unmatched": 0,
+          "unrealizable_l7": 2,
+          "pcap_packets_read": 321444,
+          "pcap_packets_kept": 2015,
+          "packets_per_branch": 2013
+        },
+        "adv": {
+          "n": 1001,
+          "detected": 996
+        },
+        "clean": {
+          "n": 1000,
+          "detected": 998
+        },
+        "dept": {
+          "n": 1000,
+          "detected": 825
+        },
+        "t2": {
+          "n": 1000,
+          "detected": 461
+        },
+        "t5": {
+          "n": 1000,
+          "detected": 401
+        },
+        "t10": {
+          "n": 1000,
+          "detected": 418
+        },
+        "t20": {
+          "n": 1000,
+          "detected": 385
+        },
+        "t30": {
+          "n": 1000,
+          "detected": 442
+        },
+        "t45": {
+          "n": 1000,
+          "detected": 424
+        },
+        "t60": {
+          "n": 1000,
+          "detected": 425
+        },
+        "t90": {
+          "n": 1001,
+          "detected": 431
+        },
+        "t150": {
+          "n": 1001,
+          "detected": 383
+        }
+      },
+      "portscan_adv_size": {
+        "realize": {
+          "target_flows": 1000,
+          "realized_flows": 1000,
+          "miss_len": 0,
+          "unmatched": 0,
+          "unrealizable_l7": 0,
+          "pcap_packets_read": 321444,
+          "pcap_packets_kept": 2016,
+          "packets_per_branch": 2016
+        },
+        "adv": {
+          "n": 1002,
+          "detected": 11
+        },
+        "clean": {
+          "n": 1003,
+          "detected": 1002
+        },
+        "dept": {
+          "n": 1002,
+          "detected": 522
+        },
+        "t2": {
+          "n": 1004,
+          "detected": 3
+        },
+        "t5": {
+          "n": 1003,
+          "detected": 1
+        },
+        "t10": {
+          "n": 1002,
+          "detected": 2
+        },
+        "t20": {
+          "n": 1003,
+          "detected": 54
+        },
+        "t30": {
+          "n": 1003,
+          "detected": 93
+        },
+        "t45": {
+          "n": 1002,
+          "detected": 93
+        },
+        "t60": {
+          "n": 1001,
+          "detected": 79
+        },
+        "t90": {
+          "n": 1003,
+          "detected": 94
+        },
+        "t150": {
+          "n": 1001,
+          "detected": 73
+        }
+      },
+      "ssdp_ddos_adv_both": {
+        "realize": {
+          "target_flows": 1000,
+          "realized_flows": 998,
+          "miss_len": 2,
+          "unmatched": 0,
+          "unrealizable_l7": 3526,
+          "pcap_packets_read": 1000000,
+          "pcap_packets_kept": 3558,
+          "packets_per_branch": 22
+        },
+        "adv": {
+          "n": 11,
+          "detected": 11
+        },
+        "clean": {
+          "n": 11,
+          "detected": 11
+        },
+        "dept": {
+          "n": 11,
+          "detected": 11
+        },
+        "t2": {
+          "n": 11,
+          "detected": 11
+        },
+        "t5": {
+          "n": 11,
+          "detected": 11
+        },
+        "t10": {
+          "n": 11,
+          "detected": 11
+        },
+        "t20": {
+          "n": 11,
+          "detected": 11
+        },
+        "t30": {
+          "n": 11,
+          "detected": 11
+        },
+        "t45": {
+          "n": 11,
+          "detected": 11
+        },
+        "t60": {
+          "n": 11,
+          "detected": 11
+        },
+        "t90": {
+          "n": 11,
+          "detected": 11
+        },
+        "t150": {
+          "n": 11,
+          "detected": 10
+        }
+      },
+      "ssdp_ddos_adv_iat": {
+        "realize": {
+          "target_flows": 1000,
+          "realized_flows": 1000,
+          "miss_len": 0,
+          "unmatched": 0,
+          "unrealizable_l7": 3510,
+          "pcap_packets_read": 1000000,
+          "pcap_packets_kept": 3530,
+          "packets_per_branch": 20
+        },
+        "adv": {
+          "n": 10,
+          "detected": 10
+        },
+        "clean": {
+          "n": 10,
+          "detected": 10
+        },
+        "dept": {
+          "n": 10,
+          "detected": 10
+        },
+        "t2": {
+          "n": 10,
+          "detected": 10
+        },
+        "t5": {
+          "n": 10,
+          "detected": 10
+        },
+        "t10": {
+          "n": 10,
+          "detected": 10
+        },
+        "t20": {
+          "n": 10,
+          "detected": 10
+        },
+        "t30": {
+          "n": 10,
+          "detected": 10
+        },
+        "t45": {
+          "n": 10,
+          "detected": 10
+        },
+        "t60": {
+          "n": 10,
+          "detected": 10
+        },
+        "t90": {
+          "n": 10,
+          "detected": 10
+        },
+        "t150": {
+          "n": 10,
+          "detected": 10
+        }
+      },
+      "ssdp_ddos_adv_size": {
+        "realize": {
+          "target_flows": 1000,
+          "realized_flows": 999,
+          "miss_len": 1,
+          "unmatched": 0,
+          "unrealizable_l7": 3682,
+          "pcap_packets_read": 1000000,
+          "pcap_packets_kept": 3716,
+          "packets_per_branch": 30
+        },
+        "adv": {
+          "n": 15,
+          "detected": 15
+        },
+        "clean": {
+          "n": 15,
+          "detected": 15
+        },
+        "dept": {
+          "n": 15,
+          "detected": 15
+        },
+        "t2": {
+          "n": 15,
+          "detected": 15
+        },
+        "t5": {
+          "n": 15,
+          "detected": 15
+        },
+        "t10": {
+          "n": 15,
+          "detected": 15
+        },
+        "t20": {
+          "n": 15,
+          "detected": 15
+        },
+        "t30": {
+          "n": 15,
+          "detected": 15
+        },
+        "t45": {
+          "n": 15,
+          "detected": 15
+        },
+        "t60": {
+          "n": 15,
+          "detected": 15
+        },
+        "t90": {
+          "n": 15,
+          "detected": 15
+        },
+        "t150": {
+          "n": 15,
+          "detected": 15
+        }
+      },
+      "syn_ddos_adv_both": {
+        "realize": {
+          "target_flows": 1000,
+          "realized_flows": 88,
+          "miss_len": 912,
+          "unmatched": 0,
+          "unrealizable_l7": 0,
+          "pcap_packets_read": 4963410,
+          "pcap_packets_kept": 29812,
+          "packets_per_branch": 202
+        },
+        "adv": {
+          "n": 89,
+          "detected": 87
+        },
+        "clean": {
+          "n": 88,
+          "detected": 88
+        },
+        "dept": {
+          "n": 88,
+          "detected": 88
+        },
+        "t2": {
+          "n": 89,
+          "detected": 57
+        },
+        "t5": {
+          "n": 88,
+          "detected": 63
+        },
+        "t10": {
+          "n": 88,
+          "detected": 69
+        },
+        "t20": {
+          "n": 88,
+          "detected": 51
+        },
+        "t30": {
+          "n": 88,
+          "detected": 50
+        },
+        "t45": {
+          "n": 88,
+          "detected": 20
+        },
+        "t60": {
+          "n": 88,
+          "detected": 20
+        },
+        "t90": {
+          "n": 88,
+          "detected": 10
+        },
+        "t150": {
+          "n": 88,
+          "detected": 7
+        }
+      },
+      "syn_ddos_adv_iat": {
+        "realize": {
+          "target_flows": 1000,
+          "realized_flows": 78,
+          "miss_len": 922,
+          "unmatched": 0,
+          "unrealizable_l7": 0,
+          "pcap_packets_read": 4963410,
+          "pcap_packets_kept": 29734,
+          "packets_per_branch": 178
+        },
+        "adv": {
+          "n": 80,
+          "detected": 80
+        },
+        "clean": {
+          "n": 78,
+          "detected": 78
+        },
+        "dept": {
+          "n": 78,
+          "detected": 78
+        },
+        "t2": {
+          "n": 79,
+          "detected": 57
+        },
+        "t5": {
+          "n": 78,
+          "detected": 60
+        },
+        "t10": {
+          "n": 78,
+          "detected": 67
+        },
+        "t20": {
+          "n": 78,
+          "detected": 54
+        },
+        "t30": {
+          "n": 78,
+          "detected": 54
+        },
+        "t45": {
+          "n": 78,
+          "detected": 23
+        },
+        "t60": {
+          "n": 78,
+          "detected": 23
+        },
+        "t90": {
+          "n": 78,
+          "detected": 12
+        },
+        "t150": {
+          "n": 78,
+          "detected": 6
+        }
+      },
+      "syn_ddos_adv_size": {
+        "realize": {
+          "target_flows": 1000,
+          "realized_flows": 79,
+          "miss_len": 921,
+          "unmatched": 0,
+          "unrealizable_l7": 0,
+          "pcap_packets_read": 4963410,
+          "pcap_packets_kept": 29908,
+          "packets_per_branch": 166
+        },
+        "adv": {
+          "n": 79,
+          "detected": 75
+        },
+        "clean": {
+          "n": 79,
+          "detected": 78
+        },
+        "dept": {
+          "n": 79,
+          "detected": 79
+        },
+        "t2": {
+          "n": 79,
+          "detected": 33
+        },
+        "t5": {
+          "n": 79,
+          "detected": 24
+        },
+        "t10": {
+          "n": 79,
+          "detected": 37
+        },
+        "t20": {
+          "n": 79,
+          "detected": 24
+        },
+        "t30": {
+          "n": 79,
+          "detected": 31
+        },
+        "t45": {
+          "n": 79,
+          "detected": 10
+        },
+        "t60": {
+          "n": 79,
+          "detected": 10
+        },
+        "t90": {
+          "n": 79,
+          "detected": 4
+        },
+        "t150": {
+          "n": 79,
+          "detected": 0
+        }
+      }
+    },
+    "skipped": {}
+  },
+  "t_star": 2,
+  "selection": "max pooled NIDS detection on validation flows",
+  "seconds": 24753.2
+}

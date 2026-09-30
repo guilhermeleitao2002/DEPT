@@ -1,0 +1,35 @@
+{
+  "method": "Merzouk et al., DBSec 2025 (github.com/mamerzouk/adversarial-purification)",
+  "cache_id": "d480a5aea5ddb21e",
+  "model": {
+    "noise_steps": 1000,
+    "beta_start": 0.0001,
+    "beta_end": 0.02,
+    "hidden_dim": 960,
+    "n_hidden": 10,
+    "emb_dim": 256,
+    "condition": true
+  },
+  "max_length": 200,
+  "norm": {
+    "size_scale": 1500.0,
+    "ipat_mean": 25.816852240952073,
+    "ipat_std": 208.21998059319273,
+    "log_cap": 6.228842350831934
+  },
+  "training": {
+    "device": "cuda",
+    "steps": 150000,
+    "batch_size": 4096,
+    "lr": 0.0001,
+    "val_every": 2500,
+    "log_every": 500,
+    "seed": 42,
+    "n_train_flows": 833748,
+    "n_val_flows": 20000,
+    "best_step": 150000,
+    "best_val_loss": 0.32291755080223083,
+    "seconds": 1643.0,
+    "n_parameters": 9703120
+  }
+}
