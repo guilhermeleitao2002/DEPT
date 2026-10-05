@@ -222,16 +222,17 @@ autoencoder to reconstruct traffic representations for real-time detection.
 
 DEPT's reconstructor (\Cref{sec:sol-reconstructor}) shares this family's goal but
 departs from it on three axes. The first is
-architectural: diffusion purifiers pay an iterative denoising chain, tens of forward
-passes, for every input, which sits poorly with a per-packet latency budget, whereas
-DEPT uses a causal Transformer that produces its correction in a single pass and
+architectural: a diffusion purifier needs the whole input before it can denoise it, and
+its cost grows with the number of denoising steps, whereas DEPT uses a causal Transformer
+that corrects each packet from the packets before it, in a single pass, and
 defaults to the identity (no-op) through its residual head. The trade is explicit: DEPT gives
 up the broad distribution coverage of a diffusion process in exchange for a model that
 fits streaming deployment. The second axis is supervision: purifiers in the
 Defense-GAN tradition learn from clean data alone and purify by projection, while DEPT
 exploits the matched adversarial-to-clean flow pairs its corpus provides, a stronger
 form of supervision that is normally unavailable, but that the paired-generator setting
-of TANTGen provides. The third axis is the one this thesis considers decisive: every network
+of TANTGen provides; \Cref{subsec:eval-sota} compares the two directly, with the purifier
+of Merzouk et al. as the baseline. The third axis is the one this thesis considers decisive: every network
 purifier surveyed above stops at the feature vector, and none of them re-emits
 traffic. A purified vector that corresponds to no sendable packet sequence has simply
 moved the realizability problem from the attacker to the defender. DEPT treats the
