@@ -532,32 +532,33 @@ def fig_baseline():
     print("wrote eval_baseline.svg")
 
 def fig_sota():
-    """ML-NIDS attack-success rate per source and mode: no defense vs each purifier.
+    """NIDS attack-success rate per source and mode: no defense vs each purifier.
 
     Reads data/models/diffusion_purifier/diffusion_purifier_metrics.json (written by
     scripts/diffusion_purifier/run_diffusion_purifier.py), held-out test subset. Each
     row shows TANTGen's traffic with no defense (red circle), after the diffusion
     purifier of Merzouk et al. (grey square) and after DEPT's purifier (blue circle),
-    with the clean-attack ASR as a faint teal tick. Kitsune rows are left out (Kitsune
-    detects almost nothing even on clean traffic).
+    with the clean-attack ASR as a faint teal tick. All source-mode combinations are
+    listed, as in eval_baseline.svg; those with no realizable packets carry a note.
     """
     path = "data/models/diffusion_purifier/diffusion_purifier_metrics.json"
     if not os.path.exists(os.path.join(ROOT, path)):
         write_placeholder("eval_sota_comparison.svg",
                           "run scripts/diffusion_purifier/run_diffusion_purifier.py, then regenerate")
         return
-    per = load(path).get("per_source", {})
-    rows = []
-    for src in sorted(per):
-        if per[src].get("kind") != "ml_nids":
-            continue
-        a = per[src]["derived"]["test"]["asr"]
-        if None in (a.get("adversarial"), a.get("diffusion_all"), a.get("dept_all")):
-            continue
-        rows.append((src, a.get("clean"), a["adversarial"], a["diffusion_all"], a["dept_all"]))
+    m = load(path)
+    per = m.get("per_source", {})
+    rows = []  # (src, clean, adv, diff, dept); values None = no realizable packets
+    for src in sorted(set(per) | set(m.get("skipped_sources", {}))):
+        a = per.get(src, {}).get("derived", {}).get("test", {}).get("asr", {})
+        vals = (a.get("adversarial"), a.get("diffusion_all"), a.get("dept_all"))
+        if None in vals:
+            rows.append((src, None, None, None, None))
+        else:
+            rows.append((src, a.get("clean"), *vals))
 
     W = 1240
-    top, bot, rh = 96, 70, 30
+    top, bot, rh = 96, 70, 27
     H = top + bot + rh * len(rows)
     x0, x1 = 300, 1120
     def X(v):
@@ -569,13 +570,16 @@ def fig_sota():
         xx = X(v)
         p.append(f'  <line x1="{fmt(xx)}" y1="{top-16}" x2="{fmt(xx)}" y2="{H-bot+8}" stroke="{GRID}" stroke-width="1.5"/>')
         p.append(f'  <text x="{fmt(xx)}" y="{H-bot+32}" text-anchor="middle" font-size="19" fill="{GREY}">{v:g}</text>')
-    p.append(f'  <text x="{(x0+x1)//2}" y="{H-bot+62}" text-anchor="middle" font-size="21" fill="{INK}">ML-NIDS attack success rate (1 - detection), held-out test pairs</text>')
+    p.append(f'  <text x="{(x0+x1)//2}" y="{H-bot+62}" text-anchor="middle" font-size="21" fill="{INK}">NIDS attack success rate (1 - detection), held-out test pairs</text>')
 
     for i, (src, clean, adv, diff, dept) in enumerate(rows):
         yc = top + rh * i + rh // 2
         if i % 2 == 0:
             p.append(f'  <rect x="{x0-288}" y="{yc-rh//2}" width="{x1-x0+300}" height="{rh}" fill="#f6f8fa"/>')
         p.append(f'  <text x="{x0-20}" y="{yc+6}" text-anchor="end" font-size="19" fill="{INK}">{src.replace("_adv_", " ").replace("_", " ")}</text>')
+        if adv is None:
+            p.append(f'  <text x="{x0+12}" y="{yc+6}" font-size="18" font-style="italic" fill="{MUT}">no realizable packets</text>')
+            continue
         lo, hi = min(adv, diff, dept), max(adv, diff, dept)
         p.append(f'  <line x1="{fmt(X(lo))}" y1="{yc}" x2="{fmt(X(hi))}" y2="{yc}" stroke="{MUT}" stroke-width="2.5"/>')
         if clean is not None:
