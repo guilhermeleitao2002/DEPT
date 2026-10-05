@@ -18,6 +18,7 @@ sequências de pacotes realizáveis. Esta dissertação propõe o DEPT
 que deteta a manipulação adversarial e purifica o tráfego suspeito antes de este chegar
 a um detetor de intrusões protegido.
 
+\looseness=-1
 O DEPT representa o tráfego através de bits ao nível do pacote e de
 estatísticas agregadas por fluxo, em duas granularidades temporais.
 Um attention-based meta-learner combina, a cada pacote, as previsões de dois
@@ -38,7 +39,9 @@ ataques avaliados que visam o modelo sequencial.
 Avaliada pelo detetor independente visado por cada ataque, a purificação recupera 63\% da
 perda na taxa de deteção causada pela manipulação adversarial.
 Na avaliação do sistema completo, o DEPT reduz a taxa de sucesso dos ataques de 21,1\%
-para 11,6\%.
+para 11,6\% e supera o purificador baseado em difusão de Merzouk
+et al.~\cite{merzouk2024diffusion}, que, nas mesmas condições, quase não recupera a
+deteção perdida com a evasão.
 Entre os pacotes classificados como realizáveis, 97,2\% são descodificados sem erros de
 malformação.
 No entanto, a eficácia varia consoante a fonte de tráfego: a deteção de manipulação
