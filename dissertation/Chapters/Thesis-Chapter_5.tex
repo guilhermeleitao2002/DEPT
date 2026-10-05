@@ -7,14 +7,6 @@
 % The following line allows to ref this chapter
 \label{chap:evaluation}
 
-% NOTE: all numbers in this chapter are taken from the measured artifacts in
-% data/models/*/ (metrics.json, streaming_metrics.json, training_info.json,
-% baseline_metrics.json, gradient_ablation_metrics.json), from the final full
-% pipeline run of July 2026, and from the per-attack run under
-% data/models/per_attack/. The wall-clock latency/overhead benchmark is the only
-% experiment not run within the scope of this thesis, and is reported as a
-% limitation and future work rather than as a result.
-
 This chapter evaluates DEPT against the threat model of \Cref{sec:sol-threat}: a
 black-box, protocol-compliant adversary, concretely the TANTGen generator of
 \Cref{sec:sol-pipeline} treated as the red team, that manipulates a streaming
@@ -41,7 +33,8 @@ work objectives of \Cref{sec:intro-objectives}:
 Both questions are answered by measurement. RQ2 is answered through the
 reconstructor's own metrics (\Cref{sec:eval-purification}) and, end to end, through the
 deployment baseline that scores the defense against the independent \ac{NIDS} each
-attack was built to evade (\Cref{sec:eval-e2e}).
+attack was built to evade (\Cref{sec:eval-e2e}), where DEPT's purifier is also compared
+with a published one (\Cref{subsec:eval-sota}).
 
 RQ1 needs the second adversary of \Cref{sec:sol-threat}, since TANTGen's gradients come
 from its own surrogate and never from DEPT: \Cref{sec:eval-gradablation} differentiates
@@ -867,12 +860,88 @@ The purifier works correctly there, but the defense loses by it.
 
 Two methodological notes come with these numbers. First, because the defended stream runs
 DEPT's detector and purifier over all of an attack's flows for full-volume realism, some
-of those flows were seen in training; restricted to the held-out test flows the defended
-detection rate is $0.9061$ over $372{,}321$ flows, slightly above the full-stream
-$0.8836$, so the deployment view is not flattered by the training overlap. Second,
+of those flows were seen in training. On flows that neither the gate nor the purifier saw
+in training, measured as in \Cref{subsec:eval-sota}, the gated pipeline lowers the
+attack success from $31.4\%$ to $17.7\%$, so the deployment view is not flattered by
+the training overlap. Second,
 Kitsune is a partly volumetric detector, so its detection rate is only meaningful on full
 streams such as these, which is exactly why the baseline feeds the full realized traffic
 rather than a subset.
+
+\subsection{Comparison with a Published Purifier}\label{subsec:eval-sota}
+
+To compare DEPT with the state of the art, its purifier is replaced by the diffusion-based
+purifier of Merzouk et al.~\cite{merzouk2024diffusion}, the only network purifier of
+\Cref{sec:rel-inference} with public code, while the flows, the realization step and the
+protected \ac{NIDS} stay the same. The baseline keeps the authors' model and settings,
+learns only from clean traffic, and its amount of noise is chosen as in the original, on
+validation flows. Both purifiers are scored on the reconstructor's held-out test pairs
+(\Cref{tab:eval-sota} and \Cref{fig:eval-sota}). Overall, the attack success is $31.5\%$
+without defense, $18.9\%$ with DEPT and $40.3\%$ with the diffusion purifier, and the order
+is the same on test flows whose original flow appears in no training pair.
+
+The comparison favours DEPT in two ways. First, DEPT learns from matched TANTGen and
+clean flows, while the baseline only sees clean traffic, and both are tested against
+TANTGen, the attacker DEPT was trained on. And second, the baseline was designed for
+flow-level features and had to be adapted to DEPT's per-packet sizes and timings; the
+timing encoding chosen for it explains part of its losses on the floods whose detection
+depends on timing.
+
+\begin{table}[t]
+\centering
+\caption[Comparison with the diffusion purifier of Merzouk et al.]{Comparison with the
+diffusion purifier of Merzouk et al.~\cite{merzouk2024diffusion}: attack-success rate
+(\ac{ASR}) of the protected NIDS on the held-out test pairs, for the clean attack, for
+TANTGen's traffic without defense, and after each purifier, aggregated over the three
+perturbation modes. On \texttt{ssdp\_flood}, only the \texttt{iat} mode has realizable
+packets.}
+\label{tab:eval-sota}
+\setlength{\tabcolsep}{5pt}
+\begin{tabular}{llrrrr}
+\toprule
+\textbf{Attack} & \textbf{NIDS} & \textbf{ASR clean} & \textbf{No defense} & \textbf{Diffusion} & \textbf{DEPT} \\
+\midrule
+\texttt{ddos}         & ML-NIDS & $0.210$ & $0.684$ & $0.893$ & $0.357$ \\
+\texttt{portscan}     & ML-NIDS & $0.002$ & $0.661$ & $0.836$ & $0.343$ \\
+\texttt{syn\_ddos}    & ML-NIDS & $0.002$ & $0.047$ & $0.391$ & $0.000$ \\
+\texttt{ntp\_ddos}    & ML-NIDS & $0.001$ & $0.011$ & $0.044$ & $0.013$ \\
+\texttt{ldap\_ddos}   & ML-NIDS & $0.000$ & $0.000$ & $0.000$ & $0.000$ \\
+\texttt{ssdp\_ddos}   & ML-NIDS & $0.014$ & $0.014$ & $0.015$ & $0.015$ \\
+\texttt{brute\_force} & ML-NIDS & $0.006$ & $0.004$ & $0.008$ & $0.016$ \\
+\texttt{dns\_ddos}    & ML-NIDS & $0.010$ & $0.013$ & $0.017$ & $0.240$ \\
+\texttt{mirai}        & Kitsune & $0.996$ & $0.913$ & $0.984$ & $0.998$ \\
+\texttt{ssdp\_flood}  & Kitsune & $0.998$ & $0.999$ & $1.000$ & $0.999$ \\
+\midrule
+\textbf{Overall}      &         & $\mathbf{0.057}$ & $\mathbf{0.315}$ & $\mathbf{0.403}$ & $\mathbf{0.189}$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[t]
+    \centering
+    \includesvg[width=0.92\textwidth]{./Images/eval_sota_comparison}
+    \caption[DEPT's purifier against the diffusion purifier, per source and mode.]{Attack-success
+    rate of the protected NIDS on each source and perturbation mode of the held-out test
+    pairs, without defense and after each purifier, with the clean attack marked.}
+    \label{fig:eval-sota}
+\end{figure}
+
+\paragraph{Where TANTGen evaded, DEPT recovers detection and the diffusion purifier does
+not.} On the five source--mode combinations where TANTGen lowered detection by more than
+five points (\texttt{ddos} and \texttt{portscan} in the \texttt{both} and \texttt{size}
+modes, and \texttt{syn\_ddos\_size}), DEPT recovers $63.5\%$ of the lost detection and the
+diffusion purifier $0.5\%$, and no amount of noise did better on the validation flows. A
+padded or delayed TANTGen flow still looks like realistic traffic, so a purifier that only
+knows clean traffic has little reason to change it.
+
+\paragraph{Elsewhere, both purifiers can lower detection.} The diffusion purifier slows down
+the floods whose detection depends on timing, raising the attack success on
+\texttt{syn\_ddos} from $4.7\%$ to $39.1\%$. DEPT is worse than the diffusion purifier on
+the three modes of \texttt{dns\_ddos}, on \texttt{brute\_force\_both} and on
+\texttt{mirai\_size}, where the diffusion purifier barely changes the traffic, and fewer of
+its packets are protocol-compliant on \texttt{ddos\_both} ($89.2\%$ against $98.6\%$). The
+Kitsune rows say little: Kitsune detects almost none of the \texttt{mirai} traffic even
+when it is clean.
 
 \subsection{One Global Model or Ten Specialists?}\label{subsec:eval-perattack}
 
