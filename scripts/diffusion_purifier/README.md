@@ -59,7 +59,28 @@ It also measures **latency** per flow on the same GPU (DEPT's single forward pas
 
 ## Results
 
-*Not run yet.*
+Run of 2026-09-25/26 on one RTX 6000 Ada, 15.9 h (overlays 46 min, training 30 min, `t*` sweep 6.9 h, evaluation 7.8 h); 29 sources scored (`ssdp_flood_adv_both` skipped: no realizable packets). Model trained on 833,748 clean flows for 150 k steps. **`t*` = 2**: every step in the grid lowered pooled validation detection below no purification (0.734 → 0.648 at t = 2, 0.325 at t = 45).
+
+Held-out test pairs, ML-NIDS attack success rate (1 − detection), modes pooled by CICFlowMeter record:
+
+| Attack | clean | no defense | diffusion | DEPT |
+|---|---|---|---|---|
+| `ddos` | 0.210 | 0.684 | 0.893 | **0.357** |
+| `portscan` | 0.002 | 0.661 | 0.836 | **0.343** |
+| `syn_ddos` | 0.002 | 0.047 | 0.391 | **0.000** |
+| `ntp_ddos` | 0.001 | 0.011 | 0.044 | 0.013 |
+| `ldap_ddos` | 0.000 | 0.000 | 0.000 | 0.000 |
+| `ssdp_ddos` | 0.014 | 0.014 | 0.015 | 0.015 |
+| `brute_force` | 0.006 | 0.004 | 0.008 | 0.016 |
+| `dns_ddos` | 0.010 | 0.013 | **0.017** | 0.240 |
+| **Overall** | 0.033 | 0.298 | 0.388 | **0.170** |
+
+- **Where TANTGen evaded** (`ddos`/`portscan` both+size, `syn_ddos_size`): DEPT restores 63.5% of the lost detection, the diffusion purifier 0.5%. In the sweep no step lifts these variants above 10% detection (DEPT: 52–67%).
+- **Where the diffusion purifier is better:** `dns_ddos` (all modes) and `brute_force_both`, variants TANTGen never evaded, where its near-identity output at `t*` = 2 is the best possible move; DEPT's timing edits double `dns_ddos`'s CICFlowMeter records and 24% of them evade. It also leads on `ddos_both` tshark compliance (98.6% vs 89.2% on a 20 k-packet sample) and batch cost (0.006 vs 0.030 ms/flow at batch 256; 2.9 vs 2.3 ms at batch 1).
+- **Checks:** strict subset 31.2% → DEPT 17.9% / diffusion 40.8%; gated subset (gate and purifiers held out) 29.8% → 15.6% / 38.1%; only the 15 variants whose record count does not change: DEPT −12.0 points, diffusion +7.1. Per variant, DEPT is better on 12 of 24, within a point on 8, worse on 4.
+- **Caveats.** The diffusion purifier's damage on timing-sensitive floods (`syn_ddos`, `ddos_iat`, `portscan_iat`) comes largely from the `log1p(IPAT)` encoding plus the original code's undenoised last step, which leave one-sided delays of up to tens of milliseconds; the robust claim is that it recovers none of the lost detection, not that it makes detection worse. Its validation loss was still falling at 150 k steps. Kitsune rows are uninformative (clean detection 0.2–0.6%, and the shared keep-mask strips 98% of `ssdp_flood_iat`'s packets). The purifier's size jitter makes SSDP/HTTP text packets unrealizable, so `ssdp_ddos` is scored on about 10% of its flows and `ddos` loses about 13% of its packets. CICFlowMeter verdicts depend on the other flows in the capture, so gated-stream numbers compare only with each other.
+
+Written up in the dissertation, §5.8.2 (Table 5.8, Figure 5.7).
 
 ## Prerequisites
 
@@ -70,4 +91,4 @@ It also measures **latency** per flow on the same GPU (DEPT's single forward pas
 
 Config: [`config/diffusion_purifier.yaml`](../../config/diffusion_purifier.yaml). The split and excludes are read from `reconstructor.yaml`, and the NIDS routing, gate and model paths from `baseline.yaml`, so this phase always matches phases 6 and 8.
 
-**Expected runtime** (estimates): overlays ~1 h, training 1–3 h on one GPU (150 k steps; the log shows an ETA), sweep 1–2 h, evaluation 8–12 h (about 14% of phase 8's flows, 4–6 streams each).
+**Runtime** (measured, one RTX 6000 Ada): overlays 46 min, training 30 min (150 k steps), `t*` sweep 6.9 h, evaluation 7.8 h (about 14% of phase 8's flows, 4–6 streams each).
