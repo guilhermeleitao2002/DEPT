@@ -136,7 +136,7 @@ This architectural diversity aims to reduce transferability: a perturbation that
 The second decision concerns what to do with a flagged flow. Dropping it would risk denying service to legitimate clients whose traffic is incorrectly flagged, so DEPT instead attempts to remove the manipulation through input purification, an approach explored in works such as
 Defense-GAN~\cite{samangouei2018defense}. The purifier is a causal Transformer that
 predicts a residual correction over the packet sequence, rather than a \ac{GAN} or a
-diffusion model: self-attention captures dependencies between packets, causality allows each correction to depend only on the current and preceding packets, and a residual head allows the input to remain unchanged when the predicted correction is zero.
+diffusion model: self-attention captures dependencies between packets, causality allows each correction to depend only on the current and preceding packets, and a residual head allows the input to remain unchanged when the predicted correction is zero. \Cref{subsec:eval-sota} compares this choice with a published diffusion-based purifier.
 
 Building on this rationale, the thesis makes five contributions:
 
@@ -153,7 +153,7 @@ Building on this rationale, the thesis makes five contributions:
     (\Cref{sec:sol-reconstructor,sec:eval-purification}).
     \item An end-to-end evaluation that measures DEPT as a defense placed in
     front of a protected NIDS: unmodified, TANTGen-perturbed, and DEPT-defended traffic are
-    each evaluated by the independent NIDS targeted by the attack, reporting changes in the attack success and detection rates (\Cref{sec:eval-e2e}).
+    each evaluated by the independent NIDS targeted by the attack, reporting changes in the attack success and detection rates, and DEPT's purifier is compared with a published diffusion-based purifier placed in the same position (\Cref{sec:eval-e2e}).
     \item An adversarial evaluation corpus of ten traffic sources drawn from three public
     datasets
     (Kitsune, CIC-IDS2017, and CIC-DDoS-2019~\cite{mirsky2018kitsune,cicids2017,sharafaldin2019cicddos}),
