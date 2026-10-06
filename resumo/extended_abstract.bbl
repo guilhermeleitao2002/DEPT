@@ -2,7 +2,7 @@
 %%% Do NOT edit. File created by BibTeX with style
 %%% ACM-Reference-Format-Journals [18-Jan-2012].
 
-\begin{thebibliography}{47}
+\begin{thebibliography}{46}
 
 %%% ====================================================================
 %%% NOTE TO THE USER: you can override these defaults by providing
@@ -38,81 +38,130 @@
 
 \bibitem[Abad~Rocamora et~al\mbox{.}(2025)]%
         {abad2025lipslev}
-\bibfield{author}{\bibinfo{person}{Elias Abad~Rocamora}, \bibinfo{person}{Grigorios~G Chrysos}, {and} \bibinfo{person}{Volkan Cevher}.} \bibinfo{year}{2025}\natexlab{}.
-\newblock \showarticletitle{Certified Robustness Under Bounded {Levenshtein} Distance}. In \bibinfo{booktitle}{\emph{International Conference on Learning Representations (ICLR)}}.
+\bibfield{author}{\bibinfo{person}{Elias Abad~Rocamora},
+  \bibinfo{person}{Grigorios~G Chrysos}, {and} \bibinfo{person}{Volkan
+  Cevher}.} \bibinfo{year}{2025}\natexlab{}.
+\newblock \showarticletitle{Certified Robustness Under Bounded {Levenshtein}
+  Distance}. In \bibinfo{booktitle}{\emph{International Conference on Learning
+  Representations (ICLR)}}.
 \newblock
 
 
 \bibitem[Alhussien and Aleroud(2024)]%
         {alhussien2024advpurrec}
-\bibfield{author}{\bibinfo{person}{Nour Alhussien} {and} \bibinfo{person}{Ahmed Aleroud}.} \bibinfo{year}{2024}\natexlab{}.
-\newblock \showarticletitle{{AdvPurRec}: Strengthening Network Intrusion Detection with Diffusion Model Reconstruction Against Adversarial Attacks}. In \bibinfo{booktitle}{\emph{2024 IEEE 23rd International Conference on Trust, Security and Privacy in Computing and Communications (TrustCom)}}. IEEE, \bibinfo{pages}{1638--1646}.
+\bibfield{author}{\bibinfo{person}{Nour Alhussien} {and} \bibinfo{person}{Ahmed
+  Aleroud}.} \bibinfo{year}{2024}\natexlab{}.
+\newblock \showarticletitle{{AdvPurRec}: Strengthening Network Intrusion
+  Detection with Diffusion Model Reconstruction Against Adversarial Attacks}.
+  In \bibinfo{booktitle}{\emph{2024 IEEE 23rd International Conference on
+  Trust, Security and Privacy in Computing and Communications (TrustCom)}}.
+  IEEE, \bibinfo{pages}{1638--1646}.
 \newblock
 
 
 \bibitem[Alotaibi and Maffeis(2024)]%
         {alotaibi2024mateen}
-\bibfield{author}{\bibinfo{person}{Fahad Alotaibi} {and} \bibinfo{person}{Sergio Maffeis}.} \bibinfo{year}{2024}\natexlab{}.
-\newblock \showarticletitle{Mateen: Adaptive ensemble learning for network anomaly detection}. In \bibinfo{booktitle}{\emph{Proceedings of the 27th International Symposium on Research in Attacks, Intrusions and Defenses}}. \bibinfo{pages}{215--234}.
+\bibfield{author}{\bibinfo{person}{Fahad Alotaibi} {and}
+  \bibinfo{person}{Sergio Maffeis}.} \bibinfo{year}{2024}\natexlab{}.
+\newblock \showarticletitle{Mateen: Adaptive ensemble learning for network
+  anomaly detection}. In \bibinfo{booktitle}{\emph{Proceedings of the 27th
+  International Symposium on Research in Attacks, Intrusions and Defenses}}.
+  \bibinfo{pages}{215--234}.
 \newblock
 
 
 \bibitem[Apruzzese et~al\mbox{.}(2023)]%
         {apruzzese2023sok}
-\bibfield{author}{\bibinfo{person}{Giovanni Apruzzese}, \bibinfo{person}{Pavel Laskov}, {and} \bibinfo{person}{Johannes Schneider}.} \bibinfo{year}{2023}\natexlab{}.
-\newblock \showarticletitle{{SoK}: Pragmatic assessment of machine learning for network intrusion detection}. In \bibinfo{booktitle}{\emph{2023 IEEE 8th European Symposium on Security and Privacy (EuroS\&P)}}. IEEE, \bibinfo{pages}{592--614}.
+\bibfield{author}{\bibinfo{person}{Giovanni Apruzzese}, \bibinfo{person}{Pavel
+  Laskov}, {and} \bibinfo{person}{Johannes Schneider}.}
+  \bibinfo{year}{2023}\natexlab{}.
+\newblock \showarticletitle{{SoK}: Pragmatic assessment of machine learning for
+  network intrusion detection}. In \bibinfo{booktitle}{\emph{2023 IEEE 8th
+  European Symposium on Security and Privacy (EuroS\&P)}}. IEEE,
+  \bibinfo{pages}{592--614}.
 \newblock
 
 
 \bibitem[Arp et~al\mbox{.}(2022)]%
         {arp2022dos}
-\bibfield{author}{\bibinfo{person}{Daniel Arp}, \bibinfo{person}{Erwin Quiring}, \bibinfo{person}{Feargus Pendlebury}, \bibinfo{person}{Alexander Warnecke}, \bibinfo{person}{Fabio Pierazzi}, \bibinfo{person}{Christian Wressnegger}, \bibinfo{person}{Lorenzo Cavallaro}, {and} \bibinfo{person}{Konrad Rieck}.} \bibinfo{year}{2022}\natexlab{}.
-\newblock \showarticletitle{Dos and Don'ts of Machine Learning in Computer Security}. In \bibinfo{booktitle}{\emph{31st USENIX Security Symposium (USENIX Security 22)}}. USENIX Association, \bibinfo{pages}{3971--3988}.
+\bibfield{author}{\bibinfo{person}{Daniel Arp}, \bibinfo{person}{Erwin
+  Quiring}, \bibinfo{person}{Feargus Pendlebury}, \bibinfo{person}{Alexander
+  Warnecke}, \bibinfo{person}{Fabio Pierazzi}, \bibinfo{person}{Christian
+  Wressnegger}, \bibinfo{person}{Lorenzo Cavallaro}, {and}
+  \bibinfo{person}{Konrad Rieck}.} \bibinfo{year}{2022}\natexlab{}.
+\newblock \showarticletitle{Dos and Don'ts of Machine Learning in Computer
+  Security}. In \bibinfo{booktitle}{\emph{31st USENIX Security Symposium
+  (USENIX Security 22)}}. USENIX Association, \bibinfo{pages}{3971--3988}.
 \newblock
 
 
 \bibitem[Athalye et~al\mbox{.}(2018)]%
         {athalye2018obfuscated}
-\bibfield{author}{\bibinfo{person}{Anish Athalye}, \bibinfo{person}{Nicholas Carlini}, {and} \bibinfo{person}{David Wagner}.} \bibinfo{year}{2018}\natexlab{}.
-\newblock \showarticletitle{Obfuscated Gradients Give a False Sense of Security: Circumventing Defenses to Adversarial Examples}. In \bibinfo{booktitle}{\emph{International Conference on Machine Learning (ICML)}}. PMLR, \bibinfo{pages}{274--283}.
+\bibfield{author}{\bibinfo{person}{Anish Athalye}, \bibinfo{person}{Nicholas
+  Carlini}, {and} \bibinfo{person}{David Wagner}.}
+  \bibinfo{year}{2018}\natexlab{}.
+\newblock \showarticletitle{Obfuscated Gradients Give a False Sense of
+  Security: Circumventing Defenses to Adversarial Examples}. In
+  \bibinfo{booktitle}{\emph{International Conference on Machine Learning
+  (ICML)}}. PMLR, \bibinfo{pages}{274--283}.
 \newblock
 
 
 \bibitem[Bai et~al\mbox{.}(2018)]%
         {bai2018empirical}
-\bibfield{author}{\bibinfo{person}{Shaojie Bai}, \bibinfo{person}{J.~Zico Kolter}, {and} \bibinfo{person}{Vladlen Koltun}.} \bibinfo{year}{2018}\natexlab{}.
-\newblock \showarticletitle{An Empirical Evaluation of Generic Convolutional and Recurrent Networks for Sequence Modeling}.
-\newblock \bibinfo{journal}{\emph{arXiv preprint arXiv:1803.01271}} (\bibinfo{year}{2018}).
+\bibfield{author}{\bibinfo{person}{Shaojie Bai}, \bibinfo{person}{J.~Zico
+  Kolter}, {and} \bibinfo{person}{Vladlen Koltun}.}
+  \bibinfo{year}{2018}\natexlab{}.
+\newblock \showarticletitle{An Empirical Evaluation of Generic Convolutional
+  and Recurrent Networks for Sequence Modeling}.
+\newblock \bibinfo{journal}{\emph{arXiv preprint arXiv:1803.01271}}
+  (\bibinfo{year}{2018}).
 \newblock
 
 
 \bibitem[Biggio et~al\mbox{.}(2011)]%
         {biggio2011bagging}
-\bibfield{author}{\bibinfo{person}{Battista Biggio}, \bibinfo{person}{Igino Corona}, \bibinfo{person}{Giorgio Fumera}, \bibinfo{person}{Giorgio Giacinto}, {and} \bibinfo{person}{Fabio Roli}.} \bibinfo{year}{2011}\natexlab{}.
-\newblock \showarticletitle{Bagging classifiers for fighting poisoning attacks in adversarial classification tasks}. In \bibinfo{booktitle}{\emph{Multiple Classifier Systems: 10th International Workshop (MCS 2011)}}. \bibinfo{publisher}{Springer}, \bibinfo{pages}{350--359}.
+\bibfield{author}{\bibinfo{person}{Battista Biggio}, \bibinfo{person}{Igino
+  Corona}, \bibinfo{person}{Giorgio Fumera}, \bibinfo{person}{Giorgio
+  Giacinto}, {and} \bibinfo{person}{Fabio Roli}.}
+  \bibinfo{year}{2011}\natexlab{}.
+\newblock \showarticletitle{Bagging classifiers for fighting poisoning attacks
+  in adversarial classification tasks}. In \bibinfo{booktitle}{\emph{Multiple
+  Classifier Systems: 10th International Workshop (MCS 2011)}}.
+  \bibinfo{publisher}{Springer}, \bibinfo{pages}{350--359}.
 \newblock
 
 
 \bibitem[Boutaba et~al\mbox{.}(2018)]%
         {boutaba2018comprehensive}
-\bibfield{author}{\bibinfo{person}{Raouf Boutaba}, \bibinfo{person}{Mohammad~A Salahuddin}, \bibinfo{person}{Noura Limam}, \bibinfo{person}{Sara Ayoubi}, \bibinfo{person}{Nashid Shahriar}, \bibinfo{person}{Felipe Estrada-Solano}, {and} \bibinfo{person}{Oscar~M Caicedo}.} \bibinfo{year}{2018}\natexlab{}.
-\newblock \showarticletitle{A comprehensive survey on machine learning for networking: evolution, applications and research opportunities}.
-\newblock \bibinfo{journal}{\emph{Journal of Internet Services and Applications}} \bibinfo{volume}{9}, \bibinfo{number}{1} (\bibinfo{year}{2018}), \bibinfo{pages}{16:1--16:99}.
+\bibfield{author}{\bibinfo{person}{Raouf Boutaba}, \bibinfo{person}{Mohammad~A
+  Salahuddin}, \bibinfo{person}{Noura Limam}, \bibinfo{person}{Sara Ayoubi},
+  \bibinfo{person}{Nashid Shahriar}, \bibinfo{person}{Felipe Estrada-Solano},
+  {and} \bibinfo{person}{Oscar~M Caicedo}.} \bibinfo{year}{2018}\natexlab{}.
+\newblock \showarticletitle{A comprehensive survey on machine learning for
+  networking: evolution, applications and research opportunities}.
+\newblock \bibinfo{journal}{\emph{Journal of Internet Services and
+  Applications}} \bibinfo{volume}{9}, \bibinfo{number}{1}
+  (\bibinfo{year}{2018}), \bibinfo{pages}{16:1--16:99}.
 \newblock
 
 
 \bibitem[Breiman(2001)]%
         {breiman2001random}
-\bibfield{author}{\bibinfo{person}{Leo Breiman}.} \bibinfo{year}{2001}\natexlab{}.
+\bibfield{author}{\bibinfo{person}{Leo Breiman}.}
+  \bibinfo{year}{2001}\natexlab{}.
 \newblock \showarticletitle{Random Forests}.
-\newblock \bibinfo{journal}{\emph{Machine Learning}} \bibinfo{volume}{45}, \bibinfo{number}{1} (\bibinfo{year}{2001}), \bibinfo{pages}{5--32}.
+\newblock \bibinfo{journal}{\emph{Machine Learning}} \bibinfo{volume}{45},
+  \bibinfo{number}{1} (\bibinfo{year}{2001}), \bibinfo{pages}{5--32}.
 \newblock
 
 
 \bibitem[{Canadian Institute for Cybersecurity}(2017)]%
         {cicids2017}
-\bibfield{author}{\bibinfo{person}{{Canadian Institute for Cybersecurity}}.} \bibinfo{year}{2017}\natexlab{}.
-\newblock \bibinfo{title}{Intrusion Detection Evaluation Dataset ({CIC-IDS2017})}.
+\bibfield{author}{\bibinfo{person}{{Canadian Institute for Cybersecurity}}.}
+  \bibinfo{year}{2017}\natexlab{}.
+\newblock \bibinfo{title}{Intrusion Detection Evaluation Dataset
+  ({CIC-IDS2017})}.
 \newblock
 \urldef\tempurl%
 \url{https://www.unb.ca/cic/datasets/ids-2017.html}
@@ -122,167 +171,260 @@ Retrieved December 30, 2025 from \tempurl}
 
 \bibitem[Carlini et~al\mbox{.}(2019)]%
         {carlini2019evaluating}
-\bibfield{author}{\bibinfo{person}{Nicholas Carlini}, \bibinfo{person}{Anish Athalye}, \bibinfo{person}{Nicolas Papernot}, \bibinfo{person}{Wieland Brendel}, \bibinfo{person}{Jonas Rauber}, \bibinfo{person}{Dimitris Tsipras}, \bibinfo{person}{Ian Goodfellow}, \bibinfo{person}{Aleksander Madry}, {and} \bibinfo{person}{Alexey Kurakin}.} \bibinfo{year}{2019}\natexlab{}.
+\bibfield{author}{\bibinfo{person}{Nicholas Carlini}, \bibinfo{person}{Anish
+  Athalye}, \bibinfo{person}{Nicolas Papernot}, \bibinfo{person}{Wieland
+  Brendel}, \bibinfo{person}{Jonas Rauber}, \bibinfo{person}{Dimitris Tsipras},
+  \bibinfo{person}{Ian Goodfellow}, \bibinfo{person}{Aleksander Madry}, {and}
+  \bibinfo{person}{Alexey Kurakin}.} \bibinfo{year}{2019}\natexlab{}.
 \newblock \bibinfo{booktitle}{\emph{On Evaluating Adversarial Robustness}}.
-\newblock \bibinfo{type}{{T}echnical {R}eport} arXiv:1902.06705. \bibinfo{institution}{arXiv}.
+\newblock \bibinfo{type}{{T}echnical {R}eport} arXiv:1902.06705.
+  \bibinfo{institution}{arXiv}.
 \newblock
 
 
 \bibitem[Chen et~al\mbox{.}(2022)]%
         {chen2022collective}
-\bibfield{author}{\bibinfo{person}{Ruoxin Chen}, \bibinfo{person}{Zenan Li}, \bibinfo{person}{Jie Li}, \bibinfo{person}{Junchi Yan}, {and} \bibinfo{person}{Chentao Wu}.} \bibinfo{year}{2022}\natexlab{}.
-\newblock \showarticletitle{On collective robustness of bagging against data poisoning}. In \bibinfo{booktitle}{\emph{International Conference on Machine Learning}}. PMLR, \bibinfo{pages}{3299--3319}.
+\bibfield{author}{\bibinfo{person}{Ruoxin Chen}, \bibinfo{person}{Zenan Li},
+  \bibinfo{person}{Jie Li}, \bibinfo{person}{Junchi Yan}, {and}
+  \bibinfo{person}{Chentao Wu}.} \bibinfo{year}{2022}\natexlab{}.
+\newblock \showarticletitle{On collective robustness of bagging against data
+  poisoning}. In \bibinfo{booktitle}{\emph{International Conference on Machine
+  Learning}}. PMLR, \bibinfo{pages}{3299--3319}.
 \newblock
 
 
 \bibitem[Croce and Hein(2020)]%
         {croce2020reliable}
-\bibfield{author}{\bibinfo{person}{Francesco Croce} {and} \bibinfo{person}{Matthias Hein}.} \bibinfo{year}{2020}\natexlab{}.
-\newblock \showarticletitle{Reliable Evaluation of Adversarial Robustness with an Ensemble of Diverse Parameter-free Attacks}. In \bibinfo{booktitle}{\emph{Proceedings of the 37th International Conference on Machine Learning (ICML)}} \emph{(\bibinfo{series}{Proceedings of Machine Learning Research}, Vol.~\bibinfo{volume}{119})}. \bibinfo{pages}{2206--2216}.
-\newblock
-
-
-\bibitem[Ghadermazi et~al\mbox{.}(2025)]%
-        {ghadermazi2025gtae}
-\bibfield{author}{\bibinfo{person}{Jalal Ghadermazi}, \bibinfo{person}{Soumyadeep Hore}, \bibinfo{person}{Ankit Shah}, {and} \bibinfo{person}{Nathaniel~D Bastian}.} \bibinfo{year}{2025}\natexlab{}.
-\newblock \showarticletitle{{GTAE-IDS}: Graph Transformer-Based Autoencoder Framework for Real-Time Network Intrusion Detection}.
-\newblock \bibinfo{journal}{\emph{IEEE Transactions on Information Forensics and Security}}  \bibinfo{volume}{20} (\bibinfo{year}{2025}), \bibinfo{pages}{4026--4041}.
+\bibfield{author}{\bibinfo{person}{Francesco Croce} {and}
+  \bibinfo{person}{Matthias Hein}.} \bibinfo{year}{2020}\natexlab{}.
+\newblock \showarticletitle{Reliable Evaluation of Adversarial Robustness with
+  an Ensemble of Diverse Parameter-free Attacks}. In
+  \bibinfo{booktitle}{\emph{Proceedings of the 37th International Conference on
+  Machine Learning (ICML)}} \emph{(\bibinfo{series}{Proceedings of Machine
+  Learning Research}, Vol.~\bibinfo{volume}{119})}.
+  \bibinfo{pages}{2206--2216}.
 \newblock
 
 
 \bibitem[Goodfellow et~al\mbox{.}(2014)]%
         {goodfellow2014explaining}
-\bibfield{author}{\bibinfo{person}{Ian~J Goodfellow}, \bibinfo{person}{Jonathon Shlens}, {and} \bibinfo{person}{Christian Szegedy}.} \bibinfo{year}{2014}\natexlab{}.
+\bibfield{author}{\bibinfo{person}{Ian~J Goodfellow}, \bibinfo{person}{Jonathon
+  Shlens}, {and} \bibinfo{person}{Christian Szegedy}.}
+  \bibinfo{year}{2014}\natexlab{}.
 \newblock \showarticletitle{Explaining and harnessing adversarial examples}.
-\newblock \bibinfo{journal}{\emph{arXiv preprint arXiv:1412.6572}} (\bibinfo{year}{2014}).
+\newblock \bibinfo{journal}{\emph{arXiv preprint arXiv:1412.6572}}
+  (\bibinfo{year}{2014}).
 \newblock
 
 
 \bibitem[Gungor et~al\mbox{.}(2022)]%
         {gungor2022stewart}
-\bibfield{author}{\bibinfo{person}{Onat Gungor}, \bibinfo{person}{Tajana Rosing}, {and} \bibinfo{person}{Baris Aksanli}.} \bibinfo{year}{2022}\natexlab{}.
-\newblock \showarticletitle{{STEWART}: Stacking ensemble for white-box adversarial attacks towards more resilient data-driven predictive maintenance}.
-\newblock \bibinfo{journal}{\emph{Computers in Industry}}  \bibinfo{volume}{140} (\bibinfo{year}{2022}), \bibinfo{pages}{103660}.
+\bibfield{author}{\bibinfo{person}{Onat Gungor}, \bibinfo{person}{Tajana
+  Rosing}, {and} \bibinfo{person}{Baris Aksanli}.}
+  \bibinfo{year}{2022}\natexlab{}.
+\newblock \showarticletitle{{STEWART}: Stacking ensemble for white-box
+  adversarial attacks towards more resilient data-driven predictive
+  maintenance}.
+\newblock \bibinfo{journal}{\emph{Computers in Industry}}
+  \bibinfo{volume}{140} (\bibinfo{year}{2022}), \bibinfo{pages}{103660}.
 \newblock
 
 
 \bibitem[Hajizadeh et~al\mbox{.}(2025)]%
         {hajizadeh2025deepred}
-\bibfield{author}{\bibinfo{person}{Mehrdad Hajizadeh}, \bibinfo{person}{Pegah Golchin}, \bibinfo{person}{Ehsan Nowroozi}, \bibinfo{person}{Maria Rigaki}, \bibinfo{person}{Veronica Valeros}, \bibinfo{person}{Sebastian Garc{\'\i}a}, \bibinfo{person}{Mauro Conti}, {and} \bibinfo{person}{Thomas Bauschert}.} \bibinfo{year}{2025}\natexlab{}.
-\newblock \showarticletitle{{DeepRed}: A Deep Learning-Powered Command and Control Framework for Multi-Stage Red Teaming Against {ML}-based Network Intrusion Detection Systems}. In \bibinfo{booktitle}{\emph{19th USENIX WOOT Conference on Offensive Technologies (WOOT 25)}}. \bibinfo{pages}{103--127}.
+\bibfield{author}{\bibinfo{person}{Mehrdad Hajizadeh}, \bibinfo{person}{Pegah
+  Golchin}, \bibinfo{person}{Ehsan Nowroozi}, \bibinfo{person}{Maria Rigaki},
+  \bibinfo{person}{Veronica Valeros}, \bibinfo{person}{Sebastian Garc{\'\i}a},
+  \bibinfo{person}{Mauro Conti}, {and} \bibinfo{person}{Thomas Bauschert}.}
+  \bibinfo{year}{2025}\natexlab{}.
+\newblock \showarticletitle{{DeepRed}: A Deep Learning-Powered Command and
+  Control Framework for Multi-Stage Red Teaming Against {ML}-based Network
+  Intrusion Detection Systems}. In \bibinfo{booktitle}{\emph{19th USENIX WOOT
+  Conference on Offensive Technologies (WOOT 25)}}. \bibinfo{pages}{103--127}.
 \newblock
 
 
 \bibitem[Hashemi et~al\mbox{.}(2019)]%
         {hashemi2019towards}
-\bibfield{author}{\bibinfo{person}{Mohammad~J Hashemi}, \bibinfo{person}{Greg Cusack}, {and} \bibinfo{person}{Eric Keller}.} \bibinfo{year}{2019}\natexlab{}.
-\newblock \showarticletitle{Towards evaluation of {NIDSs} in adversarial setting}. In \bibinfo{booktitle}{\emph{Proceedings of the 3rd ACM CoNEXT Workshop on Big DAta, Machine Learning and Artificial Intelligence for Data Communication Networks}}. \bibinfo{pages}{14--21}.
+\bibfield{author}{\bibinfo{person}{Mohammad~J Hashemi}, \bibinfo{person}{Greg
+  Cusack}, {and} \bibinfo{person}{Eric Keller}.}
+  \bibinfo{year}{2019}\natexlab{}.
+\newblock \showarticletitle{Towards evaluation of {NIDSs} in adversarial
+  setting}. In \bibinfo{booktitle}{\emph{Proceedings of the 3rd ACM CoNEXT
+  Workshop on Big DAta, Machine Learning and Artificial Intelligence for Data
+  Communication Networks}}. \bibinfo{pages}{14--21}.
 \newblock
 
 
 \bibitem[He et~al\mbox{.}(2023)]%
         {he2023adversarial}
-\bibfield{author}{\bibinfo{person}{Ke He}, \bibinfo{person}{Dan~Dongseong Kim}, {and} \bibinfo{person}{Muhammad~Rizwan Asghar}.} \bibinfo{year}{2023}\natexlab{}.
-\newblock \showarticletitle{Adversarial machine learning for network intrusion detection systems: A comprehensive survey}.
-\newblock \bibinfo{journal}{\emph{IEEE Communications Surveys \& Tutorials}} \bibinfo{volume}{25}, \bibinfo{number}{1} (\bibinfo{year}{2023}), \bibinfo{pages}{538--566}.
+\bibfield{author}{\bibinfo{person}{Ke He}, \bibinfo{person}{Dan~Dongseong Kim},
+  {and} \bibinfo{person}{Muhammad~Rizwan Asghar}.}
+  \bibinfo{year}{2023}\natexlab{}.
+\newblock \showarticletitle{Adversarial machine learning for network intrusion
+  detection systems: A comprehensive survey}.
+\newblock \bibinfo{journal}{\emph{IEEE Communications Surveys \& Tutorials}}
+  \bibinfo{volume}{25}, \bibinfo{number}{1} (\bibinfo{year}{2023}),
+  \bibinfo{pages}{538--566}.
 \newblock
 
 
 \bibitem[Holland et~al\mbox{.}(2021)]%
         {holland2021nprint}
-\bibfield{author}{\bibinfo{person}{Jordan Holland}, \bibinfo{person}{Paul Schmitt}, \bibinfo{person}{Nick Feamster}, {and} \bibinfo{person}{Prateek Mittal}.} \bibinfo{year}{2021}\natexlab{}.
-\newblock \showarticletitle{New Directions in Automated Traffic Analysis}. In \bibinfo{booktitle}{\emph{Proceedings of the 2021 ACM SIGSAC Conference on Computer and Communications Security (CCS)}}. \bibinfo{publisher}{ACM}, \bibinfo{pages}{3366--3383}.
+\bibfield{author}{\bibinfo{person}{Jordan Holland}, \bibinfo{person}{Paul
+  Schmitt}, \bibinfo{person}{Nick Feamster}, {and} \bibinfo{person}{Prateek
+  Mittal}.} \bibinfo{year}{2021}\natexlab{}.
+\newblock \showarticletitle{New Directions in Automated Traffic Analysis}. In
+  \bibinfo{booktitle}{\emph{Proceedings of the 2021 ACM SIGSAC Conference on
+  Computer and Communications Security (CCS)}}. \bibinfo{publisher}{ACM},
+  \bibinfo{pages}{3366--3383}.
 \newblock
 \href{https://doi.org/10.1145/3460120.3484758}{doi:\nolinkurl{10.1145/3460120.3484758}}
 
 
 \bibitem[Jin and Apostolaki(2025)]%
         {jin2025robustifying}
-\bibfield{author}{\bibinfo{person}{Minhao Jin} {and} \bibinfo{person}{Maria Apostolaki}.} \bibinfo{year}{2025}\natexlab{}.
-\newblock \showarticletitle{Robustifying {ML-powered} Network Classifiers with {PANTS}}. In \bibinfo{booktitle}{\emph{34th USENIX Security Symposium (USENIX Security 25)}}. \bibinfo{pages}{7291--7310}.
+\bibfield{author}{\bibinfo{person}{Minhao Jin} {and} \bibinfo{person}{Maria
+  Apostolaki}.} \bibinfo{year}{2025}\natexlab{}.
+\newblock \showarticletitle{Robustifying {ML-powered} Network Classifiers with
+  {PANTS}}. In \bibinfo{booktitle}{\emph{34th USENIX Security Symposium (USENIX
+  Security 25)}}. \bibinfo{pages}{7291--7310}.
 \newblock
 
 
 \bibitem[Kumar et~al\mbox{.}(2026)]%
         {kumar2026netdiffuser}
-\bibfield{author}{\bibinfo{person}{Pratyay Kumar}, \bibinfo{person}{Abu Saleh~Md Tayeen}, \bibinfo{person}{Satyajayant Misra}, \bibinfo{person}{Huiping Cao}, \bibinfo{person}{Jiefei Liu}, \bibinfo{person}{Qixu Gong}, {and} \bibinfo{person}{Jayashree Harikumar}.} \bibinfo{year}{2026}\natexlab{}.
-\newblock \showarticletitle{{NetDiffuser}: Deceiving {DNN}-Based Network Attack Detection Systems with Diffusion-Generated Adversarial Traffic}.
-\newblock \bibinfo{journal}{\emph{arXiv preprint arXiv:2603.08901}} (\bibinfo{year}{2026}).
+\bibfield{author}{\bibinfo{person}{Pratyay Kumar}, \bibinfo{person}{Abu
+  Saleh~Md Tayeen}, \bibinfo{person}{Satyajayant Misra},
+  \bibinfo{person}{Huiping Cao}, \bibinfo{person}{Jiefei Liu},
+  \bibinfo{person}{Qixu Gong}, {and} \bibinfo{person}{Jayashree Harikumar}.}
+  \bibinfo{year}{2026}\natexlab{}.
+\newblock \showarticletitle{{NetDiffuser}: Deceiving {DNN}-Based Network Attack
+  Detection Systems with Diffusion-Generated Adversarial Traffic}.
+\newblock \bibinfo{journal}{\emph{arXiv preprint arXiv:2603.08901}}
+  (\bibinfo{year}{2026}).
 \newblock
 
 
 \bibitem[Kumar et~al\mbox{.}(2025)]%
         {kumar2025nids}
-\bibfield{author}{\bibinfo{person}{Vivek Kumar}, \bibinfo{person}{Kamal Kumar}, {and} \bibinfo{person}{Maheep Singh}.} \bibinfo{year}{2025}\natexlab{}.
-\newblock \showarticletitle{{NIDS-CBAD}: detecting adversarial attacks in network intrusion detection systems using domain constraints}.
-\newblock \bibinfo{journal}{\emph{International Journal of Machine Learning and Cybernetics}} \bibinfo{volume}{16}, \bibinfo{number}{7-8} (\bibinfo{year}{2025}), \bibinfo{pages}{4213--4234}.
+\bibfield{author}{\bibinfo{person}{Vivek Kumar}, \bibinfo{person}{Kamal Kumar},
+  {and} \bibinfo{person}{Maheep Singh}.} \bibinfo{year}{2025}\natexlab{}.
+\newblock \showarticletitle{{NIDS-CBAD}: detecting adversarial attacks in
+  network intrusion detection systems using domain constraints}.
+\newblock \bibinfo{journal}{\emph{International Journal of Machine Learning and
+  Cybernetics}} \bibinfo{volume}{16}, \bibinfo{number}{7-8}
+  (\bibinfo{year}{2025}), \bibinfo{pages}{4213--4234}.
 \newblock
 
 
 \bibitem[Madry et~al\mbox{.}(2018)]%
         {madry2018towards}
-\bibfield{author}{\bibinfo{person}{Aleksander Madry}, \bibinfo{person}{Aleksandar Makelov}, \bibinfo{person}{Ludwig Schmidt}, \bibinfo{person}{Dimitris Tsipras}, {and} \bibinfo{person}{Adrian Vladu}.} \bibinfo{year}{2018}\natexlab{}.
-\newblock \showarticletitle{Towards Deep Learning Models Resistant to Adversarial Attacks}. In \bibinfo{booktitle}{\emph{6th International Conference on Learning Representations (ICLR)}}.
+\bibfield{author}{\bibinfo{person}{Aleksander Madry},
+  \bibinfo{person}{Aleksandar Makelov}, \bibinfo{person}{Ludwig Schmidt},
+  \bibinfo{person}{Dimitris Tsipras}, {and} \bibinfo{person}{Adrian Vladu}.}
+  \bibinfo{year}{2018}\natexlab{}.
+\newblock \showarticletitle{Towards Deep Learning Models Resistant to
+  Adversarial Attacks}. In \bibinfo{booktitle}{\emph{6th International
+  Conference on Learning Representations (ICLR)}}.
 \newblock
 
 
 \bibitem[Merzouk et~al\mbox{.}(2025)]%
         {merzouk2024diffusion}
-\bibfield{author}{\bibinfo{person}{Mohamed~Amine Merzouk}, \bibinfo{person}{Erwan Beurier}, \bibinfo{person}{Reda Yaich}, \bibinfo{person}{Nora Boulahia-Cuppens}, \bibinfo{person}{Fr{\'e}d{\'e}ric Cuppens}, {and} \bibinfo{person}{Foutse Khomh}.} \bibinfo{year}{2025}\natexlab{}.
-\newblock \showarticletitle{Diffusion-based Adversarial Purification for Intrusion Detection}. In \bibinfo{booktitle}{\emph{Data and Applications Security and Privacy XXXIX: 39th Annual IFIP WG 11.3 Conference (DBSec 2025)}}. \bibinfo{publisher}{Springer}, \bibinfo{pages}{351--370}.
+\bibfield{author}{\bibinfo{person}{Mohamed~Amine Merzouk},
+  \bibinfo{person}{Erwan Beurier}, \bibinfo{person}{Reda Yaich},
+  \bibinfo{person}{Nora Boulahia-Cuppens}, \bibinfo{person}{Fr{\'e}d{\'e}ric
+  Cuppens}, {and} \bibinfo{person}{Foutse Khomh}.}
+  \bibinfo{year}{2025}\natexlab{}.
+\newblock \showarticletitle{Diffusion-based Adversarial Purification for
+  Intrusion Detection}. In \bibinfo{booktitle}{\emph{Data and Applications
+  Security and Privacy XXXIX: 39th Annual IFIP WG 11.3 Conference (DBSec
+  2025)}}. \bibinfo{publisher}{Springer}, \bibinfo{pages}{351--370}.
 \newblock
 
 
 \bibitem[Mirsky et~al\mbox{.}(2018)]%
         {mirsky2018kitsune}
-\bibfield{author}{\bibinfo{person}{Yisroel Mirsky}, \bibinfo{person}{Tomer Doitshman}, \bibinfo{person}{Yuval Elovici}, {and} \bibinfo{person}{Asaf Shabtai}.} \bibinfo{year}{2018}\natexlab{}.
-\newblock \showarticletitle{Kitsune: An ensemble of autoencoders for online network intrusion detection}. In \bibinfo{booktitle}{\emph{Network and Distributed System Security Symposium (NDSS)}}.
+\bibfield{author}{\bibinfo{person}{Yisroel Mirsky}, \bibinfo{person}{Tomer
+  Doitshman}, \bibinfo{person}{Yuval Elovici}, {and} \bibinfo{person}{Asaf
+  Shabtai}.} \bibinfo{year}{2018}\natexlab{}.
+\newblock \showarticletitle{Kitsune: An ensemble of autoencoders for online
+  network intrusion detection}. In \bibinfo{booktitle}{\emph{Network and
+  Distributed System Security Symposium (NDSS)}}.
 \newblock
 
 
 \bibitem[Nguyen and Reddi(2023)]%
         {nguyen2021deep}
-\bibfield{author}{\bibinfo{person}{Thanh~Thi Nguyen} {and} \bibinfo{person}{Vijay~Janapa Reddi}.} \bibinfo{year}{2023}\natexlab{}.
+\bibfield{author}{\bibinfo{person}{Thanh~Thi Nguyen} {and}
+  \bibinfo{person}{Vijay~Janapa Reddi}.} \bibinfo{year}{2023}\natexlab{}.
 \newblock \showarticletitle{Deep reinforcement learning for cyber security}.
-\newblock \bibinfo{journal}{\emph{IEEE Transactions on Neural Networks and Learning Systems}} \bibinfo{volume}{34}, \bibinfo{number}{8} (\bibinfo{year}{2023}), \bibinfo{pages}{3779--3795}.
+\newblock \bibinfo{journal}{\emph{IEEE Transactions on Neural Networks and
+  Learning Systems}} \bibinfo{volume}{34}, \bibinfo{number}{8}
+  (\bibinfo{year}{2023}), \bibinfo{pages}{3779--3795}.
 \newblock
 
 
 \bibitem[Nicolae et~al\mbox{.}(2018)]%
         {nicolae2018adversarial}
-\bibfield{author}{\bibinfo{person}{Maria-Irina Nicolae}, \bibinfo{person}{Mathieu Sinn}, \bibinfo{person}{Minh~Ngoc Tran}, \bibinfo{person}{Beat Buesser}, \bibinfo{person}{Ambrish Rawat}, \bibinfo{person}{Martin Wistuba}, \bibinfo{person}{Valentina Zantedeschi}, \bibinfo{person}{Nathalie Baracaldo}, \bibinfo{person}{Bryant Chen}, \bibinfo{person}{Heiko Ludwig}, \bibinfo{person}{Ian~M. Molloy}, {and} \bibinfo{person}{Ben Edwards}.} \bibinfo{year}{2018}\natexlab{}.
+\bibfield{author}{\bibinfo{person}{Maria-Irina Nicolae},
+  \bibinfo{person}{Mathieu Sinn}, \bibinfo{person}{Minh~Ngoc Tran},
+  \bibinfo{person}{Beat Buesser}, \bibinfo{person}{Ambrish Rawat},
+  \bibinfo{person}{Martin Wistuba}, \bibinfo{person}{Valentina Zantedeschi},
+  \bibinfo{person}{Nathalie Baracaldo}, \bibinfo{person}{Bryant Chen},
+  \bibinfo{person}{Heiko Ludwig}, \bibinfo{person}{Ian~M. Molloy}, {and}
+  \bibinfo{person}{Ben Edwards}.} \bibinfo{year}{2018}\natexlab{}.
 \newblock \bibinfo{booktitle}{\emph{Adversarial Robustness Toolbox v1.0.0}}.
-\newblock \bibinfo{type}{{T}echnical {R}eport} arXiv:1807.01069. \bibinfo{institution}{arXiv}.
+\newblock \bibinfo{type}{{T}echnical {R}eport} arXiv:1807.01069.
+  \bibinfo{institution}{arXiv}.
 \newblock
 
 
 \bibitem[Olukola and Rahimi(2026)]%
         {olukola2026amds}
-\bibfield{author}{\bibinfo{person}{Oluseyi Olukola} {and} \bibinfo{person}{Nick Rahimi}.} \bibinfo{year}{2026}\natexlab{}.
-\newblock \showarticletitle{{AMDS}: Attack-Aware Multi-Stage Defense System for Network Intrusion Detection with Two-Stage Adaptive Weight Learning}.
-\newblock \bibinfo{journal}{\emph{arXiv preprint arXiv:2603.00859}} (\bibinfo{year}{2026}).
+\bibfield{author}{\bibinfo{person}{Oluseyi Olukola} {and} \bibinfo{person}{Nick
+  Rahimi}.} \bibinfo{year}{2026}\natexlab{}.
+\newblock \showarticletitle{{AMDS}: Attack-Aware Multi-Stage Defense System for
+  Network Intrusion Detection with Two-Stage Adaptive Weight Learning}.
+\newblock \bibinfo{journal}{\emph{arXiv preprint arXiv:2603.00859}}
+  (\bibinfo{year}{2026}).
 \newblock
 
 
 \bibitem[Papernot et~al\mbox{.}(2017)]%
         {papernot2017practical}
-\bibfield{author}{\bibinfo{person}{Nicolas Papernot}, \bibinfo{person}{Patrick McDaniel}, \bibinfo{person}{Ian Goodfellow}, \bibinfo{person}{Somesh Jha}, \bibinfo{person}{Z~Berkay Celik}, {and} \bibinfo{person}{Ananthram Swami}.} \bibinfo{year}{2017}\natexlab{}.
-\newblock \showarticletitle{Practical black-box attacks against machine learning}. In \bibinfo{booktitle}{\emph{Proceedings of the 2017 ACM on Asia conference on computer and communications security}}. \bibinfo{pages}{506--519}.
+\bibfield{author}{\bibinfo{person}{Nicolas Papernot}, \bibinfo{person}{Patrick
+  McDaniel}, \bibinfo{person}{Ian Goodfellow}, \bibinfo{person}{Somesh Jha},
+  \bibinfo{person}{Z~Berkay Celik}, {and} \bibinfo{person}{Ananthram Swami}.}
+  \bibinfo{year}{2017}\natexlab{}.
+\newblock \showarticletitle{Practical black-box attacks against machine
+  learning}. In \bibinfo{booktitle}{\emph{Proceedings of the 2017 ACM on Asia
+  conference on computer and communications security}}.
+  \bibinfo{pages}{506--519}.
 \newblock
 
 
 \bibitem[Pierazzi et~al\mbox{.}(2020)]%
         {pierazzi2020intriguing}
-\bibfield{author}{\bibinfo{person}{Fabio Pierazzi}, \bibinfo{person}{Feargus Pendlebury}, \bibinfo{person}{Jacopo Cortellazzi}, {and} \bibinfo{person}{Lorenzo Cavallaro}.} \bibinfo{year}{2020}\natexlab{}.
-\newblock \showarticletitle{Intriguing properties of adversarial {ML} attacks in the problem space}. In \bibinfo{booktitle}{\emph{2020 IEEE symposium on security and privacy (SP)}}. IEEE, \bibinfo{pages}{1332--1349}.
+\bibfield{author}{\bibinfo{person}{Fabio Pierazzi}, \bibinfo{person}{Feargus
+  Pendlebury}, \bibinfo{person}{Jacopo Cortellazzi}, {and}
+  \bibinfo{person}{Lorenzo Cavallaro}.} \bibinfo{year}{2020}\natexlab{}.
+\newblock \showarticletitle{Intriguing properties of adversarial {ML} attacks
+  in the problem space}. In \bibinfo{booktitle}{\emph{2020 IEEE symposium on
+  security and privacy (SP)}}. IEEE, \bibinfo{pages}{1332--1349}.
 \newblock
 
 
 \bibitem[Pissarra(2026)]%
         {pissarra2026tantgen}
-\bibfield{author}{\bibinfo{person}{Inês de~Almeida Pissarra}.} \bibinfo{year}{2026}\natexlab{}.
-\newblock \emph{\bibinfo{title}{{TANTGen}: Transformer-based Adversarial Network Traffic Generator}}.
-\newblock \bibinfo{thesistype}{Master's\ thesis}. \bibinfo{school}{Instituto Superior Técnico, Universidade de Lisboa}, \bibinfo{address}{Lisbon, Portugal}.
+\bibfield{author}{\bibinfo{person}{Inês de~Almeida Pissarra}.}
+  \bibinfo{year}{2026}\natexlab{}.
+\newblock \emph{\bibinfo{title}{{TANTGen}: Transformer-based Adversarial
+  Network Traffic Generator}}.
+\newblock \bibinfo{thesistype}{Master's\ thesis}. \bibinfo{school}{Instituto
+  Superior Técnico, Universidade de Lisboa}, \bibinfo{address}{Lisbon,
+  Portugal}.
 \newblock
 \shownote{Unpublished}.
 \newblock
@@ -290,104 +432,175 @@ Retrieved December 30, 2025 from \tempurl}
 
 \bibitem[Rieger et~al\mbox{.}(2024)]%
         {rieger2024crowdguard}
-\bibfield{author}{\bibinfo{person}{Phillip Rieger}, \bibinfo{person}{Torsten Krau{\ss}}, \bibinfo{person}{Markus Miettinen}, \bibinfo{person}{Alexandra Dmitrienko}, {and} \bibinfo{person}{Ahmad-Reza Sadeghi}.} \bibinfo{year}{2024}\natexlab{}.
-\newblock \showarticletitle{{CrowdGuard}: Federated Backdoor Detection in Federated Learning}. In \bibinfo{booktitle}{\emph{Network and Distributed System Security Symposium (NDSS)}}.
+\bibfield{author}{\bibinfo{person}{Phillip Rieger}, \bibinfo{person}{Torsten
+  Krau{\ss}}, \bibinfo{person}{Markus Miettinen}, \bibinfo{person}{Alexandra
+  Dmitrienko}, {and} \bibinfo{person}{Ahmad-Reza Sadeghi}.}
+  \bibinfo{year}{2024}\natexlab{}.
+\newblock \showarticletitle{{CrowdGuard}: Federated Backdoor Detection in
+  Federated Learning}. In \bibinfo{booktitle}{\emph{Network and Distributed
+  System Security Symposium (NDSS)}}.
 \newblock
 
 
 \bibitem[Rubinstein et~al\mbox{.}(2009)]%
         {rubinstein2009antidote}
-\bibfield{author}{\bibinfo{person}{Benjamin~IP Rubinstein}, \bibinfo{person}{Blaine Nelson}, \bibinfo{person}{Ling Huang}, \bibinfo{person}{Anthony~D Joseph}, \bibinfo{person}{Shing-hon Lau}, \bibinfo{person}{Satish Rao}, \bibinfo{person}{Nina Taft}, {and} \bibinfo{person}{J~Doug Tygar}.} \bibinfo{year}{2009}\natexlab{}.
-\newblock \showarticletitle{{ANTIDOTE}: understanding and defending against poisoning of anomaly detectors}. In \bibinfo{booktitle}{\emph{Proceedings of the 9th ACM SIGCOMM Conference on Internet Measurement}}. \bibinfo{pages}{1--14}.
+\bibfield{author}{\bibinfo{person}{Benjamin~IP Rubinstein},
+  \bibinfo{person}{Blaine Nelson}, \bibinfo{person}{Ling Huang},
+  \bibinfo{person}{Anthony~D Joseph}, \bibinfo{person}{Shing-hon Lau},
+  \bibinfo{person}{Satish Rao}, \bibinfo{person}{Nina Taft}, {and}
+  \bibinfo{person}{J~Doug Tygar}.} \bibinfo{year}{2009}\natexlab{}.
+\newblock \showarticletitle{{ANTIDOTE}: understanding and defending against
+  poisoning of anomaly detectors}. In \bibinfo{booktitle}{\emph{Proceedings of
+  the 9th ACM SIGCOMM Conference on Internet Measurement}}.
+  \bibinfo{pages}{1--14}.
 \newblock
 
 
 \bibitem[Samangouei et~al\mbox{.}(2018)]%
         {samangouei2018defense}
-\bibfield{author}{\bibinfo{person}{Pouya Samangouei}, \bibinfo{person}{Maya Kabkab}, {and} \bibinfo{person}{Rama Chellappa}.} \bibinfo{year}{2018}\natexlab{}.
-\newblock \showarticletitle{Defense-{GAN}: Protecting Classifiers Against Adversarial Attacks Using Generative Models}. In \bibinfo{booktitle}{\emph{International Conference on Learning Representations (ICLR)}}.
+\bibfield{author}{\bibinfo{person}{Pouya Samangouei}, \bibinfo{person}{Maya
+  Kabkab}, {and} \bibinfo{person}{Rama Chellappa}.}
+  \bibinfo{year}{2018}\natexlab{}.
+\newblock \showarticletitle{Defense-{GAN}: Protecting Classifiers Against
+  Adversarial Attacks Using Generative Models}. In
+  \bibinfo{booktitle}{\emph{International Conference on Learning
+  Representations (ICLR)}}.
 \newblock
 
 
 \bibitem[Sharafaldin et~al\mbox{.}(2019)]%
         {sharafaldin2019cicddos}
-\bibfield{author}{\bibinfo{person}{Iman Sharafaldin}, \bibinfo{person}{Arash~Habibi Lashkari}, \bibinfo{person}{Saqib Hakak}, {and} \bibinfo{person}{Ali~A. Ghorbani}.} \bibinfo{year}{2019}\natexlab{}.
-\newblock \showarticletitle{Developing Realistic Distributed Denial of Service ({DDoS}) Attack Dataset and Taxonomy}. In \bibinfo{booktitle}{\emph{2019 International Carnahan Conference on Security Technology (ICCST)}}. IEEE, \bibinfo{pages}{1--8}.
+\bibfield{author}{\bibinfo{person}{Iman Sharafaldin},
+  \bibinfo{person}{Arash~Habibi Lashkari}, \bibinfo{person}{Saqib Hakak}, {and}
+  \bibinfo{person}{Ali~A. Ghorbani}.} \bibinfo{year}{2019}\natexlab{}.
+\newblock \showarticletitle{Developing Realistic Distributed Denial of Service
+  ({DDoS}) Attack Dataset and Taxonomy}. In \bibinfo{booktitle}{\emph{2019
+  International Carnahan Conference on Security Technology (ICCST)}}. IEEE,
+  \bibinfo{pages}{1--8}.
 \newblock
 \href{https://doi.org/10.1109/CCST.2019.8888419}{doi:\nolinkurl{10.1109/CCST.2019.8888419}}
 
 
 \bibitem[Sun et~al\mbox{.}(2023)]%
         {sun2023gpmt}
-\bibfield{author}{\bibinfo{person}{Peishuai Sun}, \bibinfo{person}{Shuhao Li}, \bibinfo{person}{Jiang Xie}, \bibinfo{person}{Hongbo Xu}, \bibinfo{person}{Zhenyu Cheng}, {and} \bibinfo{person}{Rong Yang}.} \bibinfo{year}{2023}\natexlab{}.
-\newblock \showarticletitle{{GPMT}: Generating practical malicious traffic based on adversarial attacks with little prior knowledge}.
-\newblock \bibinfo{journal}{\emph{Computers \& Security}}  \bibinfo{volume}{130} (\bibinfo{year}{2023}), \bibinfo{pages}{103257}.
+\bibfield{author}{\bibinfo{person}{Peishuai Sun}, \bibinfo{person}{Shuhao Li},
+  \bibinfo{person}{Jiang Xie}, \bibinfo{person}{Hongbo Xu},
+  \bibinfo{person}{Zhenyu Cheng}, {and} \bibinfo{person}{Rong Yang}.}
+  \bibinfo{year}{2023}\natexlab{}.
+\newblock \showarticletitle{{GPMT}: Generating practical malicious traffic
+  based on adversarial attacks with little prior knowledge}.
+\newblock \bibinfo{journal}{\emph{Computers \& Security}}
+  \bibinfo{volume}{130} (\bibinfo{year}{2023}), \bibinfo{pages}{103257}.
 \newblock
 
 
 \bibitem[Sutton and Barto(2018)]%
         {sutton2018reinforcement}
-\bibfield{author}{\bibinfo{person}{Richard~S. Sutton} {and} \bibinfo{person}{Andrew~G. Barto}.} \bibinfo{year}{2018}\natexlab{}.
-\newblock \bibinfo{booktitle}{\emph{Reinforcement Learning: An Introduction} (\bibinfo{edition}{2} ed.)}.
+\bibfield{author}{\bibinfo{person}{Richard~S. Sutton} {and}
+  \bibinfo{person}{Andrew~G. Barto}.} \bibinfo{year}{2018}\natexlab{}.
+\newblock \bibinfo{booktitle}{\emph{Reinforcement Learning: An Introduction}
+  (\bibinfo{edition}{2} ed.)}.
 \newblock \bibinfo{publisher}{MIT Press}, \bibinfo{address}{Cambridge, MA}.
 \newblock
 
 
 \bibitem[Szegedy et~al\mbox{.}(2014)]%
         {szegedy2014intriguing}
-\bibfield{author}{\bibinfo{person}{Christian Szegedy}, \bibinfo{person}{Wojciech Zaremba}, \bibinfo{person}{Ilya Sutskever}, \bibinfo{person}{Joan Bruna}, \bibinfo{person}{Dumitru Erhan}, \bibinfo{person}{Ian Goodfellow}, {and} \bibinfo{person}{Rob Fergus}.} \bibinfo{year}{2014}\natexlab{}.
-\newblock \showarticletitle{Intriguing properties of neural networks}. In \bibinfo{booktitle}{\emph{2nd International Conference on Learning Representations (ICLR 2014)}}.
+\bibfield{author}{\bibinfo{person}{Christian Szegedy},
+  \bibinfo{person}{Wojciech Zaremba}, \bibinfo{person}{Ilya Sutskever},
+  \bibinfo{person}{Joan Bruna}, \bibinfo{person}{Dumitru Erhan},
+  \bibinfo{person}{Ian Goodfellow}, {and} \bibinfo{person}{Rob Fergus}.}
+  \bibinfo{year}{2014}\natexlab{}.
+\newblock \showarticletitle{Intriguing properties of neural networks}. In
+  \bibinfo{booktitle}{\emph{2nd International Conference on Learning
+  Representations (ICLR 2014)}}.
 \newblock
 
 
 \bibitem[Tram{\`e}r et~al\mbox{.}(2020)]%
         {tramer2020adaptive}
-\bibfield{author}{\bibinfo{person}{Florian Tram{\`e}r}, \bibinfo{person}{Nicholas Carlini}, \bibinfo{person}{Wieland Brendel}, {and} \bibinfo{person}{Aleksander Madry}.} \bibinfo{year}{2020}\natexlab{}.
-\newblock \showarticletitle{On Adaptive Attacks to Adversarial Example Defenses}. In \bibinfo{booktitle}{\emph{Advances in Neural Information Processing Systems 33 (NeurIPS)}}. \bibinfo{pages}{1633--1645}.
+\bibfield{author}{\bibinfo{person}{Florian Tram{\`e}r},
+  \bibinfo{person}{Nicholas Carlini}, \bibinfo{person}{Wieland Brendel}, {and}
+  \bibinfo{person}{Aleksander Madry}.} \bibinfo{year}{2020}\natexlab{}.
+\newblock \showarticletitle{On Adaptive Attacks to Adversarial Example
+  Defenses}. In \bibinfo{booktitle}{\emph{Advances in Neural Information
+  Processing Systems 33 (NeurIPS)}}. \bibinfo{pages}{1633--1645}.
 \newblock
 
 
 \bibitem[Vaswani et~al\mbox{.}(2017)]%
         {vaswani2017attention}
-\bibfield{author}{\bibinfo{person}{Ashish Vaswani}, \bibinfo{person}{Noam Shazeer}, \bibinfo{person}{Niki Parmar}, \bibinfo{person}{Jakob Uszkoreit}, \bibinfo{person}{Llion Jones}, \bibinfo{person}{Aidan~N Gomez}, \bibinfo{person}{{\L}ukasz Kaiser}, {and} \bibinfo{person}{Illia Polosukhin}.} \bibinfo{year}{2017}\natexlab{}.
-\newblock \showarticletitle{Attention is all you need}. In \bibinfo{booktitle}{\emph{Advances in Neural Information Processing Systems (NeurIPS)}}, Vol.~\bibinfo{volume}{30}.
+\bibfield{author}{\bibinfo{person}{Ashish Vaswani}, \bibinfo{person}{Noam
+  Shazeer}, \bibinfo{person}{Niki Parmar}, \bibinfo{person}{Jakob Uszkoreit},
+  \bibinfo{person}{Llion Jones}, \bibinfo{person}{Aidan~N Gomez},
+  \bibinfo{person}{{\L}ukasz Kaiser}, {and} \bibinfo{person}{Illia
+  Polosukhin}.} \bibinfo{year}{2017}\natexlab{}.
+\newblock \showarticletitle{Attention is all you need}. In
+  \bibinfo{booktitle}{\emph{Advances in Neural Information Processing Systems
+  (NeurIPS)}}, Vol.~\bibinfo{volume}{30}.
 \newblock
 
 
 \bibitem[Wang et~al\mbox{.}(2021)]%
         {wang2021machine}
-\bibfield{author}{\bibinfo{person}{Song Wang}, \bibinfo{person}{Juan~Fernando Balarezo}, \bibinfo{person}{Sithamparanathan Kandeepan}, \bibinfo{person}{Akram Al-Hourani}, \bibinfo{person}{Karina~Gomez Chavez}, {and} \bibinfo{person}{Benjamin Rubinstein}.} \bibinfo{year}{2021}\natexlab{}.
-\newblock \showarticletitle{Machine learning in network anomaly detection: A survey}.
-\newblock \bibinfo{journal}{\emph{IEEE Access}}  \bibinfo{volume}{9} (\bibinfo{year}{2021}), \bibinfo{pages}{152379--152396}.
+\bibfield{author}{\bibinfo{person}{Song Wang}, \bibinfo{person}{Juan~Fernando
+  Balarezo}, \bibinfo{person}{Sithamparanathan Kandeepan},
+  \bibinfo{person}{Akram Al-Hourani}, \bibinfo{person}{Karina~Gomez Chavez},
+  {and} \bibinfo{person}{Benjamin Rubinstein}.}
+  \bibinfo{year}{2021}\natexlab{}.
+\newblock \showarticletitle{Machine learning in network anomaly detection: A
+  survey}.
+\newblock \bibinfo{journal}{\emph{IEEE Access}}  \bibinfo{volume}{9}
+  (\bibinfo{year}{2021}), \bibinfo{pages}{152379--152396}.
 \newblock
 
 
 \bibitem[Wolpert(1992)]%
         {wolpert1992stacked}
-\bibfield{author}{\bibinfo{person}{David~H Wolpert}.} \bibinfo{year}{1992}\natexlab{}.
+\bibfield{author}{\bibinfo{person}{David~H Wolpert}.}
+  \bibinfo{year}{1992}\natexlab{}.
 \newblock \showarticletitle{Stacked generalization}.
-\newblock \bibinfo{journal}{\emph{Neural networks}} \bibinfo{volume}{5}, \bibinfo{number}{2} (\bibinfo{year}{1992}), \bibinfo{pages}{241--259}.
+\newblock \bibinfo{journal}{\emph{Neural networks}} \bibinfo{volume}{5},
+  \bibinfo{number}{2} (\bibinfo{year}{1992}), \bibinfo{pages}{241--259}.
 \newblock
 
 
 \bibitem[Yan et~al\mbox{.}(2025)]%
         {yan2025certta}
-\bibfield{author}{\bibinfo{person}{Jinzhu Yan}, \bibinfo{person}{Zhuotao Liu}, \bibinfo{person}{Yuyang Xie}, \bibinfo{person}{Shiyu Liang}, \bibinfo{person}{Lin Liu}, {and} \bibinfo{person}{Ke Xu}.} \bibinfo{year}{2025}\natexlab{}.
-\newblock \showarticletitle{{CertTA}: Certified Robustness Made Practical for Learning-Based Traffic Analysis}. In \bibinfo{booktitle}{\emph{34th USENIX Security Symposium (USENIX Security 25)}}. USENIX Association, \bibinfo{pages}{7349--7368}.
+\bibfield{author}{\bibinfo{person}{Jinzhu Yan}, \bibinfo{person}{Zhuotao Liu},
+  \bibinfo{person}{Yuyang Xie}, \bibinfo{person}{Shiyu Liang},
+  \bibinfo{person}{Lin Liu}, {and} \bibinfo{person}{Ke Xu}.}
+  \bibinfo{year}{2025}\natexlab{}.
+\newblock \showarticletitle{{CertTA}: Certified Robustness Made Practical for
+  Learning-Based Traffic Analysis}. In \bibinfo{booktitle}{\emph{34th USENIX
+  Security Symposium (USENIX Security 25)}}. USENIX Association,
+  \bibinfo{pages}{7349--7368}.
 \newblock
 
 
 \bibitem[Yang et~al\mbox{.}(2021)]%
         {yang2021trs}
-\bibfield{author}{\bibinfo{person}{Zhuolin Yang}, \bibinfo{person}{Linyi Li}, \bibinfo{person}{Xiaojun Xu}, \bibinfo{person}{Shiliang Zuo}, \bibinfo{person}{Qian Chen}, \bibinfo{person}{Pan Zhou}, \bibinfo{person}{Benjamin I.~P. Rubinstein}, \bibinfo{person}{Ce Zhang}, {and} \bibinfo{person}{Bo Li}.} \bibinfo{year}{2021}\natexlab{}.
-\newblock \showarticletitle{{TRS}: Transferability Reduced Ensemble via Promoting Gradient Diversity and Model Smoothness}. In \bibinfo{booktitle}{\emph{Advances in Neural Information Processing Systems (NeurIPS)}}. \bibinfo{pages}{17642--17655}.
+\bibfield{author}{\bibinfo{person}{Zhuolin Yang}, \bibinfo{person}{Linyi Li},
+  \bibinfo{person}{Xiaojun Xu}, \bibinfo{person}{Shiliang Zuo},
+  \bibinfo{person}{Qian Chen}, \bibinfo{person}{Pan Zhou},
+  \bibinfo{person}{Benjamin I.~P. Rubinstein}, \bibinfo{person}{Ce Zhang},
+  {and} \bibinfo{person}{Bo Li}.} \bibinfo{year}{2021}\natexlab{}.
+\newblock \showarticletitle{{TRS}: Transferability Reduced Ensemble via
+  Promoting Gradient Diversity and Model Smoothness}. In
+  \bibinfo{booktitle}{\emph{Advances in Neural Information Processing Systems
+  (NeurIPS)}}. \bibinfo{pages}{17642--17655}.
 \newblock
 
 
 \bibitem[Zhang et~al\mbox{.}(2020)]%
         {zhang2020tiki}
-\bibfield{author}{\bibinfo{person}{Chaoyun Zhang}, \bibinfo{person}{Xavier Costa-P{\'e}rez}, {and} \bibinfo{person}{Paul Patras}.} \bibinfo{year}{2020}\natexlab{}.
-\newblock \showarticletitle{{Tiki-Taka}: Attacking and defending deep learning-based intrusion detection systems}. In \bibinfo{booktitle}{\emph{Proceedings of the 2020 ACM SIGSAC conference on cloud computing security workshop}}. \bibinfo{pages}{27--39}.
+\bibfield{author}{\bibinfo{person}{Chaoyun Zhang}, \bibinfo{person}{Xavier
+  Costa-P{\'e}rez}, {and} \bibinfo{person}{Paul Patras}.}
+  \bibinfo{year}{2020}\natexlab{}.
+\newblock \showarticletitle{{Tiki-Taka}: Attacking and defending deep
+  learning-based intrusion detection systems}. In
+  \bibinfo{booktitle}{\emph{Proceedings of the 2020 ACM SIGSAC conference on
+  cloud computing security workshop}}. \bibinfo{pages}{27--39}.
 \newblock
 
 

@@ -80,45 +80,45 @@ Warning--empty publisher in yang2021trs
 Warning--empty address in yang2021trs
 Warning--empty publisher in zhang2020tiki
 Warning--empty address in zhang2020tiki
-You've used 47 entries,
+You've used 46 entries,
             6273 wiz_defined-function locations,
-            1770 strings with 29224 characters,
-and the built_in function-call counts, 57132 in all, are:
-= -- 6834
-> -- 2057
+            1764 strings with 28961 characters,
+and the built_in function-call counts, 55800 in all, are:
+= -- 6622
+> -- 2018
 < -- 2
-+ -- 703
-- -- 696
-* -- 4148
-:= -- 5534
-add.period$ -- 232
-call.type$ -- 47
-change.case$ -- 397
-chr.to.int$ -- 47
-cite$ -- 115
-duplicate$ -- 5147
-empty$ -- 3586
-format.name$ -- 868
-if$ -- 13879
++ -- 690
+- -- 684
+* -- 4056
+:= -- 5417
+add.period$ -- 227
+call.type$ -- 46
+change.case$ -- 389
+chr.to.int$ -- 46
+cite$ -- 114
+duplicate$ -- 5039
+empty$ -- 3510
+format.name$ -- 852
+if$ -- 13525
 int.to.chr$ -- 2
 int.to.str$ -- 1
-missing$ -- 198
-newline$ -- 394
-num.names$ -- 329
-pop$ -- 2237
+missing$ -- 194
+newline$ -- 386
+num.names$ -- 322
+pop$ -- 2200
 preamble$ -- 1
-purify$ -- 772
+purify$ -- 756
 quote$ -- 0
-skip$ -- 1902
+skip$ -- 1864
 stack$ -- 0
-substring$ -- 4044
-swap$ -- 505
+substring$ -- 3932
+swap$ -- 491
 text.length$ -- 2
 text.prefix$ -- 0
 top$ -- 0
-type$ -- 1199
+type$ -- 1183
 warning$ -- 68
-while$ -- 274
+while$ -- 268
 width$ -- 0
-write$ -- 912
+write$ -- 893
 (There were 68 warnings)

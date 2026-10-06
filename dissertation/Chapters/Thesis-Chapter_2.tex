@@ -226,9 +226,9 @@ on. Instead of hardening the classifier, it transforms each input before classif
 order to remove the perturbation, projecting the sample back onto the manifold of normal
 traffic, as \Cref{fig:bg-purification} illustrates. The idea originates with Defense-GAN,
 which projects each input onto the manifold captured by a generative adversarial
-network~\cite{samangouei2018defense}, and it has since been realized in the network domain
-with diffusion models~\cite{alhussien2024advpurrec,li2025adbm} and reconstruction-based
-Transformer autoencoders~\cite{ghadermazi2025gtae}. DEPT's purifier pursues the same
+network~\cite{samangouei2018defense}, and it has since moved to diffusion
+models~\cite{li2025adbm} and to the network domain~\cite{alhussien2024advpurrec,merzouk2024diffusion}.
+DEPT's purifier pursues the same
 goal without being a generative model itself: it is a causal Transformer denoiser,
 trained on matched adversarial-to-clean pairs rather than on a model of the benign
 distribution it could sample from (\Cref{chap:solution}).
@@ -258,8 +258,8 @@ lengths, control flags must be mutually consistent, and sequence numbers must be
 perturbation that ignores these constraints is \emph{unrealizable}: it describes no packet
 that can be sent, so evaluating a detector against it overestimates the real
 threat~\cite{pierazzi2020intriguing,hashemi2019towards}. Recent attack research enforces
-realizability explicitly, whether by verifying every perturbation against protocol
-constraints with an SMT solver, as in PANTS~\cite{jin2025robustifying}, or by generating
+realizability explicitly, whether by using an SMT solver to find packets that satisfy
+the protocol constraints, as in PANTS~\cite{jin2025robustifying}, or by generating
 traffic that is protocol-compliant by design, as in GPMT~\cite{sun2023gpmt} and
 TANTGen~\cite{pissarra2026tantgen}.
 

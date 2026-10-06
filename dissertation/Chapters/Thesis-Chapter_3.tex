@@ -32,8 +32,8 @@ with a handful of black-box methods, it reached evasion rates of up to $35.7\%$
 against models that looked nearly perfect on clean benchmarks. Two lessons carry
 over to this work. First, a detector built from a single differentiable architecture
 inherits a smooth loss surface that gradient-guided search can exploit, directly or
-through a substitute model~\cite{papernot2017practical}; notably, the defenses that
-Tiki-Taka itself proposed, model voting and ensemble adversarial training, already
+through a substitute model~\cite{papernot2017practical}; notably, two of Tiki-Taka's own
+defenses, model voting and ensemble adversarial training, already
 point towards the ensemble route DEPT takes. Second, most of these attacks perturb
 feature vectors without asking whether any real packet sequence maps to the perturbed
 vector, which is exactly the realizability constraint of
@@ -46,10 +46,10 @@ The recent attack literature has therefore moved into the traffic-space, enforci
 realizability either by verification or by construction.
 \textbf{GPMT}~\cite{sun2023gpmt} generates practical malicious traffic with a \ac{GAN}
 under little prior knowledge of the target, constraining its perturbations so that the
-traffic keeps its malicious function. \textbf{PANTS}~\cite{jin2025robustifying}
-couples adversarial search with a \ac{SMT} solver, so that every candidate
-perturbation is formally checked against protocol and semantic constraints before it
-is accepted.
+traffic keeps its malicious function. \textbf{PANTS}~\cite{jin2025robustifying}, a
+white-box tool, couples adversarial search with an \ac{SMT} solver that turns each
+adversarial input into a nearby packet sequence respecting the threat model and protocol
+semantics.
 \textbf{DeepRed}~\cite{hajizadeh2025deepred} embeds a \ac{GAN}-based generator in a command-and-control framework and shows that realizable, protocol-abiding
 attacks degrade the detection rate of ML-based \ac{NIDS} by up to $20\%$, which
 settles that the threat survives the realizability constraint. Most recently,
@@ -57,7 +57,7 @@ settles that the threat survives the realizability constraint. Most recently,
 attack side, injecting semantically consistent perturbations into flow features,
 although still under a white-box assumption. The trend across these works is clear:
 the attack side has converged on generative sequence models operating under explicit
-realizability constraints, and it is precisely to this class that the attacker of this
+realizability constraints, and it is to this class that the attacker of this
 thesis belongs.
 
 \subsection{TANTGen, the Attacker}\label{subsec:rel-tantgen}
@@ -99,26 +99,6 @@ surrogate, never from DEPT, so it can show that the ensemble detects its perturb
 but not measure this claim. \Cref{sec:eval-gradablation} closes that gap with a
 complementary adversary drawn from the standard adversarial-\ac{ML} toolkit.
 
-The canonical instrument is \emph{\ac{PGD}}~\cite{madry2018towards}, which takes
-repeated gradient steps against a model's loss and projects each iterate back onto a
-feasible set. Its strength as an evaluation tool is that the projection step states the
-attacker's budget explicitly. This matters because a weak attack and a
-strong defense are indistinguishable in the reported numbers, and many published
-defenses have been shown to owe their apparent robustness to badly-configured attacks
-rather than to any real property~\cite{carlini2019evaluating, tramer2020adaptive}.
-\Cref{sec:eval-gradablation} therefore reports its attack-strength controls alongside
-its results, including a cross-check against the parameter-free
-\emph{AutoPGD}~\cite{croce2020reliable} of the \ac{ART} library~\cite{nicolae2018adversarial}.
-
-Two features of the network-traffic setting keep this from being a routine application
-of those tools. The perturbation is not a free vector in the model's input space: it must
-remain a sendable packet, so the attacker's variables are bytes of padding and seconds of
-delay, and the budget must be denominated in those units rather than in an $\ell_p$ ball. And the ensemble's two halves
-do not even read the same features, so a perturbation crafted against one must be
-replayed through the other's featurisation to be scored at all. \Cref{sec:eval-gradablation}
-respects both constraints, and \Cref{subsec:eval-gradablation} discusses what they
-imply for how the result should be read.
-
 % #############################################################################
 \section{Training-time Defenses}\label{sec:rel-training}
 Training-time defenses harden a model before it is ever deployed, by sanitizing its
@@ -150,8 +130,9 @@ These too defend a different adversary than DEPT's, and are complementary rather
 competing.
 
 \paragraph{Ensemble-based hardening.}
-A third line builds robustness into the model by combining several learners, which is
-the training-time ancestor of DEPT's detection stage. Beyond Tiki-Taka's voting
+A third line builds robustness into the model itself by combining several learners;
+DEPT's detector is also an ensemble, but one used at inference time to recognize the
+manipulation. Beyond Tiki-Taka's voting
 ensembles~\cite{zhang2020tiki}, \textbf{TRS}~\cite{yang2021trs} showed that low
 transferability among ensemble members can be promoted directly, by regularizing for
 gradient diversity and model smoothness during training, and
@@ -176,16 +157,15 @@ examples themselves: a model trained against impossible feature perturbations is
 hardened against a threat that cannot occur, the \ac{IFM} problem of
 \Cref{subsec:bg-threat-taxonomy} seen from the defender's side. The works of
 \Cref{sec:rel-attacks} close this gap by supplying realizable adversarial data, and
-PANTS in particular demonstrates that inserting its solver-verified examples into the
+PANTS in particular demonstrates that inserting its realizable examples into the
 training loop yields robustness that persists against attacks not seen during
 training~\cite{jin2025robustifying}, while DeepRed argues the same necessity from the
-red-team side~\cite{hajizadeh2025deepred}. DEPT's corpus construction follows this
-line: its detectors are trained on realizable, black-box adversarial traffic generated
-by TANTGen, not on synthetic feature noise (\Cref{sec:sol-pipeline}). The goal,
-however, differs. Adversarially trained classifiers aim to keep classifying
-perturbed attacks as attacks; DEPT aims to recognize the \emph{manipulation} itself,
-and then to undo it, which places its second stage clearly in the inference-time family
-surveyed next.
+red-team side~\cite{hajizadeh2025deepred}. DEPT uses the same kind of data, but not to
+retrain the protected \ac{NIDS}: its own detector and purifier are trained on realizable,
+black-box adversarial traffic generated by TANTGen, not on synthetic feature noise
+(\Cref{sec:sol-pipeline}). Adversarially trained classifiers aim to keep classifying
+perturbed attacks as attacks; DEPT aims to recognize the \emph{manipulation} itself and
+then to undo it, so both of its stages belong to the inference-time family surveyed next.
 
 % #############################################################################
 \section{Inference-time Defenses}\label{sec:rel-inference}
@@ -198,10 +178,11 @@ Certification promises that no perturbation within a bounded region can flip a
 prediction. \textbf{CertTA}~\cite{yan2025certta} made randomized smoothing practical
 for traffic analysis by drawing its smoothing noise jointly over the dimensions an
 attacker actually perturbs, packet timing, sizing, and insertion, and derives
-robustness regions that are meaningful for traffic models.
-\textbf{LipsLev}~\cite{abad2025lipslev} obtains deterministic certificates under a
-bounded Levenshtein distance in a single forward pass, several orders of magnitude
-faster than smoothing-based verification. The guarantee is valuable but bounded by
+robustness regions that are meaningful for traffic models. In text classification,
+\textbf{LipsLev}~\cite{abad2025lipslev} trains 1-Lipschitz classifiers whose certificates
+under a bounded Levenshtein distance cost a single forward pass. Both act in the two
+phases: the model is fine-tuned (CertTA) or trained (LipsLev) for the certificate, which
+is then computed for each prediction. The guarantee is valuable but bounded by
 construction: a certificate covers a radius, and a TANTGen-style manipulation is not
 constrained to stay inside one, since a flow's timing can be stretched by legitimately
 large amounts while remaining perfectly realizable.
@@ -214,11 +195,9 @@ the image and text domains~\cite{li2025adbm,zhang2024causaldiff,li2025diffusedef
 ``causal'' denotes factor attribution rather than the temporal masking DEPT uses. In the
 network domain the idea has been instantiated more
 recently: \textbf{AdvPurRec}~\cite{alhussien2024advpurrec} reconstructs traffic
-features with a diffusion model before they reach the \ac{NIDS}, Merzouk et
+features with a diffusion model before they reach the \ac{NIDS}, and Merzouk et
 al.~\cite{merzouk2024diffusion} map the trade-off that governs such purifiers, where
-more diffusion noise removes more of the perturbation but degrades clean accuracy, and
-\textbf{GTAE-IDS}~\cite{ghadermazi2025gtae} applies a graph-Transformer
-autoencoder to reconstruct traffic representations for real-time detection.
+more diffusion noise removes more of the perturbation but degrades clean accuracy.
 
 DEPT's reconstructor (\Cref{sec:sol-reconstructor}) shares this family's goal but
 departs from it on three axes. The first is
@@ -257,33 +236,32 @@ learners (\Cref{subsec:sol-meta}).
 
 % #############################################################################
 \section{Positioning of DEPT and Gap Analysis}\label{sec:rel-positioning}
-\Cref{fig:rel-landscape} arranges the surveyed defenses along the two axes that
-organized this chapter, the phase at which a defense acts and the space in which it
-operates, and \Cref{tab:rel-comparison} records the same works with their strategies
-and techniques. Read together, they make the pattern of the literature visible. The
-training-time column is well populated, but almost entirely in the feature-space;
-PANTS is the exception that carries realizability into training. The inference-time
-work concentrates on purification, yet every network purifier acts on feature vectors
-and returns feature vectors. Traffic-space at inference time exists, in
-CertTA's certified regions, but certification bounds a radius rather than undoing a
-manipulation.
+\Cref{fig:rel-landscape} arranges the surveyed defenses by what they do and by the space
+in which they work, and \Cref{tab:rel-comparison} lists the same works with their
+techniques. Both also record the phase at which each defense acts. A defense acts at
+training time when it changes the protected model, while or after it is trained, and at
+inference time when it works on each input or prediction and leaves the model as it is;
+certification typically uses both phases (\Cref{sec:rel-inference}).
 
 \begin{figure}[htbp]
     \centering
     \includesvg[width=0.92\textwidth]{./Images/dept_related_landscape}
-    \caption[The surveyed defenses on the phase and space axes.]{The surveyed defenses
-    arranged by the phase at which they act and the space they operate in. Prior work
-    clusters in the feature-space row, with PANTS and CertTA being the exceptions; DEPT spans
-    both phases in the traffic-space row.}
+    \caption[The surveyed defenses by strategy, phase and space.]{The surveyed defenses
+    arranged by what they do (columns, labelled with the phase at which they act) and by
+    the space they work in (rows). Grey boxes are works from outside the network domain.
+    In the traffic-space row, no surveyed defense detects or purifies manipulated traffic;
+    DEPT does both, at inference time and without changing the protected NIDS.}
     \label{fig:rel-landscape}
 \end{figure}
 
 \begin{table}[htbp]
     \centering
     \caption[Comparison of the surveyed adversarial defenses.]{Comparison of the
-    surveyed adversarial defenses and of DEPT. Phase: $\mathcal{T}$ training-time,
-    $\mathcal{I}$ inference-time. Scope: $\Phi$ feature-space,
-    $\Psi$ traffic-space.}
+    surveyed adversarial defenses and of DEPT. Phase: $\mathcal{T}$, the defense changes
+    the protected model, while or after it is trained; $\mathcal{I}$, it acts on each input
+    or prediction and leaves the model unchanged. Scope: $\Phi$ feature-space,
+    $\Psi$ traffic-space. $^\dagger$Outside the network domain, where perturbations act
+    directly on the model's input vector.}
     \label{tab:rel-comparison}
     \footnotesize
     \begin{tabular}{@{}lclccl@{}}
@@ -293,36 +271,29 @@ manipulation.
         Antidote~\cite{rubinstein2009antidote}      & 2009 & Statistical sanitization & $\mathcal{T}$ & $\Phi$ & Robust statistics \\
         Bagging defense~\cite{biggio2011bagging,chen2022collective} & 2011 & Poisoning defense & $\mathcal{T}$ & $\Phi$ & Bagged ensemble \\
         Tiki-Taka (defense)~\cite{zhang2020tiki}    & 2020 & Ensemble hardening       & $\mathcal{T}$ & $\Phi$ & Voting, adv. training \\
-        TRS~\cite{yang2021trs}                      & 2021 & Ensemble hardening       & $\mathcal{T}$ & $\Phi$ & Gradient diversity \\
-        CrowdGuard~\cite{rieger2024crowdguard}      & 2024 & FL backdoor defense      & $\mathcal{T}$ & $\Phi$ & TEE, clustering \\
-        PBP~\cite{nguyen2025pbp}                    & 2025 & Backdoor unlearning      & $\mathcal{T}$ & $\Phi$ & Neuron masking \\
-        PANTS~\cite{jin2025robustifying}            & 2025 & Adversarial training     & $\mathcal{T}$ & $\Psi$ & SMT-verified examples \\
-        Defense-GAN~\cite{samangouei2018defense}    & 2018 & Purification             & $\mathcal{I}$ & $\Phi$ & GAN projection \\
+        TRS$^\dagger$~\cite{yang2021trs}            & 2021 & Ensemble hardening       & $\mathcal{T}$ & $\Phi$ & Gradient diversity \\
+        CrowdGuard$^\dagger$~\cite{rieger2024crowdguard} & 2024 & FL backdoor defense & $\mathcal{T}$ & $\Phi$ & TEE, clustering \\
+        PBP$^\dagger$~\cite{nguyen2025pbp}          & 2025 & Backdoor unlearning      & $\mathcal{T}$ & $\Phi$ & Neuron masking \\
+        PANTS (defense)~\cite{jin2025robustifying}  & 2025 & Adversarial training     & $\mathcal{T}$ & $\Psi$ & SMT-constrained examples \\
+        CertTA~\cite{yan2025certta}                 & 2025 & Certified robustness     & $\mathcal{T} + \mathcal{I}$ & $\Psi$ & Multi-modal smoothing \\
+        LipsLev$^\dagger$~\cite{abad2025lipslev}    & 2025 & Certified robustness     & $\mathcal{T} + \mathcal{I}$ & $\Phi$ & Levenshtein certificates \\
+        Defense-GAN$^\dagger$~\cite{samangouei2018defense} & 2018 & Purification      & $\mathcal{I}$ & $\Phi$ & GAN projection \\
         AdvPurRec~\cite{alhussien2024advpurrec}     & 2024 & Purification             & $\mathcal{I}$ & $\Phi$ & Diffusion \\
-        GTAE-IDS~\cite{ghadermazi2025gtae}          & 2025 & Reconstruction detection & $\mathcal{I}$ & $\Phi$ & Transformer autoencoder \\
-        CertTA~\cite{yan2025certta}                 & 2025 & Certified robustness     & $\mathcal{I}$ & $\Psi$ & Multi-modal smoothing \\
-        LipsLev~\cite{abad2025lipslev}              & 2025 & Certified robustness     & $\mathcal{I}$ & $\Phi$ & Levenshtein certificates \\
+        Merzouk et al.~\cite{merzouk2024diffusion}  & 2025 & Purification             & $\mathcal{I}$ & $\Phi$ & Diffusion \\
         NIDS-CBAD~\cite{kumar2025nids}              & 2025 & Adversarial detection    & $\mathcal{I}$ & $\Phi$ & Domain constraints \\
         AMDS~\cite{olukola2026amds}                 & 2026 & Adversarial detection    & $\mathcal{I}$ & $\Phi$ & Ensemble signals \\
         \midrule
-        \textbf{DEPT} (this thesis)                 & 2026 & Detection $+$ purification & $\mathcal{T} + \mathcal{I}$ & $\Psi$ & \begin{tabular}[t]{@{}l@{}}Realizable corpus, heterogeneous\\ stacking,\\ traffic-space realization\end{tabular} \\
+        \textbf{DEPT} (this thesis)                 & 2026 & Detection $+$ purification & $\mathcal{I}$ & $\Psi$ & \begin{tabular}[t]{@{}l@{}}Heterogeneous stacking,\\ causal purifier,\\ realization into packets\end{tabular} \\
         \bottomrule
     \end{tabular}
 \end{table}
 
-The gap this thesis addresses is the combination. Of the surveyed works, none brings
-together (a) training data that is realizable and generated under a black-box threat
-model, (b) an ensemble that is heterogeneous across architectural families, pairing a
-non-differentiable with a differentiable learner to resist transfer, and (c) a
-purification stage whose output is realized back into protocol-compliant
-packets. Each property exists in isolation: PANTS holds (a) but hardens classifiers
-and performs no purification, TRS and Stewart hold (b) but within homogeneous
-differentiable families or outside the network domain, and AdvPurRec and GTAE-IDS hold
-(c) up to the feature vector, on single datasets and without a streaming constraint.
-DEPT composes all three and is evaluated end to end on a corpus built over ten
-traffic sources and three perturbation modes, with metrics that respect the streaming setting
-(\Cref{chap:evaluation}). One further line is acknowledged but not pursued:
-reinforcement learning is increasingly used to make security responses
-adaptive~\cite{ren2025arcs,wilson2025pro,qiao2025slot}, and retraining against an
-evolving generator is the natural continuation of this work. DEPT as delivered is a
-static defense.
+The figure shows where the surveyed work stops. In the feature-space row, every
+strategy has examples: models are hardened, predictions certified, and manipulated
+vectors detected or purified. In the traffic-space row, a defense either hardens the
+model in advance, as PANTS does by adversarial training, or certifies a prediction within
+a bounded region, as CertTA does. None of them takes a flow as it arrives, decides
+whether it was manipulated and gives the \ac{NIDS} the flow back with the manipulation
+undone. The network purifiers of \Cref{sec:rel-inference} do undo manipulations, but only
+on feature vectors, so their output serves only a detector that reads those same
+features.

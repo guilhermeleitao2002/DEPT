@@ -241,9 +241,9 @@ finding a valid packet for a perturbed vector, the inverse feature mapping
 problem, is often constrained or intractable~\cite{pierazzi2020intriguing}.
 Recent attacks therefore work in the traffic space and enforce realizability by
 verification or by construction. GPMT generates practical malicious traffic
-with a generative adversarial network (GAN)~\cite{sun2023gpmt}; PANTS checks
-every candidate perturbation against protocol constraints with a
-satisfiability modulo theories (SMT) solver~\cite{jin2025robustifying}; DeepRed
+with a generative adversarial network (GAN)~\cite{sun2023gpmt}; PANTS, a
+white-box tool, uses a satisfiability modulo theories (SMT) solver to turn each
+adversarial input into a nearby, valid packet sequence~\cite{jin2025robustifying}; DeepRed
 embeds a GAN-based generator in a command-and-control framework and lowers the
 detection rate of ML-based NIDS by up to
 $20\%$~\cite{hajizadeh2025deepred}; and NetDiffuser brings diffusion models to
@@ -285,15 +285,16 @@ shift~\cite{alotaibi2024mateen}. Their members almost always come from the same
 differentiable family, so every member exposes a gradient and protection rests
 on decorrelating those gradients. Adversarial training~\cite{madry2018towards}
 is only meaningful in networking when the adversarial examples are realizable;
-PANTS adds its solver-verified examples to the training loop and obtains
+PANTS adds its realizable examples to the training loop and obtains
 robustness that holds against attacks not seen in
 training~\cite{jin2025robustifying}.
 
 \paragraph{Inference-time defenses} Certified defenses guarantee that no
 perturbation within a bounded region changes a prediction: CertTA uses
 randomized smoothing over packet timing, sizing and
-insertion~\cite{yan2025certta}, and LipsLev certifies under a bounded
-Levenshtein distance~\cite{abad2025lipslev}. A TANTGen-style
+insertion~\cite{yan2025certta}, and LipsLev certifies text classifiers under a
+bounded Levenshtein distance~\cite{abad2025lipslev}; both also train or
+fine-tune the model for the certificate. A TANTGen-style
 manipulation, however, is not bound to a radius, since a flow's timing can be
 stretched by large amounts and remain realizable. \emph{Purification}
 transforms each input before classification to remove the perturbation,
@@ -301,8 +302,7 @@ projecting it back onto the manifold of normal traffic. The idea goes back to
 Defense-GAN~\cite{samangouei2018defense} and has reached the network domain with
 diffusion models, in AdvPurRec~\cite{alhussien2024advpurrec} and in the work of
 \citet{merzouk2024diffusion}, who map the trade-off between removing more
-perturbation with more noise and losing clean accuracy, and with the
-graph-Transformer autoencoder of GTAE-IDS~\cite{ghadermazi2025gtae}. Other
+perturbation with more noise and losing clean accuracy. Other
 detectors flag violations of inter-feature constraints, as in
 NIDS-CBAD~\cite{kumar2025nids}, which protocol-compliant traffic does not
 produce, or fuse ensemble disagreement and uncertainty, as in
@@ -312,8 +312,10 @@ security~\cite{athalye2018obfuscated}; the value of DEPT's non-differentiable
 member is therefore measured (\Cref{sec:eval-rq1}), not assumed.
 
 \begin{table}[t]
-  \caption{Surveyed defenses and DEPT, by the phase at which they act
-  (T: training, I: inference) and the space they operate in.}
+  \caption{Surveyed defenses and DEPT, by the phase at which they act and the
+  space they operate in. T: the defense changes the protected model; I: it
+  acts on each input or prediction and leaves the model unchanged.
+  $^\dagger$Outside the network domain.}
   \label{tab:related}
   \footnotesize
   \begin{tabular}{@{}llcl@{}}
@@ -322,38 +324,41 @@ member is therefore measured (\Cref{sec:eval-rq1}), not assumed.
     \midrule
     Antidote & Robust-statistics sanitization & T & feature \\
     Tiki-Taka & Voting, ensemble adv.\ training & T & feature \\
-    TRS & Gradient-diverse ensemble & T & feature \\
-    PANTS & SMT-verified adv.\ training & T & traffic \\
-    Defense-GAN & GAN projection & I & feature \\
+    TRS$^\dagger$ & Gradient-diverse ensemble & T & feature \\
+    PANTS & Realizable adv.\ training & T & traffic \\
+    CertTA & Randomized smoothing & T, I & traffic \\
+    Defense-GAN$^\dagger$ & GAN projection & I & feature \\
     AdvPurRec & Diffusion purification & I & feature \\
     Merzouk et al. & Diffusion purification & I & feature \\
-    GTAE-IDS & Transformer autoencoder & I & feature \\
-    CertTA & Randomized smoothing & I & traffic \\
     NIDS-CBAD & Domain-constraint checks & I & feature \\
     AMDS & Fused ensemble signals & I & feature \\
     \midrule
-    \textbf{DEPT} & Stacking, realized purification & T, I & traffic \\
+    \textbf{DEPT} & Stacking, realized purification & I & traffic \\
     \bottomrule
   \end{tabular}
 \end{table}
 
 \subsection{The Gap}
 
-\Cref{tab:related} summarizes the surveyed defenses. None brings together
-(a)~training data that is realizable and generated under a black-box threat
-model, (b)~an ensemble that is heterogeneous across architectural families,
-pairing a non-differentiable with a differentiable learner, and (c)~a
-purification stage whose output is realized back into protocol-compliant
-packets. PANTS has (a) but hardens classifiers and does not purify; TRS and
-Stewart have (b), but within differentiable families or outside networking;
-AdvPurRec and GTAE-IDS have (c) only up to the feature vector, on single
-datasets and without a streaming constraint. DEPT combines the three and works
-packet by packet. Its purifier also differs from those in the Defense-GAN
-tradition in two ways. It learns from matched adversarial-to-clean flow pairs,
-a stronger supervision that a paired generator such as TANTGen makes available,
-instead of from clean data alone. And it corrects each packet from the
-preceding ones in a single causal pass, whereas a diffusion purifier needs the
-whole input before it can denoise it.
+\Cref{tab:related} summarizes the surveyed defenses. In the feature space,
+every kind of defense has examples. In the traffic space, PANTS hardens the
+model before deployment and CertTA certifies predictions within a bound, but no
+surveyed defense takes a flow as it arrives, decides whether it was manipulated
+and returns it with the manipulation undone. The network purifiers do this
+only on feature vectors, so their output serves only a detector that reads
+those features. DEPT takes this position: it works at inference time, in front
+of a NIDS that it leaves unchanged, and returns valid packets. Its other
+choices follow from it. Edited traffic must leave as valid packets, hence the
+realization step; a learned detector in front of the NIDS can itself be
+attacked through transfer, hence the heterogeneous ensemble; and both stages
+need examples of the manipulation, hence training on TANTGen's traffic, which
+fits DEPT's own models and does not retrain the protected NIDS. Its purifier
+also differs from those in the Defense-GAN tradition in two ways. It learns
+from matched adversarial-to-clean flow pairs, a stronger supervision that a
+paired generator such as TANTGen makes available, instead of from clean data
+alone. And it corrects each packet from the preceding ones in a single causal
+pass, whereas a diffusion purifier needs the whole input before it can denoise
+it.
 
 %% ============================================================================
 \section{Threat Model}\label{sec:threat}
