@@ -1,0 +1,518 @@
+
+════════════════════════════════════════════════════════════════════════════════════
+ DEPT — Gradient-guided evasion  (PGD on the TCN → scored on RF / TCN / stack)
+════════════════════════════════════════════════════════════════════════════════════
+ Config              /mnt/nas/inesc/gleitao/DEPT/config/gradient_ablation.yaml
+ Attack scope        all sources
+ Flows/source        300
+ Budget grid         b0, b8, b32, b128, b512, b1460
+ Threat model        white-box PGD on the TCN; no gradient path through the RF
+ Output dir          /mnt/nas/inesc/gleitao/DEPT/data/models/gradient_ablation
+════════════════════════════════════════════════════════════════════════════════════
+2026-07-20 12:22:33,713 [INFO] src.models.gradient_ablation.evaluate: loading trained targets
+2026-07-20 12:22:39,844 [INFO] src.models.gradient_ablation.evaluate: scoring benign reference flows (matched-FPR thresholds)
+2026-07-20 12:23:08,379 [INFO] src.models.gradient_ablation.pipeline: brute_force: scored 200 benign reference flows
+2026-07-20 12:23:29,907 [INFO] src.models.gradient_ablation.pipeline: ddos: scored 200 benign reference flows
+2026-07-20 12:23:48,551 [INFO] src.models.gradient_ablation.pipeline: mirai: scored 200 benign reference flows
+2026-07-20 12:24:09,049 [INFO] src.models.gradient_ablation.pipeline: portscan: scored 200 benign reference flows
+2026-07-20 12:24:27,668 [INFO] src.models.gradient_ablation.pipeline: ssdp_flood: scored 200 benign reference flows
+2026-07-20 12:24:50,445 [INFO] src.models.gradient_ablation.pipeline: dns_ddos: scored 200 benign reference flows
+2026-07-20 12:25:09,192 [INFO] src.models.gradient_ablation.pipeline: ldap_ddos: scored 200 benign reference flows
+2026-07-20 12:25:29,021 [INFO] src.models.gradient_ablation.pipeline: ntp_ddos: scored 200 benign reference flows
+2026-07-20 12:25:47,568 [INFO] src.models.gradient_ablation.pipeline: ssdp_ddos: scored 200 benign reference flows
+2026-07-20 12:26:07,865 [INFO] src.models.gradient_ablation.pipeline: syn_ddos: scored 200 benign reference flows
+2026-07-20 12:26:07,958 [INFO] src.models.gradient_ablation.evaluate: selecting adversarial test flows
+2026-07-20 12:26:39,340 [INFO] src.models.gradient_ablation.features: brute_force_adv_both: selected 300 flows
+2026-07-20 12:26:39,376 [INFO] src.models.gradient_ablation.features: brute_force_adv_iat: selected 300 flows
+2026-07-20 12:26:39,410 [INFO] src.models.gradient_ablation.features: brute_force_adv_size: selected 300 flows
+2026-07-20 12:26:39,531 [INFO] src.models.gradient_ablation.features: ddos_adv_both: selected 300 flows
+2026-07-20 12:26:39,646 [INFO] src.models.gradient_ablation.features: ddos_adv_iat: selected 300 flows
+2026-07-20 12:26:39,743 [INFO] src.models.gradient_ablation.features: ddos_adv_size: selected 300 flows
+2026-07-20 12:26:39,769 [INFO] src.models.gradient_ablation.features: dns_ddos_adv_both: selected 300 flows
+2026-07-20 12:26:39,793 [INFO] src.models.gradient_ablation.features: dns_ddos_adv_iat: selected 300 flows
+2026-07-20 12:26:39,817 [INFO] src.models.gradient_ablation.features: dns_ddos_adv_size: selected 300 flows
+2026-07-20 12:26:41,308 [INFO] src.models.gradient_ablation.features: ldap_ddos_adv_both: selected 300 flows
+2026-07-20 12:26:42,806 [INFO] src.models.gradient_ablation.features: ldap_ddos_adv_iat: selected 300 flows
+2026-07-20 12:26:44,316 [INFO] src.models.gradient_ablation.features: ldap_ddos_adv_size: selected 300 flows
+2026-07-20 12:26:44,367 [INFO] src.models.gradient_ablation.features: mirai_adv_both: selected 300 flows
+2026-07-20 12:26:44,411 [INFO] src.models.gradient_ablation.features: mirai_adv_iat: selected 300 flows
+2026-07-20 12:26:44,453 [INFO] src.models.gradient_ablation.features: mirai_adv_size: selected 300 flows
+2026-07-20 12:26:44,504 [INFO] src.models.gradient_ablation.features: ntp_ddos_adv_both: selected 300 flows
+2026-07-20 12:26:44,553 [INFO] src.models.gradient_ablation.features: ntp_ddos_adv_iat: selected 300 flows
+2026-07-20 12:26:44,600 [INFO] src.models.gradient_ablation.features: ntp_ddos_adv_size: selected 300 flows
+2026-07-20 12:26:45,080 [INFO] src.models.gradient_ablation.features: portscan_adv_both: selected 300 flows
+2026-07-20 12:26:45,559 [INFO] src.models.gradient_ablation.features: portscan_adv_iat: selected 300 flows
+2026-07-20 12:26:46,032 [INFO] src.models.gradient_ablation.features: portscan_adv_size: selected 300 flows
+2026-07-20 12:26:46,873 [INFO] src.models.gradient_ablation.features: ssdp_ddos_adv_both: selected 300 flows
+2026-07-20 12:26:47,702 [INFO] src.models.gradient_ablation.features: ssdp_ddos_adv_iat: selected 300 flows
+2026-07-20 12:26:48,523 [INFO] src.models.gradient_ablation.features: ssdp_ddos_adv_size: selected 300 flows
+2026-07-20 12:26:48,724 [INFO] src.models.gradient_ablation.features: ssdp_flood_adv_both: selected 300 flows
+2026-07-20 12:26:48,923 [INFO] src.models.gradient_ablation.features: ssdp_flood_adv_iat: selected 300 flows
+2026-07-20 12:26:49,183 [INFO] src.models.gradient_ablation.features: ssdp_flood_adv_size: selected 300 flows
+2026-07-20 12:26:53,427 [INFO] src.models.gradient_ablation.features: syn_ddos_adv_both: selected 300 flows
+2026-07-20 12:26:57,638 [INFO] src.models.gradient_ablation.features: syn_ddos_adv_iat: selected 300 flows
+2026-07-20 12:27:01,863 [INFO] src.models.gradient_ablation.features: syn_ddos_adv_size: selected 300 flows
+2026-07-20 12:27:01,998 [INFO] src.models.gradient_ablation.evaluate: brute_force_adv_both: building sidecar from /mnt/nas/inesc/gleitao/DEPT/data/adversarial/brute_force/brute_force_adversarial_both.pcap
+2026-07-20 12:27:53,651 [INFO] src.models.gradient_ablation.features: brute_force_adv_both: sidecar 300/300 flows, 11386 packets (274882 scanned)
+2026-07-20 12:27:53,774 [INFO] src.models.gradient_ablation.evaluate: brute_force_adv_both: sidecar verified against rf_checkpoints.npy (max_abs_diff=0)
+2026-07-20 12:27:54,028 [INFO] src.models.gradient_ablation.evaluate: brute_force_adv_both: ART AutoPGD attack-strength cross-check
+2026-07-20 12:27:55,384 [INFO] art.config: set ART_DATA_PATH to /home/gleitao/.art/data
+2026-07-20 12:27:59,492 [INFO] art.estimators.classification.pytorch: Inferred 1 hidden layers on PyTorch classifier.
+2026-07-20 12:28:00,290 [INFO] art.estimators.classification.pytorch: Inferred 1 hidden layers on PyTorch classifier.
+2026-07-20 12:28:00,306 [INFO] art.estimators.classification.pytorch: Inferred 1 hidden layers on PyTorch classifier.
+2026-07-20 12:28:00,320 [INFO] art.estimators.classification.pytorch: Inferred 1 hidden layers on PyTorch classifier.
+2026-07-20 12:28:00,332 [INFO] art.estimators.classification.pytorch: Inferred 1 hidden layers on PyTorch classifier.
+2026-07-20 12:28:00,344 [INFO] art.estimators.classification.pytorch: Inferred 1 hidden layers on PyTorch classifier.
+2026-07-20 12:28:00,355 [INFO] art.estimators.classification.pytorch: Inferred 1 hidden layers on PyTorch classifier.
+2026-07-20 12:28:00,366 [INFO] art.estimators.classification.pytorch: Inferred 1 hidden layers on PyTorch classifier.
+2026-07-20 12:28:00,377 [INFO] art.estimators.classification.pytorch: Inferred 1 hidden layers on PyTorch classifier.
+2026-07-20 12:28:00,388 [INFO] art.estimators.classification.pytorch: Inferred 1 hidden layers on PyTorch classifier.
+2026-07-20 12:28:00,399 [INFO] art.estimators.classification.pytorch: Inferred 1 hidden layers on PyTorch classifier.
+2026-07-20 12:28:00,410 [INFO] art.estimators.classification.pytorch: Inferred 1 hidden layers on PyTorch classifier.
+2026-07-20 12:28:00,421 [INFO] art.estimators.classification.pytorch: Inferred 1 hidden layers on PyTorch classifier.
+2026-07-20 12:28:00,432 [INFO] art.estimators.classification.pytorch: Inferred 1 hidden layers on PyTorch classifier.
+2026-07-20 12:28:00,443 [INFO] art.estimators.classification.pytorch: Inferred 1 hidden layers on PyTorch classifier.
+2026-07-20 12:28:00,454 [INFO] art.estimators.classification.pytorch: Inferred 1 hidden layers on PyTorch classifier.
+2026-07-20 12:28:32,029 [INFO] src.models.gradient_ablation.pipeline: brute_force_adv_both: attacked 32/300 flows
+2026-07-20 12:28:56,031 [INFO] src.models.gradient_ablation.pipeline: brute_force_adv_both: attacked 64/300 flows
+2026-07-20 12:29:18,391 [INFO] src.models.gradient_ablation.pipeline: brute_force_adv_both: attacked 96/300 flows
+2026-07-20 12:29:40,292 [INFO] src.models.gradient_ablation.pipeline: brute_force_adv_both: attacked 128/300 flows
+2026-07-20 12:30:04,632 [INFO] src.models.gradient_ablation.pipeline: brute_force_adv_both: attacked 160/300 flows
+2026-07-20 12:30:28,976 [INFO] src.models.gradient_ablation.pipeline: brute_force_adv_both: attacked 192/300 flows
+2026-07-20 12:30:53,590 [INFO] src.models.gradient_ablation.pipeline: brute_force_adv_both: attacked 224/300 flows
+2026-07-20 12:31:18,595 [INFO] src.models.gradient_ablation.pipeline: brute_force_adv_both: attacked 256/300 flows
+2026-07-20 12:31:43,750 [INFO] src.models.gradient_ablation.pipeline: brute_force_adv_both: attacked 288/300 flows
+2026-07-20 12:32:06,519 [INFO] src.models.gradient_ablation.pipeline: brute_force_adv_both: attacked 300/300 flows
+2026-07-20 12:32:13,333 [INFO] src.models.gradient_ablation.evaluate: brute_force_adv_iat: building sidecar from /mnt/nas/inesc/gleitao/DEPT/data/adversarial/brute_force/brute_force_adversarial_iat.pcap
+2026-07-20 12:33:05,717 [INFO] src.models.gradient_ablation.features: brute_force_adv_iat: sidecar 300/300 flows, 12167 packets (274882 scanned)
+2026-07-20 12:33:05,864 [INFO] src.models.gradient_ablation.evaluate: brute_force_adv_iat: sidecar verified against rf_checkpoints.npy (max_abs_diff=0)
+2026-07-20 12:33:30,363 [INFO] src.models.gradient_ablation.pipeline: brute_force_adv_iat: attacked 32/300 flows
+2026-07-20 12:33:54,686 [INFO] src.models.gradient_ablation.pipeline: brute_force_adv_iat: attacked 64/300 flows
+2026-07-20 12:34:18,834 [INFO] src.models.gradient_ablation.pipeline: brute_force_adv_iat: attacked 96/300 flows
+2026-07-20 12:34:41,594 [INFO] src.models.gradient_ablation.pipeline: brute_force_adv_iat: attacked 128/300 flows
+2026-07-20 12:35:05,421 [INFO] src.models.gradient_ablation.pipeline: brute_force_adv_iat: attacked 160/300 flows
+2026-07-20 12:35:30,493 [INFO] src.models.gradient_ablation.pipeline: brute_force_adv_iat: attacked 192/300 flows
+2026-07-20 12:35:54,716 [INFO] src.models.gradient_ablation.pipeline: brute_force_adv_iat: attacked 224/300 flows
+2026-07-20 12:36:18,905 [INFO] src.models.gradient_ablation.pipeline: brute_force_adv_iat: attacked 256/300 flows
+2026-07-20 12:36:44,043 [INFO] src.models.gradient_ablation.pipeline: brute_force_adv_iat: attacked 288/300 flows
+2026-07-20 12:37:08,290 [INFO] src.models.gradient_ablation.pipeline: brute_force_adv_iat: attacked 300/300 flows
+2026-07-20 12:37:12,769 [INFO] src.models.gradient_ablation.evaluate: brute_force_adv_size: building sidecar from /mnt/nas/inesc/gleitao/DEPT/data/adversarial/brute_force/brute_force_adversarial_size.pcap
+2026-07-20 12:38:05,045 [INFO] src.models.gradient_ablation.features: brute_force_adv_size: sidecar 300/300 flows, 11680 packets (274882 scanned)
+2026-07-20 12:38:05,208 [INFO] src.models.gradient_ablation.evaluate: brute_force_adv_size: sidecar verified against rf_checkpoints.npy (max_abs_diff=0)
+2026-07-20 12:38:28,681 [INFO] src.models.gradient_ablation.pipeline: brute_force_adv_size: attacked 32/300 flows
+2026-07-20 12:38:49,177 [INFO] src.models.gradient_ablation.pipeline: brute_force_adv_size: attacked 64/300 flows
+2026-07-20 12:39:13,752 [INFO] src.models.gradient_ablation.pipeline: brute_force_adv_size: attacked 96/300 flows
+2026-07-20 12:39:37,950 [INFO] src.models.gradient_ablation.pipeline: brute_force_adv_size: attacked 128/300 flows
+2026-07-20 12:40:02,529 [INFO] src.models.gradient_ablation.pipeline: brute_force_adv_size: attacked 160/300 flows
+2026-07-20 12:40:27,041 [INFO] src.models.gradient_ablation.pipeline: brute_force_adv_size: attacked 192/300 flows
+2026-07-20 12:40:51,747 [INFO] src.models.gradient_ablation.pipeline: brute_force_adv_size: attacked 224/300 flows
+2026-07-20 12:41:16,228 [INFO] src.models.gradient_ablation.pipeline: brute_force_adv_size: attacked 256/300 flows
+2026-07-20 12:41:39,971 [INFO] src.models.gradient_ablation.pipeline: brute_force_adv_size: attacked 288/300 flows
+2026-07-20 12:42:02,829 [INFO] src.models.gradient_ablation.pipeline: brute_force_adv_size: attacked 300/300 flows
+2026-07-20 12:42:07,297 [INFO] src.models.gradient_ablation.evaluate: ddos_adv_both: building sidecar from /mnt/nas/inesc/gleitao/DEPT/data/adversarial/ddos/ddos_adversarial_both.pcap
+2026-07-20 12:45:40,113 [INFO] src.models.gradient_ablation.features: ddos_adv_both: sidecar 300/300 flows, 7642 packets (1000000 scanned)
+2026-07-20 12:45:40,440 [INFO] src.models.gradient_ablation.evaluate: ddos_adv_both: sidecar verified against rf_checkpoints.npy (max_abs_diff=0)
+2026-07-20 12:46:04,979 [INFO] src.models.gradient_ablation.pipeline: ddos_adv_both: attacked 32/300 flows
+2026-07-20 12:46:29,407 [INFO] src.models.gradient_ablation.pipeline: ddos_adv_both: attacked 64/300 flows
+2026-07-20 12:46:53,421 [INFO] src.models.gradient_ablation.pipeline: ddos_adv_both: attacked 96/300 flows
+2026-07-20 12:47:18,499 [INFO] src.models.gradient_ablation.pipeline: ddos_adv_both: attacked 128/300 flows
+2026-07-20 12:47:42,487 [INFO] src.models.gradient_ablation.pipeline: ddos_adv_both: attacked 160/300 flows
+2026-07-20 12:48:06,953 [INFO] src.models.gradient_ablation.pipeline: ddos_adv_both: attacked 192/300 flows
+2026-07-20 12:48:31,932 [INFO] src.models.gradient_ablation.pipeline: ddos_adv_both: attacked 224/300 flows
+2026-07-20 12:48:56,739 [INFO] src.models.gradient_ablation.pipeline: ddos_adv_both: attacked 256/300 flows
+2026-07-20 12:49:21,195 [INFO] src.models.gradient_ablation.pipeline: ddos_adv_both: attacked 288/300 flows
+2026-07-20 12:49:46,036 [INFO] src.models.gradient_ablation.pipeline: ddos_adv_both: attacked 300/300 flows
+2026-07-20 12:49:51,229 [INFO] src.models.gradient_ablation.evaluate: ddos_adv_iat: building sidecar from /mnt/nas/inesc/gleitao/DEPT/data/adversarial/ddos/ddos_adversarial_iat.pcap
+2026-07-20 12:52:58,622 [INFO] src.models.gradient_ablation.features: ddos_adv_iat: sidecar 300/300 flows, 7863 packets (1000000 scanned)
+2026-07-20 12:52:58,926 [INFO] src.models.gradient_ablation.evaluate: ddos_adv_iat: sidecar verified against rf_checkpoints.npy (max_abs_diff=0)
+2026-07-20 12:53:23,691 [INFO] src.models.gradient_ablation.pipeline: ddos_adv_iat: attacked 32/300 flows
+2026-07-20 12:53:47,881 [INFO] src.models.gradient_ablation.pipeline: ddos_adv_iat: attacked 64/300 flows
+2026-07-20 12:54:11,845 [INFO] src.models.gradient_ablation.pipeline: ddos_adv_iat: attacked 96/300 flows
+2026-07-20 12:54:36,598 [INFO] src.models.gradient_ablation.pipeline: ddos_adv_iat: attacked 128/300 flows
+2026-07-20 12:55:01,437 [INFO] src.models.gradient_ablation.pipeline: ddos_adv_iat: attacked 160/300 flows
+2026-07-20 12:55:26,065 [INFO] src.models.gradient_ablation.pipeline: ddos_adv_iat: attacked 192/300 flows
+2026-07-20 12:55:51,243 [INFO] src.models.gradient_ablation.pipeline: ddos_adv_iat: attacked 224/300 flows
+2026-07-20 12:56:15,615 [INFO] src.models.gradient_ablation.pipeline: ddos_adv_iat: attacked 256/300 flows
+2026-07-20 12:56:39,454 [INFO] src.models.gradient_ablation.pipeline: ddos_adv_iat: attacked 288/300 flows
+2026-07-20 12:57:02,802 [INFO] src.models.gradient_ablation.pipeline: ddos_adv_iat: attacked 300/300 flows
+2026-07-20 12:57:06,344 [INFO] src.models.gradient_ablation.evaluate: ddos_adv_size: building sidecar from /mnt/nas/inesc/gleitao/DEPT/data/adversarial/ddos/ddos_adversarial_size.pcap
+2026-07-20 12:59:43,416 [INFO] src.models.gradient_ablation.features: ddos_adv_size: sidecar 300/300 flows, 6650 packets (740859 scanned)
+2026-07-20 12:59:43,685 [INFO] src.models.gradient_ablation.evaluate: ddos_adv_size: sidecar verified against rf_checkpoints.npy (max_abs_diff=0)
+2026-07-20 13:00:08,037 [INFO] src.models.gradient_ablation.pipeline: ddos_adv_size: attacked 32/300 flows
+2026-07-20 13:00:31,814 [INFO] src.models.gradient_ablation.pipeline: ddos_adv_size: attacked 64/300 flows
+2026-07-20 13:00:56,101 [INFO] src.models.gradient_ablation.pipeline: ddos_adv_size: attacked 96/300 flows
+2026-07-20 13:01:19,667 [INFO] src.models.gradient_ablation.pipeline: ddos_adv_size: attacked 128/300 flows
+2026-07-20 13:01:43,704 [INFO] src.models.gradient_ablation.pipeline: ddos_adv_size: attacked 160/300 flows
+2026-07-20 13:02:07,867 [INFO] src.models.gradient_ablation.pipeline: ddos_adv_size: attacked 192/300 flows
+2026-07-20 13:02:31,730 [INFO] src.models.gradient_ablation.pipeline: ddos_adv_size: attacked 224/300 flows
+2026-07-20 13:02:56,202 [INFO] src.models.gradient_ablation.pipeline: ddos_adv_size: attacked 256/300 flows
+2026-07-20 13:03:20,549 [INFO] src.models.gradient_ablation.pipeline: ddos_adv_size: attacked 288/300 flows
+2026-07-20 13:03:44,315 [INFO] src.models.gradient_ablation.pipeline: ddos_adv_size: attacked 300/300 flows
+2026-07-20 13:03:47,712 [INFO] src.models.gradient_ablation.evaluate: dns_ddos_adv_both: building sidecar from /mnt/nas/inesc/gleitao/DEPT/data/adversarial/dns_ddos/dns_ddos_adversarial_both.pcap
+2026-07-20 13:07:25,530 [INFO] src.models.gradient_ablation.features: dns_ddos_adv_both: sidecar 300/300 flows, 44560 packets (1000000 scanned)
+2026-07-20 13:07:25,765 [INFO] src.models.gradient_ablation.evaluate: dns_ddos_adv_both: sidecar verified against rf_checkpoints.npy (max_abs_diff=0)
+2026-07-20 13:07:52,930 [INFO] src.models.gradient_ablation.pipeline: dns_ddos_adv_both: attacked 32/300 flows
+2026-07-20 13:08:19,450 [INFO] src.models.gradient_ablation.pipeline: dns_ddos_adv_both: attacked 64/300 flows
+2026-07-20 13:08:45,909 [INFO] src.models.gradient_ablation.pipeline: dns_ddos_adv_both: attacked 96/300 flows
+2026-07-20 13:09:13,029 [INFO] src.models.gradient_ablation.pipeline: dns_ddos_adv_both: attacked 128/300 flows
+2026-07-20 13:09:39,459 [INFO] src.models.gradient_ablation.pipeline: dns_ddos_adv_both: attacked 160/300 flows
+2026-07-20 13:10:06,696 [INFO] src.models.gradient_ablation.pipeline: dns_ddos_adv_both: attacked 192/300 flows
+2026-07-20 13:10:33,115 [INFO] src.models.gradient_ablation.pipeline: dns_ddos_adv_both: attacked 224/300 flows
+2026-07-20 13:10:59,786 [INFO] src.models.gradient_ablation.pipeline: dns_ddos_adv_both: attacked 256/300 flows
+2026-07-20 13:11:26,499 [INFO] src.models.gradient_ablation.pipeline: dns_ddos_adv_both: attacked 288/300 flows
+2026-07-20 13:11:51,676 [INFO] src.models.gradient_ablation.pipeline: dns_ddos_adv_both: attacked 300/300 flows
+2026-07-20 13:11:58,808 [INFO] src.models.gradient_ablation.evaluate: dns_ddos_adv_iat: building sidecar from /mnt/nas/inesc/gleitao/DEPT/data/adversarial/dns_ddos/dns_ddos_adversarial_iat.pcap
+2026-07-20 13:15:37,740 [INFO] src.models.gradient_ablation.features: dns_ddos_adv_iat: sidecar 300/300 flows, 42770 packets (1000000 scanned)
+2026-07-20 13:15:37,952 [INFO] src.models.gradient_ablation.evaluate: dns_ddos_adv_iat: sidecar verified against rf_checkpoints.npy (max_abs_diff=0)
+2026-07-20 13:16:04,888 [INFO] src.models.gradient_ablation.pipeline: dns_ddos_adv_iat: attacked 32/300 flows
+2026-07-20 13:16:32,340 [INFO] src.models.gradient_ablation.pipeline: dns_ddos_adv_iat: attacked 64/300 flows
+2026-07-20 13:16:59,467 [INFO] src.models.gradient_ablation.pipeline: dns_ddos_adv_iat: attacked 96/300 flows
+2026-07-20 13:17:26,792 [INFO] src.models.gradient_ablation.pipeline: dns_ddos_adv_iat: attacked 128/300 flows
+2026-07-20 13:17:53,715 [INFO] src.models.gradient_ablation.pipeline: dns_ddos_adv_iat: attacked 160/300 flows
+2026-07-20 13:18:20,129 [INFO] src.models.gradient_ablation.pipeline: dns_ddos_adv_iat: attacked 192/300 flows
+2026-07-20 13:18:47,247 [INFO] src.models.gradient_ablation.pipeline: dns_ddos_adv_iat: attacked 224/300 flows
+2026-07-20 13:19:14,233 [INFO] src.models.gradient_ablation.pipeline: dns_ddos_adv_iat: attacked 256/300 flows
+2026-07-20 13:19:40,744 [INFO] src.models.gradient_ablation.pipeline: dns_ddos_adv_iat: attacked 288/300 flows
+2026-07-20 13:20:05,270 [INFO] src.models.gradient_ablation.pipeline: dns_ddos_adv_iat: attacked 300/300 flows
+2026-07-20 13:20:08,490 [INFO] src.models.gradient_ablation.evaluate: dns_ddos_adv_size: building sidecar from /mnt/nas/inesc/gleitao/DEPT/data/adversarial/dns_ddos/dns_ddos_adversarial_size.pcap
+2026-07-20 13:23:48,905 [INFO] src.models.gradient_ablation.features: dns_ddos_adv_size: sidecar 300/300 flows, 45032 packets (1000000 scanned)
+2026-07-20 13:23:49,097 [INFO] src.models.gradient_ablation.evaluate: dns_ddos_adv_size: sidecar verified against rf_checkpoints.npy (max_abs_diff=0)
+2026-07-20 13:24:17,234 [INFO] src.models.gradient_ablation.pipeline: dns_ddos_adv_size: attacked 32/300 flows
+2026-07-20 13:24:43,851 [INFO] src.models.gradient_ablation.pipeline: dns_ddos_adv_size: attacked 64/300 flows
+2026-07-20 13:25:11,012 [INFO] src.models.gradient_ablation.pipeline: dns_ddos_adv_size: attacked 96/300 flows
+2026-07-20 13:25:37,696 [INFO] src.models.gradient_ablation.pipeline: dns_ddos_adv_size: attacked 128/300 flows
+2026-07-20 13:26:04,515 [INFO] src.models.gradient_ablation.pipeline: dns_ddos_adv_size: attacked 160/300 flows
+2026-07-20 13:26:31,398 [INFO] src.models.gradient_ablation.pipeline: dns_ddos_adv_size: attacked 192/300 flows
+2026-07-20 13:26:58,063 [INFO] src.models.gradient_ablation.pipeline: dns_ddos_adv_size: attacked 224/300 flows
+2026-07-20 13:27:25,291 [INFO] src.models.gradient_ablation.pipeline: dns_ddos_adv_size: attacked 256/300 flows
+2026-07-20 13:27:51,940 [INFO] src.models.gradient_ablation.pipeline: dns_ddos_adv_size: attacked 288/300 flows
+2026-07-20 13:28:16,646 [INFO] src.models.gradient_ablation.pipeline: dns_ddos_adv_size: attacked 300/300 flows
+2026-07-20 13:28:20,380 [INFO] src.models.gradient_ablation.evaluate: ldap_ddos_adv_both: building sidecar from /mnt/nas/inesc/gleitao/DEPT/data/adversarial/ldap_ddos/ldap_ddos_adversarial_both.pcap
+2026-07-20 13:32:03,146 [INFO] src.models.gradient_ablation.features: ldap_ddos_adv_both: sidecar 300/300 flows, 610 packets (1000000 scanned)
+2026-07-20 13:32:05,409 [INFO] src.models.gradient_ablation.evaluate: ldap_ddos_adv_both: sidecar verified against rf_checkpoints.npy (max_abs_diff=0)
+2026-07-20 13:32:30,951 [INFO] src.models.gradient_ablation.pipeline: ldap_ddos_adv_both: attacked 32/300 flows
+2026-07-20 13:32:54,914 [INFO] src.models.gradient_ablation.pipeline: ldap_ddos_adv_both: attacked 64/300 flows
+2026-07-20 13:33:17,781 [INFO] src.models.gradient_ablation.pipeline: ldap_ddos_adv_both: attacked 96/300 flows
+2026-07-20 13:33:39,894 [INFO] src.models.gradient_ablation.pipeline: ldap_ddos_adv_both: attacked 128/300 flows
+2026-07-20 13:34:01,332 [INFO] src.models.gradient_ablation.pipeline: ldap_ddos_adv_both: attacked 160/300 flows
+2026-07-20 13:34:23,948 [INFO] src.models.gradient_ablation.pipeline: ldap_ddos_adv_both: attacked 192/300 flows
+2026-07-20 13:34:46,224 [INFO] src.models.gradient_ablation.pipeline: ldap_ddos_adv_both: attacked 224/300 flows
+2026-07-20 13:35:09,179 [INFO] src.models.gradient_ablation.pipeline: ldap_ddos_adv_both: attacked 256/300 flows
+2026-07-20 13:35:33,375 [INFO] src.models.gradient_ablation.pipeline: ldap_ddos_adv_both: attacked 288/300 flows
+2026-07-20 13:35:55,685 [INFO] src.models.gradient_ablation.pipeline: ldap_ddos_adv_both: attacked 300/300 flows
+2026-07-20 13:35:59,113 [INFO] src.models.gradient_ablation.evaluate: ldap_ddos_adv_iat: building sidecar from /mnt/nas/inesc/gleitao/DEPT/data/adversarial/ldap_ddos/ldap_ddos_adversarial_iat.pcap
+2026-07-20 13:39:40,299 [INFO] src.models.gradient_ablation.features: ldap_ddos_adv_iat: sidecar 300/300 flows, 600 packets (1000000 scanned)
+2026-07-20 13:39:42,348 [INFO] src.models.gradient_ablation.evaluate: ldap_ddos_adv_iat: sidecar verified against rf_checkpoints.npy (max_abs_diff=0)
+2026-07-20 13:40:07,488 [INFO] src.models.gradient_ablation.pipeline: ldap_ddos_adv_iat: attacked 32/300 flows
+2026-07-20 13:40:30,678 [INFO] src.models.gradient_ablation.pipeline: ldap_ddos_adv_iat: attacked 64/300 flows
+2026-07-20 13:40:52,503 [INFO] src.models.gradient_ablation.pipeline: ldap_ddos_adv_iat: attacked 96/300 flows
+2026-07-20 13:41:13,156 [INFO] src.models.gradient_ablation.pipeline: ldap_ddos_adv_iat: attacked 128/300 flows
+2026-07-20 13:41:34,740 [INFO] src.models.gradient_ablation.pipeline: ldap_ddos_adv_iat: attacked 160/300 flows
+2026-07-20 13:41:57,221 [INFO] src.models.gradient_ablation.pipeline: ldap_ddos_adv_iat: attacked 192/300 flows
+2026-07-20 13:42:18,593 [INFO] src.models.gradient_ablation.pipeline: ldap_ddos_adv_iat: attacked 224/300 flows
+2026-07-20 13:42:40,362 [INFO] src.models.gradient_ablation.pipeline: ldap_ddos_adv_iat: attacked 256/300 flows
+2026-07-20 13:43:03,867 [INFO] src.models.gradient_ablation.pipeline: ldap_ddos_adv_iat: attacked 288/300 flows
+2026-07-20 13:43:25,382 [INFO] src.models.gradient_ablation.pipeline: ldap_ddos_adv_iat: attacked 300/300 flows
+2026-07-20 13:43:30,329 [INFO] src.models.gradient_ablation.evaluate: ldap_ddos_adv_size: building sidecar from /mnt/nas/inesc/gleitao/DEPT/data/adversarial/ldap_ddos/ldap_ddos_adversarial_size.pcap
+2026-07-20 13:47:12,280 [INFO] src.models.gradient_ablation.features: ldap_ddos_adv_size: sidecar 300/300 flows, 606 packets (1000000 scanned)
+2026-07-20 13:47:14,230 [INFO] src.models.gradient_ablation.evaluate: ldap_ddos_adv_size: sidecar verified against rf_checkpoints.npy (max_abs_diff=0)
+2026-07-20 13:47:38,406 [INFO] src.models.gradient_ablation.pipeline: ldap_ddos_adv_size: attacked 32/300 flows
+2026-07-20 13:47:59,588 [INFO] src.models.gradient_ablation.pipeline: ldap_ddos_adv_size: attacked 64/300 flows
+2026-07-20 13:48:22,883 [INFO] src.models.gradient_ablation.pipeline: ldap_ddos_adv_size: attacked 96/300 flows
+2026-07-20 13:48:45,130 [INFO] src.models.gradient_ablation.pipeline: ldap_ddos_adv_size: attacked 128/300 flows
+2026-07-20 13:49:08,619 [INFO] src.models.gradient_ablation.pipeline: ldap_ddos_adv_size: attacked 160/300 flows
+2026-07-20 13:49:33,278 [INFO] src.models.gradient_ablation.pipeline: ldap_ddos_adv_size: attacked 192/300 flows
+2026-07-20 13:49:57,596 [INFO] src.models.gradient_ablation.pipeline: ldap_ddos_adv_size: attacked 224/300 flows
+2026-07-20 13:50:22,239 [INFO] src.models.gradient_ablation.pipeline: ldap_ddos_adv_size: attacked 256/300 flows
+2026-07-20 13:50:46,472 [INFO] src.models.gradient_ablation.pipeline: ldap_ddos_adv_size: attacked 288/300 flows
+2026-07-20 13:51:09,004 [INFO] src.models.gradient_ablation.pipeline: ldap_ddos_adv_size: attacked 300/300 flows
+2026-07-20 13:51:13,953 [INFO] src.models.gradient_ablation.evaluate: mirai_adv_both: building sidecar from /mnt/nas/inesc/gleitao/DEPT/data/adversarial/mirai/mirai_adversarial_both.pcap
+2026-07-20 13:53:04,816 [INFO] src.models.gradient_ablation.features: mirai_adv_both: sidecar 300/300 flows, 1443 packets (642516 scanned)
+2026-07-20 13:53:05,016 [INFO] src.models.gradient_ablation.evaluate: mirai_adv_both: sidecar verified against rf_checkpoints.npy (max_abs_diff=0)
+2026-07-20 13:53:28,789 [INFO] src.models.gradient_ablation.pipeline: mirai_adv_both: attacked 32/300 flows
+2026-07-20 13:53:53,362 [INFO] src.models.gradient_ablation.pipeline: mirai_adv_both: attacked 64/300 flows
+2026-07-20 13:54:15,902 [INFO] src.models.gradient_ablation.pipeline: mirai_adv_both: attacked 96/300 flows
+2026-07-20 13:54:39,776 [INFO] src.models.gradient_ablation.pipeline: mirai_adv_both: attacked 128/300 flows
+2026-07-20 13:55:03,666 [INFO] src.models.gradient_ablation.pipeline: mirai_adv_both: attacked 160/300 flows
+2026-07-20 13:55:28,107 [INFO] src.models.gradient_ablation.pipeline: mirai_adv_both: attacked 192/300 flows
+2026-07-20 13:55:52,333 [INFO] src.models.gradient_ablation.pipeline: mirai_adv_both: attacked 224/300 flows
+2026-07-20 13:56:16,279 [INFO] src.models.gradient_ablation.pipeline: mirai_adv_both: attacked 256/300 flows
+2026-07-20 13:56:40,105 [INFO] src.models.gradient_ablation.pipeline: mirai_adv_both: attacked 288/300 flows
+2026-07-20 13:57:02,476 [INFO] src.models.gradient_ablation.pipeline: mirai_adv_both: attacked 300/300 flows
+2026-07-20 13:57:03,995 [INFO] src.models.gradient_ablation.evaluate: mirai_adv_iat: building sidecar from /mnt/nas/inesc/gleitao/DEPT/data/adversarial/mirai/mirai_adversarial_iat.pcap
+2026-07-20 13:58:54,826 [INFO] src.models.gradient_ablation.features: mirai_adv_iat: sidecar 300/300 flows, 1023 packets (642516 scanned)
+2026-07-20 13:58:54,969 [INFO] src.models.gradient_ablation.evaluate: mirai_adv_iat: sidecar verified against rf_checkpoints.npy (max_abs_diff=0)
+2026-07-20 13:59:19,150 [INFO] src.models.gradient_ablation.pipeline: mirai_adv_iat: attacked 32/300 flows
+2026-07-20 13:59:41,874 [INFO] src.models.gradient_ablation.pipeline: mirai_adv_iat: attacked 64/300 flows
+2026-07-20 14:00:06,247 [INFO] src.models.gradient_ablation.pipeline: mirai_adv_iat: attacked 96/300 flows
+2026-07-20 14:00:30,288 [INFO] src.models.gradient_ablation.pipeline: mirai_adv_iat: attacked 128/300 flows
+2026-07-20 14:00:54,616 [INFO] src.models.gradient_ablation.pipeline: mirai_adv_iat: attacked 160/300 flows
+2026-07-20 14:01:18,890 [INFO] src.models.gradient_ablation.pipeline: mirai_adv_iat: attacked 192/300 flows
+2026-07-20 14:01:43,192 [INFO] src.models.gradient_ablation.pipeline: mirai_adv_iat: attacked 224/300 flows
+2026-07-20 14:02:07,306 [INFO] src.models.gradient_ablation.pipeline: mirai_adv_iat: attacked 256/300 flows
+2026-07-20 14:02:31,463 [INFO] src.models.gradient_ablation.pipeline: mirai_adv_iat: attacked 288/300 flows
+2026-07-20 14:02:54,547 [INFO] src.models.gradient_ablation.pipeline: mirai_adv_iat: attacked 300/300 flows
+2026-07-20 14:02:55,809 [INFO] src.models.gradient_ablation.evaluate: mirai_adv_size: building sidecar from /mnt/nas/inesc/gleitao/DEPT/data/adversarial/mirai/mirai_adversarial_size.pcap
+2026-07-20 14:04:46,586 [INFO] src.models.gradient_ablation.features: mirai_adv_size: sidecar 300/300 flows, 1382 packets (642516 scanned)
+2026-07-20 14:04:46,729 [INFO] src.models.gradient_ablation.evaluate: mirai_adv_size: sidecar verified against rf_checkpoints.npy (max_abs_diff=0)
+2026-07-20 14:05:10,483 [INFO] src.models.gradient_ablation.pipeline: mirai_adv_size: attacked 32/300 flows
+2026-07-20 14:05:34,182 [INFO] src.models.gradient_ablation.pipeline: mirai_adv_size: attacked 64/300 flows
+2026-07-20 14:05:55,999 [INFO] src.models.gradient_ablation.pipeline: mirai_adv_size: attacked 96/300 flows
+2026-07-20 14:06:20,546 [INFO] src.models.gradient_ablation.pipeline: mirai_adv_size: attacked 128/300 flows
+2026-07-20 14:06:44,583 [INFO] src.models.gradient_ablation.pipeline: mirai_adv_size: attacked 160/300 flows
+2026-07-20 14:07:08,986 [INFO] src.models.gradient_ablation.pipeline: mirai_adv_size: attacked 192/300 flows
+2026-07-20 14:07:33,063 [INFO] src.models.gradient_ablation.pipeline: mirai_adv_size: attacked 224/300 flows
+2026-07-20 14:07:57,290 [INFO] src.models.gradient_ablation.pipeline: mirai_adv_size: attacked 256/300 flows
+2026-07-20 14:08:21,561 [INFO] src.models.gradient_ablation.pipeline: mirai_adv_size: attacked 288/300 flows
+2026-07-20 14:08:44,650 [INFO] src.models.gradient_ablation.pipeline: mirai_adv_size: attacked 300/300 flows
+2026-07-20 14:08:45,642 [INFO] src.models.gradient_ablation.evaluate: ntp_ddos_adv_both: building sidecar from /mnt/nas/inesc/gleitao/DEPT/data/adversarial/ntp_ddos/ntp_ddos_adversarial_both.pcap
+2026-07-20 14:12:23,431 [INFO] src.models.gradient_ablation.features: ntp_ddos_adv_both: sidecar 300/300 flows, 22158 packets (1000000 scanned)
+2026-07-20 14:12:23,645 [INFO] src.models.gradient_ablation.evaluate: ntp_ddos_adv_both: sidecar verified against rf_checkpoints.npy (max_abs_diff=0)
+2026-07-20 14:12:49,373 [INFO] src.models.gradient_ablation.pipeline: ntp_ddos_adv_both: attacked 32/300 flows
+2026-07-20 14:13:15,304 [INFO] src.models.gradient_ablation.pipeline: ntp_ddos_adv_both: attacked 64/300 flows
+2026-07-20 14:13:41,954 [INFO] src.models.gradient_ablation.pipeline: ntp_ddos_adv_both: attacked 96/300 flows
+2026-07-20 14:14:08,167 [INFO] src.models.gradient_ablation.pipeline: ntp_ddos_adv_both: attacked 128/300 flows
+2026-07-20 14:14:33,284 [INFO] src.models.gradient_ablation.pipeline: ntp_ddos_adv_both: attacked 160/300 flows
+2026-07-20 14:14:58,404 [INFO] src.models.gradient_ablation.pipeline: ntp_ddos_adv_both: attacked 192/300 flows
+2026-07-20 14:15:23,388 [INFO] src.models.gradient_ablation.pipeline: ntp_ddos_adv_both: attacked 224/300 flows
+2026-07-20 14:15:48,458 [INFO] src.models.gradient_ablation.pipeline: ntp_ddos_adv_both: attacked 256/300 flows
+2026-07-20 14:16:13,593 [INFO] src.models.gradient_ablation.pipeline: ntp_ddos_adv_both: attacked 288/300 flows
+2026-07-20 14:16:38,179 [INFO] src.models.gradient_ablation.pipeline: ntp_ddos_adv_both: attacked 300/300 flows
+2026-07-20 14:16:42,135 [INFO] src.models.gradient_ablation.evaluate: ntp_ddos_adv_iat: building sidecar from /mnt/nas/inesc/gleitao/DEPT/data/adversarial/ntp_ddos/ntp_ddos_adversarial_iat.pcap
+2026-07-20 14:20:21,786 [INFO] src.models.gradient_ablation.features: ntp_ddos_adv_iat: sidecar 300/300 flows, 23749 packets (1000000 scanned)
+2026-07-20 14:20:22,016 [INFO] src.models.gradient_ablation.evaluate: ntp_ddos_adv_iat: sidecar verified against rf_checkpoints.npy (max_abs_diff=0)
+2026-07-20 14:20:48,438 [INFO] src.models.gradient_ablation.pipeline: ntp_ddos_adv_iat: attacked 32/300 flows
+2026-07-20 14:21:15,240 [INFO] src.models.gradient_ablation.pipeline: ntp_ddos_adv_iat: attacked 64/300 flows
+2026-07-20 14:21:41,689 [INFO] src.models.gradient_ablation.pipeline: ntp_ddos_adv_iat: attacked 96/300 flows
+2026-07-20 14:22:08,452 [INFO] src.models.gradient_ablation.pipeline: ntp_ddos_adv_iat: attacked 128/300 flows
+2026-07-20 14:22:33,842 [INFO] src.models.gradient_ablation.pipeline: ntp_ddos_adv_iat: attacked 160/300 flows
+2026-07-20 14:22:59,912 [INFO] src.models.gradient_ablation.pipeline: ntp_ddos_adv_iat: attacked 192/300 flows
+2026-07-20 14:23:25,339 [INFO] src.models.gradient_ablation.pipeline: ntp_ddos_adv_iat: attacked 224/300 flows
+2026-07-20 14:23:51,713 [INFO] src.models.gradient_ablation.pipeline: ntp_ddos_adv_iat: attacked 256/300 flows
+2026-07-20 14:24:17,176 [INFO] src.models.gradient_ablation.pipeline: ntp_ddos_adv_iat: attacked 288/300 flows
+2026-07-20 14:24:41,264 [INFO] src.models.gradient_ablation.pipeline: ntp_ddos_adv_iat: attacked 300/300 flows
+2026-07-20 14:24:43,124 [INFO] src.models.gradient_ablation.evaluate: ntp_ddos_adv_size: building sidecar from /mnt/nas/inesc/gleitao/DEPT/data/adversarial/ntp_ddos/ntp_ddos_adversarial_size.pcap
+2026-07-20 14:28:21,560 [INFO] src.models.gradient_ablation.features: ntp_ddos_adv_size: sidecar 300/300 flows, 22693 packets (1000000 scanned)
+2026-07-20 14:28:21,718 [INFO] src.models.gradient_ablation.evaluate: ntp_ddos_adv_size: sidecar verified against rf_checkpoints.npy (max_abs_diff=0)
+2026-07-20 14:28:46,552 [INFO] src.models.gradient_ablation.pipeline: ntp_ddos_adv_size: attacked 32/300 flows
+2026-07-20 14:29:12,818 [INFO] src.models.gradient_ablation.pipeline: ntp_ddos_adv_size: attacked 64/300 flows
+2026-07-20 14:29:39,598 [INFO] src.models.gradient_ablation.pipeline: ntp_ddos_adv_size: attacked 96/300 flows
+2026-07-20 14:30:04,572 [INFO] src.models.gradient_ablation.pipeline: ntp_ddos_adv_size: attacked 128/300 flows
+2026-07-20 14:30:31,260 [INFO] src.models.gradient_ablation.pipeline: ntp_ddos_adv_size: attacked 160/300 flows
+2026-07-20 14:30:55,725 [INFO] src.models.gradient_ablation.pipeline: ntp_ddos_adv_size: attacked 192/300 flows
+2026-07-20 14:31:20,919 [INFO] src.models.gradient_ablation.pipeline: ntp_ddos_adv_size: attacked 224/300 flows
+2026-07-20 14:31:46,057 [INFO] src.models.gradient_ablation.pipeline: ntp_ddos_adv_size: attacked 256/300 flows
+2026-07-20 14:32:11,716 [INFO] src.models.gradient_ablation.pipeline: ntp_ddos_adv_size: attacked 288/300 flows
+2026-07-20 14:32:36,571 [INFO] src.models.gradient_ablation.pipeline: ntp_ddos_adv_size: attacked 300/300 flows
+2026-07-20 14:32:38,285 [INFO] src.models.gradient_ablation.evaluate: portscan_adv_both: building sidecar from /mnt/nas/inesc/gleitao/DEPT/data/adversarial/portscan/portscan_adversarial_both.pcap
+2026-07-20 14:33:48,746 [INFO] src.models.gradient_ablation.features: portscan_adv_both: sidecar 300/300 flows, 603 packets (321444 scanned)
+2026-07-20 14:33:49,477 [INFO] src.models.gradient_ablation.evaluate: portscan_adv_both: sidecar verified against rf_checkpoints.npy (max_abs_diff=0)
+2026-07-20 14:34:14,128 [INFO] src.models.gradient_ablation.pipeline: portscan_adv_both: attacked 32/300 flows
+2026-07-20 14:34:37,831 [INFO] src.models.gradient_ablation.pipeline: portscan_adv_both: attacked 64/300 flows
+2026-07-20 14:35:00,748 [INFO] src.models.gradient_ablation.pipeline: portscan_adv_both: attacked 96/300 flows
+2026-07-20 14:35:24,397 [INFO] src.models.gradient_ablation.pipeline: portscan_adv_both: attacked 128/300 flows
+2026-07-20 14:35:47,921 [INFO] src.models.gradient_ablation.pipeline: portscan_adv_both: attacked 160/300 flows
+2026-07-20 14:36:11,835 [INFO] src.models.gradient_ablation.pipeline: portscan_adv_both: attacked 192/300 flows
+2026-07-20 14:36:35,506 [INFO] src.models.gradient_ablation.pipeline: portscan_adv_both: attacked 224/300 flows
+2026-07-20 14:36:59,765 [INFO] src.models.gradient_ablation.pipeline: portscan_adv_both: attacked 256/300 flows
+2026-07-20 14:37:23,609 [INFO] src.models.gradient_ablation.pipeline: portscan_adv_both: attacked 288/300 flows
+2026-07-20 14:37:46,165 [INFO] src.models.gradient_ablation.pipeline: portscan_adv_both: attacked 300/300 flows
+2026-07-20 14:37:50,296 [INFO] src.models.gradient_ablation.evaluate: portscan_adv_iat: building sidecar from /mnt/nas/inesc/gleitao/DEPT/data/adversarial/portscan/portscan_adversarial_iat.pcap
+2026-07-20 14:38:47,705 [INFO] src.models.gradient_ablation.features: portscan_adv_iat: sidecar 300/300 flows, 602 packets (321444 scanned)
+2026-07-20 14:38:48,584 [INFO] src.models.gradient_ablation.evaluate: portscan_adv_iat: sidecar verified against rf_checkpoints.npy (max_abs_diff=0)
+2026-07-20 14:39:12,631 [INFO] src.models.gradient_ablation.pipeline: portscan_adv_iat: attacked 32/300 flows
+2026-07-20 14:39:36,460 [INFO] src.models.gradient_ablation.pipeline: portscan_adv_iat: attacked 64/300 flows
+2026-07-20 14:39:58,600 [INFO] src.models.gradient_ablation.pipeline: portscan_adv_iat: attacked 96/300 flows
+2026-07-20 14:40:21,892 [INFO] src.models.gradient_ablation.pipeline: portscan_adv_iat: attacked 128/300 flows
+2026-07-20 14:40:45,841 [INFO] src.models.gradient_ablation.pipeline: portscan_adv_iat: attacked 160/300 flows
+2026-07-20 14:41:09,713 [INFO] src.models.gradient_ablation.pipeline: portscan_adv_iat: attacked 192/300 flows
+2026-07-20 14:41:33,846 [INFO] src.models.gradient_ablation.pipeline: portscan_adv_iat: attacked 224/300 flows
+2026-07-20 14:41:57,618 [INFO] src.models.gradient_ablation.pipeline: portscan_adv_iat: attacked 256/300 flows
+2026-07-20 14:42:22,004 [INFO] src.models.gradient_ablation.pipeline: portscan_adv_iat: attacked 288/300 flows
+2026-07-20 14:42:44,607 [INFO] src.models.gradient_ablation.pipeline: portscan_adv_iat: attacked 300/300 flows
+2026-07-20 14:42:48,740 [INFO] src.models.gradient_ablation.evaluate: portscan_adv_size: building sidecar from /mnt/nas/inesc/gleitao/DEPT/data/adversarial/portscan/portscan_adversarial_size.pcap
+2026-07-20 14:43:58,238 [INFO] src.models.gradient_ablation.features: portscan_adv_size: sidecar 300/300 flows, 602 packets (321444 scanned)
+2026-07-20 14:43:58,985 [INFO] src.models.gradient_ablation.evaluate: portscan_adv_size: sidecar verified against rf_checkpoints.npy (max_abs_diff=0)
+2026-07-20 14:44:22,980 [INFO] src.models.gradient_ablation.pipeline: portscan_adv_size: attacked 32/300 flows
+2026-07-20 14:44:45,724 [INFO] src.models.gradient_ablation.pipeline: portscan_adv_size: attacked 64/300 flows
+2026-07-20 14:45:07,644 [INFO] src.models.gradient_ablation.pipeline: portscan_adv_size: attacked 96/300 flows
+2026-07-20 14:45:29,406 [INFO] src.models.gradient_ablation.pipeline: portscan_adv_size: attacked 128/300 flows
+2026-07-20 14:45:53,631 [INFO] src.models.gradient_ablation.pipeline: portscan_adv_size: attacked 160/300 flows
+2026-07-20 14:46:17,150 [INFO] src.models.gradient_ablation.pipeline: portscan_adv_size: attacked 192/300 flows
+2026-07-20 14:46:40,776 [INFO] src.models.gradient_ablation.pipeline: portscan_adv_size: attacked 224/300 flows
+2026-07-20 14:47:04,282 [INFO] src.models.gradient_ablation.pipeline: portscan_adv_size: attacked 256/300 flows
+2026-07-20 14:47:28,173 [INFO] src.models.gradient_ablation.pipeline: portscan_adv_size: attacked 288/300 flows
+2026-07-20 14:47:49,990 [INFO] src.models.gradient_ablation.pipeline: portscan_adv_size: attacked 300/300 flows
+2026-07-20 14:47:54,257 [INFO] src.models.gradient_ablation.evaluate: ssdp_ddos_adv_both: building sidecar from /mnt/nas/inesc/gleitao/DEPT/data/adversarial/ssdp_ddos/ssdp_ddos_adversarial_both.pcap
+2026-07-20 14:51:33,071 [INFO] src.models.gradient_ablation.features: ssdp_ddos_adv_both: sidecar 300/300 flows, 1096 packets (1000000 scanned)
+2026-07-20 14:51:34,266 [INFO] src.models.gradient_ablation.evaluate: ssdp_ddos_adv_both: sidecar verified against rf_checkpoints.npy (max_abs_diff=0)
+2026-07-20 14:51:58,950 [INFO] src.models.gradient_ablation.pipeline: ssdp_ddos_adv_both: attacked 32/300 flows
+2026-07-20 14:52:22,435 [INFO] src.models.gradient_ablation.pipeline: ssdp_ddos_adv_both: attacked 64/300 flows
+2026-07-20 14:52:46,277 [INFO] src.models.gradient_ablation.pipeline: ssdp_ddos_adv_both: attacked 96/300 flows
+2026-07-20 14:53:10,488 [INFO] src.models.gradient_ablation.pipeline: ssdp_ddos_adv_both: attacked 128/300 flows
+2026-07-20 14:53:34,478 [INFO] src.models.gradient_ablation.pipeline: ssdp_ddos_adv_both: attacked 160/300 flows
+2026-07-20 14:53:58,454 [INFO] src.models.gradient_ablation.pipeline: ssdp_ddos_adv_both: attacked 192/300 flows
+2026-07-20 14:54:22,463 [INFO] src.models.gradient_ablation.pipeline: ssdp_ddos_adv_both: attacked 224/300 flows
+2026-07-20 14:54:46,285 [INFO] src.models.gradient_ablation.pipeline: ssdp_ddos_adv_both: attacked 256/300 flows
+2026-07-20 14:55:10,249 [INFO] src.models.gradient_ablation.pipeline: ssdp_ddos_adv_both: attacked 288/300 flows
+2026-07-20 14:55:31,218 [INFO] src.models.gradient_ablation.pipeline: ssdp_ddos_adv_both: attacked 300/300 flows
+2026-07-20 14:55:36,030 [INFO] src.models.gradient_ablation.evaluate: ssdp_ddos_adv_iat: building sidecar from /mnt/nas/inesc/gleitao/DEPT/data/adversarial/ssdp_ddos/ssdp_ddos_adversarial_iat.pcap
+2026-07-20 14:59:13,786 [INFO] src.models.gradient_ablation.features: ssdp_ddos_adv_iat: sidecar 300/300 flows, 1104 packets (1000000 scanned)
+2026-07-20 14:59:15,150 [INFO] src.models.gradient_ablation.evaluate: ssdp_ddos_adv_iat: sidecar verified against rf_checkpoints.npy (max_abs_diff=0)
+2026-07-20 14:59:40,153 [INFO] src.models.gradient_ablation.pipeline: ssdp_ddos_adv_iat: attacked 32/300 flows
+2026-07-20 15:00:04,189 [INFO] src.models.gradient_ablation.pipeline: ssdp_ddos_adv_iat: attacked 64/300 flows
+2026-07-20 15:00:28,036 [INFO] src.models.gradient_ablation.pipeline: ssdp_ddos_adv_iat: attacked 96/300 flows
+2026-07-20 15:00:50,374 [INFO] src.models.gradient_ablation.pipeline: ssdp_ddos_adv_iat: attacked 128/300 flows
+2026-07-20 15:01:14,423 [INFO] src.models.gradient_ablation.pipeline: ssdp_ddos_adv_iat: attacked 160/300 flows
+2026-07-20 15:01:37,700 [INFO] src.models.gradient_ablation.pipeline: ssdp_ddos_adv_iat: attacked 192/300 flows
+2026-07-20 15:02:01,284 [INFO] src.models.gradient_ablation.pipeline: ssdp_ddos_adv_iat: attacked 224/300 flows
+2026-07-20 15:02:25,397 [INFO] src.models.gradient_ablation.pipeline: ssdp_ddos_adv_iat: attacked 256/300 flows
+2026-07-20 15:02:49,053 [INFO] src.models.gradient_ablation.pipeline: ssdp_ddos_adv_iat: attacked 288/300 flows
+2026-07-20 15:03:10,816 [INFO] src.models.gradient_ablation.pipeline: ssdp_ddos_adv_iat: attacked 300/300 flows
+2026-07-20 15:03:15,745 [INFO] src.models.gradient_ablation.evaluate: ssdp_ddos_adv_size: building sidecar from /mnt/nas/inesc/gleitao/DEPT/data/adversarial/ssdp_ddos/ssdp_ddos_adversarial_size.pcap
+2026-07-20 15:06:54,104 [INFO] src.models.gradient_ablation.features: ssdp_ddos_adv_size: sidecar 300/300 flows, 1186 packets (1000000 scanned)
+2026-07-20 15:06:55,405 [INFO] src.models.gradient_ablation.evaluate: ssdp_ddos_adv_size: sidecar verified against rf_checkpoints.npy (max_abs_diff=0)
+2026-07-20 15:07:19,380 [INFO] src.models.gradient_ablation.pipeline: ssdp_ddos_adv_size: attacked 32/300 flows
+2026-07-20 15:07:42,462 [INFO] src.models.gradient_ablation.pipeline: ssdp_ddos_adv_size: attacked 64/300 flows
+2026-07-20 15:08:04,294 [INFO] src.models.gradient_ablation.pipeline: ssdp_ddos_adv_size: attacked 96/300 flows
+2026-07-20 15:08:26,550 [INFO] src.models.gradient_ablation.pipeline: ssdp_ddos_adv_size: attacked 128/300 flows
+2026-07-20 15:08:49,193 [INFO] src.models.gradient_ablation.pipeline: ssdp_ddos_adv_size: attacked 160/300 flows
+2026-07-20 15:09:12,883 [INFO] src.models.gradient_ablation.pipeline: ssdp_ddos_adv_size: attacked 192/300 flows
+2026-07-20 15:09:36,071 [INFO] src.models.gradient_ablation.pipeline: ssdp_ddos_adv_size: attacked 224/300 flows
+2026-07-20 15:09:59,547 [INFO] src.models.gradient_ablation.pipeline: ssdp_ddos_adv_size: attacked 256/300 flows
+2026-07-20 15:10:22,474 [INFO] src.models.gradient_ablation.pipeline: ssdp_ddos_adv_size: attacked 288/300 flows
+2026-07-20 15:10:45,333 [INFO] src.models.gradient_ablation.pipeline: ssdp_ddos_adv_size: attacked 300/300 flows
+2026-07-20 15:10:51,190 [INFO] src.models.gradient_ablation.evaluate: ssdp_flood_adv_both: building sidecar from /mnt/nas/inesc/gleitao/DEPT/data/adversarial/ssdp_flood/ssdp_flood_adversarial_both.pcap
+2026-07-20 15:16:04,843 [INFO] src.models.gradient_ablation.features: ssdp_flood_adv_both: sidecar 300/300 flows, 6677 packets (1439604 scanned)
+2026-07-20 15:16:05,326 [INFO] src.models.gradient_ablation.evaluate: ssdp_flood_adv_both: sidecar verified against rf_checkpoints.npy (max_abs_diff=0)
+2026-07-20 15:16:29,396 [INFO] src.models.gradient_ablation.pipeline: ssdp_flood_adv_both: attacked 32/300 flows
+2026-07-20 15:16:54,122 [INFO] src.models.gradient_ablation.pipeline: ssdp_flood_adv_both: attacked 64/300 flows
+2026-07-20 15:17:18,770 [INFO] src.models.gradient_ablation.pipeline: ssdp_flood_adv_both: attacked 96/300 flows
+2026-07-20 15:17:42,865 [INFO] src.models.gradient_ablation.pipeline: ssdp_flood_adv_both: attacked 128/300 flows
+2026-07-20 15:18:05,143 [INFO] src.models.gradient_ablation.pipeline: ssdp_flood_adv_both: attacked 160/300 flows
+2026-07-20 15:18:27,876 [INFO] src.models.gradient_ablation.pipeline: ssdp_flood_adv_both: attacked 192/300 flows
+2026-07-20 15:18:51,122 [INFO] src.models.gradient_ablation.pipeline: ssdp_flood_adv_both: attacked 224/300 flows
+2026-07-20 15:19:15,143 [INFO] src.models.gradient_ablation.pipeline: ssdp_flood_adv_both: attacked 256/300 flows
+2026-07-20 15:19:39,832 [INFO] src.models.gradient_ablation.pipeline: ssdp_flood_adv_both: attacked 288/300 flows
+2026-07-20 15:20:03,505 [INFO] src.models.gradient_ablation.pipeline: ssdp_flood_adv_both: attacked 300/300 flows
+2026-07-20 15:20:06,750 [INFO] src.models.gradient_ablation.evaluate: ssdp_flood_adv_iat: building sidecar from /mnt/nas/inesc/gleitao/DEPT/data/adversarial/ssdp_flood/ssdp_flood_adversarial_iat.pcap
+2026-07-20 15:25:20,119 [INFO] src.models.gradient_ablation.features: ssdp_flood_adv_iat: sidecar 300/300 flows, 6596 packets (1439604 scanned)
+2026-07-20 15:25:20,544 [INFO] src.models.gradient_ablation.evaluate: ssdp_flood_adv_iat: sidecar verified against rf_checkpoints.npy (max_abs_diff=0)
+2026-07-20 15:25:44,961 [INFO] src.models.gradient_ablation.pipeline: ssdp_flood_adv_iat: attacked 32/300 flows
+2026-07-20 15:26:09,904 [INFO] src.models.gradient_ablation.pipeline: ssdp_flood_adv_iat: attacked 64/300 flows
+2026-07-20 15:26:33,205 [INFO] src.models.gradient_ablation.pipeline: ssdp_flood_adv_iat: attacked 96/300 flows
+2026-07-20 15:26:57,389 [INFO] src.models.gradient_ablation.pipeline: ssdp_flood_adv_iat: attacked 128/300 flows
+2026-07-20 15:27:21,562 [INFO] src.models.gradient_ablation.pipeline: ssdp_flood_adv_iat: attacked 160/300 flows
+2026-07-20 15:27:45,664 [INFO] src.models.gradient_ablation.pipeline: ssdp_flood_adv_iat: attacked 192/300 flows
+2026-07-20 15:28:09,929 [INFO] src.models.gradient_ablation.pipeline: ssdp_flood_adv_iat: attacked 224/300 flows
+2026-07-20 15:28:34,002 [INFO] src.models.gradient_ablation.pipeline: ssdp_flood_adv_iat: attacked 256/300 flows
+2026-07-20 15:28:57,220 [INFO] src.models.gradient_ablation.pipeline: ssdp_flood_adv_iat: attacked 288/300 flows
+2026-07-20 15:29:20,980 [INFO] src.models.gradient_ablation.pipeline: ssdp_flood_adv_iat: attacked 300/300 flows
+2026-07-20 15:29:23,264 [INFO] src.models.gradient_ablation.evaluate: ssdp_flood_adv_size: building sidecar from /mnt/nas/inesc/gleitao/DEPT/data/adversarial/ssdp_flood/ssdp_flood_adversarial_size.pcap
+2026-07-20 15:34:36,636 [INFO] src.models.gradient_ablation.features: ssdp_flood_adv_size: sidecar 300/300 flows, 6587 packets (1439604 scanned)
+2026-07-20 15:34:37,142 [INFO] src.models.gradient_ablation.evaluate: ssdp_flood_adv_size: sidecar verified against rf_checkpoints.npy (max_abs_diff=0)
+2026-07-20 15:35:01,386 [INFO] src.models.gradient_ablation.pipeline: ssdp_flood_adv_size: attacked 32/300 flows
+2026-07-20 15:35:25,689 [INFO] src.models.gradient_ablation.pipeline: ssdp_flood_adv_size: attacked 64/300 flows
+2026-07-20 15:35:49,422 [INFO] src.models.gradient_ablation.pipeline: ssdp_flood_adv_size: attacked 96/300 flows
+2026-07-20 15:36:13,635 [INFO] src.models.gradient_ablation.pipeline: ssdp_flood_adv_size: attacked 128/300 flows
+2026-07-20 15:36:37,775 [INFO] src.models.gradient_ablation.pipeline: ssdp_flood_adv_size: attacked 160/300 flows
+2026-07-20 15:37:02,069 [INFO] src.models.gradient_ablation.pipeline: ssdp_flood_adv_size: attacked 192/300 flows
+2026-07-20 15:37:25,762 [INFO] src.models.gradient_ablation.pipeline: ssdp_flood_adv_size: attacked 224/300 flows
+2026-07-20 15:37:47,575 [INFO] src.models.gradient_ablation.pipeline: ssdp_flood_adv_size: attacked 256/300 flows
+2026-07-20 15:38:09,532 [INFO] src.models.gradient_ablation.pipeline: ssdp_flood_adv_size: attacked 288/300 flows
+2026-07-20 15:38:30,102 [INFO] src.models.gradient_ablation.pipeline: ssdp_flood_adv_size: attacked 300/300 flows
+2026-07-20 15:38:31,809 [INFO] src.models.gradient_ablation.evaluate: syn_ddos_adv_both: building sidecar from /mnt/nas/inesc/gleitao/DEPT/data/adversarial/syn_ddos/syn_ddos_adversarial_both.pcap
+2026-07-20 15:56:21,534 [INFO] src.models.gradient_ablation.features: syn_ddos_adv_both: sidecar 300/300 flows, 1016 packets (4963410 scanned)
+2026-07-20 15:56:26,744 [INFO] src.models.gradient_ablation.evaluate: syn_ddos_adv_both: sidecar verified against rf_checkpoints.npy (max_abs_diff=0)
+2026-07-20 15:56:56,067 [INFO] src.models.gradient_ablation.pipeline: syn_ddos_adv_both: attacked 32/300 flows
+2026-07-20 15:57:20,157 [INFO] src.models.gradient_ablation.pipeline: syn_ddos_adv_both: attacked 64/300 flows
+2026-07-20 15:57:44,421 [INFO] src.models.gradient_ablation.pipeline: syn_ddos_adv_both: attacked 96/300 flows
+2026-07-20 15:58:09,011 [INFO] src.models.gradient_ablation.pipeline: syn_ddos_adv_both: attacked 128/300 flows
+2026-07-20 15:58:33,795 [INFO] src.models.gradient_ablation.pipeline: syn_ddos_adv_both: attacked 160/300 flows
+2026-07-20 15:58:57,868 [INFO] src.models.gradient_ablation.pipeline: syn_ddos_adv_both: attacked 192/300 flows
+2026-07-20 15:59:23,014 [INFO] src.models.gradient_ablation.pipeline: syn_ddos_adv_both: attacked 224/300 flows
+2026-07-20 15:59:47,717 [INFO] src.models.gradient_ablation.pipeline: syn_ddos_adv_both: attacked 256/300 flows
+2026-07-20 16:00:12,176 [INFO] src.models.gradient_ablation.pipeline: syn_ddos_adv_both: attacked 288/300 flows
+2026-07-20 16:00:35,587 [INFO] src.models.gradient_ablation.pipeline: syn_ddos_adv_both: attacked 300/300 flows
+2026-07-20 16:00:45,379 [INFO] src.models.gradient_ablation.evaluate: syn_ddos_adv_iat: building sidecar from /mnt/nas/inesc/gleitao/DEPT/data/adversarial/syn_ddos/syn_ddos_adversarial_iat.pcap
+2026-07-20 16:15:50,228 [INFO] src.models.gradient_ablation.features: syn_ddos_adv_iat: sidecar 300/300 flows, 1316 packets (4963410 scanned)
+2026-07-20 16:15:55,553 [INFO] src.models.gradient_ablation.evaluate: syn_ddos_adv_iat: sidecar verified against rf_checkpoints.npy (max_abs_diff=0)
+2026-07-20 16:16:25,057 [INFO] src.models.gradient_ablation.pipeline: syn_ddos_adv_iat: attacked 32/300 flows
+2026-07-20 16:16:49,831 [INFO] src.models.gradient_ablation.pipeline: syn_ddos_adv_iat: attacked 64/300 flows
+2026-07-20 16:17:14,844 [INFO] src.models.gradient_ablation.pipeline: syn_ddos_adv_iat: attacked 96/300 flows
+2026-07-20 16:17:39,424 [INFO] src.models.gradient_ablation.pipeline: syn_ddos_adv_iat: attacked 128/300 flows
+2026-07-20 16:18:03,893 [INFO] src.models.gradient_ablation.pipeline: syn_ddos_adv_iat: attacked 160/300 flows
+2026-07-20 16:18:28,826 [INFO] src.models.gradient_ablation.pipeline: syn_ddos_adv_iat: attacked 192/300 flows
+2026-07-20 16:18:53,478 [INFO] src.models.gradient_ablation.pipeline: syn_ddos_adv_iat: attacked 224/300 flows
+2026-07-20 16:19:18,061 [INFO] src.models.gradient_ablation.pipeline: syn_ddos_adv_iat: attacked 256/300 flows
+2026-07-20 16:19:42,636 [INFO] src.models.gradient_ablation.pipeline: syn_ddos_adv_iat: attacked 288/300 flows
+2026-07-20 16:20:06,509 [INFO] src.models.gradient_ablation.pipeline: syn_ddos_adv_iat: attacked 300/300 flows
+2026-07-20 16:20:13,436 [INFO] src.models.gradient_ablation.evaluate: syn_ddos_adv_size: building sidecar from /mnt/nas/inesc/gleitao/DEPT/data/adversarial/syn_ddos/syn_ddos_adversarial_size.pcap
+2026-07-20 16:38:31,867 [INFO] src.models.gradient_ablation.features: syn_ddos_adv_size: sidecar 300/300 flows, 1200 packets (4963410 scanned)
+2026-07-20 16:38:37,246 [INFO] src.models.gradient_ablation.evaluate: syn_ddos_adv_size: sidecar verified against rf_checkpoints.npy (max_abs_diff=0)
+2026-07-20 16:39:05,953 [INFO] src.models.gradient_ablation.pipeline: syn_ddos_adv_size: attacked 32/300 flows
+2026-07-20 16:39:30,070 [INFO] src.models.gradient_ablation.pipeline: syn_ddos_adv_size: attacked 64/300 flows
+2026-07-20 16:39:54,965 [INFO] src.models.gradient_ablation.pipeline: syn_ddos_adv_size: attacked 96/300 flows
+2026-07-20 16:40:18,663 [INFO] src.models.gradient_ablation.pipeline: syn_ddos_adv_size: attacked 128/300 flows
+2026-07-20 16:40:42,412 [INFO] src.models.gradient_ablation.pipeline: syn_ddos_adv_size: attacked 160/300 flows
+2026-07-20 16:41:04,800 [INFO] src.models.gradient_ablation.pipeline: syn_ddos_adv_size: attacked 192/300 flows
+2026-07-20 16:41:26,212 [INFO] src.models.gradient_ablation.pipeline: syn_ddos_adv_size: attacked 224/300 flows
+2026-07-20 16:41:50,428 [INFO] src.models.gradient_ablation.pipeline: syn_ddos_adv_size: attacked 256/300 flows
+2026-07-20 16:42:14,000 [INFO] src.models.gradient_ablation.pipeline: syn_ddos_adv_size: attacked 288/300 flows
+2026-07-20 16:42:34,573 [INFO] src.models.gradient_ablation.pipeline: syn_ddos_adv_size: attacked 300/300 flows
+2026-07-20 16:42:53,470 [INFO] src.models.gradient_ablation.evaluate: wrote /mnt/nas/inesc/gleitao/DEPT/data/models/gradient_ablation/gradient_ablation_metrics.json
+
+  ✓ Attacked 9000 flows in 15632.2s
+
+ Thresholds  (matched FPR on unperturbed benign flows)
+   rf       fpr_0.01=0.468  fpr_0.05=0.454  fpr_0.1=0.434  raw_0.5=0.500
+   stack    fpr_0.01=0.389  fpr_0.05=0.366  fpr_0.1=0.335  raw_0.5=0.500
+   tcn      fpr_0.01=1.000  fpr_0.05=0.982  fpr_0.1=0.625  raw_0.5=0.500
+
+ Detection at δ=0  (the ASR denominator — a target that misses a flow cannot be evaded)
+   rf       detection_rate=0.834  n_detected=7510/9000
+   tcn      detection_rate=0.375  n_detected=3374/9000
+   stack    detection_rate=0.844  n_detected=7597/9000
+
+ Evasion cost — ASR @ fpr_0.05  (one perturbation crafted on the TCN, scored on all three)
+   budget    pad B/flow  delay ms       RF      TCN    STACK
+   b0               0.0     0.000     0.0%     0.0%     0.0%
+   b8              13.0     0.004     8.5%    40.5%     1.7%
+   b32             47.0     0.041    10.7%    50.1%     4.7%
+   b128           167.0     0.419    13.1%    52.2%     8.5%
+   b512           536.5     3.677    18.4%    53.3%    18.9%
+   b1460         1574.0    28.513    36.0%    54.5%    25.5%
+   best-of-attacker (PGD ∪ random), monotone envelope, denominator =
+   flows the target detects at δ=0.
+
+ Does the gradient help?  (TCN ASR: PGD vs query-matched random search)
+   budget        PGD   random
+   b0           0.0%     0.0%
+   b8          37.2%    40.1%
+   b32         47.2%    49.8%
+   b128        48.7%    51.4%
+   b512        49.5%    52.1%
+   b1460       50.7%    52.8%
+
+ Minimum budget to evade  (median over flows that ever evade; denominator = detected at δ=0)
+   rf       median=b512           never-evaded=64.0%  n_detected=7510
+   tcn      median=b8             never-evaded=45.5%  n_detected=3374
+   stack    median=b512           never-evaded=74.5%  n_detected=7597
+
+ Meta-learner reliance shift  (does the meta lean on the RF as the TCN is degraded?)
+   budget    stack p_adv  Δ if RF clean  Δ if TCN clean  rf_reliance
+   b0              1.000          0.000           0.000        0.000
+   b8              1.000          0.000           0.000        0.529
+   b32             1.000          0.000           0.000        0.539
+   b128            0.999          0.000           0.000        0.563
+   b512            0.999          0.000           0.000        0.561
+   b1460           0.997          0.000           0.000        0.543
+
+ Attack-strength cross-check  (ART AutoPGD, relaxed, eps=1460.0 B — is our search under-tuned?)
+   ART AutoPGD 100.0%   ours PGD 100.0%   ours random 100.0%   (frac below the boundary, n=16)
+
+════════════════════════════════════════════════════════════════════════════════════
+ DEPT × Transferability — Done  Total 15632.2s
+ Artifacts  /mnt/nas/inesc/gleitao/DEPT/data/models/gradient_ablation
+════════════════════════════════════════════════════════════════════════════════════
+

@@ -1,0 +1,116 @@
+{
+  "source": "ldap_ddos_adv_both",
+  "base": "ldap_ddos",
+  "mode": "both",
+  "kind": "ml_nids",
+  "model": "ml_nids:LDAP_DDoS:RF",
+  "run_key": {
+    "model_id": "8303b146ce24c6ed",
+    "t_star": 2,
+    "gated": true
+  },
+  "n_pairs": 33088,
+  "realize": {
+    "target_flows": 33088,
+    "realized_flows": 33068,
+    "miss_len": 20,
+    "unmatched": 0,
+    "unrealizable_l7": 0,
+    "pcap_packets_read": 1000000,
+    "pcap_packets_kept": 66410,
+    "packets_per_branch": 66324
+  },
+  "gate": {
+    "flag_rate": 1.0,
+    "flag_rate_gated_subset": 1.0,
+    "n_gated_flows": 4934
+  },
+  "compliance": null,
+  "unkeyed_rows": {
+    "clean": 0,
+    "adversarial": 0,
+    "dept_all": 0,
+    "diffusion_all": 0,
+    "dept_gated": 0,
+    "diffusion_gated": 0
+  },
+  "subsets": {
+    "test": {
+      "clean": {
+        "n_flows": 33076,
+        "n_detected": 33065,
+        "sum_score": 33025.54000000011
+      },
+      "adversarial": {
+        "n_flows": 33085,
+        "n_detected": 33073,
+        "sum_score": 30705.660000007272
+      },
+      "dept_all": {
+        "n_flows": 33083,
+        "n_detected": 33071,
+        "sum_score": 32467.610000001645
+      },
+      "diffusion_all": {
+        "n_flows": 33090,
+        "n_detected": 33074,
+        "sum_score": 30532.144999995944
+      }
+    },
+    "strict": {
+      "clean": {
+        "n_flows": 2965,
+        "n_detected": 2962,
+        "sum_score": 2960.029999999999
+      },
+      "adversarial": {
+        "n_flows": 2966,
+        "n_detected": 2963,
+        "sum_score": 2752.824999999924
+      },
+      "dept_all": {
+        "n_flows": 2967,
+        "n_detected": 2964,
+        "sum_score": 2911.6749999999743
+      },
+      "diffusion_all": {
+        "n_flows": 2970,
+        "n_detected": 2967,
+        "sum_score": 2737.8500000000413
+      }
+    },
+    "gated": {
+      "clean": {
+        "n_flows": 4932,
+        "n_detected": 4931,
+        "sum_score": 4924.049999999989
+      },
+      "adversarial": {
+        "n_flows": 4934,
+        "n_detected": 4933,
+        "sum_score": 4578.3199999998515
+      },
+      "dept_all": {
+        "n_flows": 4935,
+        "n_detected": 4934,
+        "sum_score": 4842.40499999998
+      },
+      "diffusion_all": {
+        "n_flows": 4934,
+        "n_detected": 4933,
+        "sum_score": 4555.050000000194
+      },
+      "dept_gated": {
+        "n_flows": 4933,
+        "n_detected": 4932,
+        "sum_score": 4840.40499999998
+      },
+      "diffusion_gated": {
+        "n_flows": 4933,
+        "n_detected": 4932,
+        "sum_score": 4554.165000000194
+      }
+    }
+  },
+  "seconds": 995.0
+}

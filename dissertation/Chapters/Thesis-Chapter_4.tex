@@ -92,7 +92,7 @@ convention of \Cref{sec:sol-pipeline}.
 \section{System Overview}\label{sec:sol-overview}
 \Cref{fig:sol-architecture} shows the complete architecture. Traffic enters through the
 \emph{Packet-to-Tensor pipeline}, which derives two views of each flow
-(\Cref{subsec:bg-features}) at two rates: a dense stream of masked nPrint per-packet
+(\Cref{sec:sol-pipeline}) at two rates: a dense stream of masked nPrint per-packet
 tokens and a sparse stream of statistics measured on the packets themselves. The two base learners
 consume one stream each. The \ac{TCN} produces a verdict logit at every packet, from
 the very first one; the \ac{RF} produces a logit at packet~2 and then every tenth
@@ -174,25 +174,88 @@ indistinguishable for any detector; \Cref{sec:eval-discussion} analyses this cos
 \paragraph{From packets to tensors.}
 Each capture is processed in a single pass. Packets are grouped into flows by their
 canonical five-tuple and kept in timestamp order, and each packet is encoded
-into the $1090$-dimensional token of \Cref{subsec:bg-features}: the $1088$ masked
-nPrint header bits plus the z-scored \ac{IPAT} and a direction bit (the normalization
+into a $1090$-dimensional token (\Cref{fig:bg-nprint}). Following nPrint
+(\Cref{subsec:bg-features}), DEPT encodes the IPv4, TCP, \ac{UDP}, and ICMP headers,
+producing a $1088$-bit vector ($480 + 480 + 64 + 64$), and appends two derived
+per-packet scalars, the z-scored \ac{IPAT} and a direction bit (the normalization
 statistics are computed at tensorization time and stored alongside the tensors, so that
 training and inference standardize identically). The per-flow token sequences are
 stored as one large ragged array with an offsets table, which keeps loading cheap and
 lets every downstream component share the same on-disk artifacts.
 
+\begin{figure}[htbp]
+    \centering
+    \begin{tikzpicture}[font=\footnotesize,
+        blk/.style={draw, fill=blue!12, minimum height=9mm, text centered, inner sep=3pt, align=center},
+        drv/.style={draw, fill=orange!22, minimum height=9mm, text centered, inner sep=3pt, align=center},
+        msk/.style={draw, fill=black!22, minimum height=5mm, text centered, inner sep=2pt, align=center},
+    ]
+        \node[draw, rounded corners, minimum width=15mm, minimum height=10mm, align=center] (pkt) {Packet\\$p_i$};
+        \node[blk, minimum width=30mm, right=13mm of pkt.east, anchor=west] (ipv4) {IPv4\\480 b};
+        \node[blk, minimum width=30mm, right=0pt of ipv4.east, anchor=west] (tcp) {TCP\\480 b};
+        \node[blk, minimum width=13mm, right=0pt of tcp.east, anchor=west] (udp) {UDP\\64 b};
+        \node[blk, minimum width=13mm, right=0pt of udp.east, anchor=west] (icmp) {ICMP\\64 b};
+        \node[drv, minimum width=11mm, right=0pt of icmp.east, anchor=west] (ipat) {IPAT};
+        \node[drv, minimum width=11mm, right=0pt of ipat.east, anchor=west] (dir) {Dir.};
+        \draw[->, thick] (pkt.east) -- (ipv4.west);
+
+        \node[above=1mm of ipv4.north west, anchor=south west, font=\scriptsize] {\;$\underbrace{\hphantom{aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa}}_{\text{1088-bit nPrint header vector, tri-state }\{-1,0,1\}}$};
+
+        \node[msk, minimum width=16mm, below=8mm of ipv4.south] (mip) {src/dst IP, IP-ID};
+        \node[msk, minimum width=12mm, below=8mm of tcp.south] (mtcp) {ports};
+        \node[msk, minimum width=10mm, below=8mm of udp.south] (mudp) {ports};
+        \draw[->, black!55] (mip.north) -- (ipv4.south);
+        \draw[->, black!55] (mtcp.north) -- (tcp.south);
+        \draw[->, black!55] (mudp.north) -- (udp.south);
+        \node[below=1mm of mtcp.south, font=\scriptsize, align=center] (msklab) {identity masking: set to $0$};
+    \end{tikzpicture}
+    \caption[The nPrint per-packet representation with identity masking.]{The per-packet representation used by DEPT: the four header blocks encoded bit-by-bit into $1088$ tri-state cells following nPrint~\cite{holland2021nprint}, the identity fields masked to zero, and the two derived scalars appended to give a $1090$-dimensional final token.}
+    \label{fig:bg-nprint}
+\end{figure}
+
+The header bits include the fields that identify the particular hosts and ports of a
+capture: the source and destination IP addresses, the transport ports, and the IP
+identification field. These are the fields behind the memorization shortcut described
+in \Cref{subsec:bg-features}, so DEPT \emph{masks} them, zeroing the $144$ bits that
+encode them (\Cref{fig:bg-nprint}). Masking forces the detectors to rely on behavioural
+structure, such as packet sizing and timing, rather than on the identity of the hosts
+of one capture.
+
 The same pass also produces the sparse representation for the \ac{RF}, measured on the
-packets themselves rather than derived from the tokens. At each
+packets themselves rather than derived from the tokens (\Cref{tab:bg-streams}). At each
 checkpoint, six base features (inter-arrival time, packet size, payload length, payload
 entropy, TCP flags, and direction) are summarized by their mean, standard deviation,
 minimum, and maximum over the whole prefix seen so far, a $24$-dimensional vector.
+None of the six encodes host or port identity, so this stream needs no masking of its own.
 These statistics are defined \emph{incrementally}, by Welford's online algorithm for
 means and variances together with running extremes, so that a flow never needs to be
 re-buffered: the cost per packet is constant. Checkpoints fire at packet~$2$ and
-then every tenth packet, the cadence motivated in \Cref{subsec:bg-features}.
-\Cref{fig:sol-cadence} lays the resulting prediction pattern out on the packet axis,
-including the carry-forward behaviour that the fusion stage of
-\Cref{subsec:sol-meta} builds on.
+then every tenth packet. The early checkpoint is deliberate: some attacks generate
+extremely short flows. A port scan, for example, averages roughly two packets per flow,
+typically a single SYN and its RST, so without the checkpoint at packet~$2$ the forest
+would never issue a verdict for precisely the flows that a scan consists of.
+
+\begin{table}[htbp]
+    \centering
+    \caption{The two representations DEPT derives from the same packets.}
+    \label{tab:bg-streams}
+    \begin{tabular}{@{}llll@{}}
+        \toprule
+        \textbf{Representation} & \textbf{Consumer} & \textbf{Emission rate} & \textbf{Dimension} \\
+        \midrule
+        Per-packet token   & TCN           & every packet                 & $1090$ (nPrint $+$ IPAT $+$ direction) \\
+        Prefix checkpoint  & Random Forest & packet $2$, then every $10th$   & $24$ (mean/std/min/max of $6$ features) \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+The two streams also differ in content and not only in rate: nPrint encodes headers
+only, so the payload entropy the forest keys on is structurally invisible to the
+\ac{TCN}. Feeding one learner a dense per-packet sequence and the other a sparse,
+aggregated summary of a partly different view is also a source of the ensemble diversity
+that \Cref{sec:bg-ensembles} argues to be valuable. \Cref{fig:sol-cadence} lays the
+resulting prediction pattern out on the packet axis, including the carry-forward
+behaviour that the fusion stage of \Cref{subsec:sol-meta} builds on.
 
 \begin{figure}[htbp]
     \centering
@@ -227,8 +290,13 @@ and the neural losses.
 % #############################################################################
 \section{Primary Detection: Heterogeneous Stacking Ensemble}\label{sec:sol-ensemble}
 The detection stage instantiates the stacking pattern of \Cref{sec:bg-ensembles}: two
-deliberately opposite base learners and a learned combiner. The base learners are
-described first, the fusion afterwards.
+deliberately opposite base learners and a learned combiner. The two learners, an \ac{RF}
+and a \ac{TCN}, are heterogeneous in architecture and asynchronous in operation: the
+network emits a dense verdict on every packet, while the forest emits a sparse verdict
+only at its checkpoints, starting at packet~$2$. This is the setting stacking was
+designed for, and the reason DEPT fuses them with a learned meta-learner rather than a
+fixed rule such as averaging or majority voting (\Cref{subsec:bg-ensemble-types}). The
+base learners are described first, the fusion afterwards.
 
 \subsection{Random Forest Base Learner}\label{subsec:sol-rf}
 The \ac{RF} consumes the $24$-dimensional checkpoint vectors and answers, at every
@@ -257,12 +325,49 @@ The \ac{TCN} is the dense half of the ensemble. It consumes the full per-packet 
 stream and emits a logit pair at every position, so a flow acquires its first verdict
 with its first packet. The network instantiates the architecture of
 \Cref{subsec:bg-architectures}: three residual temporal blocks of $128$ channels each,
-kernel size $3$, dilations $1$, $2$, and $4$, and dropout of $0.15$, closed by a
-per-timestep linear head; in total about $0.8$~million parameters. Causal padding keeps
-every output independent of future packets, which is the property that makes the model
-legitimate for streaming use, and the dilation schema gives the receptive field of
-$29$ packets derived in \Cref{eq:bg-rf}, enough context to cover several \ac{RF}
-checkpoint intervals (of roughly $10$) without inflating the parameter count.
+with two convolutions per block, kernel size $k = 3$, dilations $1$, $2$, and $4$, and
+dropout of $0.15$, closed by a per-timestep linear head; in total about $0.8$~million
+parameters. Causal padding keeps every output independent of future packets, which is
+the property that makes the model legitimate for streaming use, and the dilation schema
+gives a receptive field of
+\begin{equation}
+    \mathrm{RF} \;=\; 1 + 2\,(k-1)\sum_{i=0}^{2} 2^{\,i}
+              \;=\; 1 + 2\cdot 2\cdot(1+2+4) \;=\; 29 \text{ packets},
+    \label{eq:bg-rf}
+\end{equation}
+so a verdict at any packet integrates evidence from that packet and the $28$ preceding it
+(\Cref{fig:bg-tcn}), enough context to cover several \ac{RF} checkpoint intervals (of
+roughly $10$) without inflating the parameter count.
+
+\begin{figure}[htbp]
+    \centering
+    \begin{tikzpicture}[font=\footnotesize, nd/.style={circle, draw, minimum size=4.4mm, inner sep=0pt, fill=black!6}, hi/.style={circle, draw, minimum size=4.4mm, inner sep=0pt, fill=blue!30}, hed/.style={draw=blue!65, thick}]
+        \def\dx{0.66}
+        \foreach \i in {0,...,12} {
+            \node[nd] (x\i) at (\i*\dx,0) {};
+            \node[nd] (a\i) at (\i*\dx,1.15) {};
+            \node[nd] (b\i) at (\i*\dx,2.30) {};
+            \node[nd] (c\i) at (\i*\dx,3.45) {};
+        }
+        \node[left=3mm of x0, align=right] {Input};
+        \node[left=3mm of a0, align=right] {$d=1$};
+        \node[left=3mm of b0, align=right] {$d=2$};
+        \node[left=3mm of c0, align=right] {$d=4$};
+        % highlight rightmost output cone
+        \node[hi] at (12*\dx,3.45) {};
+        \foreach \j in {12,8,4} {\draw[hed] (b\j.north) -- (c12.south); \node[hi] at (\j*\dx,2.30) {};}
+        \foreach \p/\q in {12/12,12/10,12/8, 8/8,8/6,8/4, 4/4,4/2,4/0} {\draw[hed] (a\q.north) -- (b\p.south); \node[hi] at (\q*\dx,1.15) {};}
+        \foreach \p in {12,10,8,6,4,2,0} {
+            \draw[hed] (x\p.north) -- (a\p.south);
+            \pgfmathtruncatemacro{\pm}{max(\p-1,0)}\draw[hed] (x\pm.north) -- (a\p.south);
+            \pgfmathtruncatemacro{\pn}{max(\p-2,0)}\draw[hed] (x\pn.north) -- (a\p.south);
+        }
+        \foreach \i in {0,...,12} {\node[hi] at (\i*\dx,0) {};}
+        \node[below=5mm of x6, align=center] {receptive field grows as $\{1,2,4\}$ per block $\Rightarrow$ $\mathrm{RF}=29$ packets (\Cref{eq:bg-rf})};
+    \end{tikzpicture}
+    \caption[Dilated causal convolutions and the TCN receptive field.]{Dilated causal convolutions. Highlighted nodes trace the dependency cone of the rightmost output: dilation grows with depth ($1$, $2$, $4$), so the receptive field widens while every output still depends only on the present and past. This is a schematic representation, with one convolution per block drawn; DEPT stacks two, giving the $29$ packets of \Cref{eq:bg-rf}.}
+    \label{fig:bg-tcn}
+\end{figure}
 
 Training minimizes per-packet cross-entropy with balanced class weights, averaged
 \emph{within} each flow before averaging across flows, so that a ten-thousand-packet
@@ -386,8 +491,10 @@ head, the identity map is the easy default ($\Delta \approx 0$), the untouched
 $\sim\!1050$ header bits are preserved, and the model's capacity is spent on
 the localized corrections that matter. The causal mask, in turn, keeps the purifier
 valid for streaming use and compatible with key--value caching
-(\Cref{subsec:bg-architectures}). As noted there, the purifier is not autoregressive: it
-corrects every input position in a single pass, each from packets $\leq t$ alone.
+(\Cref{subsec:bg-architectures}). The purifier is nonetheless not autoregressive, since it
+never feeds its own output back as input: it corrects every input position in a single
+pass, each from packets $\leq t$ alone, so the causal mask is there for streaming, not
+for generation.
 
 \subsection{Training on Matched Flow Pairs}\label{subsec:sol-rec-training}
 Purification is learned from \emph{matched pairs}. Because TANTGen perturbs a flow

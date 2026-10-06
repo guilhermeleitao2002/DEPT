@@ -1,0 +1,104 @@
+
+════════════════════════════════════════════════════════════════════════════
+ DEPT — TCN  (mode: both)
+════════════════════════════════════════════════════════════════════════════
+ Config        /mnt/nas/inesc/gleitao/DEPT/config/tcn.yaml
+ Attack scope  syn_ddos  (per-attack run — other attacks excluded)
+ Tensors dir   /mnt/nas/inesc/gleitao/DEPT/data/tensors
+ Adversarial   /mnt/nas/inesc/gleitao/DEPT/data/tensors/adversarial  (30 source(s) discovered)
+ Output dir    /mnt/nas/inesc/gleitao/DEPT/data/models/per_attack/syn_ddos/tcn
+ Benign pool   1 source(s)  (syn_ddos)
+ Benign cap    3.0× adversarial flows
+ Split         train=0.7  val=0.15  test=0.15  seed=42
+ Device        cuda (NVIDIA RTX 6000 Ada Generation)
+ Epochs        20  early_stop_patience=3
+ Batch         32  num_workers=auto
+ Channels      [128, 128, 128]  kernel=3  dropout=0.15
+ LR            0.001  wd=0.0001  sched=cosine
+ AMP           ON
+════════════════════════════════════════════════════════════════════════════
+
+────────────────────────────────────────────────────────────────────────────
+ [ 1 / 2 ]  Training Temporal Convolutional Network
+────────────────────────────────────────────────────────────────────────────
+  ✓ Trained in 18953.1s  (315.9 min)
+
+ Split summary
+ ───────────────────────────────────────────────────────────────────────────
+ Split           Flows       Benign   Adversarial    Adv %
+ -------- ------------ ------------ ------------- --------
+ train       3,032,934      226,173     2,806,761    92.5%
+ val           649,915       48,466       601,449    92.5%
+ test          649,914       48,465       601,449    92.5%
+ -------- ------------ ------------ ------------- --------
+ total       4,332,763      323,104     4,009,659    92.5%
+
+ Training curves
+ ───────────────────────────────────────────────────────────────────────────
+ Params 805,762 Best epoch 7 → val_f1 0.5763
+
+  epoch   train_loss   val_loss    val_f1         lr     sec
+  ----- ------------ ---------- --------- ---------- -------
+      0       0.3533     0.3474    0.5743   9.94e-04  1769.9
+      1       0.3491     0.3474    0.5758   9.76e-04  1736.5
+      2       0.3490     0.3461    0.5759   9.46e-04  1714.7
+      3       0.3490     0.3483    0.5760   9.05e-04  1720.7
+      4       0.3487     0.3493    0.5757   8.54e-04  1699.6
+      5       0.3493     0.3483    0.5761   7.94e-04  1711.6
+      6       0.3495     0.3484    0.5759   7.27e-04  1701.6
+★     7       0.3488     0.3498    0.5763   6.55e-04  1714.6
+      8       0.3493     0.3509    0.5762   5.78e-04  1705.1
+      9       0.3498     0.3476    0.5758   5.00e-04  1707.5
+     10       0.3487     0.3480    0.5761   4.22e-04  1703.5
+
+────────────────────────────────────────────────────────────────────────────
+ [ 2 / 2 ]  Evaluating on held-out test split
+────────────────────────────────────────────────────────────────────────────
+  ✓ Evaluated in 282.9s
+
+ Overall metrics (test)
+ ───────────────────────────────────────────────────────────────────────────
+ Acc 0.7093   Macro F1 0.5764   ROC AUC 0.8743   PR AUC 0.9827
+
+ class         precision     recall         f1    support
+ ------------ ---------- ---------- ---------- ----------
+ benign           0.2042     0.9999     0.3391     48,465
+ adversarial      1.0000     0.6859     0.8137    601,449
+
+ Per-adversarial-source metrics  (3 variant(s))
+ ───────────────────────────────────────────────────────────────────────────
+ precision/recall/f1 computed against a balanced benign subsample (K × n_adv); roc_auc/pr_auc use all test benign.
+
+ variant                     precision     recall         f1    roc_auc     pr_auc    n_adv
+ -------------------------- ---------- ---------- ---------- ---------- ---------- --------
+ syn_ddos  both                 1.0000     0.9999     0.9999     0.9999     1.0000  200,483
+ syn_ddos  iat                  0.9996     0.0581     0.1097     0.6230     0.8522  200,483
+ syn_ddos  size                 1.0000     0.9998     0.9999     0.9999     0.9999  200,483
+
+============================================================================
+ DEPT × TCN — Summary
+============================================================================
+ Macro F1 0.5764   ROC AUC 0.8743   PR AUC 0.9827   Recall-adv 0.6859
+ ---------------------------------------------------------------------------
+ Train time   18953.1s  (315.9 min)
+ Eval  time     282.9s
+ Total time   19236.1s  (320.6 min)
+
+ Artifacts  → /mnt/nas/inesc/gleitao/DEPT/data/models/per_attack/syn_ddos/tcn
+ ───────────────────────────────────────────────────────────────────────────
+   ✓ tcn.pt                   (    3.1 MB)  trained model state_dict
+   ✓ tcn_config.json          (   517.0 B)  resolved model + training config
+   ✓ split.npz                (   33.1 MB)  train/val/test indices
+   ✓ dataset_index.npz        (   90.9 MB)  per-flow index (no payload)
+   ✓ split_summary.json       (   744.0 B)  split counts
+   ✓ training_info.json       (    3.0 KB)  best epoch, durations, device
+   ✓ training_curves.json     (    2.2 KB)  per-epoch loss + val macro-F1
+   ✓ metrics.json             (    7.9 KB)  full metrics (overall/per-adversarial-source)
+   ✓ confusion_matrix.png     (   28.2 KB)  binary confusion matrix
+   ✓ roc_curve.png            (   33.7 KB)  ROC curve
+   ✓ pr_curve.png             (   32.7 KB)  precision-recall curve
+   ✓ training_curves.png      (   60.1 KB)  loss + macro-F1 over epochs
+ ───────────────────────────────────────────────────────────────────────────
+   Total  12/12 files, 127.2 MB
+============================================================================
+

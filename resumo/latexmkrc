@@ -1,0 +1,3 @@
+# The `pbalance' class option (last-page column balancing) needs one more
+# pdflatex pass than latexmk's default limit of 5 on a clean build.
+$max_repeat = 8;

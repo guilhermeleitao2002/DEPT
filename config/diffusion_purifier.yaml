@@ -1,0 +1,78 @@
+# =====================================================================
+# DEPT — Phase 9: comparison with a published purifier (diffusion)
+# =====================================================================
+# The diffusion-based adversarial purifier of Merzouk et al. (DBSec 2025,
+# github.com/mamerzouk/adversarial-purification) takes the place of DEPT's reconstructor
+# inside the phase-8 harness: same flows, same realization back into packets, same
+# independent NIDS. Only the purifier changes.
+#
+#   python3 scripts/diffusion_purifier/run_diffusion_purifier.py            # all stages
+#   python3 scripts/diffusion_purifier/run_diffusion_purifier.py --stage evaluate
+#
+# Stages: overlays → train → sweep → evaluate. Each one skips work that is already on
+# disk (--force redoes it), and evaluate resumes source by source.
+#
+# The split, excludes and tensor paths are read from reconstructor.yaml, and the NIDS
+# routing, gate and model paths from baseline.yaml, so phase 9 always matches phases 6
+# and 8. Needs trained phase-6 and phase-8 artifacts (reconstructor split.npz, the
+# meta-learner, and phase 8's detector_cache for the gated streams).
+
+reconstructor_config: config/reconstructor.yaml
+baseline_config: config/baseline.yaml
+output_dir: data/models/diffusion_purifier
+
+max_length: 200              # packets per flow, as the reconstructor and phase 8
+
+# ---- The flow vector the purifier works in (see src/models/diffusion_purifier/overlay.py)
+overlay:
+  size_scale: 1500           # total length / MTU
+  ipat_quantile: 0.999       # IPAT scale: log1p(IPAT) / log1p(this quantile of train IPATs)
+  train_max_flows_per_base: null   # null = every distinct clean training flow
+  val_max_flows: 20000       # clean validation flows for the diffusion loss
+  batch_size: 256
+  num_workers: auto
+
+# ---- Diffusion model: Merzouk et al.'s settings ----
+model:
+  noise_steps: 1000          # T
+  beta_start: 1.0e-4
+  beta_end: 0.02
+  hidden_dim: 960            # units per hidden layer (the paper's choice)
+  n_hidden: 10               # hidden layers
+  emb_dim: 256               # sinusoidal timestep embedding
+  condition: true            # also feed packet directions + mask (fixed by realization)
+
+# ---- Training (original: AdamW, lr 1e-4, full-batch epochs; here mini-batches) ----
+training:
+  device: auto
+  steps: 150000
+  batch_size: 4096
+  lr: 1.0e-4
+  val_every: 2500
+  log_every: 500
+  seed: 42
+
+# ---- Choosing t* (the paper: the step that maximizes NIDS accuracy on adversarial
+# inputs; here measured on validation flows, not on test data) ----
+sweep:
+  t_grid: [2, 5, 10, 20, 30, 45, 60, 90, 150]
+  t_star: null               # set an int to skip the selection and use it directly
+  mse_max_flows_per_source: 2000
+  nids_bases: [ddos, portscan, brute_force, dns_ddos, ldap_ddos, ntp_ddos, ssdp_ddos,
+               syn_ddos]     # ML-NIDS sources (flows are scored independently)
+  nids_max_flows_per_source: 1000
+  seed: 42
+
+# ---- Evaluation ----
+evaluate:
+  device: auto
+  batch_size: 64             # DEPT reconstructor inference
+  purify_batch_size: 4096    # diffusion purification
+  gated: true                # also score both purifiers behind DEPT's meta-learner gate
+  seed: 42
+  compliance_sources: [ddos_adv_both, portscan_adv_both]   # tshark on a packet sample
+  compliance_max_packets: 20000
+  latency:
+    n_flows: 256
+    batch_sizes: [1, 256]
+    repeats: 20

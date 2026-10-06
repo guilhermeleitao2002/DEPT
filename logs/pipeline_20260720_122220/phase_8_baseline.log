@@ -1,0 +1,17 @@
+
+════════════════════════════════════════════════════════════════════════════════════
+ DEPT — Deployment baseline  (clean → perturbed → DEPT-defended, through the independent NIDS)
+════════════════════════════════════════════════════════════════════════════════════
+ Config              /mnt/nas/inesc/gleitao/DEPT/config/baseline.yaml
+ Attacks             all (nids.attacks)
+ Detector            /mnt/nas/inesc/gleitao/DEPT/data/models/metalearner  (gates purification)
+ Reconstructor       /mnt/nas/inesc/gleitao/DEPT/data/models/reconstructor
+ Output dir          /mnt/nas/inesc/gleitao/DEPT/data/models/baseline
+════════════════════════════════════════════════════════════════════════════════════
+  ✗ FAILED 'function' object has no attribute 'evaluate'
+Traceback (most recent call last):
+  File "/mnt/nas/inesc/gleitao/DEPT/scripts/baseline/run_baseline.py", line 202, in <module>
+    sys.exit(main())
+  File "/mnt/nas/inesc/gleitao/DEPT/scripts/baseline/run_baseline.py", line 187, in main
+    summary = baseline_eval.evaluate(cfg, output_dir, attacks=attacks)
+AttributeError: 'function' object has no attribute 'evaluate'

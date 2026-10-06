@@ -1,0 +1,116 @@
+{
+  "source": "dns_ddos_adv_iat",
+  "base": "dns_ddos",
+  "mode": "iat",
+  "kind": "ml_nids",
+  "model": "ml_nids:DNS_DDoS:RF",
+  "run_key": {
+    "model_id": "8303b146ce24c6ed",
+    "t_star": 2,
+    "gated": true
+  },
+  "n_pairs": 1002,
+  "realize": {
+    "target_flows": 1002,
+    "realized_flows": 995,
+    "miss_len": 7,
+    "unmatched": 0,
+    "unrealizable_l7": 56,
+    "pcap_packets_read": 1000000,
+    "pcap_packets_kept": 151128,
+    "packets_per_branch": 148716
+  },
+  "gate": {
+    "flag_rate": 0.998003992015968,
+    "flag_rate_gated_subset": 0.9875,
+    "n_gated_flows": 160
+  },
+  "compliance": null,
+  "unkeyed_rows": {
+    "clean": 0,
+    "adversarial": 0,
+    "dept_all": 0,
+    "diffusion_all": 0,
+    "dept_gated": 0,
+    "diffusion_gated": 0
+  },
+  "subsets": {
+    "test": {
+      "clean": {
+        "n_flows": 1228,
+        "n_detected": 1218,
+        "sum_score": 1217.9249999999997
+      },
+      "adversarial": {
+        "n_flows": 1209,
+        "n_detected": 1195,
+        "sum_score": 1096.5600000000034
+      },
+      "dept_all": {
+        "n_flows": 2433,
+        "n_detected": 1856,
+        "sum_score": 1396.7749999999942
+      },
+      "diffusion_all": {
+        "n_flows": 1182,
+        "n_detected": 1163,
+        "sum_score": 814.4749999999888
+      }
+    },
+    "strict": {
+      "clean": {
+        "n_flows": 100,
+        "n_detected": 99,
+        "sum_score": 99.16999999999999
+      },
+      "adversarial": {
+        "n_flows": 99,
+        "n_detected": 98,
+        "sum_score": 88.51
+      },
+      "dept_all": {
+        "n_flows": 196,
+        "n_detected": 147,
+        "sum_score": 111.88499999999996
+      },
+      "diffusion_all": {
+        "n_flows": 97,
+        "n_detected": 96,
+        "sum_score": 67.09499999999996
+      }
+    },
+    "gated": {
+      "clean": {
+        "n_flows": 198,
+        "n_detected": 196,
+        "sum_score": 196.21
+      },
+      "adversarial": {
+        "n_flows": 201,
+        "n_detected": 199,
+        "sum_score": 182.5900000000002
+      },
+      "dept_all": {
+        "n_flows": 372,
+        "n_detected": 283,
+        "sum_score": 213.53999999999988
+      },
+      "diffusion_all": {
+        "n_flows": 194,
+        "n_detected": 191,
+        "sum_score": 133.70500000000004
+      },
+      "dept_gated": {
+        "n_flows": 309,
+        "n_detected": 225,
+        "sum_score": 177.50500000000005
+      },
+      "diffusion_gated": {
+        "n_flows": 201,
+        "n_detected": 199,
+        "sum_score": 138.62500000000006
+      }
+    }
+  },
+  "seconds": 1395.6
+}

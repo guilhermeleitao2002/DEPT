@@ -7,6 +7,7 @@ Reads measured metrics from data/models/ and writes:
   eval_purification_scatter.svg- purification gain vs perturbation footprint
   eval_evasion_cost.svg        - ASR vs attacker spend, one line per target (RQ1)
   eval_baseline.svg            - deployment baseline: NIDS ASR before vs after DEPT
+  eval_sota_comparison.svg     - DEPT's purifier vs the diffusion purifier (phase 9)
 
 House palette (dissertation/Images conventions):
   blue #2c5f8a (fill #d7e4f2) | red #c44536 (#fbeae8) | teal #2a9d8f (#dff0ed)
@@ -530,9 +531,81 @@ def fig_baseline():
     open(os.path.join(OUT, "eval_baseline.svg"), "w").write("\n".join(p) + "\n")
     print("wrote eval_baseline.svg")
 
+def fig_sota():
+    """NIDS attack-success rate per source and mode: no defense vs each purifier.
+
+    Reads data/models/diffusion_purifier/diffusion_purifier_metrics.json (written by
+    scripts/diffusion_purifier/run_diffusion_purifier.py), held-out test subset. Each
+    row shows TANTGen's traffic with no defense (red circle), after the diffusion
+    purifier of Merzouk et al. (grey square) and after DEPT's purifier (blue circle),
+    with the clean-attack ASR as a faint teal tick. All source-mode combinations are
+    listed, as in eval_baseline.svg; those with no realizable packets carry a note.
+    """
+    path = "data/models/diffusion_purifier/diffusion_purifier_metrics.json"
+    if not os.path.exists(os.path.join(ROOT, path)):
+        write_placeholder("eval_sota_comparison.svg",
+                          "run scripts/diffusion_purifier/run_diffusion_purifier.py, then regenerate")
+        return
+    m = load(path)
+    per = m.get("per_source", {})
+    rows = []  # (src, clean, adv, diff, dept); values None = no realizable packets
+    for src in sorted(set(per) | set(m.get("skipped_sources", {}))):
+        a = per.get(src, {}).get("derived", {}).get("test", {}).get("asr", {})
+        vals = (a.get("adversarial"), a.get("diffusion_all"), a.get("dept_all"))
+        if None in vals:
+            rows.append((src, None, None, None, None))
+        else:
+            rows.append((src, a.get("clean"), *vals))
+
+    W = 1240
+    top, bot, rh = 96, 70, 27
+    H = top + bot + rh * len(rows)
+    x0, x1 = 300, 1120
+    def X(v):
+        return x0 + max(0.0, min(1.0, v)) * (x1 - x0)
+
+    p = []
+    p.append(f'<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {H}" font-family="Helvetica, Arial, sans-serif">')
+    for v in [0.0, 0.2, 0.4, 0.6, 0.8, 1.0]:
+        xx = X(v)
+        p.append(f'  <line x1="{fmt(xx)}" y1="{top-16}" x2="{fmt(xx)}" y2="{H-bot+8}" stroke="{GRID}" stroke-width="1.5"/>')
+        p.append(f'  <text x="{fmt(xx)}" y="{H-bot+32}" text-anchor="middle" font-size="19" fill="{GREY}">{v:g}</text>')
+    p.append(f'  <text x="{(x0+x1)//2}" y="{H-bot+62}" text-anchor="middle" font-size="21" fill="{INK}">NIDS attack success rate (1 - detection), held-out test pairs</text>')
+
+    for i, (src, clean, adv, diff, dept) in enumerate(rows):
+        yc = top + rh * i + rh // 2
+        if i % 2 == 0:
+            p.append(f'  <rect x="{x0-288}" y="{yc-rh//2}" width="{x1-x0+300}" height="{rh}" fill="#f6f8fa"/>')
+        p.append(f'  <text x="{x0-20}" y="{yc+6}" text-anchor="end" font-size="19" fill="{INK}">{src.replace("_adv_", " ").replace("_", " ")}</text>')
+        if adv is None:
+            p.append(f'  <text x="{x0+12}" y="{yc+6}" font-size="18" font-style="italic" fill="{MUT}">no realizable packets</text>')
+            continue
+        lo, hi = min(adv, diff, dept), max(adv, diff, dept)
+        p.append(f'  <line x1="{fmt(X(lo))}" y1="{yc}" x2="{fmt(X(hi))}" y2="{yc}" stroke="{MUT}" stroke-width="2.5"/>')
+        if clean is not None:
+            p.append(f'  <line x1="{fmt(X(clean))}" y1="{yc-10}" x2="{fmt(X(clean))}" y2="{yc+10}" stroke="{TEAL_D}" stroke-width="2.5"/>')
+        p.append("  " + circle(X(adv), yc, 8, RED, RED_D))      # no defense
+        p.append("  " + square(X(diff), yc, 14, GREY, GREY_D))  # diffusion purifier
+        p.append("  " + circle(X(dept), yc, 8, BLUE, BLUE_D))   # DEPT's purifier
+
+    lx, ly = x0 - 150, 44
+    p.append("  " + circle(lx, ly, 8, RED, RED_D))
+    p.append(f'  <text x="{lx+18}" y="{ly+7}" font-size="20" fill="{INK}">no defense</text>')
+    p.append("  " + square(lx + 190, ly, 14, GREY, GREY_D))
+    p.append(f'  <text x="{lx+208}" y="{ly+7}" font-size="20" fill="{INK}">diffusion purifier</text>')
+    p.append("  " + circle(lx + 460, ly, 8, BLUE, BLUE_D))
+    p.append(f'  <text x="{lx+478}" y="{ly+7}" font-size="20" fill="{INK}">DEPT purifier</text>')
+    p.append(f'  <line x1="{lx+690}" y1="{ly-10}" x2="{lx+690}" y2="{ly+10}" stroke="{TEAL_D}" stroke-width="2.5"/>')
+    p.append(f'  <text x="{lx+702}" y="{ly+7}" font-size="20" fill="{INK}">clean attack</text>')
+
+    p.append('</svg>')
+    open(os.path.join(OUT, "eval_sota_comparison.svg"), "w").write("\n".join(p) + "\n")
+    print("wrote eval_sota_comparison.svg")
+
 if __name__ == "__main__":
     fig_streaming()
     fig_strip()
     fig_scatter()
     fig_evasion_cost()
     fig_baseline()
+    fig_sota()

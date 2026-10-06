@@ -10,7 +10,7 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$REPO_ROOT"
 
 START_PHASE=1
-END_PHASE=8
+END_PHASE=9
 SKIP_ADV=0
 PER_ATTACK=0
 
@@ -32,6 +32,7 @@ Phases (in order):
   6. Reconstructor train + evaluate     scripts/reconstructor/run_reconstructor.py
   7. Gradient ablation (RQ1)            scripts/gradient_ablation/run_gradient_ablation.py
   8. Deployment baseline                scripts/baseline/run_baseline.py
+  9. Diffusion-purifier comparison      scripts/diffusion_purifier/run_diffusion_purifier.py
 
 Each phase is timed; per-phase and total wall-clock are printed in a summary
 at the end. Live output is also mirrored to
@@ -39,10 +40,10 @@ at the end. Live output is also mirrored to
 The script aborts on the first failing phase (set -euo pipefail).
 
 Usage:
-  ./run_pipeline.sh                 # all 8 phases (one global model per stage)
+  ./run_pipeline.sh                 # all 9 phases (one global model per stage)
   ./run_pipeline.sh --skip-adv      # skip phase 1 (PCAPs already present)
-  ./run_pipeline.sh --from N        # start at phase N  (1..8)
-  ./run_pipeline.sh --to   N        # stop  after phase N (1..8)
+  ./run_pipeline.sh --from N        # start at phase N  (1..9)
+  ./run_pipeline.sh --to   N        # stop  after phase N (1..9)
 
 Per-attack mode:
   ./run_pipeline.sh --per-attack            # phases 3-6 once per attack
@@ -52,7 +53,7 @@ Per-attack mode:
   Runs the model phases (3-6) once per attack, passing --attack <name> to
   each stage script. Phases 1-2 are per-attack by construction (their
   outputs are keyed by attack), so they are skipped here — run them via a
-  normal (global) invocation first. Phases 7-8 evaluate the GLOBAL models
+  normal (global) invocation first. Phases 7-9 evaluate the GLOBAL models
   (their configs read data/models/<stage>/), so they are also skipped in
   per-attack mode — run them via a normal (global) invocation. Global
   artifacts stay at data/models/<stage>/; per-attack artifacts land under
@@ -87,6 +88,7 @@ PHASE_NAMES=(
     [6]="reconstructor"
     [7]="gradient_ablation"
     [8]="baseline"
+    [9]="diffusion_purifier"
 )
 PHASE_CMDS=(
     [1]="$PYTHON scripts/adversarial_generation/generate_adversarials.py"
@@ -97,6 +99,7 @@ PHASE_CMDS=(
     [6]="$PYTHON scripts/reconstructor/run_reconstructor.py"
     [7]="$PYTHON scripts/gradient_ablation/run_gradient_ablation.py"
     [8]="$PYTHON scripts/baseline/run_baseline.py"
+    [9]="$PYTHON scripts/diffusion_purifier/run_diffusion_purifier.py"
 )
 
 declare -A DURATIONS
@@ -104,7 +107,7 @@ declare -A DURATIONS
 SEP="==============================================================================="
 
 section() {
-    printf '\n%s\n PHASE %d/8 — %s\n%s\n' "$SEP" "$1" "$2" "$SEP"
+    printf '\n%s\n PHASE %d/9 — %s\n%s\n' "$SEP" "$1" "$2" "$SEP"
 }
 
 format_duration() {
@@ -167,7 +170,7 @@ if (( PER_ATTACK )); then
     fi
     if (( END_PHASE > 6 )); then
         printf 'Note: --per-attack only applies to phases 3-6; stopping after phase 6.\n'
-        printf '      (Phases 7-8 evaluate the global models — run them globally.)\n'
+        printf '      (Phases 7-9 evaluate the global models — run them globally.)\n'
         END_PHASE=6
     fi
     printf 'Per-attack run over %d attack(s): %s\n' \
@@ -179,7 +182,7 @@ if (( PER_ATTACK )); then
         done
     done
 else
-    for i in 1 2 3 4 5 6 7 8; do
+    for i in 1 2 3 4 5 6 7 8 9; do
         if (( i < START_PHASE || i > END_PHASE )); then continue; fi
         if [[ $i -eq 1 && $SKIP_ADV -eq 1 ]]; then continue; fi
         run_phase "$i"
@@ -211,7 +214,7 @@ if (( PER_ATTACK )); then
         fi
     done
 else
-    for i in 1 2 3 4 5 6 7 8; do
+    for i in 1 2 3 4 5 6 7 8 9; do
         if [[ -n "${DURATIONS[$i]:-}" ]]; then
             printf '  phase %d  %-22s  %s\n' "$i" "${PHASE_NAMES[$i]}" "$(format_duration "${DURATIONS[$i]}")"
         fi

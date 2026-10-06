@@ -1,0 +1,35 @@
+
+════════════════════════════════════════════════════════════════════════════
+ DEPT — Meta-Learner  (mode: both)
+════════════════════════════════════════════════════════════════════════════
+ Config                /mnt/nas/inesc/gleitao/DEPT/config/metalearner.yaml
+ Attack scope          ssdp_flood  (per-attack run)
+ RF model dir          /mnt/nas/inesc/gleitao/DEPT/data/models/per_attack/ssdp_flood/rf
+ TCN model dir         /mnt/nas/inesc/gleitao/DEPT/data/models/per_attack/ssdp_flood/tcn
+ Output dir            /mnt/nas/inesc/gleitao/DEPT/data/models/per_attack/ssdp_flood/metalearner
+════════════════════════════════════════════════════════════════════════════
+
+────────────────────────────────────────────────────────────────────────────
+ [ 1 / 2 ]  Training meta-learner
+────────────────────────────────────────────────────────────────────────────
+  ✓ Trained in 208.9s
+  best epoch: 11  meta-val AUROC@10: 0.9999  params: 67,971
+
+────────────────────────────────────────────────────────────────────────────
+ [ 2 / 2 ]  Evaluating on held-out test split
+────────────────────────────────────────────────────────────────────────────
+  ✓ Evaluated in 11.7s
+  macro F1: 0.9997  ROC AUC: 1.0000  PR AUC: 1.0000  recall_adv: 1.0000
+  streaming EDP median: 1.0  detection rate: 1.0
+    AUROC@   1 = 0.8316
+    AUROC@   2 = 0.9493
+    AUROC@   5 = 0.9991
+    AUROC@  10 = 0.9999
+    AUROC@  20 = 0.9999
+    AUROC@ max = 1.0000
+
+════════════════════════════════════════════════════════════════════════════
+ Done  Total 220.6s
+ Artifacts  /mnt/nas/inesc/gleitao/DEPT/data/models/per_attack/ssdp_flood/metalearner
+════════════════════════════════════════════════════════════════════════════
+

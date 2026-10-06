@@ -1,0 +1,113 @@
+
+════════════════════════════════════════════════════════════════════════════
+ DEPT — TCN  (mode: both)
+════════════════════════════════════════════════════════════════════════════
+ Config        /mnt/nas/inesc/gleitao/DEPT/config/tcn.yaml
+ Attack scope  ddos  (per-attack run — other attacks excluded)
+ Tensors dir   /mnt/nas/inesc/gleitao/DEPT/data/tensors
+ Adversarial   /mnt/nas/inesc/gleitao/DEPT/data/tensors/adversarial  (30 source(s) discovered)
+ Output dir    /mnt/nas/inesc/gleitao/DEPT/data/models/per_attack/ddos/tcn
+ Benign pool   1 source(s)  (ddos)
+ Benign cap    3.0× adversarial flows
+ Split         train=0.7  val=0.15  test=0.15  seed=42
+ Device        cuda (NVIDIA RTX 6000 Ada Generation)
+ Epochs        20  early_stop_patience=3
+ Batch         32  num_workers=auto
+ Channels      [128, 128, 128]  kernel=3  dropout=0.15
+ LR            0.001  wd=0.0001  sched=cosine
+ AMP           ON
+════════════════════════════════════════════════════════════════════════════
+
+────────────────────────────────────────────────────────────────────────────
+ [ 1 / 2 ]  Training Temporal Convolutional Network
+────────────────────────────────────────────────────────────────────────────
+  ✓ Trained in 1747.5s  (29.1 min)
+
+ Split summary
+ ───────────────────────────────────────────────────────────────────────────
+ Split           Flows       Benign   Adversarial    Adv %
+ -------- ------------ ------------ ------------- --------
+ train         136,951       60,390        76,561    55.9%
+ val            29,348       12,941        16,407    55.9%
+ test           29,345       12,941        16,404    55.9%
+ -------- ------------ ------------ ------------- --------
+ total         195,644       86,272       109,372    55.9%
+
+ Training curves
+ ───────────────────────────────────────────────────────────────────────────
+ Params 805,762 Best epoch 18 → val_f1 0.9575
+
+  epoch   train_loss   val_loss    val_f1         lr     sec
+  ----- ------------ ---------- --------- ---------- -------
+      0       0.2956     0.2803    0.8140   9.94e-04   274.0
+      1       0.2579     0.2406    0.8624   9.76e-04    76.9
+      2       0.2374     0.2237    0.9396   9.46e-04    77.3
+      3       0.2344     0.2233    0.9381   9.05e-04    76.4
+      4       0.2290     0.2220    0.9423   8.54e-04    74.8
+      5       0.2320     0.2205    0.9480   7.94e-04    77.2
+      6       0.2335     0.2199    0.9496   7.27e-04    77.0
+      7       0.2334     0.2209    0.9449   6.55e-04    78.7
+      8       0.2301     0.2197    0.9503   5.78e-04    77.6
+      9       0.2287     0.2196    0.9506   5.00e-04    75.9
+     10       0.2241     0.2193    0.9510   4.22e-04    77.4
+     11       0.2233     0.2186    0.9537   3.45e-04    77.4
+     12       0.2226     0.2189    0.9530   2.73e-04    77.4
+     13       0.2195     0.2186    0.9526   2.06e-04    77.5
+     14       0.2189     0.2183    0.9541   1.46e-04    77.4
+     15       0.2174     0.2138    0.9542   9.55e-05    76.9
+     16       0.2146     0.2122    0.9554   5.45e-05    75.8
+     17       0.2131     0.2086    0.9551   2.45e-05    77.7
+★    18       0.2112     0.2061    0.9575   6.16e-06    76.1
+     19       0.2104     0.2059    0.9570   0.00e+00    78.3
+
+────────────────────────────────────────────────────────────────────────────
+ [ 2 / 2 ]  Evaluating on held-out test split
+────────────────────────────────────────────────────────────────────────────
+  ✓ Evaluated in 25.4s
+
+ Overall metrics (test)
+ ───────────────────────────────────────────────────────────────────────────
+ Acc 0.9573   Macro F1 0.9570   ROC AUC 0.9904   PR AUC 0.9933
+
+ class         precision     recall         f1    support
+ ------------ ---------- ---------- ---------- ----------
+ benign           0.9207     0.9883     0.9533     12,941
+ adversarial      0.9902     0.9329     0.9607     16,404
+
+ Per-adversarial-source metrics  (3 variant(s))
+ ───────────────────────────────────────────────────────────────────────────
+ precision/recall/f1 computed against a balanced benign subsample (K × n_adv); roc_auc/pr_auc use all test benign.
+
+ variant                     precision     recall         f1    roc_auc     pr_auc    n_adv
+ -------------------------- ---------- ---------- ---------- ---------- ---------- --------
+ ddos  both                     0.9745     1.0000     0.9871     1.0000     1.0000    5,781
+ ddos  iat                      0.9687     0.8095     0.8820     0.9727     0.9544    5,781
+ ddos  size                     0.9698     1.0000     0.9846     1.0000     1.0000    4,842
+
+============================================================================
+ DEPT × TCN — Summary
+============================================================================
+ Macro F1 0.9570   ROC AUC 0.9904   PR AUC 0.9933   Recall-adv 0.9329
+ ---------------------------------------------------------------------------
+ Train time    1747.5s  (29.1 min)
+ Eval  time      25.4s
+ Total time    1772.9s  (29.5 min)
+
+ Artifacts  → /mnt/nas/inesc/gleitao/DEPT/data/models/per_attack/ddos/tcn
+ ───────────────────────────────────────────────────────────────────────────
+   ✓ tcn.pt                   (    3.1 MB)  trained model state_dict
+   ✓ tcn_config.json          (   517.0 B)  resolved model + training config
+   ✓ split.npz                (    1.5 MB)  train/val/test indices
+   ✓ dataset_index.npz        (    4.1 MB)  per-flow index (no payload)
+   ✓ split_summary.json       (   672.0 B)  split counts
+   ✓ training_info.json       (    2.9 KB)  best epoch, durations, device
+   ✓ training_curves.json     (    4.0 KB)  per-epoch loss + val macro-F1
+   ✓ metrics.json             (    7.5 KB)  full metrics (overall/per-adversarial-source)
+   ✓ confusion_matrix.png     (   26.9 KB)  binary confusion matrix
+   ✓ roc_curve.png            (   31.6 KB)  ROC curve
+   ✓ pr_curve.png             (   24.6 KB)  precision-recall curve
+   ✓ training_curves.png      (   53.1 KB)  loss + macro-F1 over epochs
+ ───────────────────────────────────────────────────────────────────────────
+   Total  12/12 files, 8.8 MB
+============================================================================
+

@@ -1,0 +1,148 @@
+{
+  "source": "ssdp_flood_adv_iat",
+  "base": "ssdp_flood",
+  "mode": "iat",
+  "kind": "kitsune",
+  "model": "kitsune:ssdp_flood",
+  "run_key": {
+    "model_id": "8303b146ce24c6ed",
+    "t_star": 2,
+    "gated": true
+  },
+  "n_pairs": 65536,
+  "realize": {
+    "target_flows": 65536,
+    "realized_flows": 65536,
+    "miss_len": 0,
+    "unmatched": 0,
+    "unrealizable_l7": 1411479,
+    "pcap_packets_read": 1439604,
+    "pcap_packets_kept": 1439602,
+    "packets_per_branch": 28123
+  },
+  "gate": {
+    "flag_rate": 0.9999847412109375,
+    "flag_rate_gated_subset": 1.0,
+    "n_gated_flows": 1483
+  },
+  "compliance": null,
+  "unkeyed_rows": {
+    "clean": 0,
+    "adversarial": 0,
+    "dept_all": 0,
+    "diffusion_all": 0,
+    "dept_gated": 0,
+    "diffusion_gated": 0
+  },
+  "subsets": {
+    "test": {
+      "clean": {
+        "n_flows": 3413,
+        "n_detected": 6,
+        "sum_score": 358.8885518534085
+      },
+      "adversarial": {
+        "n_flows": 3413,
+        "n_detected": 3,
+        "sum_score": 324.5662726414115
+      },
+      "dept_all": {
+        "n_flows": 3413,
+        "n_detected": 4,
+        "sum_score": 346.787217138078
+      },
+      "diffusion_all": {
+        "n_flows": 3413,
+        "n_detected": 0,
+        "sum_score": 320.51112045403187
+      }
+    },
+    "strict": {
+      "clean": {
+        "n_flows": 317,
+        "n_detected": 2,
+        "sum_score": 37.340896372706496
+      },
+      "adversarial": {
+        "n_flows": 317,
+        "n_detected": 0,
+        "sum_score": 29.648602288104904
+      },
+      "dept_all": {
+        "n_flows": 317,
+        "n_detected": 0,
+        "sum_score": 32.36417288011524
+      },
+      "diffusion_all": {
+        "n_flows": 317,
+        "n_detected": 0,
+        "sum_score": 29.695239629991615
+      }
+    },
+    "gated": {
+      "clean": {
+        "n_flows": 501,
+        "n_detected": 0,
+        "sum_score": 51.215286807764066
+      },
+      "adversarial": {
+        "n_flows": 501,
+        "n_detected": 2,
+        "sum_score": 49.622579278535234
+      },
+      "dept_all": {
+        "n_flows": 501,
+        "n_detected": 0,
+        "sum_score": 50.17987086780136
+      },
+      "diffusion_all": {
+        "n_flows": 501,
+        "n_detected": 0,
+        "sum_score": 47.15132035657066
+      },
+      "dept_gated": {
+        "n_flows": 501,
+        "n_detected": 0,
+        "sum_score": 50.17987086780136
+      },
+      "diffusion_gated": {
+        "n_flows": 501,
+        "n_detected": 0,
+        "sum_score": 47.15132035657066
+      }
+    },
+    "full": {
+      "clean": {
+        "n_flows": 22991,
+        "n_detected": 40,
+        "sum_score": 2409.5627544797176
+      },
+      "adversarial": {
+        "n_flows": 22991,
+        "n_detected": 10,
+        "sum_score": 2165.3598815689033
+      },
+      "dept_all": {
+        "n_flows": 22991,
+        "n_detected": 42,
+        "sum_score": 2461.723304118297
+      },
+      "diffusion_all": {
+        "n_flows": 22991,
+        "n_detected": 5,
+        "sum_score": 2167.3445126961574
+      },
+      "dept_gated": {
+        "n_flows": 22991,
+        "n_detected": 42,
+        "sum_score": 2461.723304118297
+      },
+      "diffusion_gated": {
+        "n_flows": 22991,
+        "n_detected": 5,
+        "sum_score": 2167.3445126961574
+      }
+    }
+  },
+  "seconds": 1189.2
+}

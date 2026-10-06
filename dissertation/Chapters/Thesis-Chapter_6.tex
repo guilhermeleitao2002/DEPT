@@ -25,7 +25,8 @@ manipulated from clean flows; the purification stage (\Cref{sec:sol-reconstructo
 Transformer predicting a residual correction with a realization step that writes it back into
 dissector-validated packets, so the protected \ac{NIDS} receives traffic rather than tensors. The
 last two are the evaluation itself: the deployment baseline of \Cref{subsec:eval-e2e-detect}, which
-judges DEPT through the real \ac{NIDS} each attack was built to evade, and a reusable ten-source
+judges DEPT through the real \ac{NIDS} each attack was built to evade and compares its purifier with a
+published one (\Cref{subsec:eval-sota}), and a reusable ten-source
 corpus in three perturbation modes, reported per source and per mode.
 
 % #############################################################################
@@ -48,7 +49,9 @@ condition: scored through the \emph{independent} \ac{NIDS} each attack was built
 purification recovers $63.0\%$ of the destroyed detection overall, while reconstruction error on the
 perturbed dimensions falls by $17.0\times$ and the realized packets pass \texttt{tshark} $97.2\%$
 of the time (\Cref{sec:eval-purification}). End to end, the gated pipeline cuts the protected
-\ac{NIDS}'s attack-success rate from $21.1\%$ to $11.6\%$ (\Cref{subsec:eval-e2e-detect}).
+\ac{NIDS}'s attack-success rate from $21.1\%$ to $11.6\%$ (\Cref{subsec:eval-e2e-detect}). In the same
+position, the diffusion-based purifier of Merzouk et al.~\cite{merzouk2024diffusion} recovers $0.5\%$ of
+the detection lost where TANTGen evaded, against $63.5\%$ for DEPT (\Cref{subsec:eval-sota}).
 
 The condition is that TANTGen actually evaded. Where it moved the features without evading,
 purifying \emph{lowers} the protected detector's detection, by up to $22$ points on
@@ -85,6 +88,8 @@ The fourth is validation. Purification gain measured through DEPT's own \ac{TCN}
 circular, though the end-to-end claim does not rest on it; each attack is judged by one target
 \ac{NIDS} rather than a panel; on \texttt{mirai} a target that detects almost nothing even on the
 clean attack; and the defended full-stream figures run DEPT's models over some flows seen in training.
+DEPT is also compared with a single published purifier, adapted to its representation, and only
+against the attacker it was trained on (\Cref{subsec:eval-sota}).
 
 The fifth is scope. The purifier corrects all $1090$ dimensions without being told which the
 attacker moved, but the realization step overlays only the two this threat model perturbs
@@ -115,6 +120,9 @@ The limitations above set most of the agenda.
     \item \textbf{A fusion that never falls below its best base learner.} Re-emitting the \ac{RF}
     evidence at every packet without an explicit staleness weight, or letting the meta-learner fall back
     to the stronger base opinion when the two diverge.
+    \item \textbf{More baselines and other attackers.} Repeating the comparison of
+    \Cref{subsec:eval-sota} with other purifiers, and against generators DEPT was not trained on,
+    would show how much of its advantage comes from training on the same attacker.
     \item \textbf{What separates a size-mode DNS flood flow from an unedited one.} Which observable quantity,
     absent from the representation above, distinguishes these flows? Payload content, never parsed by design,
     is the first place to look.

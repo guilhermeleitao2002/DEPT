@@ -1,0 +1,94 @@
+
+════════════════════════════════════════════════════════════════════════════
+ DEPT — Random Forest  (mode: both)
+════════════════════════════════════════════════════════════════════════════
+ Config        /mnt/nas/inesc/gleitao/DEPT/config/rf.yaml
+ Attack scope  brute_force  (per-attack run — other attacks excluded)
+ Tensors dir   /mnt/nas/inesc/gleitao/DEPT/data/tensors
+ Adversarial   /mnt/nas/inesc/gleitao/DEPT/data/tensors/adversarial  (30 source(s) discovered)
+ Output dir    /mnt/nas/inesc/gleitao/DEPT/data/models/per_attack/brute_force/rf
+ Benign pool   1 source(s)  (brute_force)
+ Benign cap    3.0× adversarial windows
+ Split         train=0.7  val=0.15  test=0.15  seed=42
+ Grid search   ON
+════════════════════════════════════════════════════════════════════════════
+
+────────────────────────────────────────────────────────────────────────────
+ [ 1 / 2 ]  Training Random Forest
+────────────────────────────────────────────────────────────────────────────
+  ✓ Trained in 733.8s  (12.2 min)
+
+ Split summary  (rows = RF checkpoints, multi-scale prefixes)
+ ───────────────────────────────────────────────────────────────────────────
+ Split           Ckpts      Flows       Benign   Adversarial    Adv %
+ -------- ------------ ---------- ------------ ------------- --------
+ train         412,797     58,539      350,371        62,426    15.1%
+ val            46,716     12,546       33,380        13,336    28.5%
+ test           43,916     12,542       30,401        13,515    30.8%
+ -------- ------------ ---------- ------------ ------------- --------
+ total         503,429     83,627      414,152        89,277    17.7%
+
+ Grid search
+ ───────────────────────────────────────────────────────────────────────────
+ Top 5 of 18 configuration(s):
+
+    rank   n_est  max_depth  min_leaf     val_f1     fit_s
+    ----  ------ ---------- ---------  ---------  --------
+  ★    1     200       None         2     0.9607      21.4
+       2     200         40         2     0.9607      20.7
+       3     400       None         5     0.9607      41.5
+       4     400         40         2     0.9607      40.2
+       5     400         40         5     0.9607      41.2
+
+ Best params  {'n_estimators': 200, 'max_depth': None, 'min_samples_leaf': 2}
+
+────────────────────────────────────────────────────────────────────────────
+ [ 2 / 2 ]  Evaluating on held-out test split
+────────────────────────────────────────────────────────────────────────────
+  ✓ Evaluated in 29.9s
+
+ Overall metrics (test)
+ ───────────────────────────────────────────────────────────────────────────
+ Acc 0.9624   Macro F1 0.9573   ROC AUC 0.9631   PR AUC 0.8607
+
+ class         precision     recall         f1    support
+ ------------ ---------- ---------- ---------- ----------
+ benign           1.0000     0.9457     0.9721     30,401
+ adversarial      0.8912     1.0000     0.9425     13,515
+
+ Per-adversarial-source metrics  (3 variant(s))
+ ───────────────────────────────────────────────────────────────────────────
+ precision/recall/f1 computed against a balanced benign subsample (K × n_adv); roc_auc/pr_auc use all test benign.
+
+ variant                     precision     recall         f1    roc_auc     pr_auc    n_adv
+ -------------------------- ---------- ---------- ---------- ---------- ---------- --------
+ brute_force  both              0.7328     1.0000     0.8458     0.9598     0.6134    4,524
+ brute_force  iat               0.7307     1.0000     0.8444     0.9594     0.6090    4,476
+ brute_force  size              0.7324     1.0000     0.8455     0.9701     0.7695    4,515
+
+============================================================================
+ DEPT × Random Forest — Summary
+============================================================================
+ Macro F1 0.9573   ROC AUC 0.9631   PR AUC 0.8607   Recall-adv 1.0000
+ ---------------------------------------------------------------------------
+ Train time     733.8s  (12.2 min)
+ Eval  time      29.9s
+ Total time     763.7s  (12.7 min)
+
+ Artifacts  → /mnt/nas/inesc/gleitao/DEPT/data/models/per_attack/brute_force/rf
+ ───────────────────────────────────────────────────────────────────────────
+   ✓ rf.joblib                (  279.6 MB)  trained classifier
+   ✓ split.npz                (    3.8 MB)  train/val/test indices
+   ✓ dataset.npz              (  194.4 MB)  merged dataset snapshot
+   ✓ feature_names.json       (   446.0 B)  RF stat names (24)
+   ✓ split_summary.json       (   842.0 B)  split counts
+   ✓ training_info.json       (    5.7 KB)  grid search + best params
+   ✓ metrics.json             (    7.4 KB)  full metrics (overall/per-adversarial-source)
+   ✓ confusion_matrix.png     (   27.1 KB)  binary confusion matrix
+   ✓ roc_curve.png            (   32.3 KB)  ROC curve
+   ✓ pr_curve.png             (   27.8 KB)  precision-recall curve
+   ✓ feature_importance.png   (   85.4 KB)  Gini importances
+ ───────────────────────────────────────────────────────────────────────────
+   Total  11/11 files, 478.1 MB
+============================================================================
+

@@ -42,6 +42,20 @@ class KitsuneNIDS(NIDSModel):
         per_flow = flow_agg(rmse, keys, self._detection)
         return BranchScore.from_flow_scores(per_flow, self.threshold)
 
+    def score_flows(self, packets: list, keys: list) -> list[tuple[str, float, int]]:
+        """Per-flow variant of :meth:`score` (phase 9): ``(flow_key, RMSE, detected)``.
+
+        The whole stream is still fed to AfterImage (its statistics are stateful across
+        flows); only the per-flow results are returned, so a caller can restrict the
+        metric to a subset of flows without changing what Kitsune saw.
+        """
+        if not packets:
+            return []
+        feats = krun.extract_features(packets, self._tantgen_root)
+        rmse = krun.score(self._kitnet, feats)
+        per_flow = flow_agg(rmse, keys, self._detection)
+        return [(k, float(s), int(s > self.threshold)) for k, s in per_flow.items()]
+
 
 def build(base: str, cfg: dict, repo_root: Path) -> KitsuneNIDS:
     """Locate (or calibrate) the Kitsune model for ``base`` → :class:`KitsuneNIDS`.

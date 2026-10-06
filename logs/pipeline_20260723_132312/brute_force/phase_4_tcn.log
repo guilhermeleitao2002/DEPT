@@ -1,0 +1,101 @@
+
+════════════════════════════════════════════════════════════════════════════
+ DEPT — TCN  (mode: both)
+════════════════════════════════════════════════════════════════════════════
+ Config        /mnt/nas/inesc/gleitao/DEPT/config/tcn.yaml
+ Attack scope  brute_force  (per-attack run — other attacks excluded)
+ Tensors dir   /mnt/nas/inesc/gleitao/DEPT/data/tensors
+ Adversarial   /mnt/nas/inesc/gleitao/DEPT/data/tensors/adversarial  (30 source(s) discovered)
+ Output dir    /mnt/nas/inesc/gleitao/DEPT/data/models/per_attack/brute_force/tcn
+ Benign pool   1 source(s)  (brute_force)
+ Benign cap    3.0× adversarial flows
+ Split         train=0.7  val=0.15  test=0.15  seed=42
+ Device        cuda (NVIDIA RTX 6000 Ada Generation)
+ Epochs        20  early_stop_patience=3
+ Batch         32  num_workers=auto
+ Channels      [128, 128, 128]  kernel=3  dropout=0.15
+ LR            0.001  wd=0.0001  sched=cosine
+ AMP           ON
+════════════════════════════════════════════════════════════════════════════
+
+────────────────────────────────────────────────────────────────────────────
+ [ 1 / 2 ]  Training Temporal Convolutional Network
+────────────────────────────────────────────────────────────────────────────
+  ✓ Trained in 982.7s  (16.4 min)
+
+ Split summary
+ ───────────────────────────────────────────────────────────────────────────
+ Split           Flows       Benign   Adversarial    Adv %
+ -------- ------------ ------------ ------------- --------
+ train          58,548       43,911        14,637    25.0%
+ val            12,548        9,410         3,138    25.0%
+ test           12,544        9,409         3,135    25.0%
+ -------- ------------ ------------ ------------- --------
+ total          83,640       62,730        20,910    25.0%
+
+ Training curves
+ ───────────────────────────────────────────────────────────────────────────
+ Params 805,762 Best epoch 4 → val_f1 0.9569
+
+  epoch   train_loss   val_loss    val_f1         lr     sec
+  ----- ------------ ---------- --------- ---------- -------
+      0       0.1003     0.0943    0.9559   9.94e-04   497.7
+      1       0.0939     0.0972    0.9547   9.76e-04    43.8
+      2       0.0907     0.1017    0.9524   9.46e-04    47.3
+      3       0.0897     0.0933    0.9567   9.05e-04    45.6
+★     4       0.0895     0.0934    0.9569   8.54e-04    44.3
+      5       0.0919     0.0935    0.9558   7.94e-04    42.3
+      6       0.0896     0.0951    0.9568   7.27e-04    44.6
+      7       0.0894     0.0928    0.9566   6.55e-04    48.5
+
+────────────────────────────────────────────────────────────────────────────
+ [ 2 / 2 ]  Evaluating on held-out test split
+────────────────────────────────────────────────────────────────────────────
+  ✓ Evaluated in 28.0s
+
+ Overall metrics (test)
+ ───────────────────────────────────────────────────────────────────────────
+ Acc 0.9697   Macro F1 0.9611   ROC AUC 0.9804   PR AUC 0.9027
+
+ class         precision     recall         f1    support
+ ------------ ---------- ---------- ---------- ----------
+ benign           1.0000     0.9596     0.9794      9,409
+ adversarial      0.8919     1.0000     0.9429      3,135
+
+ Per-adversarial-source metrics  (3 variant(s))
+ ───────────────────────────────────────────────────────────────────────────
+ precision/recall/f1 computed against a balanced benign subsample (K × n_adv); roc_auc/pr_auc use all test benign.
+
+ variant                     precision     recall         f1    roc_auc     pr_auc    n_adv
+ -------------------------- ---------- ---------- ---------- ---------- ---------- --------
+ brute_force  both              0.7333     1.0000     0.8462     0.9803     0.7527    1,045
+ brute_force  iat               0.7333     1.0000     0.8462     0.9804     0.7610    1,045
+ brute_force  size              0.7333     1.0000     0.8462     0.9804     0.7573    1,045
+
+============================================================================
+ DEPT × TCN — Summary
+============================================================================
+ Macro F1 0.9611   ROC AUC 0.9804   PR AUC 0.9027   Recall-adv 1.0000
+ ---------------------------------------------------------------------------
+ Train time     982.7s  (16.4 min)
+ Eval  time      28.0s
+ Total time    1010.6s  (16.8 min)
+
+ Artifacts  → /mnt/nas/inesc/gleitao/DEPT/data/models/per_attack/brute_force/tcn
+ ───────────────────────────────────────────────────────────────────────────
+   ✓ tcn.pt                   (    3.1 MB)  trained model state_dict
+   ✓ tcn_config.json          (   517.0 B)  resolved model + training config
+   ✓ split.npz                (  654.2 KB)  train/val/test indices
+   ✓ dataset_index.npz        (    1.8 MB)  per-flow index (no payload)
+   ✓ split_summary.json       (   746.0 B)  split counts
+   ✓ training_info.json       (    3.0 KB)  best epoch, durations, device
+   ✓ training_curves.json     (    1.6 KB)  per-epoch loss + val macro-F1
+   ✓ metrics.json             (    7.5 KB)  full metrics (overall/per-adversarial-source)
+   ✓ confusion_matrix.png     (   26.5 KB)  binary confusion matrix
+   ✓ roc_curve.png            (   32.6 KB)  ROC curve
+   ✓ pr_curve.png             (   28.4 KB)  precision-recall curve
+   ✓ training_curves.png      (   60.6 KB)  loss + macro-F1 over epochs
+ ───────────────────────────────────────────────────────────────────────────
+   Total  12/12 files, 5.6 MB
+============================================================================
+

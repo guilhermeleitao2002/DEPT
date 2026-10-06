@@ -160,6 +160,62 @@ class MLNIDS(NIDSModel):
         predicted = {i: int(pred[i] == 1) for i in range(len(pred))}
         return BranchScore.from_flow_scores(flow_scores, None, predicted=predicted)
 
+    def score_flows(self, packets: list, keys: list) -> list[tuple[str | None, float, int]]:
+        """Per-flow variant of :meth:`score` (phase 9): one ``(flow_key, P(malicious),
+        detected)`` per CICFlowMeter flow, in extraction order.
+
+        ``flow_key`` is the flow's canonical 5-tuple in the same format as ``keys``
+        (``None`` if the row's address columns cannot be read), so a caller can score a
+        stream once and restrict the metric to any subset of flows afterwards. Summing
+        the rows reproduces :meth:`score` exactly; :meth:`score` itself is unchanged.
+        """
+        if not packets:
+            return []
+        from scapy.all import wrpcap
+
+        with tempfile.TemporaryDirectory(prefix="dept_mlnids_") as td:
+            pcap_path = Path(td) / "branch.pcap"
+            raw_csv = Path(td) / "flows.csv"
+            wrpcap(str(pcap_path), packets)
+            _run_cicflowmeter(pcap_path, raw_csv, self._cfm_python, self._cfm_src)
+            if not raw_csv.exists():
+                return []
+            X, flow_keys = self._features_and_keys_from_csv(raw_csv)
+        if X is None or len(X) == 0:
+            return []
+        Xs = self._scaler.transform(X)
+        pred = self._model.predict(Xs).astype(int)
+        proba = self._proba(Xs)
+        return [(flow_keys[i], float(proba[i]), int(pred[i] == 1)) for i in range(len(pred))]
+
+    def _features_and_keys_from_csv(self, raw_csv: Path):
+        """:meth:`_features_from_csv` plus each kept row's canonical 5-tuple key."""
+        import pandas as pd
+
+        try:
+            df = pd.read_csv(raw_csv)
+        except pd.errors.EmptyDataError:
+            return None, []
+        if df.empty:
+            return None, []
+        flow_keys = _canonical_keys_from_frame(df)
+        # From here on identical to _features_from_csv, with the kept rows tracked.
+        if "fwd_header_len" in df.columns:
+            df["fwd_header_len1"] = df["fwd_header_len"]
+        df = df.rename(columns=self._mapping)
+        missing = [c for c in self._features if c not in df.columns]
+        if missing:
+            raise NIDSUnavailable(
+                f"cicflowmeter output missing {len(missing)} expected feature "
+                f"column(s), e.g. {missing[:3]} — is the cicflowmeter version compatible?")
+        df = df[self._features].apply(pd.to_numeric, errors="coerce")
+        df = df.dropna(how="all")
+        if df.empty:
+            return None, []
+        kept = [flow_keys[i] for i in df.index]
+        df = df.replace([np.inf, -np.inf], np.nan).fillna(-1)
+        return df.values, kept
+
     def _features_from_csv(self, raw_csv: Path):
         import pandas as pd
 
@@ -192,6 +248,36 @@ class MLNIDS(NIDSModel):
             return self._model.predict_proba(Xs)[:, 1]
         # LinearSVC etc.: use the (unbounded) decision function as the score.
         return np.asarray(self._model.decision_function(Xs), dtype=np.float64)
+
+
+def _canonical_keys_from_frame(df) -> list[str | None]:
+    """Canonical 5-tuple key per CICFlowMeter row, matching ``realize._canonical_key``.
+
+    The realized stream keys each packet as ``ip_lo|ip_hi|port_lo|port_hi|proto`` with
+    the endpoints ordered by their ``"ip:port"`` string; the same ordering applied to a
+    row's ``src_ip/dst_ip/src_port/dst_port/protocol`` gives the row its flow's key.
+    """
+    cols = ("src_ip", "dst_ip", "src_port", "dst_port", "protocol")
+    if any(c not in df.columns for c in cols):
+        return [None] * len(df)
+
+    def _int(v) -> int:
+        try:
+            return int(float(v))
+        except (TypeError, ValueError):
+            return -1
+
+    out: list[str | None] = []
+    for src_ip, dst_ip, sp, dp, proto in df[list(cols)].itertuples(index=False, name=None):
+        if not isinstance(src_ip, str) or not isinstance(dst_ip, str):
+            out.append(None)
+            continue
+        sp, dp, proto = _int(sp), _int(dp), _int(proto)
+        swap = f"{src_ip}:{sp}" > f"{dst_ip}:{dp}"
+        ip_lo, ip_hi = (dst_ip, src_ip) if swap else (src_ip, dst_ip)
+        p_lo, p_hi = (dp, sp) if swap else (sp, dp)
+        out.append(f"{ip_lo}|{ip_hi}|{p_lo}|{p_hi}|{proto}")
+    return out
 
 
 def build(base: str, cfg: dict, repo_root: Path) -> MLNIDS:

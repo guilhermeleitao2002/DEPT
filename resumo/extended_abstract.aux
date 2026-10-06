@@ -1,0 +1,283 @@
+\relax 
+\providecommand\hyper@newdestlabel[2]{}
+\providecommand\HyField@AuxAddToFields[1]{}
+\providecommand\HyField@AuxAddToCoFields[2]{}
+\citation{boutaba2018comprehensive,wang2021machine}
+\citation{szegedy2014intriguing,goodfellow2014explaining}
+\citation{he2023adversarial}
+\citation{zhang2020tiki}
+\citation{pierazzi2020intriguing,hashemi2019towards}
+\citation{papernot2017practical,apruzzese2023sok}
+\citation{pissarra2026tantgen}
+\citation{wolpert1992stacked}
+\citation{papernot2017practical}
+\citation{samangouei2018defense}
+\@writefile{toc}{\contentsline {section}{Abstract}{1}{section*.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {1}Introduction}{1}{section.1}\protected@file@percent }
+\newlabel{sec:intro}{{1}{1}{Introduction}{section.1}{}}
+\newlabel{sec:intro@cref}{{[section][1][]1}{[1][1][]1}{}{}{}}
+\citation{merzouk2024diffusion}
+\citation{mirsky2018kitsune,cicids2017,sharafaldin2019cicddos}
+\citation{he2023adversarial}
+\citation{papernot2017practical}
+\citation{goodfellow2014explaining,madry2018towards}
+\citation{hashemi2019towards,zhang2020tiki}
+\citation{pierazzi2020intriguing}
+\citation{sun2023gpmt}
+\citation{jin2025robustifying}
+\citation{hajizadeh2025deepred}
+\citation{kumar2026netdiffuser}
+\citation{pissarra2026tantgen}
+\citation{mirsky2018kitsune}
+\citation{rubinstein2009antidote}
+\citation{rieger2024crowdguard}
+\citation{biggio2011bagging,chen2022collective}
+\citation{zhang2020tiki}
+\citation{yang2021trs}
+\citation{gungor2022stewart}
+\citation{alotaibi2024mateen}
+\citation{madry2018towards}
+\citation{jin2025robustifying}
+\citation{yan2025certta}
+\citation{abad2025lipslev}
+\citation{samangouei2018defense}
+\citation{alhussien2024advpurrec}
+\citation{merzouk2024diffusion}
+\citation{ghadermazi2025gtae}
+\citation{kumar2025nids}
+\citation{olukola2026amds}
+\citation{athalye2018obfuscated}
+\@writefile{toc}{\contentsline {section}{\numberline {2}Background and Related Work}{2}{section.2}\protected@file@percent }
+\newlabel{sec:related}{{2}{2}{Background and Related Work}{section.2}{}}
+\newlabel{sec:related@cref}{{[section][2][]2}{[1][2][]2}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.1}Evasion of Learned Network Detectors}{2}{subsection.2.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{TANTGen}{2}{section*.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.2}Defenses against Evasion}{2}{subsection.2.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Training-time defenses}{2}{section*.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Inference-time defenses}{2}{section*.4}\protected@file@percent }
+\citation{mirsky2018kitsune}
+\citation{cicids2017}
+\citation{sharafaldin2019cicddos}
+\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces Surveyed defenses and DEPT, by the phase at which they act (T: training, I: inference) and the space they operate in.}}{3}{table.caption.5}\protected@file@percent }
+\providecommand*\caption@xref[2]{\@setref\relax\@undefined{#1}}
+\newlabel{tab:related}{{1}{3}{Surveyed defenses and DEPT, by the phase at which they act (T: training, I: inference) and the space they operate in}{table.caption.5}{}}
+\newlabel{tab:related@cref}{{[table][1][]1}{[1][3][]3}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.3}The Gap}{3}{subsection.2.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {3}Threat Model}{3}{section.3}\protected@file@percent }
+\newlabel{sec:threat}{{3}{3}{Threat Model}{section.3}{}}
+\newlabel{sec:threat@cref}{{[section][3][]3}{[1][3][]3}{}{}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {4}DEPT Architecture}{3}{section.4}\protected@file@percent }
+\newlabel{sec:dept}{{4}{3}{DEPT Architecture}{section.4}{}}
+\newlabel{sec:dept@cref}{{[section][4][]4}{[1][3][]3}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.1}Overview}{3}{subsection.4.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}Corpus and Traffic Representation}{3}{subsection.4.2}\protected@file@percent }
+\newlabel{sec:corpus}{{4.2}{3}{Corpus and Traffic Representation}{subsection.4.2}{}}
+\newlabel{sec:corpus@cref}{{[subsection][2][4]4.2}{[1][3][]3}{}{}{}}
+\@writefile{toc}{\contentsline {paragraph}{Corpus}{3}{section*.7}\protected@file@percent }
+\citation{holland2021nprint}
+\citation{arp2022dos}
+\citation{breiman2001random}
+\citation{bai2018empirical}
+\citation{vaswani2017attention}
+\citation{wolpert1992stacked}
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces DEPT in front of a protected NIDS. The packet-to-tensor pipeline derives two views of each flow: bit-level packet tokens for the TCN and prefix statistics for the Random Forest. The meta-learner fuses the two prediction streams into a verdict at every packet. Unflagged flows pass unchanged; flagged flows are corrected by the reconstructor and realized back into packets, so the NIDS receives traffic, not tensors.}}{4}{figure.caption.6}\protected@file@percent }
+\newlabel{fig:arch}{{1}{4}{DEPT in front of a protected NIDS. The packet-to-tensor pipeline derives two views of each flow: bit-level packet tokens for the TCN and prefix statistics for the Random Forest. The meta-learner fuses the two prediction streams into a verdict at every packet. Unflagged flows pass unchanged; flagged flows are corrected by the reconstructor and realized back into packets, so the NIDS receives traffic, not tensors}{figure.caption.6}{}}
+\newlabel{fig:arch@cref}{{[figure][1][]1}{[1][3][]4}{}{}{}}
+\@writefile{toc}{\contentsline {paragraph}{Labels}{4}{section*.8}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Packet tokens}{4}{section*.9}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Prefix statistics}{4}{section*.10}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Split and class balance}{4}{section*.11}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.3}Heterogeneous Detection Ensemble}{4}{subsection.4.3}\protected@file@percent }
+\newlabel{sec:ensemble}{{4.3}{4}{Heterogeneous Detection Ensemble}{subsection.4.3}{}}
+\newlabel{sec:ensemble@cref}{{[subsection][3][4]4.3}{[1][4][]4}{}{}{}}
+\@writefile{toc}{\contentsline {paragraph}{Random Forest}{4}{section*.12}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{TCN}{4}{section*.13}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Meta-learner}{4}{section*.15}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Prediction cadence over the first packets of a flow. The TCN emits a logit at every packet; the RF emits one at packet\nonbreakingspace 2 and every tenth packet (dark squares) and its last logit is carried forward (light squares), with its age in packets given to the meta-learner, which fuses both at every packet.}}{5}{figure.caption.14}\protected@file@percent }
+\newlabel{fig:cadence}{{2}{5}{Prediction cadence over the first packets of a flow. The TCN emits a logit at every packet; the RF emits one at packet~2 and every tenth packet (dark squares) and its last logit is carried forward (light squares), with its age in packets given to the meta-learner, which fuses both at every packet}{figure.caption.14}{}}
+\newlabel{fig:cadence@cref}{{[figure][2][]2}{[1][4][]5}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.4}Purification and Realization}{5}{subsection.4.4}\protected@file@percent }
+\newlabel{sec:purifier}{{4.4}{5}{Purification and Realization}{subsection.4.4}{}}
+\newlabel{sec:purifier@cref}{{[subsection][4][4]4.4}{[1][5][]5}{}{}{}}
+\@writefile{toc}{\contentsline {paragraph}{Reconstructor}{5}{section*.16}\protected@file@percent }
+\newlabel{eq:residual}{{1}{5}{Reconstructor}{equation.1}{}}
+\newlabel{eq:residual@cref}{{[equation][1][]1}{[1][5][]5}{}{}{}}
+\@writefile{toc}{\contentsline {paragraph}{Training on matched pairs}{5}{section*.17}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Realization}{5}{section*.18}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces Configuration of the four learned components. A step is a checkpoint for the RF and a packet for the three sequence models.}}{5}{table.caption.19}\protected@file@percent }
+\newlabel{tab:config}{{2}{5}{Configuration of the four learned components. A step is a checkpoint for the RF and a packet for the three sequence models}{table.caption.19}{}}
+\newlabel{tab:config@cref}{{[table][2][]2}{[1][5][]5}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.5}Implementation}{5}{subsection.4.5}\protected@file@percent }
+\newlabel{sec:impl}{{4.5}{5}{Implementation}{subsection.4.5}{}}
+\newlabel{sec:impl@cref}{{[subsection][5][4]4.5}{[1][5][]5}{}{}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {5}Evaluation}{5}{section.5}\protected@file@percent }
+\newlabel{sec:evaluation}{{5}{5}{Evaluation}{section.5}{}}
+\newlabel{sec:evaluation@cref}{{[section][5][]5}{[1][5][]5}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.1}Research Questions and Setup}{5}{subsection.5.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Test data}{5}{section*.20}\protected@file@percent }
+\citation{madry2018towards}
+\citation{carlini2019evaluating,tramer2020adaptive}
+\citation{croce2020reliable}
+\citation{nicolae2018adversarial}
+\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces Streaming detection on the held-out test flows. AUROC@$t$ uses each flow's prediction after $t$ packets; EDP is the median packet of first detection; the detection rate counts adversarial flows ever flagged.}}{6}{table.caption.22}\protected@file@percent }
+\newlabel{tab:streaming}{{3}{6}{Streaming detection on the held-out test flows. AUROC@$t$ uses each flow's prediction after $t$ packets; EDP is the median packet of first detection; the detection rate counts adversarial flows ever flagged}{table.caption.22}{}}
+\newlabel{tab:streaming@cref}{{[table][3][]3}{[1][6][]6}{}{}{}}
+\@writefile{toc}{\contentsline {paragraph}{Metrics}{6}{section*.21}\protected@file@percent }
+\newlabel{eq:rho}{{2}{6}{Metrics}{equation.2}{}}
+\newlabel{eq:rho@cref}{{[equation][2][]2}{[1][6][]6}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.2}Detection}{6}{subsection.5.2}\protected@file@percent }
+\newlabel{sec:eval-detect}{{5.2}{6}{Detection}{subsection.5.2}{}}
+\newlabel{sec:eval-detect@cref}{{[subsection][2][5]5.2}{[1][6][]6}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.3}Robustness to a Gradient-guided Attacker (RQ1)}{6}{subsection.5.3}\protected@file@percent }
+\newlabel{sec:eval-rq1}{{5.3}{6}{Robustness to a Gradient-guided Attacker (RQ1)}{subsection.5.3}{}}
+\newlabel{sec:eval-rq1@cref}{{[subsection][3][5]5.3}{[1][6][]6}{}{}{}}
+\@writefile{toc}{\contentsline {paragraph}{Attack}{6}{section*.24}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Results}{6}{section*.26}\protected@file@percent }
+\citation{merzouk2024diffusion}
+\citation{merzouk2024diffusion}
+\@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces End-of-flow AUROC per source and perturbation mode, against benign flows of the same source. $n_{\text  {adv}}$ is the number of adversarial test flows per mode (on \texttt  {mirai}, the RF scores $867$ of the $1{,}957$, as many flows end before packet\nonbreakingspace 2). Values below $0.55$ are marked with $\dagger $.}}{7}{table.caption.23}\protected@file@percent }
+\newlabel{tab:persource}{{4}{7}{End-of-flow AUROC per source and perturbation mode, against benign flows of the same source. $n_{\text {adv}}$ is the number of adversarial test flows per mode (on \src {mirai}, the RF scores $867$ of the $1{,}957$, as many flows end before packet~2). Values below $0.55$ are marked with $\dagger $}{table.caption.23}{}}
+\newlabel{tab:persource@cref}{{[table][4][]4}{[1][6][]7}{}{}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Attack success of one perturbation crafted with the TCN's gradients and replayed unchanged through each target, at a matched $5\%$ false-positive rate. In parentheses: flows never evaded at any budget.}}{7}{figure.caption.25}\protected@file@percent }
+\newlabel{fig:rq1}{{3}{7}{Attack success of one perturbation crafted with the TCN's gradients and replayed unchanged through each target, at a matched $5\%$ false-positive rate. In parentheses: flows never evaded at any budget}{figure.caption.25}{}}
+\newlabel{fig:rq1@cref}{{[figure][3][]3}{[1][6][]7}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.4}Purification (RQ2)}{7}{subsection.5.4}\protected@file@percent }
+\newlabel{sec:eval-purif}{{5.4}{7}{Purification (RQ2)}{subsection.5.4}{}}
+\newlabel{sec:eval-purif@cref}{{[subsection][4][5]5.4}{[1][7][]7}{}{}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {5}{\ignorespaces Purification on the $384{,}963$ held-out test pairs. The TCN row is circular and kept as a sanity check; compliance counts realizable packets only.}}{7}{table.caption.27}\protected@file@percent }
+\newlabel{tab:purif}{{5}{7}{Purification on the $384{,}963$ held-out test pairs. The TCN row is circular and kept as a sanity check; compliance counts realizable packets only}{table.caption.27}{}}
+\newlabel{tab:purif@cref}{{[table][5][]5}{[1][7][]7}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.5}End-to-end Deployment and Comparison with a Diffusion Purifier}{7}{subsection.5.5}\protected@file@percent }
+\newlabel{sec:eval-e2e}{{5.5}{7}{End-to-end Deployment and Comparison with a Diffusion Purifier}{subsection.5.5}{}}
+\newlabel{sec:eval-e2e@cref}{{[subsection][5][5]5.5}{[1][7][]7}{}{}{}}
+\@writefile{toc}{\contentsline {paragraph}{Deployment}{7}{section*.29}\protected@file@percent }
+\citation{merzouk2024diffusion}
+\@writefile{lot}{\contentsline {table}{\numberline {6}{\ignorespaces Attack success rate (\%) of the protected NIDS per attack, over the three perturbation modes. Left: full realized streams through the gated pipeline, where only flows flagged by the meta-learner are purified; $\Delta $ is the reduction in points. Right: held-out test pairs, with DEPT's reconstructor or the diffusion purifier of \citet  {merzouk2024diffusion} applied to every flow. On the test pairs, Kitsune misses almost all traffic even when clean, so its two rows say little.}}{8}{table.caption.28}\protected@file@percent }
+\newlabel{tab:e2e}{{6}{8}{Attack success rate (\%) of the protected NIDS per attack, over the three perturbation modes. Left: full realized streams through the gated pipeline, where only flows flagged by the meta-learner are purified; $\Delta $ is the reduction in points. Right: held-out test pairs, with DEPT's reconstructor or the diffusion purifier of \citet {merzouk2024diffusion} applied to every flow. On the test pairs, Kitsune misses almost all traffic even when clean, so its two rows say little}{table.caption.28}{}}
+\newlabel{tab:e2e@cref}{{[table][6][]6}{[1][7][]8}{}{}{}}
+\@writefile{toc}{\contentsline {paragraph}{Comparison with a published purifier}{8}{section*.30}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.6}One Global Model or Ten Specialists?}{8}{subsection.5.6}\protected@file@percent }
+\newlabel{sec:eval-spec}{{5.6}{8}{One Global Model or Ten Specialists?}{subsection.5.6}{}}
+\newlabel{sec:eval-spec@cref}{{[subsection][6][5]5.6}{[1][8][]8}{}{}{}}
+\citation{jin2025robustifying}
+\citation{sutton2018reinforcement,nguyen2021deep}
+\bibstyle{ACM-Reference-Format}
+\bibdata{references}
+\bibcite{abad2025lipslev}{{1}{2025}{{Abad~Rocamora et~al\mbox  {.}}}{{}}}
+\bibcite{alhussien2024advpurrec}{{2}{2024}{{Alhussien and Aleroud}}{{}}}
+\bibcite{alotaibi2024mateen}{{3}{2024}{{Alotaibi and Maffeis}}{{}}}
+\bibcite{apruzzese2023sok}{{4}{2023}{{Apruzzese et~al\mbox  {.}}}{{}}}
+\bibcite{arp2022dos}{{5}{2022}{{Arp et~al\mbox  {.}}}{{}}}
+\bibcite{athalye2018obfuscated}{{6}{2018}{{Athalye et~al\mbox  {.}}}{{}}}
+\bibcite{bai2018empirical}{{7}{2018}{{Bai et~al\mbox  {.}}}{{}}}
+\bibcite{biggio2011bagging}{{8}{2011}{{Biggio et~al\mbox  {.}}}{{}}}
+\bibcite{boutaba2018comprehensive}{{9}{2018}{{Boutaba et~al\mbox  {.}}}{{}}}
+\bibcite{breiman2001random}{{10}{2001}{{Breiman}}{{}}}
+\@writefile{toc}{\contentsline {section}{\numberline {6}Discussion and Limitations}{9}{section.6}\protected@file@percent }
+\newlabel{sec:discussion}{{6}{9}{Discussion and Limitations}{section.6}{}}
+\newlabel{sec:discussion@cref}{{[section][6][]6}{[1][9][]9}{}{}{}}
+\@writefile{toc}{\contentsline {paragraph}{Research questions}{9}{section*.31}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Size-perturbed reflection floods}{9}{section*.32}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{The gate and the fusion}{9}{section*.33}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Validation and scope}{9}{section*.34}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {7}Conclusion and Future Work}{9}{section.7}\protected@file@percent }
+\newlabel{sec:conclusion}{{7}{9}{Conclusion and Future Work}{section.7}{}}
+\newlabel{sec:conclusion@cref}{{[section][7][]7}{[1][9][]9}{}{}{}}
+\@writefile{toc}{\contentsline {section}{Acknowledgments}{9}{section*.36}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{References}{9}{section*.38}\protected@file@percent }
+\bibcite{cicids2017}{{11}{2017}{{Canadian Institute for Cybersecurity}}{{}}}
+\bibcite{carlini2019evaluating}{{12}{2019}{{Carlini et~al\mbox  {.}}}{{}}}
+\bibcite{chen2022collective}{{13}{2022}{{Chen et~al\mbox  {.}}}{{}}}
+\bibcite{croce2020reliable}{{14}{2020}{{Croce and Hein}}{{}}}
+\bibcite{ghadermazi2025gtae}{{15}{2025}{{Ghadermazi et~al\mbox  {.}}}{{}}}
+\bibcite{goodfellow2014explaining}{{16}{2014}{{Goodfellow et~al\mbox  {.}}}{{}}}
+\bibcite{gungor2022stewart}{{17}{2022}{{Gungor et~al\mbox  {.}}}{{}}}
+\bibcite{hajizadeh2025deepred}{{18}{2025}{{Hajizadeh et~al\mbox  {.}}}{{}}}
+\bibcite{hashemi2019towards}{{19}{2019}{{Hashemi et~al\mbox  {.}}}{{}}}
+\bibcite{he2023adversarial}{{20}{2023}{{He et~al\mbox  {.}}}{{}}}
+\bibcite{holland2021nprint}{{21}{2021}{{Holland et~al\mbox  {.}}}{{}}}
+\bibcite{jin2025robustifying}{{22}{2025}{{Jin and Apostolaki}}{{}}}
+\bibcite{kumar2026netdiffuser}{{23}{2026}{{Kumar et~al\mbox  {.}}}{{}}}
+\bibcite{kumar2025nids}{{24}{2025}{{Kumar et~al\mbox  {.}}}{{}}}
+\bibcite{madry2018towards}{{25}{2018}{{Madry et~al\mbox  {.}}}{{}}}
+\bibcite{merzouk2024diffusion}{{26}{2025}{{Merzouk et~al\mbox  {.}}}{{}}}
+\bibcite{mirsky2018kitsune}{{27}{2018}{{Mirsky et~al\mbox  {.}}}{{}}}
+\bibcite{nguyen2021deep}{{28}{2023}{{Nguyen and Reddi}}{{}}}
+\bibcite{nicolae2018adversarial}{{29}{2018}{{Nicolae et~al\mbox  {.}}}{{}}}
+\bibcite{olukola2026amds}{{30}{2026}{{Olukola and Rahimi}}{{}}}
+\bibcite{papernot2017practical}{{31}{2017}{{Papernot et~al\mbox  {.}}}{{}}}
+\bibcite{pierazzi2020intriguing}{{32}{2020}{{Pierazzi et~al\mbox  {.}}}{{}}}
+\bibcite{pissarra2026tantgen}{{33}{2026}{{Pissarra}}{{}}}
+\bibcite{rieger2024crowdguard}{{34}{2024}{{Rieger et~al\mbox  {.}}}{{}}}
+\bibcite{rubinstein2009antidote}{{35}{2009}{{Rubinstein et~al\mbox  {.}}}{{}}}
+\bibcite{samangouei2018defense}{{36}{2018}{{Samangouei et~al\mbox  {.}}}{{}}}
+\bibcite{sharafaldin2019cicddos}{{37}{2019}{{Sharafaldin et~al\mbox  {.}}}{{}}}
+\bibcite{sun2023gpmt}{{38}{2023}{{Sun et~al\mbox  {.}}}{{}}}
+\bibcite{sutton2018reinforcement}{{39}{2018}{{Sutton and Barto}}{{}}}
+\bibcite{szegedy2014intriguing}{{40}{2014}{{Szegedy et~al\mbox  {.}}}{{}}}
+\bibcite{tramer2020adaptive}{{41}{2020}{{Tram{\`e}r et~al\mbox  {.}}}{{}}}
+\bibcite{vaswani2017attention}{{42}{2017}{{Vaswani et~al\mbox  {.}}}{{}}}
+\bibcite{wang2021machine}{{43}{2021}{{Wang et~al\mbox  {.}}}{{}}}
+\bibcite{wolpert1992stacked}{{44}{1992}{{Wolpert}}{{}}}
+\bibcite{yan2025certta}{{45}{2025}{{Yan et~al\mbox  {.}}}{{}}}
+\bibcite{yang2021trs}{{46}{2021}{{Yang et~al\mbox  {.}}}{{}}}
+\bibcite{zhang2020tiki}{{47}{2020}{{Zhang et~al\mbox  {.}}}{{}}}
+\newlabel{tocindent-1}{0pt}
+\newlabel{tocindent0}{0pt}
+\newlabel{tocindent1}{4.185pt}
+\newlabel{tocindent2}{10.34999pt}
+\newlabel{tocindent3}{0pt}
+\newlabel{tocindent4}{0pt}
+\newlabel{tocindent5}{0pt}
+\newlabel{TotPages}{{10}{10}{}{page.10}{}}
+\gdef \@PBprevLastPage{10}
+\csdimgdef {@PBunbalpgXHeight}{615.0pt}
+\csdimgdef {@PBunbalpgXLeftHeight}{615.0pt}
+\csdimgdef {@PBunbalpgXLeftFloatsHeight}{0.0pt}
+\csdimgdef {@PBunbalpgXRightHeight}{615.0pt}
+\csdimgdef {@PBunbalpgXRightFloatsHeight}{0.0pt}
+\csdimgdef {@PBunbalpgXUsedLeft}{602.0pt}
+\csdimgdef {@PBunbalpgXUsedRight}{363.66599pt}
+\providetoggle {@PBunbalpgXHasFloats}
+\global \togglefalse {@PBunbalpgXHasFloats}
+\providetoggle {@PBunbalpgXHasFloatcol}
+\global \togglefalse {@PBunbalpgXHasFloatcol}
+\providetoggle {@PBunbalpgXHasFootnotes}
+\global \togglefalse {@PBunbalpgXHasFootnotes}
+\providetoggle {@PBunbalpgXHasMarginpars}
+\global \togglefalse {@PBunbalpgXHasMarginpars}
+\ExplSyntaxOn
+\seq_gclear_new:c{@PBunbalpgXLeftFloatHeights}
+\ExplSyntaxOff
+\ExplSyntaxOn
+\seq_gclear_new:c{@PBunbalpgXLeftFloatSpacesBelow}
+\ExplSyntaxOff
+\providetoggle {@PBpgXalreadyBalanced}
+\global \toggletrue {@PBpgXalreadyBalanced}
+\csdimgdef {@PBbalpgXHeight}{615.0pt}
+\csdimgdef {@PBbalpgXLeftHeight}{615.0pt}
+\csdimgdef {@PBbalpgXLeftFloatsHeight}{0.0pt}
+\csdimgdef {@PBbalpgXRightHeight}{1230.0pt}
+\csdimgdef {@PBbalpgXRightFloatsHeight}{0.0pt}
+\csdimgdef {@PBbalpgXUsedLeft}{602.0pt}
+\csdimgdef {@PBbalpgXUsedRight}{962.0pt}
+\providetoggle {@PBbalpgXHasFloats}
+\global \togglefalse {@PBbalpgXHasFloats}
+\providetoggle {@PBbalpgXHasFloatcol}
+\global \togglefalse {@PBbalpgXHasFloatcol}
+\providetoggle {@PBbalpgXHasFootnotes}
+\global \togglefalse {@PBbalpgXHasFootnotes}
+\providetoggle {@PBbalpgXHasMarginpars}
+\global \togglefalse {@PBbalpgXHasMarginpars}
+\ExplSyntaxOn
+\seq_gclear_new:c{@PBbalpgXLeftFloatHeights}
+\ExplSyntaxOff
+\ExplSyntaxOn
+\seq_gclear_new:c{@PBbalpgXLeftFloatSpacesBelow}
+\ExplSyntaxOff
+\providetoggle {@PBstabilized}
+\global \toggletrue {@PBstabilized}
+\providetoggle {@PBimpossible}
+\global \togglefalse {@PBimpossible}
+\gdef \@PBprevLastPhysPage{10}
+\gdef \@abspage@last{10}
