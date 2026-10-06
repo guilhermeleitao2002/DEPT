@@ -181,7 +181,7 @@ attention-based meta-learner fuses them at every
 packet~\cite{wolpert1992stacked}. A black-box attacker relies on
 transferability, crafting a perturbation against a substitute model and hoping
 it carries over to the target~\cite{papernot2017practical}; a perturbation that
-moves one learner need not move the other. For a flagged flow, dropping it
+moves one learner does not necessarily move the other. For a flagged flow, dropping it
 would turn every false positive into a denial of service, so DEPT purifies it
 instead~\cite{samangouei2018defense}: a causal Transformer predicts a residual
 correction for each packet from the packets before it, and a realization step
@@ -388,7 +388,7 @@ training data comes from known sources and the training pipeline is trusted. No
 claim is made against an adversary with gradient access to every component,
 which for the Random Forest is not possible. And DEPT does not detect the
 underlying attacks (the flood, the scan): it only answers whether a flow has
-been adversarially manipulated.
+been adversarially manipulated and undoes the manipulation when it has.
 
 %% ============================================================================
 \section{DEPT Architecture}\label{sec:dept}
@@ -644,7 +644,7 @@ benign traffic; it regresses the correction directly.
 \paragraph{Training on matched pairs} TANTGen keeps each flow's five-tuple, so
 every adversarial flow can be aligned with the clean flow it was derived from.
 The reconstructor is trained on these (adversarial $\rightarrow$ clean) pairs,
-without single-packet pairs, which carry no timing, using a smooth-L1 loss
+without single-packet pairs, using a smooth-L1 loss
 between $\hat{x}$ and the clean flow, averaged within each flow. The loss
 weights all $1{,}090$ dimensions equally, so the training signal holds no hint
 of where the perturbation is: the model has to find which dimensions were
@@ -838,7 +838,7 @@ likely cause is that the RF logit enters the fusion token as a single feature
 refreshed only at checkpoints, while the TCN logit changes at every packet, so
 attention under-weights the intermittent evidence. The auxiliary loss falls from
 $0.0267$ to $0.0177$ during training, moving the meta-learner towards its better
-base learner, but does not close this gap.
+base learner, but does not close this gap. Perhaps longer training would.
 
 \subsection{Robustness to a Gradient-guided Attacker (RQ1)}\label{sec:eval-rq1}
 
@@ -858,8 +858,7 @@ $9{,}000$ test flows ($300$ per source--mode combination), set each target's
 threshold at a matched $5\%$ false-positive rate on benign traffic, and measure
 ASR only over the flows each target detects without perturbation ($7{,}510$ for
 the RF, $3{,}374$ for the TCN and $7{,}597$ for the stack). Since the budgets are
-nested, a larger budget can always spend less, so each curve is reported as its
-monotone envelope.
+nested, a larger budget can always spend less.
 
 \begin{figure}[t]
   \centering
@@ -871,7 +870,7 @@ monotone envelope.
         xtick={8,32,128,512,1460}, xticklabels={8,32,128,512,1460},
         ymin=0, ymax=62, ytick={0,10,20,30,40,50,60},
         yticklabel={\pgfmathprintnumber{\tick}\%},
-        xlabel={per-packet padding budget (bytes, log scale)},
+        xlabel={per-packet padding budget (bytes)},
         ylabel={attack success rate},
         tick label style={font=\scriptsize}, label style={font=\footnotesize},
         ylabel shift=-3pt,
@@ -924,10 +923,10 @@ the fusion token is given back its clean value, the share of the
 meta-learner's verdict that moves with the forest goes from $0$ without attack,
 where there is nothing to compensate, to between $0.53$ and $0.56$ at every
 non-zero budget: the stack leans on the learner the attacker cannot
-differentiate. The gradient itself gives this attacker no advantage. Against the
-TCN, random search beats PGD at every budget ($40.1\%$ against $37.2\%$ at
+differentiate. Against the
+TCN, random search slightlybeats PGD at every budget ($40.1\%$ against $37.2\%$ at
 $8$ bytes), so what was measured is a search-based attacker that happens to have
-a gradient; since both searches are crafted on the TCN, the conclusion that the
+a gradient; regardless, since both searches are crafted on the TCN, the conclusion that the
 non-differentiable member raises the cost of evasion still holds.
 
 \subsection{Purification (RQ2)}\label{sec:eval-purif}
@@ -1019,13 +1018,6 @@ The \src{mirai} source, whose flows are often very short, is where purification
 works least well: on \dmode{size}, the footprint only falls from $1.569$ to
 $0.973$.
 
-One held-out flow makes the mechanism concrete. In a four-packet Mirai SYN-flood
-burst under the \dmode{size} mode, TANTGen appends $29$ bytes to every $44$-byte
-datagram, raising the IPv4 total length to $73$ bytes. The reconstructor
-recovers the original length, realization trims the padding, and every packet
-leaves at exactly $44$ bytes; all twelve packets of the three stages pass
-\texttt{tshark} with no malformed frames or bad checksums.
-
 \subsection{End-to-end Deployment and Comparison with a Diffusion Purifier}\label{sec:eval-e2e}
 
 
@@ -1087,8 +1079,7 @@ it. Elsewhere, both purifiers can lower detection. The diffusion purifier slows
 down the floods whose detection depends on timing, raising attack success on
 \src{syn\_ddos} from $4.7\%$ to $39.1\%$. DEPT is worse than it on the three
 modes of \src{dns\_ddos}, on \src{brute\_force} \dmode{both} and on \src{mirai}
-\dmode{size}, where the diffusion purifier barely changes the traffic, and has
-fewer compliant packets on \src{ddos} \dmode{both} ($89.2\%$ against $98.6\%$).
+\dmode{size}, where the diffusion purifier barely changes the traffic.
 
 \subsection{One Global Model or Ten Specialists?}\label{sec:eval-spec}
 
@@ -1127,7 +1118,7 @@ the comparison rests on a minority of the corpus. On some combinations
 \src{ssdp\_flood} \dmode{size}), the forest and the stack are never evaded,
 which only says that padding and delay cannot overcome that much model
 confidence. And the attacker that was measured is, in effect, a search-based
-one. RQ2 is answered
+one, even though the gradient-based one falls only shortly behind. RQ2 is answered
 positively under a condition: purification restores detection where TANTGen
 evaded, and is inert or harmful where it did not.
 
@@ -1136,10 +1127,10 @@ DNS, NTP, SSDP and LDAP floods, every model scores at or below chance,
 per-attack specialists included. On three of the four, every matched test pair
 is bit-identical to its clean counterpart, so no detector can separate them; this
 is a cost of the label convention. On \src{dns\_ddos}, the purifier cuts a full
-footprint to under a third without moving DEPT's verdict, so the cause is the
+footprint to under a third without moving DEPT's verdict, so the cause is likely the
 representation: its $24$ prefix statistics and $1{,}088$ header bits cannot
 express what separates such a flow from an unedited one. Since these floods
-dominate the corpus, every aggregate averages near-perfect and below-chance
+dominate the corpus, most aggregates average near-perfect and below-chance
 sub-populations.
 
 \paragraph{The gate and the fusion} Purification without an adequate gate
@@ -1155,7 +1146,7 @@ attack. DEPT is compared with one published purifier, adapted to its
 representation, and only against the attacker it was trained on. The purifier
 corrects all $1{,}090$ dimensions without being told which the attacker moved,
 but realization writes back only length and timing, so ``attack-agnostic''
-describes the detector and the denoiser, not the deployed pipeline. The features
+describes the detector and the reconstructor, not the full deployed pipeline. The features
 are limited to headers, timing, direction, and payload length and entropy, which
 remain observable as more traffic is encrypted; payload content is never parsed,
 which may be where the \src{dns\_ddos} blind spot lies. Finally, tensorization is
@@ -1170,12 +1161,12 @@ network traffic from the first packet, and purifies flagged flows back into
 valid packets before they reach the protected NIDS. Evaluated against a
 black-box, protocol-compliant generator over ten traffic sources and three
 perturbation modes, its heterogeneous ensemble makes a gradient-guided evasion
-measurably more expensive, and its purifier, judged by the detector each attack was
+measurably more expensive, and its reconstructor, judged by the detector each attack was
 built to evade, recovers $63\%$ of the lost detection and nearly halves
 end-to-end attack success, where a published diffusion purifier recovers almost
 none.
 
-The failures set most of the agenda. A gate trained on whether purification
+As for the failures. A gate trained on whether purification
 raises or lowers the protected detector's score, which the system already
 computes, would turn the end-to-end losses into no-ops. Deriving the fields to
 edit from the residual $\Delta$ and checking them against protocol constraints,
