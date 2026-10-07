@@ -24,14 +24,22 @@ measured behaviour of the resulting system is the subject of \Cref{chap:evaluati
 
 % #############################################################################
 \section{Threat Model}\label{sec:sol-threat}
+Three kinds of traffic are distinguished. \emph{Benign traffic} is the normal traffic of
+a network, with no attack in it. \emph{Attack traffic} belongs to a conventional attack,
+such as a flood or a scan, of the kind a \ac{NIDS} is built to detect.
+\emph{Adversarial traffic} is attack traffic that has been perturbed so that the
+\ac{NIDS} no longer detects it; these perturbations are what DEPT defends against.
+
 The scenario, illustrated in \Cref{fig:sol-context}, involves three parties. A
-\emph{protected \ac{NIDS}} guards a network and is assumed to handle conventional,
-non-adversarial attacks (which can be normal benign or simply regular attack traffic); this is the detector an adversary wants to get past. An
-\emph{attacker} manipulates the traffic of an ongoing attack so that this \ac{NIDS} no
-longer recognizes it, the evasion attack of \Cref{sec:bg-aml}.
-\emph{DEPT} sits inline, immediately upstream of the protected \ac{NIDS}: its job is to
-decide, packet by packet, whether a flow has been adversarially manipulated, and to
-neutralize the manipulation before the protected system ever consumes the flow.
+\emph{protected \ac{NIDS}} guards a network and is assumed to handle benign and attack
+traffic correctly, but not adversarial traffic; this is the detector an adversary wants
+to get past. An \emph{attacker} produces adversarial traffic by manipulating an ongoing
+attack, the evasion attack of \Cref{sec:bg-aml}. \emph{DEPT} sits inline, immediately
+upstream of the protected \ac{NIDS}: its job is to decide, packet by packet, whether a
+flow is adversarial, and to neutralize the manipulation before the protected system
+ever consumes the flow. Since DEPT only separates adversarial traffic from the rest, the
+label convention of \Cref{sec:sol-pipeline} groups benign and attack traffic together
+as \emph{benign}, in the sense of unmanipulated.
 
 \begin{figure}[htbp]
     \centering

@@ -363,12 +363,16 @@ it.
 %% ============================================================================
 \section{Threat Model}\label{sec:threat}
 
-Three parties are involved (\Cref{fig:arch}). A \emph{protected NIDS} guards a
-network and is assumed to detect conventional, non-adversarial attacks. An
-\emph{attacker} manipulates the traffic of an ongoing attack so that this NIDS
-no longer recognizes it. \emph{DEPT} sits inline, immediately upstream of the
-protected NIDS: it must decide, packet by packet, whether a flow has been
-manipulated, and neutralize the manipulation before the NIDS consumes the flow.
+We distinguish \emph{benign} traffic (no attack), \emph{attack} traffic (a
+conventional attack, such as a flood or a scan, that a NIDS is built to detect)
+and \emph{adversarial} traffic (attack traffic perturbed so that the NIDS no
+longer detects it). Three parties are involved (\Cref{fig:arch}). A
+\emph{protected NIDS} guards a network and is assumed to handle benign and
+attack traffic correctly, but not adversarial traffic. An \emph{attacker}
+produces adversarial traffic by manipulating an ongoing attack. \emph{DEPT} sits
+inline, immediately upstream of the protected NIDS: it must decide, packet by
+packet, whether a flow is adversarial, and neutralize the manipulation before
+the NIDS consumes the flow.
 
 The attacker is TANTGen, which ties the threat model to capabilities that have
 been demonstrated rather than assumed. It has no access to the architecture,
