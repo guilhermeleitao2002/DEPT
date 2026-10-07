@@ -90,15 +90,6 @@ makes transferability the operative attack channel, which is the scenario the
 heterogeneity argument of \Cref{subsec:bg-gradient-masking} is aimed at. The threat
 model of \Cref{sec:sol-threat} formalizes these assumptions.
 
-\subsection{Gradient-guided Evasion, the Second Attacker}\label{subsec:rel-gradient}
-TANTGen is the adversary DEPT is trained on, but it cannot be the only one it is
-evaluated against. DEPT's central design claim is that fusing a non-differentiable
-Random Forest with a differentiable \ac{TCN} raises the cost of evasion because an
-attacker's gradient reaches only one of the two. TANTGen's gradients come from its own
-surrogate, never from DEPT, so it can show that the ensemble detects its perturbations
-but not measure this claim. \Cref{sec:eval-gradablation} closes that gap with a
-complementary adversary drawn from the standard adversarial-\ac{ML} toolkit.
-
 % #############################################################################
 \section{Training-time Defenses}\label{sec:rel-training}
 Training-time defenses harden a model before it is ever deployed, by sanitizing its
