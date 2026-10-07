@@ -388,6 +388,15 @@ protocol-compliant and \emph{increase-only}, since packets on the wire can be
 padded or delayed but not un-sent, and its budget is counted in the units an
 attacker spends: bytes of padding and seconds of delay.
 
+DEPT, in turn, does not use TANTGen's model, parameters or surrogate NIDS, only
+its traffic: labelled TANTGen flows train the detectors, and TANTGen flows
+paired with their clean originals train the purifier. It is not black-box all
+the way through, however, since realization writes back only the two quantities
+TANTGen perturbs (\Cref{sec:purifier}): DEPT knows the attacker's feature set but
+not its model, a gray-box position. Training and test flows come from the same
+generator, so DEPT is evaluated against the attacker it was trained on; only the
+second adversary's added perturbations are never seen in training.
+
 Three non-goals complete the model. DEPT does not defend against poisoning: the
 training data comes from known sources and the training pipeline is trusted. No
 claim is made against an adversary with gradient access to every component,
