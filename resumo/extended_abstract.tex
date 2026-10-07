@@ -73,7 +73,7 @@ are written back onto packet timing and size. DEPT is trained and evaluated on
 realizable adversarial traffic from the black-box generator TANTGen, over ten
 traffic sources from three public datasets and three perturbation modes. It
 predicts from the first packet, reaching an end-of-flow AUROC of $0.933$.
-The Random Forest alone is more accurate from the second packet on, but
+The Random Forest alone has a higher AUROC from the second packet on, but
 against a gradient-guided attacker the ensemble is the hardest target:
 $74.5\%$ of flows never evade it, against $45.5\%$ for the network
 alone. Judged by the independent detector each attack was built to evade,
@@ -509,8 +509,8 @@ the reconstructor on matched pairs of adversarial and clean flows.
 \paragraph{Corpus} The corpus pairs ten traffic sources with their TANTGen
 counterparts: the Mirai botnet and SSDP flood captures of
 Kitsune~\cite{mirsky2018kitsune}; the DDoS, port scan and FTP/SSH brute-force
-captures of CIC-IDS2017~\cite{sharafaldin2018cicids}; and the NTP, DNS, SSDP, SYN and LDAP
-reflection and amplification floods of
+captures of CIC-IDS2017~\cite{sharafaldin2018cicids}; and the NTP, DNS, SSDP and LDAP
+reflection and amplification floods and a SYN flood of
 CIC-DDoS-2019~\cite{sharafaldin2019cicddos}. These floods offer no clean time
 window to filter on, so each is truncated to its first million packets, the
 scale at which TANTGen caps its own input. TANTGen produced one variant per perturbation mode, giving 30 adversarial source--mode
@@ -551,9 +551,8 @@ the TCN, which adds to the diversity between the two learners.
 training, validation and test sets, made at flow level (every token, checkpoint
 or pair of a flow falls on the same side) and stratified by source. Their results are
 therefore directly comparable, and the meta-learner is never evaluated on flows
-that a base learner trained on. Because the reflection floods contribute far
-more benign flows than the other sources, the benign pool is capped at three
-flows per adversarial flow, and all losses use balanced class weights.
+that a base learner trained on. Adversarial flows outnumber benign ones about
+five to one, so the forest and the neural losses use balanced class weights.
 
 \subsection{Heterogeneous Detection Ensemble}\label{sec:ensemble}
 
@@ -593,7 +592,7 @@ does not drown two-packet scans in the gradient.
     % RF: none before packet 2, fresh at checkpoints, carried forward between
     \draw[dgrey, densely dashed, line width=0.4pt]
       (0.82,1.27) rectangle (1.18,1.63);
-    \foreach \x/\a in {2/0,3/1,4/2,5/3,6/4,7/5,8/6,9/7,10/0,11/1,12.4/0}
+    \foreach \x/\a in {1/30,2/0,3/1,4/2,5/3,6/4,7/5,8/6,9/7,10/0,11/1,12.4/0}
       \node[text=black!55, font=\tiny] at (\x,2.25) {\a};
     \foreach \x in {3,...,9,11}
       \draw[dblue, fill=dbluefill, line width=0.4pt]
@@ -617,7 +616,7 @@ does not drown two-packet scans in the gradient.
   \Description{A timeline of packets 1 to 11 and 20. The TCN row has a dot at
   every packet. The Random Forest row has an empty dashed square at packet 1,
   dark squares at the checkpoints at packets 2, 10 and 20, and light squares at
-  the other packets, with an age counter that resets to 0 at each checkpoint.
+  the other packets, with an age counter that starts at 30 and resets to 0 at each checkpoint.
   The meta-learner row has a diamond at every packet.}
   \label{fig:cadence}
 \end{figure}
@@ -659,8 +658,9 @@ it corrects all positions in one pass, and the causal mask is there for
 streaming. Unlike generative purifiers, it does not model the distribution of
 benign traffic; it regresses the correction directly.
 
-\paragraph{Training on matched pairs} TANTGen keeps each flow's five-tuple, so
-every adversarial flow can be aligned with the clean flow it was derived from.
+\paragraph{Training on matched pairs} TANTGen keeps a flow's five-tuple, so an
+adversarial flow can be aligned with the clean flow it was derived from; since
+TANTGen also splits, merges and drops flows, this holds for about a third of them.
 The reconstructor is trained on these (adversarial $\rightarrow$ clean) pairs,
 without single-packet pairs, using a smooth-L1 loss
 between $\hat{x}$ and the clean flow, averaged within each flow. The loss
@@ -714,7 +714,7 @@ separately.
 \Cref{tab:config} summarizes the learned components; the sequence models are
 trained with AdamW for at most $20$ epochs, with early stopping on the
 selection criterion of the table. DEPT is written in Python, with PyTorch for the three sequence models,
-scikit-learn for the forest, and a native reimplementation of the nPrint
+scikit-learn for the forest, and a Python reimplementation of the nPrint
 encoding on top of scapy, which also performs realization; \texttt{tshark},
 \texttt{editcap} and \texttt{tcpdump} handle dissection, time filtering and
 packet capping. All experiments ran on one server with two Intel Xeon Gold 5320
@@ -738,7 +738,7 @@ report how early and how well DEPT detects manipulation. The latency of the full
 pipeline is not evaluated in this work.
 
 \paragraph{Test data} The held-out test split has $1{,}293{,}737$ flows, of which
-$83.7\%$ are adversarial, because the reflection floods dominate; the RF, whose
+$83.7\%$ are adversarial, because the CIC-DDoS-2019 floods dominate; the RF, whose
 first checkpoint is packet~2, does not score the $6{,}179$ single-packet flows.
 Because of this base rate, the models are compared with the area under the ROC
 curve (AUROC) and on the streaming axis rather than on accuracy. Of the $7{,}217{,}272$ adversarial
@@ -806,8 +806,9 @@ adversarial recall of $0.708$.
 \begin{table*}[t]
   \caption{End-of-flow AUROC per source and perturbation mode, against benign
   flows of the same source. $n_{\text{adv}}$ is the number of adversarial test
-  flows per mode (on \src{mirai}, the RF scores $867$ of the $1{,}957$, as many
-  flows end before packet~2). Values below $0.55$ are marked with $\dagger$.}
+  flows per mode ($4{,}842$ on \src{ddos} \dmode{size}; on \src{mirai}, the RF
+  scores $867$ of the $1{,}957$, as many flows end before packet~2, and on
+  \src{ssdp\_flood} $9{,}830$). Values below $0.55$ are marked with $\dagger$.}
   \label{tab:persource}
   \footnotesize
   \setlength{\tabcolsep}{5pt}
@@ -821,7 +822,7 @@ adversarial recall of $0.708$.
     \src{ddos} (CIC-IDS2017) & $5{,}781$ & 1.000 & 1.000 & 1.000 & 0.999 & 0.924 & 0.967 & 1.000 & 1.000 & 1.000 \\
     \src{portscan} (CIC-IDS2017) & $23{,}800$ & 1.000 & 0.997 & 0.998 & 1.000 & 0.652 & 0.757 & 0.998 & 0.997 & 0.997 \\
     \src{mirai} (Kitsune) & $1{,}957$ & 0.926 & 0.680 & 0.724 & 0.919 & 0.680 & 0.719 & 0.829 & 0.723 & 0.734 \\
-    \src{ssdp\_flood} (Kitsune) & $9{,}830$ & 1.000 & 0.999 & 1.000 & 1.000 & 1.000 & 1.000 & 1.000 & 0.999 & 1.000 \\
+    \src{ssdp\_flood} (Kitsune) & $9{,}831$ & 1.000 & 0.999 & 1.000 & 1.000 & 1.000 & 1.000 & 1.000 & 0.999 & 1.000 \\
     \src{syn\_ddos} (CIC-DDoS-2019) & $200{,}483$ & 1.000 & 1.000 & 1.000 & 1.000 & 0.647 & 0.806 & 1.000 & 1.000 & 1.000 \\
     \src{dns\_ddos} (CIC-DDoS-2019) & $1{,}019$ & 0.999 & 0.552 & 1.000 & 0.999 & 0.547$\dagger$ & 1.000 & 0.258$\dagger$ & 0.531$\dagger$ & 0.443$\dagger$ \\
     \src{ldap\_ddos} (CIC-DDoS-2019) & $74{,}710$ & 1.000 & 0.500$\dagger$ & 1.000 & 1.000 & 0.500$\dagger$ & 1.000 & 0.476$\dagger$ & 0.501$\dagger$ & 0.476$\dagger$ \\
@@ -856,7 +857,7 @@ likely cause is that the RF logit enters the fusion token as a single feature
 refreshed only at checkpoints, while the TCN logit changes at every packet, so
 attention under-weights the intermittent evidence. The auxiliary loss falls from
 $0.0267$ to $0.0177$ during training, moving the meta-learner towards its better
-base learner, but does not close this gap. Perhaps longer training would.
+base learner, but does not close this gap.
 
 \subsection{Robustness to a Gradient-guided Attacker (RQ1)}\label{sec:eval-rq1}
 
@@ -875,8 +876,7 @@ attacker that takes the best of PGD and random search for each flow. We sample
 $9{,}000$ test flows ($300$ per source--mode combination), set each target's
 threshold at a matched $5\%$ false-positive rate on benign traffic, and measure
 ASR only over the flows each target detects without perturbation ($7{,}510$ for
-the RF, $3{,}374$ for the TCN and $7{,}597$ for the stack). Since the budgets are
-nested, a larger budget can always spend less.
+the RF, $3{,}374$ for the TCN and $7{,}597$ for the stack).
 
 \begin{figure}[t]
   \centering
@@ -932,7 +932,7 @@ smallest budget. The ordering is not uniform: at $512$ bytes the stack and the
 forest are level ($18.9\%$ and $18.4\%$), and the stack pulls ahead again at
 $1{,}460$ bytes ($25.5\%$ against $36.0\%$). For scale, TANTGen's own padding
 averages $29$ to $32$ bytes per packet on \src{portscan} \dmode{both} and
-\src{mirai} \dmode{size}, where the stack concedes at most $8.5\%$, but $246$ to
+\src{mirai} \dmode{size} (the stack concedes $4.7\%$ at $32$ bytes), but $246$ to
 $289$ bytes on the \dmode{size} variants of \src{ddos}, \src{ssdp\_flood} and
 \src{portscan}, closer to the $512$-byte point.
 
@@ -942,7 +942,7 @@ meta-learner's verdict that moves with the forest goes from $0$ without attack,
 where there is nothing to compensate, to between $0.53$ and $0.56$ at every
 non-zero budget: the stack leans on the learner the attacker cannot
 differentiate. Against the
-TCN, random search slightlybeats PGD at every budget ($40.1\%$ against $37.2\%$ at
+TCN, random search slightly beats PGD at every budget ($40.1\%$ against $37.2\%$ at
 $8$ bytes), so what was measured is a search-based attacker that happens to have
 a gradient; regardless, since both searches are crafted on the TCN, the conclusion that the
 non-differentiable member raises the cost of evasion still holds.
@@ -976,8 +976,8 @@ non-differentiable member raises the cost of evasion still holds.
   pipeline, where only flows flagged by the meta-learner are purified; $\Delta$
   is the reduction in points. Right: held-out test pairs, with DEPT's
   reconstructor or the diffusion purifier of \citet{merzouk2024diffusion} applied
-  to every flow. On the test pairs, Kitsune misses almost all traffic even when
-  clean, so its two rows say little.}
+  to every flow. Kitsune misses almost all \src{mirai} traffic even when clean, and
+  98\% of \src{ssdp\_flood}'s packets are dropped (see text), so its rows say little.}
   \label{tab:e2e}
   \footnotesize
   \setlength{\tabcolsep}{6pt}
@@ -1019,7 +1019,7 @@ restored}, where TANTGen's edits are structural: \src{ddos} \dmode{size} from
 $0.005$ to $0.817$ (clean $0.828$), \src{ddos} \dmode{both} from $0.080$ to
 $0.865$, \src{portscan} \dmode{both} from $0.011$ to $0.679$ and \src{portscan}
 \dmode{size} from $0.013$ to $0.479$. \emph{(ii)~Nothing to undo}: on the
-\dmode{both} and \dmode{iat} variants of the reflection floods, the footprint is
+\dmode{both} and \dmode{iat} variants of the four reflection floods, the footprint is
 near zero before purification, and on the \dmode{size} variants of
 \src{ldap\_ddos}, \src{ntp\_ddos} and \src{ssdp\_ddos} the adversarial tokens are
 bit-identical to the clean ones, because the attack did not fire. \emph{(iii)~A
@@ -1130,7 +1130,7 @@ evasion is expressed in timing.
 non-differentiable learner with a differentiable one measurably raises the cost
 of a transferable, gradient-guided evasion, with three limits. The ASR is
 measured over the flows a target detects without perturbation, and the TCN
-detects at most $2\%$ of the flows on seven of the ten sources, so its side of
+detects at most $2\%$ of the flows on four of the ten sources, so its side of
 the comparison rests on a minority of the corpus. On some combinations
 (\src{ddos} and \src{portscan} in \dmode{both} and \dmode{size}, and
 \src{ssdp\_flood} \dmode{size}), the forest and the stack are never evaded,
@@ -1143,13 +1143,14 @@ evaded, and is inert or harmful where it did not.
 \paragraph{Size-perturbed reflection floods} On the \dmode{size} variants of the
 DNS, NTP, SSDP and LDAP floods, every model scores at or below chance,
 per-attack specialists included. On three of the four, every matched test pair
-is bit-identical to its clean counterpart, so no detector can separate them; this
+is bit-identical to its clean counterpart, so no detector can tell such a flow from
+its original; this
 is a cost of the label convention. On \src{dns\_ddos}, the purifier cuts a full
 footprint to under a third without moving DEPT's verdict, so the cause is likely the
 representation: its $24$ prefix statistics and $1{,}088$ header bits cannot
 express what separates such a flow from an unedited one. Since these floods
-dominate the corpus, most aggregates average near-perfect and below-chance
-sub-populations.
+supply about a third of the adversarial test flows, most aggregates average
+near-perfect and below-chance sub-populations.
 
 \paragraph{The gate and the fusion} Purification without an adequate gate
 subtracts as well as adds, and the gate as built barely gates. The meta-learner,
@@ -1168,7 +1169,7 @@ describes the detector and the reconstructor, not the full deployed pipeline. Th
 are limited to headers, timing, direction, and payload length and entropy, which
 remain observable as more traffic is encrypted; payload content is never parsed,
 which may be where the \src{dns\_ddos} blind spot lies. Finally, tensorization is
-pure Python, slower than the native nPrint tool, and the latency study that
+pure Python, slower than the original C++ nPrint tool, and the latency study that
 would settle the real-time budget of an inline defense remains to be done.
 
 %% ============================================================================
@@ -1184,7 +1185,7 @@ built to evade, recovers $63\%$ of the lost detection and nearly halves
 end-to-end attack success, where a published diffusion purifier recovers almost
 none.
 
-As for the failures. A gate trained on whether purification
+The failures set the future work. A gate trained on whether purification
 raises or lowers the protected detector's score, which the system already
 computes, would turn the end-to-end losses into no-ops. Deriving the fields to
 edit from the residual $\Delta$ and checking them against protocol constraints,

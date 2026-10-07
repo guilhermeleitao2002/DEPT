@@ -41,7 +41,7 @@
   <rect x="921" y="106.8" width="18" height="18" fill="#ffffff"/><rect x="922.5" y="108.3" width="15" height="15" fill="#5a6673" stroke="#3a444e" stroke-width="1.5"/>
   <rect x="1051" y="106.8" width="18" height="18" fill="#ffffff"/><rect x="1052.5" y="108.3" width="15" height="15" fill="#5a6673" stroke="#3a444e" stroke-width="1.5"/>
   <rect x="141" y="108.8" width="18" height="18" fill="none" stroke="#8a949e" stroke-width="2" stroke-dasharray="4,3"/>
-  <text x="168" y="123.8" text-anchor="start" font-size="17" fill="#8a949e">no RF verdict yet</text>
+  <text x="164" y="97.8" text-anchor="start" font-size="17" fill="#8a949e">no RF verdict yet</text>
   <!-- TCN: blue circles, dense from packet 1 -->
   <polyline points="150,513.2 280,504.9 410,468.1 540,469 670,465.5 800,465.2 930,465.4 1060,465.3" fill="none" stroke="#2c5f8a" stroke-width="3"/>
   <circle cx="150" cy="513.2" r="10" fill="#ffffff"/><circle cx="150" cy="513.2" r="8.5" fill="#2c5f8a" stroke="#16344c" stroke-width="1.5"/>
@@ -66,7 +66,6 @@
   <text x="1078" y="121.8" font-size="21" font-weight="bold" fill="#5a6673">RF  0.9813</text>
   <text x="1078" y="239.1" font-size="21" font-weight="bold" fill="#2a9d8f">meta  0.9334</text>
   <text x="1078" y="471.3" font-size="21" font-weight="bold" fill="#2c5f8a">TCN  0.8386</text>
-  <line x1="150" y1="484.6" x2="150" y2="373.8" stroke="#8a949e" stroke-width="1.5" stroke-dasharray="5,4"/>
-  <text x="162" y="378.7" text-anchor="start" font-size="18" fill="#5a6673">only the TCN and the meta-learner</text>
-  <text x="162" y="406.9" text-anchor="start" font-size="18" fill="#5a6673">have a verdict at packet 1</text>
+  <text x="294" y="373.8" text-anchor="start" font-size="18" fill="#5a6673">only the TCN and the meta-learner</text>
+  <text x="294" y="402" text-anchor="start" font-size="18" fill="#5a6673">have a verdict at packet 1</text>
 </svg>

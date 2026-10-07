@@ -72,6 +72,7 @@
 \citation{holland2021nprint}
 \citation{arp2022dos}
 \citation{breiman2001random}
+\citation{bai2018empirical}
 \@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces DEPT in front of a protected NIDS. The packet-to-tensor pipeline derives two views of each flow: bit-level packet tokens for the TCN and prefix statistics for the Random Forest. The meta-learner fuses the two prediction streams into a verdict at every packet. Unflagged flows pass unchanged; flagged flows are corrected by the reconstructor and realized back into packets, so the NIDS receives traffic, not tensors.}}{4}{figure.caption.6}\protected@file@percent }
 \newlabel{fig:arch}{{1}{4}{DEPT in front of a protected NIDS. The packet-to-tensor pipeline derives two views of each flow: bit-level packet tokens for the TCN and prefix statistics for the Random Forest. The meta-learner fuses the two prediction streams into a verdict at every packet. Unflagged flows pass unchanged; flagged flows are corrected by the reconstructor and realized back into packets, so the NIDS receives traffic, not tensors}{figure.caption.6}{}}
 \newlabel{fig:arch@cref}{{[figure][1][]1}{[1][3][]4}{}{}{}}
@@ -87,7 +88,6 @@
 \newlabel{sec:ensemble}{{4.3}{4}{Heterogeneous Detection Ensemble}{subsection.4.3}{}}
 \newlabel{sec:ensemble@cref}{{[subsection][3][4]4.3}{[1][4][]4}{}{}{}}
 \@writefile{toc}{\contentsline {paragraph}{Random Forest}{4}{section*.12}\protected@file@percent }
-\citation{bai2018empirical}
 \citation{vaswani2017attention}
 \citation{wolpert1992stacked}
 \@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Prediction cadence over the first packets of a flow. The TCN emits a logit at every packet; the RF emits one at packet\nonbreakingspace 2 and every tenth packet (dark squares) and its last logit is carried forward (light squares), with its age in packets given to the meta-learner, which fuses both at every packet.}}{5}{figure.caption.14}\protected@file@percent }
@@ -133,8 +133,8 @@
 \@writefile{toc}{\contentsline {paragraph}{Attack}{6}{section*.24}\protected@file@percent }
 \citation{merzouk2024diffusion}
 \citation{merzouk2024diffusion}
-\@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces End-of-flow AUROC per source and perturbation mode, against benign flows of the same source. $n_{\text  {adv}}$ is the number of adversarial test flows per mode (on \texttt  {mirai}, the RF scores $867$ of the $1{,}957$, as many flows end before packet\nonbreakingspace 2). Values below $0.55$ are marked with $\dagger $.}}{7}{table.caption.23}\protected@file@percent }
-\newlabel{tab:persource}{{4}{7}{End-of-flow AUROC per source and perturbation mode, against benign flows of the same source. $n_{\text {adv}}$ is the number of adversarial test flows per mode (on \src {mirai}, the RF scores $867$ of the $1{,}957$, as many flows end before packet~2). Values below $0.55$ are marked with $\dagger $}{table.caption.23}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces End-of-flow AUROC per source and perturbation mode, against benign flows of the same source. $n_{\text  {adv}}$ is the number of adversarial test flows per mode ($4{,}842$ on \texttt  {ddos} \texttt  {size}; on \texttt  {mirai}, the RF scores $867$ of the $1{,}957$, as many flows end before packet\nonbreakingspace 2, and on \texttt  {ssdp\_flood} $9{,}830$). Values below $0.55$ are marked with $\dagger $.}}{7}{table.caption.23}\protected@file@percent }
+\newlabel{tab:persource}{{4}{7}{End-of-flow AUROC per source and perturbation mode, against benign flows of the same source. $n_{\text {adv}}$ is the number of adversarial test flows per mode ($4{,}842$ on \src {ddos} \dmode {size}; on \src {mirai}, the RF scores $867$ of the $1{,}957$, as many flows end before packet~2, and on \src {ssdp\_flood} $9{,}830$). Values below $0.55$ are marked with $\dagger $}{table.caption.23}{}}
 \newlabel{tab:persource@cref}{{[table][4][]4}{[1][6][]7}{}{}{}}
 \@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Attack success of one perturbation crafted with the TCN's gradients and replayed unchanged through each target, at a matched $5\%$ false-positive rate. In parentheses: flows never evaded at any budget.}}{7}{figure.caption.25}\protected@file@percent }
 \newlabel{fig:rq1}{{3}{7}{Attack success of one perturbation crafted with the TCN's gradients and replayed unchanged through each target, at a matched $5\%$ false-positive rate. In parentheses: flows never evaded at any budget}{figure.caption.25}{}}
@@ -147,8 +147,8 @@
 \newlabel{sec:eval-purif}{{5.4}{7}{Purification (RQ2)}{subsection.5.4}{}}
 \newlabel{sec:eval-purif@cref}{{[subsection][4][5]5.4}{[1][7][]7}{}{}{}}
 \citation{merzouk2024diffusion}
-\@writefile{lot}{\contentsline {table}{\numberline {6}{\ignorespaces Attack success rate (\%) of the protected NIDS per attack, over the three perturbation modes. Left: full realized streams through the gated pipeline, where only flows flagged by the meta-learner are purified; $\Delta $ is the reduction in points. Right: held-out test pairs, with DEPT's reconstructor or the diffusion purifier of \citet  {merzouk2024diffusion} applied to every flow. On the test pairs, Kitsune misses almost all traffic even when clean, so its two rows say little.}}{8}{table.caption.28}\protected@file@percent }
-\newlabel{tab:e2e}{{6}{8}{Attack success rate (\%) of the protected NIDS per attack, over the three perturbation modes. Left: full realized streams through the gated pipeline, where only flows flagged by the meta-learner are purified; $\Delta $ is the reduction in points. Right: held-out test pairs, with DEPT's reconstructor or the diffusion purifier of \citet {merzouk2024diffusion} applied to every flow. On the test pairs, Kitsune misses almost all traffic even when clean, so its two rows say little}{table.caption.28}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {6}{\ignorespaces Attack success rate (\%) of the protected NIDS per attack, over the three perturbation modes. Left: full realized streams through the gated pipeline, where only flows flagged by the meta-learner are purified; $\Delta $ is the reduction in points. Right: held-out test pairs, with DEPT's reconstructor or the diffusion purifier of \citet  {merzouk2024diffusion} applied to every flow. Kitsune misses almost all \texttt  {mirai} traffic even when clean, and 98\% of \texttt  {ssdp\_flood}'s packets are dropped (see text), so its rows say little.}}{8}{table.caption.28}\protected@file@percent }
+\newlabel{tab:e2e}{{6}{8}{Attack success rate (\%) of the protected NIDS per attack, over the three perturbation modes. Left: full realized streams through the gated pipeline, where only flows flagged by the meta-learner are purified; $\Delta $ is the reduction in points. Right: held-out test pairs, with DEPT's reconstructor or the diffusion purifier of \citet {merzouk2024diffusion} applied to every flow. Kitsune misses almost all \src {mirai} traffic even when clean, and 98\% of \src {ssdp\_flood}'s packets are dropped (see text), so its rows say little}{table.caption.28}{}}
 \newlabel{tab:e2e@cref}{{[table][6][]6}{[1][7][]8}{}{}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {5.5}End-to-end Deployment and Comparison with a Diffusion Purifier}{8}{subsection.5.5}\protected@file@percent }
 \newlabel{sec:eval-e2e}{{5.5}{8}{End-to-end Deployment and Comparison with a Diffusion Purifier}{subsection.5.5}{}}
@@ -228,54 +228,7 @@
 \newlabel{tocindent5}{0pt}
 \@writefile{toc}{\contentsline {section}{References}{10}{section*.38}\protected@file@percent }
 \newlabel{TotPages}{{10}{10}{}{page.10}{}}
-\gdef \@PBprevLastPage{10}
-\csdimgdef {@PBunbalpgXHeight}{615.0pt}
-\csdimgdef {@PBunbalpgXLeftHeight}{615.0pt}
-\csdimgdef {@PBunbalpgXLeftFloatsHeight}{0.0pt}
-\csdimgdef {@PBunbalpgXRightHeight}{615.0pt}
-\csdimgdef {@PBunbalpgXRightFloatsHeight}{0.0pt}
-\csdimgdef {@PBunbalpgXUsedLeft}{612.75pt}
-\csdimgdef {@PBunbalpgXUsedRight}{587.66599pt}
-\providetoggle {@PBunbalpgXHasFloats}
-\global \togglefalse {@PBunbalpgXHasFloats}
-\providetoggle {@PBunbalpgXHasFloatcol}
-\global \togglefalse {@PBunbalpgXHasFloatcol}
-\providetoggle {@PBunbalpgXHasFootnotes}
-\global \togglefalse {@PBunbalpgXHasFootnotes}
-\providetoggle {@PBunbalpgXHasMarginpars}
-\global \togglefalse {@PBunbalpgXHasMarginpars}
-\ExplSyntaxOn
-\seq_gclear_new:c{@PBunbalpgXLeftFloatHeights}
-\ExplSyntaxOff
-\ExplSyntaxOn
-\seq_gclear_new:c{@PBunbalpgXLeftFloatSpacesBelow}
-\ExplSyntaxOff
-\providetoggle {@PBpgXalreadyBalanced}
-\global \toggletrue {@PBpgXalreadyBalanced}
-\csdimgdef {@PBbalpgXHeight}{615.0pt}
-\csdimgdef {@PBbalpgXLeftHeight}{615.0pt}
-\csdimgdef {@PBbalpgXLeftFloatsHeight}{0.0pt}
-\csdimgdef {@PBbalpgXRightHeight}{1230.0pt}
-\csdimgdef {@PBbalpgXRightFloatsHeight}{0.0pt}
-\csdimgdef {@PBbalpgXUsedLeft}{612.75pt}
-\csdimgdef {@PBbalpgXUsedRight}{1196.75pt}
-\providetoggle {@PBbalpgXHasFloats}
-\global \togglefalse {@PBbalpgXHasFloats}
-\providetoggle {@PBbalpgXHasFloatcol}
-\global \togglefalse {@PBbalpgXHasFloatcol}
-\providetoggle {@PBbalpgXHasFootnotes}
-\global \togglefalse {@PBbalpgXHasFootnotes}
-\providetoggle {@PBbalpgXHasMarginpars}
-\global \togglefalse {@PBbalpgXHasMarginpars}
-\ExplSyntaxOn
-\seq_gclear_new:c{@PBbalpgXLeftFloatHeights}
-\ExplSyntaxOff
-\ExplSyntaxOn
-\seq_gclear_new:c{@PBbalpgXLeftFloatSpacesBelow}
-\ExplSyntaxOff
-\providetoggle {@PBstabilized}
-\global \toggletrue {@PBstabilized}
 \providetoggle {@PBimpossible}
-\global \togglefalse {@PBimpossible}
+\global \toggletrue {@PBimpossible}
 \gdef \@PBprevLastPhysPage{10}
 \gdef \@abspage@last{10}

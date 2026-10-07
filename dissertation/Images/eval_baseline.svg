@@ -12,7 +12,7 @@
   <text x="956" y="1508" text-anchor="middle" font-size="19" fill="#5a6673">0.8</text>
   <line x1="1120" y1="80" x2="1120" y2="1484" stroke="#e3e7ec" stroke-width="1.5"/>
   <text x="1120" y="1508" text-anchor="middle" font-size="19" fill="#5a6673">1</text>
-  <text x="710" y="1538" text-anchor="middle" font-size="21" fill="#1a1a1a">NIDS attack success rate (1 - detection), per source, before vs after DEPT</text>
+  <text x="710" y="1538" text-anchor="middle" font-size="21" fill="#1a1a1a">NIDS attack success rate (1 - detection), per source and mode, before vs after DEPT</text>
   <rect x="12" y="96" width="1120" height="46" fill="#f6f8fa"/>
   <text x="280" y="125" text-anchor="end" font-size="19" fill="#1a1a1a">brute force both</text>
   <line x1="313.3" y1="119" x2="306.7" y2="119" stroke="#8a949e" stroke-width="3"/>

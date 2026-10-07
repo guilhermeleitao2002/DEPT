@@ -54,9 +54,9 @@ position, the diffusion-based purifier of Merzouk et al.~\cite{merzouk2024diffus
 the detection lost where TANTGen evaded, against $63.5\%$ for DEPT (\Cref{subsec:eval-sota}).
 
 The condition is that TANTGen actually evaded. Where it moved the features without evading,
-purifying \emph{lowers} the protected detector's detection, by up to $22$ points on
+purifying \emph{lowers} the protected detector's detection, by up to $23$ points on
 \texttt{dns\_ddos} and $18$ on \texttt{portscan\_iat}, because the denoiser removes signal the
-\ac{NIDS} was still using. The aggregate displays large recoveries on six source--mode combinations
+\ac{NIDS} was still using. The aggregate displays large recoveries on five source--mode combinations
 against regressions on five others, and the gate does not prevent them: it predicts whether a flow
 is adversarial, not whether purifying it will help. RQ2 is answered affirmatively only for flows a
 defense would want to purify.
@@ -68,9 +68,9 @@ Six limitations bound the results, analysed in more detail in \Cref{sec:eval-dis
 representational, and partly a labelling cost. On the \texttt{size} variants of the DNS, NTP, SSDP and LDAP reflection floods,
 every model scores at or \emph{below chance} against same-source benign flows, per-attack specialists
 included. On three of the four, the adversarial tokens are bit-identical to the clean ones, so no detector
-can separate them; on DNS the purifier cuts the footprint without moving DEPT's verdict, so the cause is the
+can tell such a flow from its clean original; on DNS the purifier cuts the footprint without moving DEPT's verdict, so the cause is the
 representation itself, its $24$ prefix statistics and $1088$ header bits, not capacity, tuning or training
-scope. Since these floods dominate the corpus, every aggregate in \Cref{chap:evaluation} averages
+scope. Since these four floods supply about a third of the adversarial test flows, every aggregate in \Cref{chap:evaluation} averages
 near-perfect and below-chance sub-populations.
 
 The second is that purification without an adequate gate subtracts as well as adds, as RQ2's
@@ -99,8 +99,8 @@ denoiser, not the full deployed pipeline. The feature space is bounded too, to h
 direction, and payload length and entropy, which stay observable as encrypted traffic grows; payload
 content is never parsed, by design, and may be exactly where the blind spot above lives.
 
-The sixth is efficiency. The tensorization is pure Python, slower than the native
-nPrint tool it reimplements, setting the throughput floor, and the latency study that would
+The sixth is efficiency. The tensorization is pure Python, slower than the original
+C++ nPrint tool it reimplements, setting the throughput floor, and the latency study that would
 settle the real-time budget of \Cref{sec:intro-problem} is left undone.
 
 % #############################################################################
@@ -123,6 +123,9 @@ The limitations above set most of the agenda.
     \item \textbf{More baselines and other attackers.} Repeating the comparison of
     \Cref{subsec:eval-sota} with other purifiers, and against generators DEPT was not trained on,
     would show how much of its advantage comes from training on the same attacker.
+    \item \textbf{A latency study.} Timing each stage on live traffic, with tensorization
+    moved out of pure Python, would show whether DEPT meets the real-time budget of
+    \Cref{sec:intro-problem}.
     \item \textbf{What separates a size-mode DNS flood flow from an unedited one.} Which observable quantity,
     absent from the representation above, distinguishes these flows? Payload content, never parsed by design,
     is the first place to look.

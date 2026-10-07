@@ -131,7 +131,8 @@ def fig_streaming():
         if v is not None:
             p.append("  " + square(xs[i], Y(v), 15, GREY, GREY_D))
     p.append(f'  <rect x="{fmt(xs[0]-9)}" y="{fmt(Y(series["rf"][1])-9)}" width="18" height="18" fill="none" stroke="{MUT}" stroke-width="2" stroke-dasharray="4,3"/>')
-    p.append(f'  <text x="{fmt(xs[0]+18)}" y="{fmt(Y(series["rf"][1])+6)}" text-anchor="start" font-size="17" fill="{MUT}">no RF verdict yet</text>')
+    # above the RF line, so the packet-2 marker never covers it
+    p.append(f'  <text x="{fmt(xs[0]+14)}" y="{fmt(Y(series["rf"][1])-20)}" text-anchor="start" font-size="17" fill="{MUT}">no RF verdict yet</text>')
 
     # TCN (blue circles)
     p.append('  <!-- TCN: blue circles, dense from packet 1 -->')
@@ -156,9 +157,10 @@ def fig_streaming():
                  f'font-weight="bold" fill="{color}">{name}  {series[key][-1]:.4f}</text>')
 
     # the packet-1 story: only the TCN and the meta-learner have a verdict there
-    p.append(f'  <line x1="{fmt(xs[0])}" y1="{fmt(Y(series["meta"][0])+16)}" x2="{fmt(xs[0])}" y2="{fmt(Y(0.876))}" stroke="{MUT}" stroke-width="1.5" stroke-dasharray="5,4"/>')
-    p.append(f'  <text x="{fmt(xs[0]+12)}" y="{fmt(Y(0.874))}" text-anchor="start" font-size="18" fill="{GREY}">only the TCN and the meta-learner</text>')
-    p.append(f'  <text x="{fmt(xs[0]+12)}" y="{fmt(Y(0.8625))}" text-anchor="start" font-size="18" fill="{GREY}">have a verdict at packet 1</text>')
+    # placed right of the packet-2 column, between the meta and TCN lines, so no
+    # series line crosses the text
+    p.append(f'  <text x="{fmt(xs[1]+14)}" y="{fmt(Y(0.876))}" text-anchor="start" font-size="18" fill="{GREY}">only the TCN and the meta-learner</text>')
+    p.append(f'  <text x="{fmt(xs[1]+14)}" y="{fmt(Y(0.8645))}" text-anchor="start" font-size="18" fill="{GREY}">have a verdict at packet 1</text>')
 
     p.append('</svg>')
     open(os.path.join(OUT, "eval_streaming_auroc.svg"), "w").write("\n".join(p) + "\n")
@@ -327,8 +329,10 @@ def fig_scatter():
     # kept a band below the top-right cluster so it never runs into its callouts
     p.append(f'  <text x="{fmt(X(0.56))}" y="{fmt(Y(0.70))}" font-size="19" font-style="italic" fill="{MUT}">footprint erased,</text>')
     p.append(f'  <text x="{fmt(X(0.56))}" y="{fmt(Y(0.665))}" font-size="19" font-style="italic" fill="{MUT}">detection gap closed</text>')
-    p.append(f'  <text x="{fmt(X(0.60))}" y="{fmt(Y(0.185))}" font-size="19" font-style="italic" fill="{MUT}">footprint, but detector near chance:</text>')
-    p.append(f'  <text x="{fmt(X(0.60))}" y="{fmt(Y(0.15))}" font-size="19" font-style="italic" fill="{MUT}">no detection gap to close</text>')
+    # the TCN scores these flows like their clean originals (dns_ddos: blind;
+    # brute_force: P(adv) 0.343 on both), so the gain metric has nothing to measure
+    p.append(f'  <text x="{fmt(X(0.60))}" y="{fmt(Y(0.185))}" font-size="19" font-style="italic" fill="{MUT}">full footprint, but the TCN already</text>')
+    p.append(f'  <text x="{fmt(X(0.60))}" y="{fmt(Y(0.15))}" font-size="19" font-style="italic" fill="{MUT}">scores it like the clean flow</text>')
 
     # marks at exact positions; coincident piles are annotated with their counts
     ann = []
@@ -415,7 +419,8 @@ def fig_evasion_cost():
         xx = X(xvals[i])
         row = 34 if (i % 2 == 0 or xvals[i] > 200) else 56
         p.append(f'  <line x1="{fmt(xx)}" y1="{y0}" x2="{fmt(xx)}" y2="{y0+8}" stroke="{GREY_D}" stroke-width="1.5"/>')
-        p.append(f'  <text x="{fmt(xx)}" y="{y0+row}" text-anchor="middle" font-size="18" fill="{GREY}">{int(round(xvals[i]))}</text>')
+        # round half up, as the thesis tables do (Python's round(536.5) gives 536)
+        p.append(f'  <text x="{fmt(xx)}" y="{y0+row}" text-anchor="middle" font-size="18" fill="{GREY}">{int(math.floor(xvals[i] + 0.5))}</text>')
     p.append(f'  <line x1="{x0}" y1="{y0}" x2="{x1}" y2="{y0}" stroke="{GREY_D}" stroke-width="2"/>')
     p.append(f'  <line x1="{x0}" y1="{y0}" x2="{x0}" y2="{y1-10}" stroke="{GREY_D}" stroke-width="2"/>')
     p.append(f'  <text x="{(x0+x1)//2}" y="{y0+92}" text-anchor="middle" font-size="21" fill="{INK}">attacker spend - median padding per flow (bytes)</text>')
@@ -451,7 +456,8 @@ def fig_evasion_cost():
         v = series[key][-1]
         if v is None:
             continue
-        p.append(f'  <text x="{lx}" y="{fmt(Y(v)+6)}" font-size="21" font-weight="bold" fill="{color}">{name}  {v*100:.0f}%</text>')
+        pct = math.floor(v * 1000 + 0.5) / 10   # one decimal, half up, as in the table
+        p.append(f'  <text x="{lx}" y="{fmt(Y(v)+6)}" font-size="21" font-weight="bold" fill="{color}">{name}  {pct:.1f}%</text>')
 
     p.append(f'  <text x="{x0+16}" y="{y1+4}" font-size="18" fill="{GREY}">one perturbation, crafted on the TCN, scored on all three</text>')
     p.append(f'  <text x="{x0+16}" y="{y1+28}" font-size="18" fill="{MUT}">matched {policy}; denominator = flows the target detects unperturbed</text>')
@@ -503,7 +509,7 @@ def fig_baseline():
         xx = X(v)
         p.append(f'  <line x1="{fmt(xx)}" y1="{top-16}" x2="{fmt(xx)}" y2="{H-bot+8}" stroke="{GRID}" stroke-width="1.5"/>')
         p.append(f'  <text x="{fmt(xx)}" y="{H-bot+32}" text-anchor="middle" font-size="19" fill="{GREY}">{v:g}</text>')
-    p.append(f'  <text x="{(x0+x1)//2}" y="{H-bot+62}" text-anchor="middle" font-size="21" fill="{INK}">NIDS attack success rate (1 - detection), per source, before vs after DEPT</text>')
+    p.append(f'  <text x="{(x0+x1)//2}" y="{H-bot+62}" text-anchor="middle" font-size="21" fill="{INK}">NIDS attack success rate (1 - detection), per source and mode, before vs after DEPT</text>')
 
     # alternating row bands + dumbbells
     for i, (src, clean, adv, defe) in enumerate(rows):

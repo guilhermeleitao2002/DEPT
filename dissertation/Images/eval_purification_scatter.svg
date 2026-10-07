@@ -50,8 +50,8 @@
   <text x="229.4" y="494.3" font-size="19" font-style="italic" fill="#8a949e">nothing to undo</text>
   <text x="608.1" y="217.2" font-size="19" font-style="italic" fill="#8a949e">footprint erased,</text>
   <text x="608.1" y="234.3" font-size="19" font-style="italic" fill="#8a949e">detection gap closed</text>
-  <text x="637.8" y="469.8" font-size="19" font-style="italic" fill="#8a949e">footprint, but detector near chance:</text>
-  <text x="637.8" y="487" font-size="19" font-style="italic" fill="#8a949e">no detection gap to close</text>
+  <text x="637.8" y="469.8" font-size="19" font-style="italic" fill="#8a949e">full footprint, but the TCN already</text>
+  <text x="637.8" y="487" font-size="19" font-style="italic" fill="#8a949e">scores it like the clean flow</text>
   <circle cx="192.3" cy="561.4" r="10" fill="#ffffff"/><circle cx="192.3" cy="561.4" r="8.5" fill="#2c5f8a" stroke="#16344c" stroke-width="1.5"/>
   <polygon points="192.3,548.7 203.3,567.8 181.3,567.8" fill="#ffffff"/><polygon points="192.3,550.9 201.4,566.7 183.2,566.7" fill="#c44536" stroke="#7d2b21" stroke-width="1.5"/>
   <polygon points="192.3,550.9 203.3,570 181.3,570" fill="#ffffff"/><polygon points="192.3,553.1 201.4,568.9 183.2,568.9" fill="#c44536" stroke="#7d2b21" stroke-width="1.5"/>

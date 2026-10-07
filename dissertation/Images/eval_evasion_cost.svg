@@ -22,7 +22,7 @@
   <line x1="241.2" y1="560" x2="241.2" y2="568" stroke="#3a444e" stroke-width="1.5"/>
   <text x="241.2" y="616" text-anchor="middle" font-size="18" fill="#5a6673">167</text>
   <line x1="443.1" y1="560" x2="443.1" y2="568" stroke="#3a444e" stroke-width="1.5"/>
-  <text x="443.1" y="594" text-anchor="middle" font-size="18" fill="#5a6673">536</text>
+  <text x="443.1" y="594" text-anchor="middle" font-size="18" fill="#5a6673">537</text>
   <line x1="1010" y1="560" x2="1010" y2="568" stroke="#3a444e" stroke-width="1.5"/>
   <text x="1010" y="594" text-anchor="middle" font-size="18" fill="#5a6673">1574</text>
   <line x1="150" y1="560" x2="1010" y2="560" stroke="#3a444e" stroke-width="2"/>
@@ -53,9 +53,9 @@
   <polygon points="241.2,506.3 253.5,518.6 241.2,530.9 228.9,518.6" fill="#ffffff"/><polygon points="241.2,508.1 251.7,518.6 241.2,529.1 230.7,518.6" fill="#2a9d8f" stroke="#14544c" stroke-width="1.5"/>
   <polygon points="443.1,455 455.4,467.3 443.1,479.6 430.8,467.3" fill="#ffffff"/><polygon points="443.1,456.8 453.6,467.3 443.1,477.8 432.6,467.3" fill="#2a9d8f" stroke="#14544c" stroke-width="1.5"/>
   <polygon points="1010,422.7 1022.3,435 1010,447.3 997.7,435" fill="#ffffff"/><polygon points="1010,424.5 1020.5,435 1010,445.5 999.5,435" fill="#2a9d8f" stroke="#14544c" stroke-width="1.5"/>
-  <text x="1028" y="299.1" font-size="21" font-weight="bold" fill="#2c5f8a">TCN  54%</text>
-  <text x="1028" y="389.5" font-size="21" font-weight="bold" fill="#5a6673">RF  36%</text>
-  <text x="1028" y="441" font-size="21" font-weight="bold" fill="#2a9d8f">stack  26%</text>
+  <text x="1028" y="299.1" font-size="21" font-weight="bold" fill="#2c5f8a">TCN  54.5%</text>
+  <text x="1028" y="389.5" font-size="21" font-weight="bold" fill="#5a6673">RF  36.0%</text>
+  <text x="1028" y="441" font-size="21" font-weight="bold" fill="#2a9d8f">stack  25.5%</text>
   <text x="166" y="74" font-size="18" fill="#5a6673">one perturbation, crafted on the TCN, scored on all three</text>
   <text x="166" y="98" font-size="18" fill="#8a949e">matched fpr_0.05; denominator = flows the target detects unperturbed</text>
 </svg>
