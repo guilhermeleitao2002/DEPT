@@ -7,45 +7,17 @@
 % the resumo environment does not switch language: set Portuguese hyphenation
 \begin{otherlanguage*}{portuguese}
 % use \noindent in firts paragraph
-\noindent Os detetores de intrusões em rede baseados em ML são
-vulneráveis à evasão adversarial. Um atacante que altere apenas a temporização e os
-tamanhos dos pacotes, preservando a conformidade com o protocolo e a funcionalidade do
-ataque, pode fazer com que um ataque em curso pareça benigno a um detetor em
-funcionamento. Grande parte da literatura sobre defesas mede a robustez face a
-perturbações no feature-space sem verificar se estas correspondem a
-sequências de pacotes realizáveis. Esta dissertação propõe o DEPT
-(\textit{Defense via Ensemble and Purification Transformer}), uma defesa em tempo real
-que deteta a manipulação adversarial e purifica o tráfego suspeito antes de este chegar
-a um detetor de intrusões protegido.
+\noindent Os detetores de intrusões em rede baseados em ML podem ser evadidos alterando apenas os tempos e tamanhos dos pacotes, sem quebrar o protocolo nem o ataque.
+Contudo, muitas defesas são avaliadas com perturbações no feature-space que podem não ser realizáveis.
+Propõe-se o DEPT, uma defesa em tempo real que deteta e purifica o tráfego manipulado antes do detetor protegido.
 
-\looseness=-1
-O DEPT representa o tráfego através de bits ao nível do pacote e de
-estatísticas agregadas por fluxo, em duas granularidades temporais.
-Um attention-based meta-learner combina, a cada pacote, as previsões de dois
-classificadores com arquiteturas diferentes, uma \textit{Random Forest} e uma \textit{Temporal Convolutional Network}, para detetar fluxos com manipulação
-adversarial.
-Em seguida, um Transformer causal de purificação corrige, em feature-space,
-os fluxos sinalizados, e uma etapa de reconstrução aplica essas correções à temporização
-e ao tamanho dos pacotes, projetando-as de volta para traffic-space.
+O tráfego é representado por bits mascarados de cada pacote e estatísticas de fluxo.
+A cada pacote, um attention-based meta-learner combina uma \textit{Random Forest} e uma \textit{Temporal Convolutional Network} para detetar fluxos manipulados, que um Transformer causal corrige em feature-space antes da projeção para traffic-space.
 
-O DEPT é treinado e avaliado com tráfego adversarial gerado pelo
-TANTGen~\cite{pissarra2026tantgen}, um gerador black-box, em dez fontes de tráfego
-provenientes de três conjuntos de dados públicos, cada uma manipulada em três modos de
-perturbação.
-Produz previsões a partir do primeiro pacote e atinge, no final do fluxo, uma area under the receiver operating characteristic curve (AUROC) de 0,933 na deteção de manipulação.
-Embora a Random Forest isolada obtenha uma AUROC superior a partir do segundo
-pacote, o \textit{ensemble} oferece previsões mais precoces e maior resistência aos
-ataques avaliados que visam o modelo sequencial.
-Avaliada pelo detetor independente visado por cada ataque, a purificação recupera 63\% da
-perda na taxa de deteção causada pela manipulação adversarial.
-Na avaliação do sistema completo, o DEPT reduz a taxa de sucesso dos ataques de 21,1\%
-para 11,6\% e supera o purificador baseado em difusão de Merzouk
-et al.~\cite{merzouk2024diffusion}, que, nas mesmas condições, quase não recupera a
-deteção perdida com a evasão.
-Entre os pacotes classificados como realizáveis, 97,2\% são descodificados sem erros de
-malformação.
-No entanto, a eficácia varia consoante a fonte de tráfego: a deteção de manipulação
-mantém-se próxima ou abaixo do acaso nos ataques de reflection-flood com
-perturbação de tamanho, e a purificação pode reduzir a deteção quando a
-manipulação não provocou evasão.
+O DEPT é treinado e avaliado com tráfego adversarial do gerador black-box TANTGen~\cite{pissarra2026tantgen}: dez fontes de três conjuntos de dados, em três modos de perturbação.
+A deteção de manipulação atinge uma \mbox{AUROC} final de 0,933, abaixo da Random Forest isolada desde o segundo pacote, mas o \textit{ensemble} prevê já no primeiro e resiste melhor aos ataques testados contra o modelo sequencial.
+No detetor independente visado por cada ataque, a purificação recupera 63\% da deteção perdida.
+No sistema completo, o sucesso dos ataques cai de 21,1\% para 11,6\%, enquanto um purificador por difusão~\cite{merzouk2024diffusion} quase nada recupera.
+Dos pacotes realizáveis, 97,2\% são descodificados sem erros de malformação.
+A eficácia varia por fonte: a deteção fica próxima ou abaixo do acaso nos reflection-floods com perturbação de tamanho, e purificar fluxos que não evadiram pode reduzir a deteção a jusante.
 \end{otherlanguage*}
