@@ -156,19 +156,6 @@
 \newblock
 
 
-\bibitem[{Canadian Institute for Cybersecurity}(2017)]%
-        {cicids2017}
-\bibfield{author}{\bibinfo{person}{{Canadian Institute for Cybersecurity}}.}
-  \bibinfo{year}{2017}\natexlab{}.
-\newblock \bibinfo{title}{Intrusion Detection Evaluation Dataset
-  ({CIC-IDS2017})}.
-\newblock
-\urldef\tempurl%
-\url{https://www.unb.ca/cic/datasets/ids-2017.html}
-\showURL{%
-Retrieved December 30, 2025 from \tempurl}
-
-
 \bibitem[Carlini et~al\mbox{.}(2019)]%
         {carlini2019evaluating}
 \bibfield{author}{\bibinfo{person}{Nicholas Carlini}, \bibinfo{person}{Anish
@@ -466,6 +453,20 @@ Retrieved December 30, 2025 from \tempurl}
   \bibinfo{booktitle}{\emph{International Conference on Learning
   Representations (ICLR)}}.
 \newblock
+
+
+\bibitem[Sharafaldin et~al\mbox{.}(2018)]%
+        {sharafaldin2018cicids}
+\bibfield{author}{\bibinfo{person}{Iman Sharafaldin},
+  \bibinfo{person}{Arash~Habibi Lashkari}, {and} \bibinfo{person}{Ali~A.
+  Ghorbani}.} \bibinfo{year}{2018}\natexlab{}.
+\newblock \showarticletitle{Toward Generating a New Intrusion Detection Dataset
+  and Intrusion Traffic Characterization}. In
+  \bibinfo{booktitle}{\emph{Proceedings of the 4th International Conference on
+  Information Systems Security and Privacy (ICISSP)}}.
+  \bibinfo{publisher}{SciTePress}, \bibinfo{pages}{108--116}.
+\newblock
+\href{https://doi.org/10.5220/0006639801080116}{doi:\nolinkurl{10.5220/0006639801080116}}
 
 
 \bibitem[Sharafaldin et~al\mbox{.}(2019)]%

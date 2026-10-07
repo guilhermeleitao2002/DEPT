@@ -204,7 +204,7 @@ contributions are:
   diffusion-based purifier of \citet{merzouk2024diffusion}
   (\Cref{sec:eval-e2e});
   \item an adversarial corpus of ten traffic sources from three public
-  datasets~\cite{mirsky2018kitsune,cicids2017,sharafaldin2019cicddos}, each
+  datasets~\cite{mirsky2018kitsune,sharafaldin2018cicids,sharafaldin2019cicddos}, each
   manipulated by TANTGen in three modes, with a per-source analysis of where the
   defense works, where it fails, and why (\Cref{sec:evaluation}).
 \end{itemize}
@@ -496,7 +496,7 @@ the reconstructor on matched pairs of adversarial and clean flows.
 \paragraph{Corpus} The corpus pairs ten traffic sources with their TANTGen
 counterparts: the Mirai botnet and SSDP flood captures of
 Kitsune~\cite{mirsky2018kitsune}; the DDoS, port scan and FTP/SSH brute-force
-captures of CIC-IDS2017~\cite{cicids2017}; and the NTP, DNS, SSDP, SYN and LDAP
+captures of CIC-IDS2017~\cite{sharafaldin2018cicids}; and the NTP, DNS, SSDP, SYN and LDAP
 reflection and amplification floods of
 CIC-DDoS-2019~\cite{sharafaldin2019cicddos}. These floods offer no clean time
 window to filter on, so each is truncated to its first million packets, the
