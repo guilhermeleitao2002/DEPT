@@ -51,14 +51,15 @@ as \emph{benign}, in the sense of unmanipulated.
     \label{fig:sol-context}
 \end{figure}
 
-The attacker is TANTGen~\cite{pissarra2026tantgen} (\Cref{subsec:rel-tantgen}), which
-ties the threat model to capabilities that have been demonstrated rather than assumed.
+The attacker is any adversary with the capabilities below; in this work it is
+TANTGen~\cite{pissarra2026tantgen} (\Cref{subsec:rel-tantgen}), which ties them to an
+attack that has been demonstrated rather than assumed.
 It works in the \emph{black-box} setting of \Cref{subsec:bg-threat-taxonomy}: it has no
 access to the architecture, parameters, or gradients of DEPT or of the protected
 \ac{NIDS}, and can at most observe detection outcomes. It perturbs two quantities of
-live attack traffic, packet timing (inter-arrival times) and size (payload padding), in
-three modes: \texttt{iat}, \texttt{size}, and \texttt{both}. Its packets are
-protocol-compliant by construction. Attacks that break protocol semantics, such as a
+live attack traffic, packet timing (inter-arrival times) and size (payload padding),
+alone or together (TANTGen's \texttt{iat}, \texttt{size}, and \texttt{both} modes). Its
+packets are protocol-compliant. Attacks that break protocol semantics, such as a
 wrong checksum or a negative inter-arrival time, are out of scope: they are not working
 evasions (\Cref{subsec:bg-realizability}), and stateless checks reject them before any
 learned model is involved.
@@ -72,10 +73,11 @@ Forest, which has no gradient to leak. Its perturbations are protocol-compliant 
 un-sent, and its budget is counted in bytes of padding and seconds of delay.
 
 DEPT, in turn, does not use TANTGen's model, parameters, or surrogate \ac{NIDS}, only
-its traffic: labelled TANTGen flows train the detectors, and TANTGen flows paired with
-the clean flows they came from train the reconstructor (\Cref{subsec:sol-rec-training}). It
-is not black-box all the way through, however, since realization writes back only the
-two quantities TANTGen perturbs (\Cref{subsec:sol-realization}). DEPT thus knows the
+its traffic: labelled flows train the detectors, and flows paired with their clean
+originals train the reconstructor (\Cref{subsec:sol-rec-training}), so any generator with
+the capabilities above could replace TANTGen. It is not black-box all the way through,
+however, since realization writes back only the two quantities the attacker perturbs
+(\Cref{subsec:sol-realization}). DEPT thus knows the
 attacker's feature set but not its model, the gray-box setting of
 \Cref{subsec:bg-threat-taxonomy} seen from the defender's side. Training and test flows
 come from the same generator, so DEPT is evaluated against the attacker it was trained
@@ -483,8 +485,8 @@ heads, and $d_{\text{model}}=128$ (about $678$K parameters), with the $1090$-dim
 token as both input and output. Its head, however, does not predict the entire clean sequence
 directly: it predicts a per-dimension \emph{residual} $\Delta$, and the output is the
 input plus $\Delta$ (\Cref{fig:sol-purifier-a}). This residual formulation fits the
-problem. An adversarial example is a perturbation of a clean sample, and TANTGen's
-manipulations touch only two physical quantities, timing and size, so out of the
+problem. An adversarial example is a perturbation of a clean sample, and the
+manipulations of this threat model touch only two physical quantities, timing and size, so out of the
 $1090$ dimensions of a token only a handful actually need correcting; with a residual
 head, the identity map is the easy default ($\Delta \approx 0$), the untouched
 $\sim\!1050$ header bits are preserved, and the model's capacity is spent on
@@ -496,9 +498,9 @@ pass, each from packets $\leq t$ alone, so the causal mask is there for streamin
 for generation.
 
 \subsection{Training on Matched Flow Pairs}\label{subsec:sol-rec-training}
-Purification is learned from \emph{matched pairs}. Because TANTGen perturbs a flow
+Purification is learned from \emph{matched pairs}. Because the attacker perturbs a flow
 without changing its five-tuple identity, an adversarial flow can be aligned with the
-clean flow it was derived from by matching canonical five-tuple keys. TANTGen also
+clean flow it was derived from by matching canonical five-tuple keys. In practice, TANTGen also
 splits, merges, and drops flows, so only about a third of the adversarial flows find
 such a counterpart (\Cref{subsec:eval-datasets}); these form the (adversarial
 $\rightarrow$ clean) pairs on which reconstruction is supervised. Pairs shorter than two packets are dropped,
@@ -531,7 +533,7 @@ identity fields are masked to zero. Realization therefore works by \emph{overlay
 keep each original packet, with its identity and payload content intact,
 and write back only the two quantities purification may have changed. The purified
 IPv4 total length is decoded from its sixteen header bits and applied by trimming the application payload, which
-is the inverse of TANTGen's size perturbation; the purified inter-arrival time is
+is the inverse of the attacker's size perturbation; the purified inter-arrival time is
 de-normalized and applied to the packet's capture timestamp. The packets are then
 re-serialized with scapy, which recomputes the checksums and length fields that depend
 on the edit. Alignment between tensor rows and packets reuses the pipeline's canonical

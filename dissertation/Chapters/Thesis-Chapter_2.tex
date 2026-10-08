@@ -50,8 +50,8 @@ interacting with an environment. DEPT uses neither semi-supervised nor reinforce
 learning, although the latter is the natural framework for the continuous-adaptation extension discussed in
 \Cref{chap:conclusion}.
 \emph{Self-supervised learning} is a variant of unsupervised learning, deriving its
-training signal from the data itself rather than from annotations: TANTGen~\cite{pissarra2026tantgen}, one of the key adversaries
-DEPT aims to be protected against, is pre-trained to reconstruct masked packet sizes and inter-arrival
+training signal from the data itself rather than from annotations: TANTGen~\cite{pissarra2026tantgen}, the generator of
+the adversarial traffic used in this work, is pre-trained to reconstruct masked packet sizes and inter-arrival
 times on unlabelled traffic, and only its surrogate detector head is trained under
 supervision~\cite{pissarra2026tantgen}.
 

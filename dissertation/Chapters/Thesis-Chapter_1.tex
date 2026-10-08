@@ -60,6 +60,8 @@ manipulates attack traffic under black-box constraints, altering only packet tim
 and packet size, and the traffic it emits is protocol-compliant by construction. DEPT provides
 the defense side of the same effort. It is trained on, and evaluated against, the
 realizable adversarial traffic that TANTGen produces, grounding the evaluation in packet-level attacks rather than feature perturbations whose realizability has not been established.
+Only this traffic is used, not TANTGen itself, so another generator with the same constraints
+could take its place.
 
 % #############################################################################
 \section{Problem Statement}\label{sec:intro-problem}

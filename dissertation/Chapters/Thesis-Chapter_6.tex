@@ -53,7 +53,7 @@ of the time (\Cref{sec:eval-purification}). End to end, the gated pipeline cuts 
 position, the diffusion-based purifier of Merzouk et al.~\cite{merzouk2024diffusion} recovers $0.5\%$ of
 the detection lost where TANTGen evaded, against $63.5\%$ for DEPT (\Cref{subsec:eval-sota}).
 
-The condition is that TANTGen actually evaded. Where it moved the features without evading,
+The condition is that the manipulation actually evaded. Where it moved the features without evading,
 purifying \emph{lowers} the protected detector's detection, by up to $23$ points on
 \texttt{dns\_ddos} and $18$ on \texttt{portscan\_iat}, because the denoiser removes signal the
 \ac{NIDS} was still using. The aggregate displays large recoveries on five source--mode combinations

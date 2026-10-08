@@ -60,7 +60,7 @@ the attack side has converged on generative sequence models operating under expl
 realizability constraints, and it is to this class that the attacker of this
 thesis belongs.
 
-\subsection{TANTGen, the Attacker}\label{subsec:rel-tantgen}
+\subsection{TANTGen, the Attacker Used in This Work}\label{subsec:rel-tantgen}
 \textbf{TANTGen}~\cite{pissarra2026tantgen} is a Transformer-based adversarial network
 traffic generator developed in a sibling thesis, and it gets a closer treatment than the
 works above because it is the concrete adversary that DEPT is trained against and
@@ -79,7 +79,7 @@ confined to two quantities of live attack traffic, packet timing and packet
 size, exposed as three perturbation modes (\texttt{iat}, \texttt{size},
 \texttt{both}) that structure the corpus of \Cref{sec:sol-pipeline}.
 
-Taking TANTGen as the adversary has three consequences that run through DEPT's design.
+These properties, and not TANTGen itself, have three consequences that run through DEPT's design.
 First, since the adversarial traffic is protocol-compliant, a defense
 gains nothing from checking protocol validity; whatever signal exists must be found in
 the traffic's behaviour, its timing and sizing structure, which is what DEPT's
@@ -174,7 +174,7 @@ robustness regions that are meaningful for traffic models. In text classificatio
 under a bounded Levenshtein distance cost a single forward pass. Both act in the two
 phases: the model is fine-tuned (CertTA) or trained (LipsLev) for the certificate, which
 is then computed for each prediction. The guarantee is valuable but bounded by
-construction: a certificate covers a radius, and a TANTGen-style manipulation is not
+construction: a certificate covers a radius, and a manipulation of timing or size is not
 constrained to stay inside one, since a flow's timing can be stretched by legitimately
 large amounts while remaining perfectly realizable.
 
@@ -200,8 +200,8 @@ up the broad distribution coverage of a diffusion process in exchange for a mode
 fits streaming deployment. The second axis is supervision: purifiers in the
 Defense-GAN tradition learn from clean data alone and purify by projection, while DEPT
 exploits the matched adversarial-to-clean flow pairs its corpus provides, a stronger
-form of supervision that is normally unavailable, but that the paired-generator setting
-of TANTGen provides; \Cref{subsec:eval-sota} compares the two directly, with the purifier
+form of supervision that is normally unavailable, but that a paired generator such as
+TANTGen provides; \Cref{subsec:eval-sota} compares the two directly, with the purifier
 of Merzouk et al. as the baseline. The third axis is the one this thesis considers decisive: every network
 purifier surveyed above stops at the feature vector, and none of them re-emits
 traffic. A purified vector that corresponds to no sendable packet sequence has simply

@@ -157,8 +157,8 @@ protocol-compliant by construction. We propose DEPT (Defense via Ensemble and
 Purification Transformer), a streaming defense placed inline in front of a
 protected NIDS (\Cref{fig:arch}). DEPT decides, packet by packet, whether a flow
 has been adversarially manipulated and, when it has, tries to undo the
-manipulation before the protected NIDS processes the flow. It is trained on,
-and evaluated against, the realizable traffic that TANTGen produces.
+manipulation before the protected NIDS processes the flow. It is trained and
+evaluated on TANTGen's traffic, but does not depend on TANTGen alone.
 
 Three requirements shape the design. The verdict must come while the flow is
 still in progress (\emph{streaming operation}), since waiting for a flow to end
@@ -260,7 +260,7 @@ It changes only two quantities of live attack traffic, packet timing
 modes: \dmode{iat}, \dmode{size} and \dmode{both}. Its evasion was calibrated
 against Kitsune~\cite{mirsky2018kitsune}, an anomaly detector built from an
 ensemble of autoencoders, for the Kitsune attacks, and against its own
-flow classifiers (ML-NIDS) for the CIC attacks. Taking TANTGen as the adversary has three
+flow classifiers (ML-NIDS) for the CIC attacks. These properties, and not TANTGen itself, have three
 consequences for a defense. Checking protocol validity is useless, so any
 signal must come from the traffic's timing and sizing behaviour; the
 footprint of the manipulation can be thin, mainly in the timing-only mode; and
@@ -294,7 +294,7 @@ perturbation within a bounded region changes a prediction: CertTA uses
 randomized smoothing over packet timing, sizing and
 insertion~\cite{yan2025certta}, and LipsLev certifies text classifiers under a
 bounded Levenshtein distance~\cite{abad2025lipslev}; both also train or
-fine-tune the model for the certificate. A TANTGen-style
+fine-tune the model for the certificate. A timing or size
 manipulation, however, is not bound to a radius, since a flow's timing can be
 stretched by large amounts and remain realizable. \emph{Purification}
 transforms each input before classification to remove the perturbation,
@@ -351,7 +351,7 @@ of a NIDS that it leaves unchanged, and returns valid packets. Its other
 choices follow from it. Edited traffic must leave as valid packets, hence the
 realization step; a learned detector in front of the NIDS can itself be
 attacked through transfer, hence the heterogeneous ensemble; and both stages
-need examples of the manipulation, hence training on TANTGen's traffic, which
+need examples of the manipulation, hence training on a generator's traffic, which
 fits DEPT's own models and does not retrain the protected NIDS. Its purifier
 also differs from those in the Defense-GAN tradition in two ways. It learns
 from matched adversarial-to-clean flow pairs, a stronger supervision that a
@@ -374,8 +374,8 @@ inline, immediately upstream of the protected NIDS: it must decide, packet by
 packet, whether a flow is adversarial, and neutralize the manipulation before
 the NIDS consumes the flow.
 
-The attacker is TANTGen, which ties the threat model to capabilities that have
-been demonstrated rather than assumed. It has no access to the architecture,
+The attacker is any adversary with the capabilities below, here TANTGen, so they
+are demonstrated rather than assumed. It has no access to the architecture,
 parameters or gradients of DEPT or of the protected NIDS, and can at most
 observe detection outcomes. It perturbs inter-arrival times and payload
 padding, and its packets are protocol-compliant. Attacks that break protocol
@@ -393,10 +393,11 @@ padded or delayed but not un-sent, and its budget is counted in the units an
 attacker spends: bytes of padding and seconds of delay.
 
 DEPT, in turn, does not use TANTGen's model, parameters or surrogate NIDS, only
-its traffic: labelled TANTGen flows train the detectors, and TANTGen flows
-paired with their clean originals train the purifier. It is not black-box all
-the way through, however, since realization writes back only the two quantities
-TANTGen perturbs (\Cref{sec:purifier}): DEPT knows the attacker's feature set but
+its traffic: labelled flows train the detectors, and flows paired with their
+clean originals train the purifier, so any generator with the capabilities above
+could replace TANTGen. It is not black-box all the way through, however, since
+realization writes back only the two quantities the attacker perturbs
+(\Cref{sec:purifier}): DEPT knows the attacker's feature set but
 not its model, a gray-box position. Training and test flows come from the same
 generator, so DEPT is evaluated against the attacker it was trained on; only the
 second adversary's added perturbations are never seen in training.
@@ -650,7 +651,7 @@ predicts a residual correction for every token and outputs
   \hat{x}_t = x'_t + \Delta_t, \qquad \Delta_t = g_\theta(x'_1,\dots,x'_t),
   \label{eq:residual}
 \end{equation}
-so each correction depends only on the current and earlier packets. TANTGen
+so each correction depends only on the current and earlier packets. The attacker
 moves only a few of the $1{,}090$ dimensions of a token, so with a residual
 head the identity ($\Delta \approx 0$) is the easy default, and the roughly
 $1{,}050$ untouched header bits are preserved. The model is not autoregressive:
@@ -658,7 +659,7 @@ it corrects all positions in one pass, and the causal mask is there for
 streaming. Unlike generative purifiers, it does not model the distribution of
 benign traffic; it regresses the correction directly.
 
-\paragraph{Training on matched pairs} TANTGen keeps a flow's five-tuple, so an
+\paragraph{Training on matched pairs} The attacker keeps a flow's five-tuple, so an
 adversarial flow can be aligned with the clean flow it was derived from; since
 TANTGen also splits, merges and drops flows, this holds for about a third of them.
 The reconstructor is trained on these (adversarial $\rightarrow$ clean) pairs,
@@ -673,7 +674,7 @@ alone, since nPrint encodes headers only and the identity fields are masked.
 Realization therefore works by overlay: each original packet keeps its identity
 and payload content, and only the two quantities purification may change are
 written back. The purified IPv4 total length, decoded from its 16 header bits,
-is applied by trimming the payload, the inverse of TANTGen's padding, and the
+is applied by trimming the payload, the inverse of the attacker's padding, and the
 purified IPAT is de-normalized and applied to the packet's timestamp. Packets are
 then re-serialized with scapy, which recomputes checksums and length fields. The
 price is that the deployed pipeline is not attack-agnostic end to end: a flow
@@ -1137,8 +1138,8 @@ the comparison rests on a minority of the corpus. On some combinations
 which only says that padding and delay cannot overcome that much model
 confidence. And the attacker that was measured is, in effect, a search-based
 one, even though the gradient-based one falls only shortly behind. RQ2 is answered
-positively under a condition: purification restores detection where TANTGen
-evaded, and is inert or harmful where it did not.
+positively under a condition: purification restores detection where the
+manipulation evaded, and is inert or harmful where it did not.
 
 \paragraph{Size-perturbed reflection floods} On the \dmode{size} variants of the
 DNS, NTP, SSDP and LDAP floods, every model scores at or below chance,
