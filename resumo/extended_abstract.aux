@@ -109,10 +109,6 @@
 \@writefile{toc}{\contentsline {subsection}{\numberline {4.5}Implementation}{5}{subsection.4.5}\protected@file@percent }
 \newlabel{sec:impl}{{4.5}{5}{Implementation}{subsection.4.5}{}}
 \newlabel{sec:impl@cref}{{[subsection][5][4]4.5}{[1][5][]5}{}{}{}}
-\citation{madry2018towards}
-\citation{carlini2019evaluating,tramer2020adaptive}
-\citation{croce2020reliable}
-\citation{nicolae2018adversarial}
 \@writefile{toc}{\contentsline {section}{\numberline {5}Evaluation}{6}{section.5}\protected@file@percent }
 \newlabel{sec:evaluation}{{5}{6}{Evaluation}{section.5}{}}
 \newlabel{sec:evaluation@cref}{{[section][5][]5}{[1][6][]6}{}{}{}}
@@ -127,55 +123,58 @@
 \@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces Streaming detection on the held-out test flows. AUROC@$t$ uses each flow's prediction after $t$ packets; EDP is the median packet of first detection; the detection rate counts adversarial flows ever flagged.}}{6}{table.caption.22}\protected@file@percent }
 \newlabel{tab:streaming}{{3}{6}{Streaming detection on the held-out test flows. AUROC@$t$ uses each flow's prediction after $t$ packets; EDP is the median packet of first detection; the detection rate counts adversarial flows ever flagged}{table.caption.22}{}}
 \newlabel{tab:streaming@cref}{{[table][3][]3}{[1][6][]6}{}{}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.3}Robustness to a Gradient-guided Attacker (RQ1)}{6}{subsection.5.3}\protected@file@percent }
-\newlabel{sec:eval-rq1}{{5.3}{6}{Robustness to a Gradient-guided Attacker (RQ1)}{subsection.5.3}{}}
-\newlabel{sec:eval-rq1@cref}{{[subsection][3][5]5.3}{[1][6][]6}{}{}{}}
-\@writefile{toc}{\contentsline {paragraph}{Attack}{6}{section*.24}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Per-attack specialists}{6}{section*.24}\protected@file@percent }
+\citation{madry2018towards}
+\citation{carlini2019evaluating,tramer2020adaptive}
+\citation{croce2020reliable}
+\citation{nicolae2018adversarial}
 \citation{merzouk2024diffusion}
 \citation{merzouk2024diffusion}
 \@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces End-of-flow AUROC per source and perturbation mode, against benign flows of the same source. $n_{\text  {adv}}$ is the number of adversarial test flows per mode ($4{,}842$ on \texttt  {ddos} \texttt  {size}; on \texttt  {mirai}, the RF scores $867$ of the $1{,}957$, as many flows end before packet\nonbreakingspace 2, and on \texttt  {ssdp\_flood} $9{,}830$). Values below $0.55$ are marked with $\dagger $.}}{7}{table.caption.23}\protected@file@percent }
 \newlabel{tab:persource}{{4}{7}{End-of-flow AUROC per source and perturbation mode, against benign flows of the same source. $n_{\text {adv}}$ is the number of adversarial test flows per mode ($4{,}842$ on \src {ddos} \dmode {size}; on \src {mirai}, the RF scores $867$ of the $1{,}957$, as many flows end before packet~2, and on \src {ssdp\_flood} $9{,}830$). Values below $0.55$ are marked with $\dagger $}{table.caption.23}{}}
 \newlabel{tab:persource@cref}{{[table][4][]4}{[1][6][]7}{}{}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Attack success of one perturbation crafted with the TCN's gradients and replayed unchanged through each target, at a matched $5\%$ false-positive rate. In parentheses: flows never evaded at any budget.}}{7}{figure.caption.25}\protected@file@percent }
-\newlabel{fig:rq1}{{3}{7}{Attack success of one perturbation crafted with the TCN's gradients and replayed unchanged through each target, at a matched $5\%$ false-positive rate. In parentheses: flows never evaded at any budget}{figure.caption.25}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.3}Robustness to a Gradient-guided Attacker (RQ1)}{7}{subsection.5.3}\protected@file@percent }
+\newlabel{sec:eval-rq1}{{5.3}{7}{Robustness to a Gradient-guided Attacker (RQ1)}{subsection.5.3}{}}
+\newlabel{sec:eval-rq1@cref}{{[subsection][3][5]5.3}{[1][7][]7}{}{}{}}
+\@writefile{toc}{\contentsline {paragraph}{Attack}{7}{section*.25}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Results}{7}{section*.27}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Attack success of one perturbation crafted with the TCN's gradients and replayed unchanged through each target, at a matched $5\%$ false-positive rate. In parentheses: flows never evaded at any budget.}}{7}{figure.caption.26}\protected@file@percent }
+\newlabel{fig:rq1}{{3}{7}{Attack success of one perturbation crafted with the TCN's gradients and replayed unchanged through each target, at a matched $5\%$ false-positive rate. In parentheses: flows never evaded at any budget}{figure.caption.26}{}}
 \newlabel{fig:rq1@cref}{{[figure][3][]3}{[1][7][]7}{}{}{}}
-\@writefile{toc}{\contentsline {paragraph}{Results}{7}{section*.26}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {5}{\ignorespaces Purification on the $384{,}963$ held-out test pairs. The TCN row is circular and kept as a sanity check; compliance counts realizable packets only.}}{7}{table.caption.27}\protected@file@percent }
-\newlabel{tab:purif}{{5}{7}{Purification on the $384{,}963$ held-out test pairs. The TCN row is circular and kept as a sanity check; compliance counts realizable packets only}{table.caption.27}{}}
-\newlabel{tab:purif@cref}{{[table][5][]5}{[1][7][]7}{}{}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {5.4}Purification (RQ2)}{7}{subsection.5.4}\protected@file@percent }
 \newlabel{sec:eval-purif}{{5.4}{7}{Purification (RQ2)}{subsection.5.4}{}}
 \newlabel{sec:eval-purif@cref}{{[subsection][4][5]5.4}{[1][7][]7}{}{}{}}
 \citation{merzouk2024diffusion}
-\@writefile{lot}{\contentsline {table}{\numberline {6}{\ignorespaces Attack success rate (\%) of the protected NIDS per attack, over the three perturbation modes. Left: full realized streams through the gated pipeline, where only flows flagged by the meta-learner are purified; $\Delta $ is the reduction in points. Right: held-out test pairs, with DEPT's reconstructor or the diffusion purifier of \citet  {merzouk2024diffusion} applied to every flow. Kitsune misses almost all \texttt  {mirai} traffic even when clean, and 98\% of \texttt  {ssdp\_flood}'s packets are dropped (see text), so its rows say little.}}{8}{table.caption.28}\protected@file@percent }
-\newlabel{tab:e2e}{{6}{8}{Attack success rate (\%) of the protected NIDS per attack, over the three perturbation modes. Left: full realized streams through the gated pipeline, where only flows flagged by the meta-learner are purified; $\Delta $ is the reduction in points. Right: held-out test pairs, with DEPT's reconstructor or the diffusion purifier of \citet {merzouk2024diffusion} applied to every flow. Kitsune misses almost all \src {mirai} traffic even when clean, and 98\% of \src {ssdp\_flood}'s packets are dropped (see text), so its rows say little}{table.caption.28}{}}
-\newlabel{tab:e2e@cref}{{[table][6][]6}{[1][7][]8}{}{}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {5}{\ignorespaces Purification on the $384{,}963$ held-out test pairs. The TCN row is circular and kept as a sanity check; compliance counts realizable packets only.}}{8}{table.caption.28}\protected@file@percent }
+\newlabel{tab:purif}{{5}{8}{Purification on the $384{,}963$ held-out test pairs. The TCN row is circular and kept as a sanity check; compliance counts realizable packets only}{table.caption.28}{}}
+\newlabel{tab:purif@cref}{{[table][5][]5}{[1][7][]8}{}{}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {5.5}End-to-end Deployment and Comparison with a Diffusion Purifier}{8}{subsection.5.5}\protected@file@percent }
 \newlabel{sec:eval-e2e}{{5.5}{8}{End-to-end Deployment and Comparison with a Diffusion Purifier}{subsection.5.5}{}}
 \newlabel{sec:eval-e2e@cref}{{[subsection][5][5]5.5}{[1][8][]8}{}{}{}}
-\@writefile{toc}{\contentsline {paragraph}{Deployment}{8}{section*.29}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{Comparison with a published purifier}{8}{section*.30}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Deployment}{8}{section*.30}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Comparison with a published purifier}{8}{section*.31}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {6}Discussion and Limitations}{8}{section.6}\protected@file@percent }
+\newlabel{sec:discussion}{{6}{8}{Discussion and Limitations}{section.6}{}}
+\newlabel{sec:discussion@cref}{{[section][6][]6}{[1][8][]8}{}{}{}}
+\@writefile{toc}{\contentsline {paragraph}{Research questions}{8}{section*.32}\protected@file@percent }
 \citation{jin2025robustifying}
 \citation{sutton2018reinforcement,nguyen2021deep}
 \bibstyle{ACM-Reference-Format}
 \bibdata{references}
 \bibcite{abad2025lipslev}{{1}{2025}{{Abad~Rocamora et~al\mbox  {.}}}{{}}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.6}One Global Model or Ten Specialists?}{9}{subsection.5.6}\protected@file@percent }
-\newlabel{sec:eval-spec}{{5.6}{9}{One Global Model or Ten Specialists?}{subsection.5.6}{}}
-\newlabel{sec:eval-spec@cref}{{[subsection][6][5]5.6}{[1][8][]9}{}{}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {6}Discussion and Limitations}{9}{section.6}\protected@file@percent }
-\newlabel{sec:discussion}{{6}{9}{Discussion and Limitations}{section.6}{}}
-\newlabel{sec:discussion@cref}{{[section][6][]6}{[1][9][]9}{}{}{}}
-\@writefile{toc}{\contentsline {paragraph}{Research questions}{9}{section*.31}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{Size-perturbed reflection floods}{9}{section*.32}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{The gate and the fusion}{9}{section*.33}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{Validation and scope}{9}{section*.34}\protected@file@percent }
+\bibcite{alhussien2024advpurrec}{{2}{2024}{{Alhussien and Aleroud}}{{}}}
+\bibcite{alotaibi2024mateen}{{3}{2024}{{Alotaibi and Maffeis}}{{}}}
+\@writefile{lot}{\contentsline {table}{\numberline {6}{\ignorespaces Attack success rate (\%) of the protected NIDS per attack, over the three perturbation modes. Left: full realized streams through the gated pipeline, where only flows flagged by the meta-learner are purified; $\Delta $ is the reduction in points. Right: held-out test pairs, with DEPT's reconstructor or the diffusion purifier of \citet  {merzouk2024diffusion} applied to every flow. Kitsune misses almost all \texttt  {mirai} traffic even when clean, and 98\% of \texttt  {ssdp\_flood}'s packets are dropped (see text), so its rows say little.}}{9}{table.caption.29}\protected@file@percent }
+\newlabel{tab:e2e}{{6}{9}{Attack success rate (\%) of the protected NIDS per attack, over the three perturbation modes. Left: full realized streams through the gated pipeline, where only flows flagged by the meta-learner are purified; $\Delta $ is the reduction in points. Right: held-out test pairs, with DEPT's reconstructor or the diffusion purifier of \citet {merzouk2024diffusion} applied to every flow. Kitsune misses almost all \src {mirai} traffic even when clean, and 98\% of \src {ssdp\_flood}'s packets are dropped (see text), so its rows say little}{table.caption.29}{}}
+\newlabel{tab:e2e@cref}{{[table][6][]6}{[1][7][]9}{}{}{}}
+\@writefile{toc}{\contentsline {paragraph}{Size-perturbed reflection floods}{9}{section*.33}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{The gate and the fusion}{9}{section*.34}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Validation and scope}{9}{section*.35}\protected@file@percent }
 \@writefile{toc}{\contentsline {section}{\numberline {7}Conclusion and Future Work}{9}{section.7}\protected@file@percent }
 \newlabel{sec:conclusion}{{7}{9}{Conclusion and Future Work}{section.7}{}}
 \newlabel{sec:conclusion@cref}{{[section][7][]7}{[1][9][]9}{}{}{}}
-\@writefile{toc}{\contentsline {section}{Acknowledgments}{9}{section*.36}\protected@file@percent }
-\bibcite{alhussien2024advpurrec}{{2}{2024}{{Alhussien and Aleroud}}{{}}}
-\bibcite{alotaibi2024mateen}{{3}{2024}{{Alotaibi and Maffeis}}{{}}}
+\@writefile{toc}{\contentsline {section}{Acknowledgments}{9}{section*.37}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{References}{9}{section*.39}\protected@file@percent }
 \bibcite{apruzzese2023sok}{{4}{2023}{{Apruzzese et~al\mbox  {.}}}{{}}}
 \bibcite{arp2022dos}{{5}{2022}{{Arp et~al\mbox  {.}}}{{}}}
 \bibcite{athalye2018obfuscated}{{6}{2018}{{Athalye et~al\mbox  {.}}}{{}}}
@@ -226,9 +225,55 @@
 \newlabel{tocindent3}{0pt}
 \newlabel{tocindent4}{0pt}
 \newlabel{tocindent5}{0pt}
-\@writefile{toc}{\contentsline {section}{References}{10}{section*.38}\protected@file@percent }
 \newlabel{TotPages}{{10}{10}{}{page.10}{}}
+\gdef \@PBprevLastPage{10}
+\csdimgdef {@PBunbalpgXHeight}{615.0pt}
+\csdimgdef {@PBunbalpgXLeftHeight}{615.0pt}
+\csdimgdef {@PBunbalpgXLeftFloatsHeight}{0.0pt}
+\csdimgdef {@PBunbalpgXRightHeight}{615.0pt}
+\csdimgdef {@PBunbalpgXRightFloatsHeight}{0.0pt}
+\csdimgdef {@PBunbalpgXUsedLeft}{602.0pt}
+\csdimgdef {@PBunbalpgXUsedRight}{531.66599pt}
+\providetoggle {@PBunbalpgXHasFloats}
+\global \togglefalse {@PBunbalpgXHasFloats}
+\providetoggle {@PBunbalpgXHasFloatcol}
+\global \togglefalse {@PBunbalpgXHasFloatcol}
+\providetoggle {@PBunbalpgXHasFootnotes}
+\global \togglefalse {@PBunbalpgXHasFootnotes}
+\providetoggle {@PBunbalpgXHasMarginpars}
+\global \togglefalse {@PBunbalpgXHasMarginpars}
+\ExplSyntaxOn
+\seq_gclear_new:c{@PBunbalpgXLeftFloatHeights}
+\ExplSyntaxOff
+\ExplSyntaxOn
+\seq_gclear_new:c{@PBunbalpgXLeftFloatSpacesBelow}
+\ExplSyntaxOff
+\providetoggle {@PBpgXalreadyBalanced}
+\global \toggletrue {@PBpgXalreadyBalanced}
+\csdimgdef {@PBbalpgXHeight}{615.0pt}
+\csdimgdef {@PBbalpgXLeftHeight}{615.0pt}
+\csdimgdef {@PBbalpgXLeftFloatsHeight}{0.0pt}
+\csdimgdef {@PBbalpgXRightHeight}{1230.0pt}
+\csdimgdef {@PBbalpgXRightFloatsHeight}{0.0pt}
+\csdimgdef {@PBbalpgXUsedLeft}{602.0pt}
+\csdimgdef {@PBbalpgXUsedRight}{1130.0pt}
+\providetoggle {@PBbalpgXHasFloats}
+\global \togglefalse {@PBbalpgXHasFloats}
+\providetoggle {@PBbalpgXHasFloatcol}
+\global \togglefalse {@PBbalpgXHasFloatcol}
+\providetoggle {@PBbalpgXHasFootnotes}
+\global \togglefalse {@PBbalpgXHasFootnotes}
+\providetoggle {@PBbalpgXHasMarginpars}
+\global \togglefalse {@PBbalpgXHasMarginpars}
+\ExplSyntaxOn
+\seq_gclear_new:c{@PBbalpgXLeftFloatHeights}
+\ExplSyntaxOff
+\ExplSyntaxOn
+\seq_gclear_new:c{@PBbalpgXLeftFloatSpacesBelow}
+\ExplSyntaxOff
+\providetoggle {@PBstabilized}
+\global \toggletrue {@PBstabilized}
 \providetoggle {@PBimpossible}
-\global \toggletrue {@PBimpossible}
+\global \togglefalse {@PBimpossible}
 \gdef \@PBprevLastPhysPage{10}
 \gdef \@abspage@last{10}

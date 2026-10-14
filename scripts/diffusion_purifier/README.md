@@ -80,7 +80,7 @@ Held-out test pairs, ML-NIDS attack success rate (1 − detection), modes pooled
 - **Checks:** strict subset 31.2% → DEPT 17.9% / diffusion 40.8%; gated subset (gate and purifiers held out) 29.8% → 15.6% / 38.1%; only the 15 variants whose record count does not change: DEPT −12.0 points, diffusion +7.1. Per variant, DEPT is better on 12 of 24, within a point on 8, worse on 4.
 - **Caveats.** The diffusion purifier's damage on timing-sensitive floods (`syn_ddos`, `ddos_iat`, `portscan_iat`) comes largely from the `log1p(IPAT)` encoding plus the original code's undenoised last step, which leave one-sided delays of up to tens of milliseconds; the robust claim is that it recovers none of the lost detection, not that it makes detection worse. Its validation loss was still falling at 150 k steps. Kitsune rows are uninformative (clean detection 0.2–0.6%, and the shared keep-mask strips 98% of `ssdp_flood_iat`'s packets). The purifier's size jitter makes SSDP/HTTP text packets unrealizable, so `ssdp_ddos` is scored on about 10% of its flows and `ddos` loses about 13% of its packets. CICFlowMeter verdicts depend on the other flows in the capture, so gated-stream numbers compare only with each other.
 
-Written up in the dissertation, §5.8.2 (Table 5.8, Figure 5.7).
+Written up in the dissertation, §5.7.2 (Table 5.8, Figure 5.6).
 
 ## Prerequisites
 

@@ -1,7 +1,6 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.28 (TeX Live 2025/Debian) (preloaded format=pdflatex 2026.8.31)  8 OCT 2026 16:49
+This is pdfTeX, Version 3.141592653-2.6-1.40.28 (TeX Live 2025/Debian) (preloaded format=pdflatex 2026.8.31)  14 OCT 2026 22:51
 entering extended mode
- \write18 enabled.
- file:line:error style messages enabled.
+ restricted \write18 enabled.
  %&-line parsing enabled.
 **extended_abstract.tex
 (./extended_abstract.tex
@@ -1263,54 +1262,55 @@ LaTeX Font Info:    Font shape `T1/zi4/m/n' will be
 LaTeX Font Info:    Font shape `T1/zi4/m/n' will be
 (Font)              scaled to size 7.0pt on input line 818.
  [6.6]
-Package pgfplots info on input line 902: Using 'lua backend=false' for axis: xmode=log unsupported (yet).
+Package pgfplots info on input line 922: Using 'lua backend=false' for axis: xmode=log unsupported (yet).
 LaTeX Font Info:    Font shape `OT1/LinuxLibertineT-TLF/sb/n' will be
-(Font)              scaled to size 7.3pt on input line 967.
+(Font)              scaled to size 7.3pt on input line 984.
 LaTeX Font Info:    Font shape `OT1/LinuxLibertineT-TLF/sb/n' will be
-(Font)              scaled to size 5.5pt on input line 967.
+(Font)              scaled to size 5.5pt on input line 984.
 LaTeX Font Info:    Font shape `OT1/LinuxLibertineT-TLF/sb/n' will be
-(Font)              scaled to size 8.0pt on input line 981.
+(Font)              scaled to size 8.0pt on input line 998.
 LaTeX Font Info:    Font shape `OT1/LinuxLibertineT-TLF/sb/n' will be
-(Font)              scaled to size 6.0pt on input line 981.
+(Font)              scaled to size 6.0pt on input line 998.
 LaTeX Font Info:    Font shape `OT1/LinuxLibertineT-TLF/sb/n' will be
-(Font)              scaled to size 9.0pt on input line 1008.
+(Font)              scaled to size 9.0pt on input line 1025.
 LaTeX Font Info:    Font shape `OT1/LinuxLibertineT-TLF/sb/n' will be
-(Font)              scaled to size 6.6pt on input line 1008.
- [7.7{/usr/share/texlive/texmf-dist/fonts/enc/dvips/libertine/lbtn_fygcup.enc}] [8.8] Processing 'acks' comment.
+(Font)              scaled to size 6.6pt on input line 1025.
+ [7.7] [8.8{/usr/share/texlive/texmf-dist/fonts/enc/dvips/libertine/lbtn_fygcup.enc}] Processing 'acks' comment.
 \openout3 = `comment.cut'.
 
  Comment 'acks' writing to comment.cut. Straight input of comment.cut. (./comment.cut) (./extended_abstract.bbl
 LaTeX Font Info:    Font shape `T1/LinuxLibertineT-TLF/m/it' will be
 (Font)              scaled to size 7.0pt on input line 42.
- [9.9]) (/usr/share/texlive/texmf-dist/tex/generic/stringenc/se-pdfdoc.def
+ [9.9])
+Overfull \vbox (1.16599pt too high) has occurred while \output is active []
+
+ (/usr/share/texlive/texmf-dist/tex/generic/stringenc/se-pdfdoc.def
 File: se-pdfdoc.def 2019/11/29 v1.12 stringenc: PDFDocEncoding
 ) (/usr/share/texlive/texmf-dist/tex/generic/stringenc/se-utf8.def
 File: se-utf8.def 2019/11/29 v1.12 stringenc: UTF-8
 ) [10.10]
-
-Package pbalance Warning: Could not balance, doing nothing.
-
-(./extended_abstract.aux)
+Package pbalance Info: Done balancing page 10 on input line 1204.
+ (./extended_abstract.aux)
  ***********
 LaTeX2e <2025-11-01>
 L3 programming layer <2026-01-19>
  ***********
 Package rerunfilecheck Info: File `extended_abstract.out' has not changed.
-(rerunfilecheck)             Checksum: 906BD9DFC52AA87AA1FB8C0A1DCB922A;4528.
+(rerunfilecheck)             Checksum: 7653D9AE84F4D82886F69AC12BDF38CE;4252.
  ) 
 Here is how much of TeX's memory you used:
- 45872 strings out of 469416
- 1012682 string characters out of 5467654
- 1578124 words of memory out of 5000000
- 72613 multiletter control sequences out of 15000+600000
- 892253 words of font info for 700 fonts, out of 8000000 for 9000
+ 45890 strings out of 469416
+ 1013153 string characters out of 5467654
+ 1610621 words of memory out of 5000000
+ 72637 multiletter control sequences out of 15000+600000
+ 891707 words of font info for 696 fonts, out of 8000000 for 9000
  227 hyphenation exceptions out of 8191
  90i,19n,131p,1014b,2350s stack positions out of 10000i,1000n,20000p,200000b,200000s
 </usr/share/texlive/texmf-dist/fonts/type1/public/inconsolata/Inconsolata-zi4r.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/newtx/LibertineMathMI.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/newtx/LibertineMathMI7.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/newtx/LibertineMathRM.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/libertine/LinBiolinumT.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/libertine/LinLibertineT.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/libertine/LinLibertineTB.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/libertine/LinLibertineTI.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/libertine/LinLibertineTZ.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/newtx/txmiaX.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/newtx/txsys.pfb>
-Output written on extended_abstract.pdf (10 pages, 555009 bytes).
+Output written on extended_abstract.pdf (10 pages, 553879 bytes).
 PDF statistics:
- 512 PDF objects out of 1000 (max. 8388607)
- 465 compressed objects within 5 object streams
+ 509 PDF objects out of 1000 (max. 8388607)
+ 462 compressed objects within 5 object streams
  118 named destinations out of 1000 (max. 500000)
- 145117 words of extra memory for PDF output out of 154059 (max. 10000000)
+ 145109 words of extra memory for PDF output out of 154059 (max. 10000000)
 

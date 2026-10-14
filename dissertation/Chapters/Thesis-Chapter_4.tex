@@ -173,7 +173,7 @@ answer, ``did the generator touch this flow''. Throughout the rest of this docum
 \emph{benign} is used in this sense of \emph{unmanipulated}: the ten original sources are
 called benign even though they are drawn from attack captures. One consequence is that,
 on a source whose features TANTGen barely moves, the two classes are nearly
-indistinguishable for any detector; \Cref{sec:eval-discussion} analyses this cost.
+indistinguishable for any detector; \Cref{subsec:eval-persource} shows this cost.
 
 \paragraph{From packets to tensors.}
 Each capture is processed in a single pass. Packets are grouped into flows by their
@@ -437,8 +437,8 @@ loss is the same balanced per-packet cross-entropy as the \ac{TCN}'s, plus an au
 ``beat the best base'' term (weight $0.5$) that penalizes, at each packet, any
 shortfall of the meta-learner's true-class confidence against the better of the two
 base learners. The intent is to make ``never worse than the best base'' an explicit
-training signal; what this loss does and does not achieve in practice is reported with
-the ablations in \Cref{sec:eval-meta}. At deployment the meta-learner's per-packet
+training signal; what this loss does and does not achieve in practice is reported in
+\Cref{sec:eval-meta}. At deployment the meta-learner's per-packet
 probability is compared against a fixed threshold of $0.5$; a flow is flagged the first
 time its score crosses it, which is also the event the earliest-detection metric of
 \Cref{chap:evaluation} uses.
@@ -502,7 +502,7 @@ Purification is learned from \emph{matched pairs}. Because the attacker perturbs
 without changing its five-tuple identity, an adversarial flow can be aligned with the
 clean flow it was derived from by matching canonical five-tuple keys. In practice, TANTGen also
 splits, merges, and drops flows, so only about a third of the adversarial flows find
-such a counterpart (\Cref{subsec:eval-datasets}); these form the (adversarial
+such a counterpart (\Cref{sec:eval-setup}); these form the (adversarial
 $\rightarrow$ clean) pairs on which reconstruction is supervised. Pairs shorter than two packets are dropped,
 since a single packet carries no inter-arrival interval and thus no timing signal to
 restore. Pairs follow the same seed-$42$ flow-level split as everything else, keeping
