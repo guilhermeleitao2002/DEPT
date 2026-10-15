@@ -350,9 +350,7 @@ The perturbation adds padding and delay to each packet, on top of TANTGen's, and
 shortens a packet or makes it longer than the \ac{MTU}. The padding bytes are random.
 The \ac{TCN} does not see payload bytes, so its gradient cannot choose them, but their
 content changes the payload entropy that the forest reads. The budget is set per packet,
-from $8$ bytes and $10\,\mu$s to $1{,}460$ bytes and $100$\,ms. A norm ball over the
-tensor would not be meaningful here, because the timing channel is standardized with a
-standard deviation of $208.2$ seconds, while the $1088$ header channels are bits.
+from $8$ bytes and $10\,\mu$s to $1{,}460$ bytes and $100$\,ms.
 
 A defense tested only with a weak attack can look more robust than it
 is~\cite{carlini2019evaluating,tramer2020adaptive}, so two other searches check the
