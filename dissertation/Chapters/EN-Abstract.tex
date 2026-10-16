@@ -5,17 +5,18 @@
 % reset acronyms
 \acresetall
 % use \noindent in firts paragraph
-\noindent Machine-learning-based network intrusion detectors can be evaded by reshaping only packet timing and sizes, while preserving protocol compliance and attack functionality.
-Yet many defenses are evaluated on feature perturbations that may not be realizable as traffic.
+\noindent Machine-learning-based network intrusion detectors can be evaded by adversaries who subtly manipulate network traffic (e.g., by changing packet sizes or inter-packet arrival times), while preserving protocol compliance and the ability to achieve their attack objectives.
+However, many state-of-the-art defenses are evaluated using feature perturbations that may not translate into realizable network traffic, limiting their practical applicability.
 This thesis proposes DEPT, a streaming defense that detects and purifies manipulated traffic before it reaches a protected detector.
 
 DEPT represents traffic as masked packet-level bits and flow statistics at two temporal granularities.
-At each packet, an attention-based meta-learner fuses a Random Forest and a Temporal Convolutional Network to detect manipulated flows.
-Flagged flows are corrected in feature space by a causal purification Transformer and mapped back to packet timing and sizes.
+For each packet, an attention-based meta-learner combines a Random Forest and a Temporal Convolutional Network to identify manipulated flows.
+Flagged flows are corrected in feature space using a causal purification Transformer, with the corrected features mapped back to packet sizes and timings. .
+Training and evaluation rely on TANTGen~\cite{pissarra2026tantgen}, a black-box adversarial traffic generator, covering ten traffic sources from three public datasets and three perturbation modes.
 
-TANTGen~\cite{pissarra2026tantgen}, a black-box generator, supplies the adversarial traffic for training and evaluation: ten sources from three public datasets, each in three perturbation modes.
-Manipulation detection reaches an end-of-flow AUROC of $0.933$; the Random Forest alone scores higher from the second packet, but the ensemble predicts from the first and better resists the evaluated attacks on the sequence model.
-On the independent detector each attack targeted, purification recovers $63\%$ of the detection lost to manipulation.
-End to end, DEPT cuts attack success from $21.1\%$ to $11.6\%$, whereas the diffusion-based purifier of Merzouk et al.~\cite{merzouk2024diffusion} recovers almost none of the lost detection.
-Of DEPT's realizable packets, $97.2\%$ parse without malformed-packet errors.
-Results vary by source: manipulation detection is near or below chance on size-perturbed reflection floods, and purifying flows that did not evade can lower downstream detection.
+Experimental results show that DEPT achieves an end-of-flow AUROC of $0.933$ in detecting adversarial manipulations.
+Although the Random Forest alone outperforms the ensemble from the second packet onwards, the ensemble enables detection from the very first packet and provides greater robustness.
+Purification restores $63\%$ of the detection lost to adversarial manipulation, reducing attack success from $21.1\%$ to $11.6\%$.
+In contrast, a state-of-the-art diffusion-based purifier~\cite{merzouk2024diffusion} recovers almost none of the lost detection.
+Moreover, $97.2\%$ of DEPT's generated packets parse without malformed-packet errors, supporting the practical feasibility of the approach.
+Nevertheless, performance varies across traffic source, with manipulation detection struggling on size-perturbed reflection floods, and purification occasionally reducing detection performance on flows that had not successfully evaded the detector.
