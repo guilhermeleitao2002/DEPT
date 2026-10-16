@@ -7,17 +7,19 @@
 % the resumo environment does not switch language: set Portuguese hyphenation
 \begin{otherlanguage*}{portuguese}
 % use \noindent in firts paragraph
-\noindent Os detetores de intrusões em rede baseados em ML podem ser evadidos alterando apenas os tempos e tamanhos dos pacotes, sem quebrar o protocolo nem o ataque.
-Contudo, muitas defesas são avaliadas com perturbações no feature-space que podem não ser realizáveis.
-Propõe-se o DEPT, uma defesa em tempo real que deteta e purifica o tráfego manipulado antes do detetor protegido.
+\noindent Os detetores de intrusões em rede baseados em \textit{machine learning} podem ser evadidos por adversários que manipulam subtilmente o tráfego de rede (por exemplo, alterando os tamanhos dos pacotes ou os tempos entre chegadas de pacotes), preservando a conformidade com o protocolo e a capacidade de atingir os objetivos do ataque.
+No entanto, muitas defesas do estado da arte são avaliadas com perturbações de \textit{features} que podem não se traduzir em tráfego de rede realizável, o que limita a sua aplicabilidade prática.
+Esta tese propõe o DEPT, uma defesa em \textit{streaming} que deteta e purifica tráfego manipulado antes de este chegar a um detetor protegido.
 
-O tráfego é representado por bits mascarados de cada pacote e estatísticas de fluxo.
-A cada pacote, um attention-based meta-learner combina uma \textit{Random Forest} e uma \textit{Temporal Convolutional Network} para detetar fluxos manipulados, que um Transformer causal corrige em feature-space antes da projeção para traffic-space.
+O DEPT representa o tráfego através de bits mascarados ao nível do pacote e de estatísticas de fluxo em duas granularidades temporais.
+Para cada pacote, um \textit{meta-learner} baseado em atenção combina uma \textit{Random Forest} e uma \textit{Temporal Convolutional Network} para identificar fluxos manipulados.
+Os fluxos sinalizados são corrigidos no \textit{feature space} por um \textit{Transformer} causal de purificação, sendo as \textit{features} corrigidas mapeadas de volta para tamanhos e tempos dos pacotes.
+O treino e a avaliação recorrem ao TANTGen~\cite{pissarra2026tantgen}, um gerador de tráfego adversarial \textit{black-box}, abrangendo dez fontes de tráfego de três \textit{datasets} públicos e três modos de perturbação.
 
-O DEPT é treinado e avaliado com tráfego adversarial do gerador black-box TANTGen~\cite{pissarra2026tantgen}: dez fontes de três conjuntos de dados, em três modos de perturbação.
-A deteção de manipulação atinge uma \mbox{AUROC} final de 0,933, abaixo da Random Forest isolada desde o segundo pacote, mas o \textit{ensemble} prevê já no primeiro e resiste melhor aos ataques testados contra o modelo sequencial.
-No detetor independente visado por cada ataque, a purificação recupera 63\% da deteção perdida.
-No sistema completo, o sucesso dos ataques cai de 21,1\% para 11,6\%, enquanto um purificador por difusão~\cite{merzouk2024diffusion} quase nada recupera.
-Dos pacotes realizáveis, 97,2\% são descodificados sem erros de malformação.
-A eficácia varia por fonte: a deteção fica próxima ou abaixo do acaso nos reflection-floods com perturbação de tamanho, e purificar fluxos que não evadiram pode reduzir a deteção a jusante.
+Os resultados experimentais mostram que o DEPT atinge uma \mbox{AUROC} no fim do fluxo de 0,933 na deteção de manipulações adversariais.
+Embora a \textit{Random Forest} supere o \textit{ensemble} a partir do segundo pacote, o \textit{ensemble} permite a deteção logo no primeiro pacote e oferece maior robustez.
+A purificação recupera 63\% da deteção perdida devido à manipulação adversarial, reduzindo o sucesso dos ataques de 21,1\% para 11,6\%.
+Em contraste, um purificador do estado da arte baseado em difusão~\cite{merzouk2024diffusion} quase não recupera a deteção perdida.
+Além disso, 97,2\% dos pacotes gerados pelo DEPT são descodificados sem erros de pacotes malformados, o que suporta a viabilidade prática da abordagem.
+Ainda assim, o desempenho varia entre fontes de tráfego, com a deteção de manipulações a ter dificuldades nos \textit{reflection floods} com perturbação de tamanho, e a purificação a reduzir ocasionalmente o desempenho de deteção em fluxos que não tinham evadido o detetor com sucesso.
 \end{otherlanguage*}
