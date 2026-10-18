@@ -141,22 +141,21 @@
 \@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Attack success of one perturbation crafted with the TCN's gradients and replayed unchanged through each target, at a matched $5\%$ false-positive rate. In parentheses: flows never evaded at any budget.}}{7}{figure.caption.26}\protected@file@percent }
 \newlabel{fig:rq1}{{3}{7}{Attack success of one perturbation crafted with the TCN's gradients and replayed unchanged through each target, at a matched $5\%$ false-positive rate. In parentheses: flows never evaded at any budget}{figure.caption.26}{}}
 \newlabel{fig:rq1@cref}{{[figure][3][]3}{[1][7][]7}{}{}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.4}Purification (RQ2)}{7}{subsection.5.4}\protected@file@percent }
-\newlabel{sec:eval-purif}{{5.4}{7}{Purification (RQ2)}{subsection.5.4}{}}
-\newlabel{sec:eval-purif@cref}{{[subsection][4][5]5.4}{[1][7][]7}{}{}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {5}{\ignorespaces Purification on the $384{,}963$ held-out test pairs. The TCN row is circular and kept as a sanity check; compliance counts realizable packets only.}}{7}{table.caption.28}\protected@file@percent }
+\newlabel{tab:purif}{{5}{7}{Purification on the $384{,}963$ held-out test pairs. The TCN row is circular and kept as a sanity check; compliance counts realizable packets only}{table.caption.28}{}}
+\newlabel{tab:purif@cref}{{[table][5][]5}{[1][7][]7}{}{}{}}
 \citation{merzouk2024diffusion}
-\@writefile{lot}{\contentsline {table}{\numberline {5}{\ignorespaces Purification on the $384{,}963$ held-out test pairs. The TCN row is circular and kept as a sanity check; compliance counts realizable packets only.}}{8}{table.caption.28}\protected@file@percent }
-\newlabel{tab:purif}{{5}{8}{Purification on the $384{,}963$ held-out test pairs. The TCN row is circular and kept as a sanity check; compliance counts realizable packets only}{table.caption.28}{}}
-\newlabel{tab:purif@cref}{{[table][5][]5}{[1][7][]8}{}{}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {6}{\ignorespaces Attack success rate (\%) of the protected NIDS per attack, over the three perturbation modes. Left: full realized streams through the gated pipeline, where only flows flagged by the meta-learner are purified; $\Delta $ is the reduction in points. Right: held-out test pairs, with DEPT's reconstructor or the diffusion purifier of \citet  {merzouk2024diffusion} applied to every flow. Kitsune misses almost all \texttt  {mirai} traffic even when clean, and 98\% of \texttt  {ssdp\_flood}'s packets are dropped (see text), so its rows say little.}}{8}{table.caption.29}\protected@file@percent }
+\newlabel{tab:e2e}{{6}{8}{Attack success rate (\%) of the protected NIDS per attack, over the three perturbation modes. Left: full realized streams through the gated pipeline, where only flows flagged by the meta-learner are purified; $\Delta $ is the reduction in points. Right: held-out test pairs, with DEPT's reconstructor or the diffusion purifier of \citet {merzouk2024diffusion} applied to every flow. Kitsune misses almost all \src {mirai} traffic even when clean, and 98\% of \src {ssdp\_flood}'s packets are dropped (see text), so its rows say little}{table.caption.29}{}}
+\newlabel{tab:e2e@cref}{{[table][6][]6}{[1][7][]8}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.4}Purification (RQ2)}{8}{subsection.5.4}\protected@file@percent }
+\newlabel{sec:eval-purif}{{5.4}{8}{Purification (RQ2)}{subsection.5.4}{}}
+\newlabel{sec:eval-purif@cref}{{[subsection][4][5]5.4}{[1][7][]8}{}{}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {5.5}End-to-end Deployment and Comparison with a Diffusion Purifier}{8}{subsection.5.5}\protected@file@percent }
 \newlabel{sec:eval-e2e}{{5.5}{8}{End-to-end Deployment and Comparison with a Diffusion Purifier}{subsection.5.5}{}}
 \newlabel{sec:eval-e2e@cref}{{[subsection][5][5]5.5}{[1][8][]8}{}{}{}}
 \@writefile{toc}{\contentsline {paragraph}{Deployment}{8}{section*.30}\protected@file@percent }
 \@writefile{toc}{\contentsline {paragraph}{Comparison with a published purifier}{8}{section*.31}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {6}Discussion and Limitations}{8}{section.6}\protected@file@percent }
-\newlabel{sec:discussion}{{6}{8}{Discussion and Limitations}{section.6}{}}
-\newlabel{sec:discussion@cref}{{[section][6][]6}{[1][8][]8}{}{}{}}
-\@writefile{toc}{\contentsline {paragraph}{Research questions}{8}{section*.32}\protected@file@percent }
 \citation{jin2025robustifying}
 \citation{sutton2018reinforcement,nguyen2021deep}
 \bibstyle{ACM-Reference-Format}
@@ -164,9 +163,10 @@
 \bibcite{abad2025lipslev}{{1}{2025}{{Abad~Rocamora et~al\mbox  {.}}}{{}}}
 \bibcite{alhussien2024advpurrec}{{2}{2024}{{Alhussien and Aleroud}}{{}}}
 \bibcite{alotaibi2024mateen}{{3}{2024}{{Alotaibi and Maffeis}}{{}}}
-\@writefile{lot}{\contentsline {table}{\numberline {6}{\ignorespaces Attack success rate (\%) of the protected NIDS per attack, over the three perturbation modes. Left: full realized streams through the gated pipeline, where only flows flagged by the meta-learner are purified; $\Delta $ is the reduction in points. Right: held-out test pairs, with DEPT's reconstructor or the diffusion purifier of \citet  {merzouk2024diffusion} applied to every flow. Kitsune misses almost all \texttt  {mirai} traffic even when clean, and 98\% of \texttt  {ssdp\_flood}'s packets are dropped (see text), so its rows say little.}}{9}{table.caption.29}\protected@file@percent }
-\newlabel{tab:e2e}{{6}{9}{Attack success rate (\%) of the protected NIDS per attack, over the three perturbation modes. Left: full realized streams through the gated pipeline, where only flows flagged by the meta-learner are purified; $\Delta $ is the reduction in points. Right: held-out test pairs, with DEPT's reconstructor or the diffusion purifier of \citet {merzouk2024diffusion} applied to every flow. Kitsune misses almost all \src {mirai} traffic even when clean, and 98\% of \src {ssdp\_flood}'s packets are dropped (see text), so its rows say little}{table.caption.29}{}}
-\newlabel{tab:e2e@cref}{{[table][6][]6}{[1][7][]9}{}{}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {6}Discussion and Limitations}{9}{section.6}\protected@file@percent }
+\newlabel{sec:discussion}{{6}{9}{Discussion and Limitations}{section.6}{}}
+\newlabel{sec:discussion@cref}{{[section][6][]6}{[1][9][]9}{}{}{}}
+\@writefile{toc}{\contentsline {paragraph}{Research questions}{9}{section*.32}\protected@file@percent }
 \@writefile{toc}{\contentsline {paragraph}{Size-perturbed reflection floods}{9}{section*.33}\protected@file@percent }
 \@writefile{toc}{\contentsline {paragraph}{The gate and the fusion}{9}{section*.34}\protected@file@percent }
 \@writefile{toc}{\contentsline {paragraph}{Validation and scope}{9}{section*.35}\protected@file@percent }

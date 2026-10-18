@@ -660,8 +660,7 @@ streaming. Unlike generative purifiers, it does not model the distribution of
 benign traffic; it regresses the correction directly.
 
 \paragraph{Training on matched pairs} The attacker keeps a flow's five-tuple, so an
-adversarial flow can be aligned with the clean flow it was derived from; since
-TANTGen also splits, merges and drops flows, this holds for about a third of them.
+adversarial flow can be aligned with the clean flow it was derived from.
 The reconstructor is trained on these (adversarial $\rightarrow$ clean) pairs,
 without single-packet pairs, using a smooth-L1 loss
 between $\hat{x}$ and the clean flow, averaged within each flow. The loss

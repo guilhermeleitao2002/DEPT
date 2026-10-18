@@ -500,9 +500,7 @@ for generation.
 \subsection{Training on Matched Flow Pairs}\label{subsec:sol-rec-training}
 Purification is learned from \emph{matched pairs}. Because the attacker perturbs a flow
 without changing its five-tuple identity, an adversarial flow can be aligned with the
-clean flow it was derived from by matching canonical five-tuple keys. In practice, TANTGen also
-splits, merges, and drops flows, so only about a third of the adversarial flows find
-such a counterpart (\Cref{sec:eval-setup}); these form the (adversarial
+clean flow it was derived from by matching canonical five-tuple keys. These form the (adversarial
 $\rightarrow$ clean) pairs on which reconstruction is supervised. Pairs shorter than two packets are dropped,
 since a single packet carries no inter-arrival interval and thus no timing signal to
 restore. Pairs follow the same seed-$42$ flow-level split as everything else, keeping

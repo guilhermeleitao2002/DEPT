@@ -1,13 +1,13 @@
 # Fdb version 4
-["bibtex extended_abstract"] 1792014661.77971 "extended_abstract.aux" "extended_abstract.bbl" "extended_abstract" 1792014663.41415 0
+["bibtex extended_abstract"] 1792323249.7996 "extended_abstract.aux" "extended_abstract.bbl" "extended_abstract" 1792323251.51354 0
   "./ACM-Reference-Format.bst" 1791300108.77616 93560 7091f2b0543d2c8bfe2e82ce5d54a029 ""
   "./references.bib" 1791367532.49278 16015 57bc3bd4c1bcab654845a272d50a730a ""
-  "extended_abstract.aux" 1792014663.21351 22544 3ba30e17785354ba3c0275ccfbc31bcb "pdflatex"
+  "extended_abstract.aux" 1792323251.31379 22544 c1431292133d93579344f64574288e78 "pdflatex"
   (generated)
   "extended_abstract.bbl"
   "extended_abstract.blg"
   (rewritten before read)
-["pdflatex"] 1792014661.83816 "extended_abstract.tex" "extended_abstract.pdf" "extended_abstract" 1792014663.41433 0
+["pdflatex"] 1792323249.86633 "extended_abstract.tex" "extended_abstract.pdf" "extended_abstract" 1792323251.51368 0
   "/etc/texmf/web2c/texmf.cnf" 1779121234.46173 475 c0e671620eb5563b2130f56340a5fde8 ""
   "/home/gleitao/.texlive2025/texmf-var/web2c/pdftex/pdflatex.fmt" 1788189959 2266903 f4525dafffe929d3d06b7188f90d977f ""
   "/usr/share/texlive/texmf-dist/fonts/enc/dvips/inconsolata/i4-t1-4.enc" 1558214095 7693 0f2dce6d313c82989ec3a67fc24df2a0 ""
@@ -337,11 +337,11 @@
   "/usr/share/texmf/web2c/texmf.cnf" 1769369718 41603 27f93b3067076450172040dcd57ca8b3 ""
   "/var/lib/texmf/fonts/map/pdftex/updmap/pdftex.map" 1779121243 5418024 d27383b0a8fadef44c19c8c5a157ff8e ""
   "acmart.cls" 1791300108.77616 121737 e553f62fc9642f9010f9c29ba27de8d5 ""
-  "comment.cut" 1792014663.12951 138 6eca62047ee1d94fae6d333df68bfd51 "pdflatex"
-  "extended_abstract.aux" 1792014663.21351 22544 3ba30e17785354ba3c0275ccfbc31bcb "pdflatex"
-  "extended_abstract.bbl" 1792014661.82952 26238 ff3af0947ae0062cab3f95ff8b13f42e "bibtex extended_abstract"
-  "extended_abstract.out" 1792014663.21751 4252 7653d9ae84f4d82886f69ac12bdf38ce "pdflatex"
-  "extended_abstract.tex" 1792014165.04793 71679 89dfafc048f5a5ba743921af0b235840 ""
+  "comment.cut" 1792323251.22979 138 6eca62047ee1d94fae6d333df68bfd51 "pdflatex"
+  "extended_abstract.aux" 1792323251.31379 22544 c1431292133d93579344f64574288e78 "pdflatex"
+  "extended_abstract.bbl" 1792323249.85379 26238 ff3af0947ae0062cab3f95ff8b13f42e "bibtex extended_abstract"
+  "extended_abstract.out" 1792323251.31779 4252 7653d9ae84f4d82886f69ac12bdf38ce "pdflatex"
+  "extended_abstract.tex" 1792323247.87779 71590 2d4581a2cf57cfe768ac7c6e65163cd4 ""
   (generated)
   "comment.cut"
   "extended_abstract.aux"
