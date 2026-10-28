@@ -1,15 +1,8 @@
 """Training loop for the Mini-Transformer meta-learner.
 
-Trains on the seed=42 ``val`` split — out-of-fold for both RF and TCN by
-construction — sub-split into a ``meta_train`` / ``meta_val`` partition
-(seed=43 by default) so we have a held-out signal for early stopping.
-
-The actual ``test`` split is never seen at training time; final
-evaluation lives in ``evaluate.py``.
-
-Streaming AUROC@10 on the meta-val partition is the early-stopping
-signal (last-timestep macro-F1 saturates near 1.0 because RF's last
-checkpoint is already near-perfect, so it would be uninformative).
+Trains on the base learners' ``val`` split, divided into ``meta_train`` /
+``meta_val`` (seed 43) for early stopping. Early stopping uses AUROC@10 on
+``meta_val``, since the last-packet macro F1 saturates near 1.0.
 """
 from __future__ import annotations
 
@@ -96,12 +89,9 @@ def _per_packet_loss(
     padding-label (always 0).
 
     The auxiliary loss is a per-packet ``ReLU(p_best_base - p_meta)`` on
-    the model's confidence in the *true* class. ``p_best_base`` is the
-    max of RF (when fresh — i.e. token slot is finite, not NaN) and TCN
-    confidences, so the meta-learner is explicitly punished when it
-    under-confidence-es the better base learner. Combined with the
-    primary CE, this prevents the degenerate "always predict TCN"
-    convergence observed without it.
+    the confidence in the true class, where ``p_best_base`` is the max of
+    the RF (when it has a value) and the TCN. Without it the model tended
+    to just copy the TCN.
 
     Returns ``(total_loss, components)`` where ``components`` is a dict
     with the per-component scalar values for logging.

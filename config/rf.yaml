@@ -1,38 +1,19 @@
 # ===================================
 # DEPT — Random Forest base learner
 # ===================================
-# Binary classifier (benign vs adversarial) over the 24-dim multi-scale
-# prefix statistics (one row per RF checkpoint) produced by the
-# Packet-to-Tensor pipeline.
+# Binary classifier (benign vs adversarial) over the 24-dim prefix statistics,
+# one row per RF checkpoint.
 #
-# Under DEPT's dataset-driven label convention, every Kitsune/CIC-IDS2017/
-# CIC-DDoS-2019 flow is benign and every TANTGen-generated flow is
-# adversarial. The
-# RF learns to distinguish the benign manifold from adversarial
-# perturbations — the upstream NIDS is expected to handle the raw-dataset
-# attacks, so they contribute to the benign class here.
+# Every Kitsune / CIC-IDS2017 / CIC-DDoS-2019 flow is benign and every TANTGen
+# flow is adversarial: the protected NIDS already handles the original attacks.
 
 tensors_dir: data/tensors
 adversarial_dir: data/tensors/adversarial   # auto-discovered: every subdir with metadata.json
 output_dir: data/models/rf
 
-# Benign pool — restricted to the 10 attacks for which TANTGen adversarial
-# PCAPs exist on disk: the 5 original sources (brute_force, ddos, mirai,
-# portscan, ssdp_flood) plus the 5 CIC-DDoS-2019 reflection floods
-# (dns_ddos, ldap_ddos, ntp_ddos, ssdp_ddos, syn_ddos). The CIC-DDoS
-# benign tensors are built from the first 1,000,000 packets of each raw
-# capture (packet-capped by process_all_attacks.py, since these floods
-# have no clean attack time window) — the unperturbed counterpart of the
-# matching adversarial source. Every adversarial source has a benign
-# counterpart in this pool.
-# Excluded sources and reasons:
-#   dos_slow, syn_dos  — no TANTGen adversarial PCAP on disk for this set
-#                        (syn_dos is the Kitsune SYN DoS — distinct from the
-#                        CIC-DDoS-2019 syn_ddos flood, which IS included)
-#   active_wiretap, arp_mitm, brute_force_ftp, brute_force_ssh,
-#   infiltration, os_scan, ssl_renegotiation, video_injection, web_attacks
-#                      — no TANTGen adversarial counterpart; including them
-#                        inflates the benign class without a matching signal
+# Benign pool: the 10 attacks that have TANTGen adversarial versions. The
+# CIC-DDoS-2019 sources are the first 1,000,000 packets of each capture (they
+# have no clean attack time window).
 benign_sources:
   - brute_force
   - ddos
@@ -45,18 +26,8 @@ benign_sources:
   - ssdp_ddos
   - syn_ddos
 
-# Adversarial pool — every subdirectory of adversarial_dir/ that contains
-# metadata.json is loaded automatically, except those listed below.
-# (portscan_adv_* is included: the early packet-2 RF checkpoint covers its
-# 1–2-packet flows, which the retired fixed N=10 window schema could not.)
-# - dos_slow / syn_dos / fuzzing : defensively drops leftover tensors
-#   from attack sets no longer part of this configuration.
-# - brute_force_kitsune / portscan_kitsune *_adv_* : defensive guard against
-#   tensors that would only exist if process_all_attacks.py's TANTGEN_KEYS
-#   filter were bypassed. The opted-in adversarial sources are the 5
-#   originals (mirai, ssdp_flood, ddos, portscan, brute_force) and the 5
-#   CIC-DDoS-2019 floods (ntp_ddos, dns_ddos, ssdp_ddos, syn_ddos,
-#   ldap_ddos); these kitsune variants are not.
+# Adversarial pool: every subdirectory of adversarial_dir/ with a metadata.json,
+# except the ones below (leftovers from attack sets that are no longer used).
 adversarial_exclude:
   - dos_slow_adv_both
   - dos_slow_adv_iat
@@ -74,16 +45,15 @@ adversarial_exclude:
   - portscan_kitsune_adv_iat
   - portscan_kitsune_adv_size
 
-# Split (flow-atomic, stratified by source).
+# Flow-level split, stratified by source.
 split:
   train_frac: 0.70
   val_frac: 0.15
   test_frac: 0.15
   seed: 42
 
-# Benign capping: total benign *flows* ≤ benign_cap_ratio × adversarial
-# *flows* (applied globally before the per-checkpoint expansion).
-# Prevents the much larger benign pool from dominating training.
+# At most benign_cap_ratio × as many benign flows as adversarial flows (no
+# effect on the current data, where benign flows are the minority).
 benign_cap_ratio: 3.0
 
 rf_defaults:

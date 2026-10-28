@@ -1,10 +1,9 @@
 # =====================================================================
 # DEPT — Phase 9: comparison with a published purifier (diffusion)
 # =====================================================================
-# The diffusion-based adversarial purifier of Merzouk et al. (DBSec 2025,
-# github.com/mamerzouk/adversarial-purification) takes the place of DEPT's reconstructor
-# inside the phase-8 harness: same flows, same realization back into packets, same
-# independent NIDS. Only the purifier changes.
+# The diffusion-based purifier of Merzouk et al. (DBSec 2025,
+# github.com/mamerzouk/adversarial-purification) replaces DEPT's reconstructor in the
+# phase-8 setup: same flows, same realization into packets, same independent NIDS.
 #
 #   python3 scripts/diffusion_purifier/run_diffusion_purifier.py            # all stages
 #   python3 scripts/diffusion_purifier/run_diffusion_purifier.py --stage evaluate

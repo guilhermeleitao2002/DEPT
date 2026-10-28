@@ -1,24 +1,15 @@
 # ===================================
 # DEPT — TCN base learner
 # ===================================
-# Binary classifier (benign vs adversarial) over the ragged, variable-length
-# per-flow [L, F=1090] packet sequences produced by the Packet-to-Tensor
-# pipeline. Emits a per-packet prediction stream.
-#
-# Same dataset scope as config/rf.yaml so RF and TCN see the same flows under
-# the same flow-atomic split (driven by `split.seed`). This is the basis for a
-# fair RF-vs-TCN comparison and the meta-learner that stacks the two.
+# Binary classifier (benign vs adversarial) over the variable-length per-flow
+# [L, 1090] packet sequences, with one prediction per packet. Same sources and
+# split as config/rf.yaml.
 
 tensors_dir: data/tensors
 adversarial_dir: data/tensors/adversarial   # auto-discovered: every subdir with metadata.json
 output_dir: data/models/tcn
 
-# Benign pool — the 10 attacks for which TANTGen adversarial PCAPs exist on
-# disk: the 5 original sources (brute_force, ddos, mirai, portscan,
-# ssdp_flood) plus the 5 CIC-DDoS-2019 reflection floods (dns_ddos,
-# ldap_ddos, ntp_ddos, ssdp_ddos, syn_ddos, the latter built from the first
-# 1,000,000 packets of each raw capture). Same as rf.yaml; see that file for
-# the full rationale.
+# Benign pool: same as rf.yaml.
 benign_sources:
   - brute_force
   - ddos
@@ -31,10 +22,7 @@ benign_sources:
   - ssdp_ddos
   - syn_ddos
 
-# Adversarial pool — every subdirectory of adversarial_dir/ that contains
-# metadata.json is loaded automatically, except those listed below. Same
-# list as rf.yaml; see that file for per-entry rationale (the excludes are
-# defensive carry-overs from older attack sets).
+# Adversarial pool: same as rf.yaml.
 adversarial_exclude:
   - dos_slow_adv_both
   - dos_slow_adv_iat
@@ -52,23 +40,19 @@ adversarial_exclude:
   - portscan_kitsune_adv_iat
   - portscan_kitsune_adv_size
 
-# Split (flow-atomic, stratified by source). Use the same seed as rf.yaml
-# so TCN's split.npz matches RF's element-wise.
+# Flow-level split, stratified by source (same seed as rf.yaml).
 split:
   train_frac: 0.70
   val_frac: 0.15
   test_frac: 0.15
   seed: 42
 
-# Benign capping: total benign flows ≤ benign_cap_ratio × adversarial
-# flows (applied globally, flow-atomic). Same value as rf.yaml.
+# Same benign cap as rf.yaml.
 benign_cap_ratio: 3.0
 
 # ---- TCN architecture ----
-# Default: 3 dilated temporal blocks at 128 channels (~0.8M params).
-# Receptive field = 1 + 2·(2+4+8) = 29 packets — sufficient to integrate
-# context across the cumulative prefix of a flow under streaming inference.
-# Head: per-timestep Conv1d(C_last → num_classes) emitting [B, T, 2] logits.
+# 3 dilated temporal blocks of 128 channels (~0.8M params), receptive field
+# 29 packets, and a per-packet Conv1d head giving [B, T, 2] logits.
 model:
   num_features: 1090       # 1088 nPrint bits + IPAT (z-score) + Direction
   channels: [128, 128, 128]
@@ -77,8 +61,7 @@ model:
   num_classes: 2
 
 # ---- Training ----
-# Variable-length per-flow sequences. Per-packet CE is averaged inside
-# each flow (so long flows don't dominate), then averaged across flows.
+# Per-packet cross-entropy, averaged inside each flow and then across flows.
 training:
   device: auto             # auto | cuda | cuda:0 | cuda:1 | cpu
   epochs: 20

@@ -119,7 +119,7 @@ def train(config: dict, tensors_root: Path, output_dir: Path) -> dict:
         val_idx=split.val_idx,
         test_idx=split.test_idx,
     )
-    # Full dataset tensors persisted so evaluate.py doesn't re-assemble (cheap vs. determinism).
+    # Saved so evaluate.py does not need to re-assemble the dataset.
     np.savez(
         output_dir / "dataset.npz",
         X=dataset.X,

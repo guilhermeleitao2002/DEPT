@@ -5,9 +5,8 @@ For each flow we build a per-packet ``[L, 13]`` token matrix combining:
   * The two base-learner predictions (carry-forward RF logit + dense TCN
     logit), with a recency feature ``rf_age`` and a binary
     ``is_rf_checkpoint`` flag.
-  * A compact 9-dim packet summary (IPAT, direction, normalised packet
-    length, six TCP flag bits) — *not* the full 1088-bit nPrint vector;
-    the meta-learner is a stacker, not a feature extractor.
+  * A 9-dim packet summary (IPAT, direction, normalised packet length,
+    six TCP flag bits) instead of the full nPrint vector.
 
 Token layout (column index → meaning):
 
@@ -468,10 +467,7 @@ class MetaLearnerDataset(Dataset):
     def __getitem__(self, i: int) -> tuple[torch.Tensor, int, int]:
         idx = int(self.sample_indices[i])
         start, length = (int(x) for x in self.cache.offsets[idx])
-        # Copy the memmap slice — `np.load(..., mmap_mode='r')` returns a
-        # read-only view, which would yield a non-writable tensor. We never
-        # mutate the result in-place, but PyTorch warns anyway; the copy is
-        # cheap (a few KB per flow) and silences the warning at the source.
+        # Copy the read-only memmap slice (avoids PyTorch's warning).
         toks = np.array(
             self.cache.tokens[start:start + length], dtype=np.float32, copy=True,
         )

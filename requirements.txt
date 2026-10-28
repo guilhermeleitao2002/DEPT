@@ -1,82 +1,42 @@
-# =============================================================================
-# DEPT — full-pipeline Python dependencies
-# =============================================================================
-# This venv must run BOTH DEPT's own pipeline (packet_to_tensor -> RF -> TCN ->
-# meta-learner) AND the TANTGen modules that
-# scripts/adversarial_generation/generate_adversarials.py invokes as subprocesses
-# under THIS interpreter (dataloader, the Split scripts, and the TANTGen
-# surrogate / finetune / pretrain / apply modules). It is therefore the SUPERSET
-# of both projects' runtime dependencies.
-#
-# IMPORTANT (dependency issues): numpy is pinned < 2.0 to match TANTGen's tested
-# numpy==1.26.4. TANTGen code now runs in this venv, and installing numpy 2.x
-# here is the usual culprit -- the numpy 1.x -> 2.x ABI break surfaces when those
-# modules load. If numpy 2.x is already installed, reinstall (or rebuild the venv)
-# so the pin takes effect:  pip install -r requirements.txt
-# =============================================================================
+# DEPT dependencies. The same environment also runs the TANTGen modules called
+# by scripts/adversarial_generation/generate_adversarials.py, so it includes
+# TANTGen's dependencies too. numpy stays below 2.0 to match TANTGen
+# (numpy==1.26.4).
 
 # --- Core scientific stack ---------------------------------------------------
 numpy>=1.26,<2.0
-scipy>=1.11                  # hard dep of scikit-learn (and TANTGen feature code)
+scipy>=1.11
 pandas>=2.0
-scikit-learn>=1.3           # import name: sklearn
+scikit-learn>=1.3
 
-# --- Packet / network processing ---------------------------------------------
+# --- Packet processing --------------------------------------------------------
 scapy>=2.5
 
-# --- Independent-NIDS evaluation (reconstructor eval + deployment baseline) ---
-# Both the reconstructor eval and scripts/baseline score realized packets through the
-# real NIDS each attack was built to evade (src/models/nids), reused from the sibling
-# TANTGen tree (see `nids.tantgen_root`). Two families, two dependencies:
-#
-#  * Kitsune (mirai, ssdp_flood): KitNET + the compiled AfterImage Cython extension.
-#    Loading that prebuilt `AfterImage*.so` runs `pyximport.install()` at import, so this
-#    venv needs Cython/pyximport (matches TANTGen's Cython 3.2.4) and the sibling tree
-#    with its AfterImage .so already built.
-#  * ML-NIDS (the 8 CIC-IDS/CIC-DDoS attacks): TANTGen's CICFlowMeter flow classifiers.
-#    Scoring re-extracts flow features with the `cicflowmeter` CLI, so it MUST be on PATH
-#    — this is a hard dependency (the ML-NIDS path errors clearly if it is missing).
-Cython==3.2.4               # provides `pyximport` for the AfterImage .so (Kitsune)
-cicflowmeter>=0.1.6         # `cicflowmeter` CLI: PCAP -> flow features (ML-NIDS scoring)
+# --- Independent NIDS (reconstructor evaluation, phases 8-9) -------------------
+# Kitsune loads TANTGen's compiled AfterImage .so, which needs pyximport.
+# The ML-NIDS uses the cicflowmeter version vendored in TANTGen, which needs requests.
+Cython==3.2.4
+requests>=2.25
 
-# --- Gradient-guided evasion study, RQ1 (scripts/gradient_ablation) -------------
-# Used for ONE job: AutoProjectedGradientDescent (Croce & Hein 2020) as a
-# parameter-free, third-party check that our own PGD is not simply under-tuned.
-# The attack itself is hand-rolled, because its feasible set (increase-only,
-# integer bytes, MTU clamp, zero on non-IPv4 packets) is a projection operator
-# that ART's binary include/exclude `mask` cannot express.
-#
-# Safe against the pins above: ART's core requires only numpy/scipy/scikit-learn/
-# six/setuptools/tqdm, and torch is merely an *extra* — installing it does not
-# touch the numpy<2.0 TANTGen ABI pin or the torch==2.6.0+cu124 build.
-adversarial-robustness-toolbox>=1.20   # import name: art
+# --- Gradient-guided evasion (phase 7) ----------------------------------------
+# Only used for the AutoPGD check.
+adversarial-robustness-toolbox>=1.20
 
-# --- Deep learning -----------------------------------------------------------
-# DEPT TCN + mini-transformer meta-learner (raw torch);
-# TANTGen transformer surrogate + finetune + pretrain (PyTorch Lightning).
-#
-# torch MUST match this server's NVIDIA driver. The default PyPI torch is a
-# CUDA 12.8 (cu128) build and fails here with "NVIDIA driver too old". This
-# machine's driver supports CUDA 12.4 — proven by TANTGen's working
-# torch 2.6.0+cu124 on the same GPUs. The `+cu124` local version forces pip to
-# pull the cu124 wheel from the index below (a plain `torch>=2.1` would let pip
-# grab the newer cu128 build from PyPI again).
+# --- Deep learning -------------------------------------------------------------
+# The +cu124 build matches the GPU driver used (CUDA 12.4); the default PyPI
+# wheel is built for CUDA 12.8. Change the index and version for other drivers.
 --extra-index-url https://download.pytorch.org/whl/cu124
 torch==2.6.0+cu124
-pytorch-lightning>=2.1,<3.0  # import name: pytorch_lightning
-tensorboard                  # TensorBoardLogger + EventAccumulator (epoch plots)
+pytorch-lightning>=2.1,<3.0  # TANTGen
+tensorboard                  # TANTGen
 
-# --- Imbalanced sampling -----------------------------------------------------
-imbalanced-learn>=0.11       # import name: imblearn (RandomUnderSampler)
+# --- TANTGen -------------------------------------------------------------------
+imbalanced-learn>=0.11
+psutil>=5.9
+nvidia-ml-py>=12.0
 
-# --- Plotting / utilities ----------------------------------------------------
+# --- Plotting / utilities -----------------------------------------------------
 matplotlib>=3.7
 tqdm>=4.65
 joblib>=1.3
-pyyaml>=6.0                  # import name: yaml
-
-# --- Profiling / GPU telemetry (experiment_metrics) --------------------------
-psutil>=5.9
-nvidia-ml-py>=12.0          # provides `import pynvml`; replaces the deprecated
-                            # standalone `pynvml` package (torch warns on it).
-                            # If the old `pynvml` is installed, uninstall it first.
+pyyaml>=6.0

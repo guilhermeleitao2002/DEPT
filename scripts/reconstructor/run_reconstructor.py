@@ -3,15 +3,13 @@
 DEPT — Reconstructor (Purification) Transformer (train + eval)
 ==============================================================
 
-Trains a small causal residual denoiser that purifies adversarially-perturbed
-flows back onto the clean-traffic manifold, and evaluates it on the held-out
-test pairs with four metric groups:
+Trains the causal residual denoiser on matched (adversarial, clean) flow pairs
+and evaluates it on the held-out test pairs:
 
-  * Reconstruction quality  — MSE on perturbed dims, before vs after.
-  * Independent-NIDS efficacy (headline) — detection restoration through the real
-    NIDS each attack evades (Kitsune / ML-NIDS), via src.models.nids.
-  * Purification gain (secondary) — DEPT's own TCN P(adversarial); circular, kept
-    only as an in-distribution sanity check.
+  * Reconstruction quality  — MSE on the perturbed dims, before vs after.
+  * Independent-NIDS restoration — through the NIDS each attack evades
+    (Kitsune / ML-NIDS).
+  * Purification gain       — DEPT's own TCN P(adversarial) (sanity check).
   * Protocol compliance     — tshark on the realized purified packets.
 
 Usage
@@ -19,31 +17,27 @@ Usage
     python scripts/reconstructor/run_reconstructor.py
     python scripts/reconstructor/run_reconstructor.py --mode train
     python scripts/reconstructor/run_reconstructor.py --mode eval
-
-    # Per-attack model — pairs restricted to one attack, purification gain
-    # scored through the per-attack TCN from data/models/per_attack/<attack>/tcn
-    # (train it first); artifacts land under
-    # data/models/per_attack/<attack>/reconstructor:
     python scripts/reconstructor/run_reconstructor.py --attack mirai
 
-Reads config/reconstructor.yaml and force-overwrites every artifact under
+With --attack the pairs are restricted to one attack, the per-attack TCN is
+used (train it first) and artifacts go to
+``data/models/per_attack/<attack>/reconstructor``.
+
+Reads config/reconstructor.yaml and overwrites every artifact under
 <output_dir>.
 
-Outputs (under <output_dir> from reconstructor.yaml)
-----------------------------------------------------
-    reconstructor.pt             — best PyTorch state_dict (min val recon loss)
+Outputs
+-------
+    reconstructor.pt             — best state_dict (lowest val loss)
     reconstructor_config.json    — resolved model + training config
-    split.npz                    — train/val/test pair indices (eval rebuilds
-                                   the deterministic pair table from config)
+    split.npz                    — train/val/test pair indices
     split_summary.json           — per-split / per-source pair counts
     training_curves.json         — per-epoch train/val loss
     training_info.json           — best epoch, durations, device, pair stats
-    metrics.json                 — reconstruction / nids (headline) /
-                                   purification (TCN, secondary) / compliance
-    realized/<source>.pcap       — realized purified packets (traffic-space)
+    metrics.json                 — reconstruction / nids / purification / compliance
+    realized/<source>.pcap       — realized purified packets
     realized_nids/<source>_{adv,purified,clean}.pcap
-                                 — 3-way aligned realization scored through
-                                   the independent NIDS
+                                 — aligned packets scored by the independent NIDS
     reconstruction_error.png / purification_gain.png / nids_restoration.png /
     training_curves.png
 """

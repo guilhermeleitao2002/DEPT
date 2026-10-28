@@ -1,16 +1,8 @@
 """TCN dataset — lazy memmap reader over per-source ragged flow tensors.
 
-Each source folder stores ``flow_packets.npy`` ([P_total, 1090]) and a
-sibling ``flow_offsets.npy`` ([N_flows, 2]) giving each flow's
-``(start_idx, length)`` slice. ``FlowSequenceDataset.__getitem__`` reads
-one variable-length ``[L, F]`` slice directly from the right memmap and
-returns it alongside the flow's label and length.
-
-Batching uses a custom ``collate_fn`` that right-pads the per-flow
-sequences to the batch max length, yielding ``(seq[B, T_max, F],
-labels[B], lengths[B], mask[B, T_max])``. The padding mask is used by
-the per-packet CE loss in :mod:`src.models.tcn.train` to ignore padded
-timesteps.
+Each item is one flow's ``[L, F]`` slice of ``flow_packets.npy``. The
+collate function right-pads a batch to its longest flow and returns
+``(seq[B, T_max, F], labels[B], lengths[B], mask[B, T_max])``.
 """
 from __future__ import annotations
 

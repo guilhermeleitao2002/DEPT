@@ -1,9 +1,9 @@
 """
 Group packets by 5-tuple flow and compute per-flow IPAT.
 
-This is the key difference from TANTGen: TANTGen computes a global IAT
-across all packets; DEPT needs *per-flow* Inter-Packet Arrival Time (IPAT)
-because each flow window is processed independently by the ensemble.
+Unlike TANTGen, which computes a global IAT across all packets, DEPT needs
+the *per-flow* Inter-Packet Arrival Time (IPAT), since each flow is
+processed independently by the ensemble.
 
 A flow is identified by the canonical 5-tuple:
     (min(src,dst)_IP, max(src,dst)_IP, min_port, max_port, protocol)
@@ -12,9 +12,6 @@ so that forward and reverse packets belong to the same flow.
 Direction is assigned relative to the first packet seen in each flow:
     1 = same direction as flow initiator (forward)
     0 = reverse direction
-
-Performance note: uses vectorized operations on the 5-tuple columns only,
-avoiding per-row iteration over the full (potentially ~1100-column) DataFrame.
 """
 
 from collections import OrderedDict
@@ -25,11 +22,8 @@ import pandas as pd
 
 
 def _compute_canonical_keys(df: pd.DataFrame) -> pd.Series:
-    """
-    Build canonical (order-independent) 5-tuple keys vectorized.
-
-    Returns a Series of tuples: (ip_lo, ip_hi, port_lo, port_hi, protocol).
-    """
+    """Canonical (order-independent) 5-tuple keys:
+    (ip_lo, ip_hi, port_lo, port_hi, protocol)."""
     src_ip = df["Source_IP"].astype(str)
     dst_ip = df["Destination_IP"].astype(str)
     src_port = df["Source_Port"].astype(int)
@@ -57,14 +51,14 @@ def group_by_flow(
     """
     Group packets by 5-tuple flow using metadata only.
 
-    Returns lightweight index arrays instead of per-flow DataFrames
-    to avoid duplicating the full (potentially 1088-column) data.
+    Returns index arrays instead of per-flow DataFrames, so the nPrint
+    bits are never copied.
 
     Parameters
     ----------
     meta_df : pd.DataFrame
         Metadata from pcap_parser (Timestamp, Source_IP, …, TCP_Flags).
-        Must **not** contain nPrint bit columns (those stay in numpy to avoid using up too much memory).
+        Must not contain the nPrint bit columns (kept in numpy).
 
     Returns
     -------
@@ -116,7 +110,6 @@ def group_by_flow(
     # Build flow → index mapping (no per-flow DataFrame copies)
     flow_key_arr = flow_keys.values  # numpy array of tuples
     flow_indices = OrderedDict()
-    # Use a dict of lists for fast appending, then convert to arrays
     _tmp: Dict[Tuple, list] = {}
     for i, fk in enumerate(flow_key_arr):
         if fk not in _tmp:

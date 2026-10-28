@@ -13,7 +13,7 @@
       "alpha_ratio": 2.5,
       "random_init": true
     },
-    "asr_denominator": "flows the target detects unperturbed at the reported threshold (robust-accuracy convention); an unconditional ASR would mostly report flows the detector never caught \u2014 the TCN's own ROC-AUC is 0.494 on mirai_adv_size and 0.232 on mirai_adv_iat"
+    "asr_denominator": "flows the target detects unperturbed at the reported threshold"
   },
   "benign_reference": {
     "rf": {

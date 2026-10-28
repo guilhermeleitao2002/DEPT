@@ -2,18 +2,9 @@
 # -----------------------------------------------------------------------------
 # Export every ./Images/*.svg to a plain ./Images/<name>.pdf next to it.
 # -----------------------------------------------------------------------------
-# The normal local build never needs this: the 'svg' package drives Inkscape at
-# compile time (see Preamble_commands.tex) and caches into ./Images/.svgcache/.
-# Overleaf, however, has no Inkscape and only allows restricted shell escape, so
-# that conversion cannot happen there. The preamble detects this and falls back
-# to \includegraphics on the .pdf files this script produces.
-#
-# Run it after editing/adding any SVG, then commit the regenerated PDFs:
-#     ./Images/export-svg-to-pdf.sh
-#
-# The Inkscape invocation mirrors what svg.sty issues with inkscapelatex=false
-# (default export area, text rendered into the PDF), so the fallback figures are
-# byte-for-byte the same artwork the local build embeds.
+# These PDFs are only used when the build cannot run Inkscape (e.g. Overleaf);
+# see Preamble_commands.tex. Run after editing or adding an SVG:
+#     ./Images/export-svg-to-pdf.sh [--force]
 set -euo pipefail
 
 cd "$(dirname "$0")"

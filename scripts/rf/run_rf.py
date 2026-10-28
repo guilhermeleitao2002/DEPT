@@ -3,46 +3,32 @@
 DEPT — Random Forest Base Learner (train + eval)
 ==================================================
 
-Trains the statistical base learner on the 24-dim multi-scale prefix
-statistics (one row per RF checkpoint) produced by the Packet-to-Tensor
-pipeline and evaluates it on a held-out, flow-level test split. Under
-DEPT's benign-vs-adversarial label convention, the benign pool is every
-flow from the Kitsune + CIC-IDS2017 + CIC-DDoS-2019 folders listed as
-`benign_sources` in rf.yaml, and the adversarial pool is every TANTGen-
-generated subfolder auto-discovered under `adversarial_dir`.
+Trains the RF on the 24-dim prefix statistics (one row per checkpoint) and
+evaluates it on the held-out flow-level test split. Benign sources are listed
+in rf.yaml; adversarial sources are discovered under ``adversarial_dir``.
 
 Usage
 -----
-    # Train + evaluate (default):
-    python scripts/rf/run_rf.py
-
-    # Train only:
+    python scripts/rf/run_rf.py                 # train + evaluate
     python scripts/rf/run_rf.py --mode train
-
-    # Evaluate an already-trained artifact:
     python scripts/rf/run_rf.py --mode eval
+    python scripts/rf/run_rf.py --attack mirai  # per-attack model
 
-    # Per-attack model (single attack's benign + adversarial pools only);
-    # artifacts land under data/models/per_attack/<attack>/rf:
-    python scripts/rf/run_rf.py --attack mirai
+Reads config/rf.yaml and overwrites every artifact under <output_dir>
+(``data/models/per_attack/<attack>/rf`` with --attack).
 
-Reads config/rf.yaml and force-overwrites every artifact under <output_dir>.
-
-Outputs (under <output_dir> from rf.yaml)
------------------------------------------
-    rf.joblib              — fitted sklearn RandomForestClassifier
+Outputs
+-------
+    rf.joblib              — fitted RandomForestClassifier
     split.npz              — train/val/test row indices into dataset.npz
-    dataset.npz            — merged X, y, sources, label_str for reproducibility
-    feature_names.json     — ordered RF stat names (24)
-    split_summary.json     — per-split checkpoint + flow counts (benign / adversarial / per-source)
-    training_info.json     — grid search results, best params, effective config
+    dataset.npz            — merged X, y, sources, label_str
+    feature_names.json     — RF stat names (24)
+    split_summary.json     — per-split checkpoint and flow counts
+    training_info.json     — grid search results, best params, config
     metrics.json           — overall, per-adversarial-source, per-label_str metrics
     streaming_metrics.json — AUROC@t and EDP, overall + per source
-    earliness_vs_accuracy.png — per-source AUROC@t curves
-    confusion_matrix.png   — binary CM (test, benign vs adversarial)
-    roc_curve.png          — ROC (test, when both classes present)
-    pr_curve.png           — PR  (test, when both classes present)
-    feature_importance.png — Gini importances over the 24 RF features
+    earliness_vs_accuracy.png, confusion_matrix.png, roc_curve.png,
+    pr_curve.png, feature_importance.png
 """
 from __future__ import annotations
 

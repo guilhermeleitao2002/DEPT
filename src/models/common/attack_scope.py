@@ -1,19 +1,9 @@
 """Per-attack scoping shared by the DEPT stage runners.
 
-The default ("global") pipeline trains one encompassing model per stage on
-all 10 attacks at once. Every stage runner also accepts ``--attack NAME``,
-which restricts the run to a single attack: the benign pool collapses to
-that attack's clean source folder and the adversarial pool to its
-``<attack>_adv_{both,iat,size}`` variants. This module owns the two pieces
-of plumbing every runner needs for that:
-
-  * ``scoped_adversarial_exclude`` — extend a config's exclude list so the
-    auto-discovery in the train/eval code only keeps the chosen attack's
-    adversarial sources;
-  * ``per_attack_models_root`` — the canonical artifact home for per-attack
-    runs, ``data/models/per_attack/<attack>/{rf,tcn,metalearner,
-    reconstructor}``. The global artifacts stay untouched at
-    ``data/models/<stage>``.
+By default each stage trains one model on all 10 attacks. With
+``--attack NAME`` a runner keeps only that attack's clean source and its
+``<attack>_adv_{both,iat,size}`` variants, and writes its artifacts under
+``data/models/per_attack/<attack>/<stage>``.
 """
 from __future__ import annotations
 

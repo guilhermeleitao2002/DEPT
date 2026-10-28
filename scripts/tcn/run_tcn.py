@@ -3,48 +3,33 @@
 DEPT — TCN Base Learner (train + eval)
 =======================================
 
-Trains the temporal base learner on the ragged, variable-length per-flow
-[L, F=1090] sequence tensors produced by the Packet-to-Tensor pipeline and
-evaluates it on the same held-out, flow-level test split as the RF (so the
-two can be compared flow-for-flow). Under DEPT's benign-vs-adversarial
-label convention, the benign pool is every flow from the Kitsune +
-CIC-IDS2017 + CIC-DDoS-2019 folders listed as ``benign_sources`` in
-tcn.yaml, and the adversarial pool is every TANTGen-generated subfolder
-auto-discovered under ``adversarial_dir``.
+Trains the TCN on the variable-length per-flow [L, 1090] sequences and
+evaluates it on the held-out flow-level test split. Benign sources are listed
+in tcn.yaml; adversarial sources are discovered under ``adversarial_dir``.
 
 Usage
 -----
-    # Train + evaluate (default):
-    python scripts/tcn/run_tcn.py
-
-    # Train only:
+    python scripts/tcn/run_tcn.py                 # train + evaluate
     python scripts/tcn/run_tcn.py --mode train
-
-    # Evaluate an already-trained artifact:
     python scripts/tcn/run_tcn.py --mode eval
+    python scripts/tcn/run_tcn.py --attack mirai  # per-attack model
 
-    # Per-attack model (single attack's benign + adversarial pools only);
-    # artifacts land under data/models/per_attack/<attack>/tcn:
-    python scripts/tcn/run_tcn.py --attack mirai
+Reads config/tcn.yaml and overwrites every artifact under <output_dir>
+(``data/models/per_attack/<attack>/tcn`` with --attack).
 
-Reads config/tcn.yaml and force-overwrites every artifact under <output_dir>.
-
-Outputs (under <output_dir> from tcn.yaml)
-------------------------------------------
-    tcn.pt                 — best PyTorch state_dict
+Outputs
+-------
+    tcn.pt                 — best state_dict
     tcn_config.json        — resolved model + training config
     split.npz              — train/val/test row indices into dataset_index.npz
     dataset_index.npz      — per-flow index (sources, local_idx, y, ...)
-    split_summary.json     — per-split flow counts (benign / adversarial / per-source)
-    training_info.json     — best epoch, durations, device, effective config
+    split_summary.json     — per-split flow counts
+    training_info.json     — best epoch, durations, device, config
     training_curves.json   — per-epoch train_loss / val_loss / val_macro_f1 / lr
     metrics.json           — overall, per-adversarial-source, per-label_str metrics
     streaming_metrics.json — AUROC@t and EDP, overall + per source
-    earliness_vs_accuracy.png — per-source AUROC@t curves
-    confusion_matrix.png   — binary CM (test, benign vs adversarial)
-    roc_curve.png          — ROC (test, when both classes present)
-    pr_curve.png           — PR  (test, when both classes present)
-    training_curves.png    — loss + val macro-F1 over epochs
+    earliness_vs_accuracy.png, confusion_matrix.png, roc_curve.png,
+    pr_curve.png, training_curves.png
 """
 from __future__ import annotations
 

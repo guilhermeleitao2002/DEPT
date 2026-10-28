@@ -1,7 +1,6 @@
 """Causal Mini-Transformer that fuses RF + TCN per-packet streams.
 
-Architecture (small by design — TCN already does feature extraction; the
-meta-learner's only job is fusion):
+Architecture:
 
   Token in (13 dims per packet)
     │
@@ -10,8 +9,7 @@ meta-learner's only job is fusion):
     │  checkpoint emits.
     │
     ├─ Linear projection 13 → d_model
-    ├─ Sinusoidal positional encoding (Vaswani-style; generalises to
-    │  flow lengths beyond ``max_seq_len``).
+    ├─ Sinusoidal positional encoding
     │
     ├─ N × TransformerEncoderLayer
     │     • multi-head self-attention with strict causal mask
@@ -69,14 +67,12 @@ class _SinusoidalPositionalEncoding(nn.Module):
 
 
 class _EncoderLayer(nn.Module):
-    """Pre-norm transformer encoder layer with no fast-path dispatching.
+    """Pre-norm encoder layer, equivalent to
+    ``nn.TransformerEncoderLayer(norm_first=True, batch_first=True)``.
 
-    Functionally identical to nn.TransformerEncoderLayer(norm_first=True,
-    batch_first=True) but does NOT inherit from it, so
-    nn.TransformerEncoder.forward() skips the isinstance check that would
-    invoke torch._transformer_encoder_layer_fwd — the fused C++ kernel that
-    emits mask-type warnings on older PyTorch regardless of mask dtype.
-    Sub-module names are kept identical so the state-dict layout matches.
+    Not a subclass of it, so ``nn.TransformerEncoder`` does not use the fused
+    fast path (which emits mask-type warnings on older PyTorch versions).
+    Sub-module names match, so the state dict has the same layout.
     """
 
     def __init__(
@@ -206,10 +202,6 @@ class MetaLearner(nn.Module):
         x = self.pos_enc(x)
         T = x.size(1)
         causal = self._causal_mask(T, x.device)
-        # _EncoderLayer is not a subclass of nn.TransformerEncoderLayer, so
-        # TransformerEncoder.forward() fails the isinstance check and takes the
-        # plain Python loop — no torch._transformer_encoder_layer_fwd, no
-        # mask-type warnings.
         x = self.encoder(x, mask=causal, src_key_padding_mask=key_padding_mask)
         return self.head(x)                      # [B, T, num_classes]
 

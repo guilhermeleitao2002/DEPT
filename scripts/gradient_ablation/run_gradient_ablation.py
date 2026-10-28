@@ -1,24 +1,18 @@
 #!/usr/bin/env python3
 """
-DEPT — Gradient ablation (RQ1)
-==============================
+DEPT — Gradient-guided evasion (RQ1)
+====================================
 
-TANTGen, the adversary DEPT is trained on, is black-box and gradient-free. This
-study adds the attacker RQ1 asks about: one that differentiates the **TCN**
-directly, and whose perturbation is then scored — unchanged — against all three
-targets:
+TANTGen is black-box and does not use gradients. This study adds an attacker
+that differentiates the TCN, and scores the same perturbation on:
 
-  * rf     — the non-differentiable forest      (no gradient path; transfer only)
-  * tcn    — the differentiable base learner    (white-box; the attacker's own target)
-  * stack  — RF + TCN + meta-learner            (the heterogeneous ensemble)
+  * rf     — the forest (no gradient path)
+  * tcn    — the attacker's own target
+  * stack  — RF + TCN + meta-learner
 
-The attacker pays in units it actually spends: padding bytes and delay seconds,
-increase-only (the packets are already on the wire). The headline is a cost
-curve — how much budget each target demands — compared at a **matched
-false-positive rate**, not at a raw 0.5 threshold.
-
-If the stack costs more than the TCN alone, heterogeneous stacking has
-measurably raised the price of evasion, and RQ1 is answered by measurement.
+The perturbation is padding bytes and delay seconds per packet, increase-only.
+The result is a cost curve per target, compared at a matched false-positive
+rate.
 
 Usage
 -----
@@ -29,8 +23,8 @@ Usage
 
 Phase 7 of run_pipeline.sh (global mode only). Reads config/gradient_ablation.yaml.
 Writes data/models/gradient_ablation/{gradient_ablation_metrics.json, evasion_cost.png,
-sidecar/}. Requires trained RF + TCN + meta-learner under data/models/ and the
-TANTGen PCAPs under data/adversarial/.
+sidecar/}. Requires the trained RF, TCN and meta-learner and the TANTGen PCAPs
+under data/adversarial/.
 """
 from __future__ import annotations
 

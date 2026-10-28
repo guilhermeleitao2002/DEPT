@@ -1,14 +1,10 @@
-"""The attack loop: craft on the TCN, score on RF / TCN / stack.
+"""The attack loop: craft on the TCN, score on RF, TCN and stack.
 
-One perturbation, three targets. Per batch of flows and per budget the loop
-runs PGD against the TCN, then replays the resulting ``(k bytes, d seconds)``
-through each target's own featurisation. The RF never enters the gradient path —
-it is scored forward-only, which is the asymmetry RQ1 is about.
-
-Two ablations ride along at no extra PGD cost, replaying the same perturbed
-tensor through the meta-learner with one base-learner logit slot handed back its
-clean value. They are what makes the "the meta leans on the RF" claim falsifiable
-rather than rhetorical; see :func:`~.evaluate.reliance_shift`.
+For each batch of flows and each budget, PGD runs against the TCN and the
+resulting ``(k bytes, d seconds)`` is replayed through each target. Two
+ablations replay the same tensor through the meta-learner with one base
+learner's input reset to its clean value (see
+:func:`~.evaluate.reliance_shift`).
 """
 from __future__ import annotations
 
@@ -54,8 +50,7 @@ class BudgetSpec:
 def parse_budgets(specs: list) -> list[BudgetSpec]:
     """Config budget entries -> :class:`BudgetSpec`.
 
-    Accepts ``{id, bytes, seconds}`` dicts. A budget of 0/0 is legal and is in
-    fact the delta=0 control: it must reproduce the unperturbed verdicts.
+    Accepts ``{id, bytes, seconds}`` dicts. A 0/0 budget is the delta=0 control.
     """
     out = []
     for s in specs:
@@ -109,17 +104,12 @@ def _rf_streams(
 ) -> tuple[list[np.ndarray], list[np.ndarray], list[np.ndarray]]:
     """RF per-checkpoint ``(probs, logits, packet_idx)`` under a perturbation.
 
-    Features are recomputed from perturbed per-packet values and aggregated by
-    the pipeline's own ``_flow_checkpoint_stats``; the whole batch is scored in a
-    single ``predict_proba`` call, since 300 trees over a few thousand rows is
-    dominated by per-call overhead.
+    The whole batch is scored with a single ``predict_proba`` call.
     """
     feats_all, pos_all = [], []
     for i, row in enumerate(sc_rows):
         feats, hist = sidecar.flow(row)
-        # The sidecar and the tensor must agree on length (verify_sidecar proves
-        # it); min() keeps a mismatch from indexing off the end rather than
-        # silently scoring a misaligned flow.
+        # Lengths should match (see verify_sidecar); min() guards against overflow.
         L = min(int(lengths[i]), feats.shape[0])
         X, pos = rf_feats_for_delta(
             feats[:L], hist[:L], k[i, :L], d[i, :L],
@@ -167,9 +157,8 @@ def attack_source(
 ) -> list[dict]:
     """Attack one adversarial source across the budget grid.
 
-    Returns one record per (flow, budget, variant) carrying each target's
-    verdict, its **unperturbed** verdict, the two meta-learner ablations, and
-    the realised spend.
+    Returns one record per (flow, budget, variant) with each target's perturbed
+    and unperturbed verdicts, the two meta-learner ablations, and the spend.
     """
     from ..common.dataset import load_source_meta
 
@@ -178,10 +167,7 @@ def attack_source(
     _y, fids, _ls, local_idx, _n = load_source_meta(folder, source)
     fid_to_local = {str(f): int(li) for f, li in zip(fids, local_idx)}
 
-    # Intersect with the caller's selection, not just with what the sidecar holds.
-    # The sidecar cache is accepted on a superset match, so a cache built by an
-    # earlier 300-flow run would otherwise silently make --flows-per-source 24
-    # attack all 300 — the run would stop matching its own config.
+    # Keep only the selected flows (a cached sidecar may hold more).
     wanted = set(select_flow_ids)
     rows = [i for i in range(len(sidecar))
             if str(sidecar.flow_ids[i]) in wanted
@@ -201,9 +187,7 @@ def attack_source(
         B = len(sc_rows)
         labels = [1] * B          # every selected flow is adversarial by construction
 
-        # Unperturbed reference streams. These are both the ablation baselines
-        # and — crucially — the denominator for ASR: a flow the target already
-        # misses at delta=0 was never detected, so "evading" it measures nothing.
+        # Unperturbed streams: ablation baselines and the ASR denominator.
         zeros = np.zeros((B, int(mask.shape[1])), dtype=np.float32)
         with torch.no_grad():
             tcn_probs_clean, tcn_logit_clean = score_tcn(models.tcn, seq, lengths)
@@ -226,12 +210,8 @@ def attack_source(
 
         for spec in budgets:
             for variant in variants:
-                # `random` is the control that makes "gradient-guided" a claim
-                # rather than a label: identical feasible set, identical budget,
-                # and — via restarts — an equal number of forward passes, with
-                # only the gradient removed. If PGD does not beat it, the
-                # gradients bought the attacker nothing and the "gradient-guided"
-                # framing of RQ1 does not apply to this surface.
+                # `random`: same feasible set, budget and number of forward
+                # passes as PGD, without the gradient.
                 vcfg = (
                     pgd_cfg if variant == "pgd"
                     else PGDConfig(
@@ -329,14 +309,10 @@ def autopgd_check(
     tl_cap: int = 1500,
     steps: int = 20,
 ) -> dict:
-    """Cross-check this module's search against ART's AutoPGD on one batch.
+    """Compare this search with ART's AutoPGD on one batch.
 
-    The referee-proofing step: if a parameter-free, third-party optimiser finds
-    materially more evasions than the search used for the headline, the headline
-    is measuring a weak attack rather than a strong defense. Reported as a
-    diagnostic, never mixed into the ASR curves — AutoPGD runs on the *relaxed*
-    problem (no integrality, no physical budget), so its perturbation is not
-    realizable on the wire.
+    Diagnostic only: AutoPGD runs on the relaxed problem (no integrality, no
+    physical budget), so its result cannot be realized.
     """
     from .attack import art_autopgd_relaxed
 
@@ -390,11 +366,9 @@ def score_benign_reference(
     flows_per_source: int,
     seed: int,
 ) -> dict[str, np.ndarray]:
-    """Unperturbed benign flow verdicts per target — the matched-FPR reference.
+    """Unperturbed benign flow verdicts per target, for the matched-FPR thresholds.
 
-    Reads RF's checkpoints straight off disk: benign flows are never perturbed
-    here, so the sidecar (and its scapy pass) is unnecessary — the on-disk
-    aggregates are exactly the right answer.
+    The RF checkpoints are read from disk, since benign flows are not perturbed.
     """
     import json
 
@@ -414,9 +388,7 @@ def score_benign_reference(
         ckpts = np.load(folder / "rf_checkpoints.npy", mmap_mode="r")
         ck_off = np.load(folder / "rf_checkpoint_offsets.npy")
         _y, fids, _ls, local_idx, _n = load_source_meta(folder, src)
-        # Cadence is per-source metadata, not a constant: reconstructing the
-        # checkpoint positions with the wrong stride would misalign every RF
-        # token the meta-learner sees.
+        # The checkpoint cadence is stored per source.
         meta = json.loads((folder / "metadata.json").read_text())
         first_ck = int(meta.get("rf_first_checkpoint", 2))
         stride = int(meta.get("rf_checkpoint_stride", 10))

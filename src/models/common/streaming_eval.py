@@ -14,16 +14,10 @@ predictions:
      "not detected" and excluded from the median, but their fraction is
      reported as ``detection_rate``.
 
-Both metrics are computed overall and per-adversarial-source under the
-same source-vs-balanced-benign / source-vs-all-benign / source-vs-same-
-base-benign slicings used by the existing per-source evaluator
-(``src/models/{rf,tcn}/evaluate.py``).
-
-The function is model-agnostic: ``per_flow_probs`` is a list of 1D arrays
-with one prediction per emission point, plus ``per_flow_packet_idx``
-giving the packet index (1-based) at each emission. TCN emits a dense
-stream (one prediction per packet); RF emits a sparse stream (one per
-``rf_checkpoint_stride`` packets). The same function handles both.
+Both are reported overall and per adversarial source (against all,
+balanced and same-base benign flows). Each flow's stream is a list of
+probabilities with the 1-based packet index of each emission, so the same
+code handles the dense TCN stream and the sparse RF stream.
 """
 from __future__ import annotations
 

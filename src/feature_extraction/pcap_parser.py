@@ -15,8 +15,8 @@ Additionally extracts lightweight per-packet metadata needed downstream:
     Timestamp, Source_IP, Destination_IP, Source_Port, Destination_Port,
     Protocol, Packet_Size, Payload_Length, Payload_Entropy, TCP_Flags
 
-Inspired by FlowPaint (SIGCOMM'26) §3.3, selective masking zeros out
-high-entropy identity fields (IPs, ports, IP ID) to prevent overfitting.
+Following FlowPaint, identity fields (IPs, ports, IP ID) are masked to zero
+to prevent overfitting to host identity.
 """
 
 import math
@@ -97,12 +97,9 @@ def _encode_layer(raw_list: list, max_bytes: int) -> np.ndarray:
     Expand one header layer's raw bytes into nPrint bit vectors for a whole
     capture at once, via a single ``np.unpackbits`` call.
 
-    Mirrors nPrint's ``make_bitstring`` semantics exactly:
-
-      * layer absent (raw is ``None``) -> all -1  ("not present" sentinel)
-      * layer present                  -> header bytes expanded MSB-first, then
-                                          zero-padded out to ``max_bytes * 8``
-                                          bits (unused options space is 0)
+    Same semantics as nPrint's ``make_bitstring``: an absent layer is all -1;
+    a present one is its header bytes expanded MSB-first and zero-padded to
+    ``max_bytes * 8`` bits.
 
     Parameters
     ----------
@@ -125,9 +122,7 @@ def _encode_layer(raw_list: list, max_bytes: int) -> np.ndarray:
     if not present:
         return bits
 
-    # Pack every present header into a fixed-width, zero-padded byte buffer;
-    # np.unpackbits then expands the whole buffer to MSB-first bits in one
-    # C-level call (unused trailing bytes stay zero, matching nPrint padding).
+    # Zero-padded fixed-width byte buffer, expanded to bits in one call.
     byte_buf = np.zeros((len(present), max_bytes), dtype=np.uint8)
     for row, i in enumerate(present):
         raw = raw_list[i][:max_bytes]
@@ -156,9 +151,8 @@ def _scan_raw_packet(pkt) -> tuple:
     """
     Extract raw header bytes and metadata from a single packet.
 
-    The (cheap) raw-byte + metadata scan runs sequentially per packet here; the
-    (expensive) bit expansion is deferred and vectorised over the whole capture
-    afterwards by :func:`_encode_layer`.
+    The bit expansion is done later for the whole capture by
+    :func:`_encode_layer`.
 
     Returns
     -------
@@ -215,7 +209,7 @@ def _scan_raw_packet(pkt) -> tuple:
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Selective masking (FlowPaint §3.3.2)
+# Identity masking
 # ──────────────────────────────────────────────────────────────────────────────
 
 # Default prefixes to mask — high-entropy identity fields
@@ -239,13 +233,8 @@ def extract_packet_features(
     Read a PCAP and return nPrint bit-level features as a compact numpy
     array plus a lightweight metadata DataFrame.
 
-    Packets are read once, sequentially, with Scapy (``PcapReader``); each
-    packet's raw header bytes + metadata are collected. The nPrint bit
-    expansion — the only genuinely heavy step — is then done for the whole
-    capture in four vectorised ``np.unpackbits`` calls (one per header layer,
-    see :func:`_encode_layer`). Reading dominates the runtime, so this is both
-    simpler and faster than the previous per-file process pool, and it can be
-    interrupted cleanly.
+    Packets are read once with Scapy's ``PcapReader``; the nPrint bit
+    expansion is then done in one vectorised call per header layer.
 
     Parameters
     ----------

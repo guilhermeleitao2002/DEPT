@@ -1,31 +1,14 @@
-"""Evasion-cost measurement: the RQ1 deliverable.
+"""Evasion-cost results for RQ1.
 
-The headline is not a single attack success rate but a **cost curve**: how much
-padding and delay the attacker must spend to push each target below its decision
-threshold. RQ1 asks whether heterogeneous stacking "measurably raises the cost",
-so cost is the x-axis and it is denominated in what an attacker actually pays —
-bytes on the wire and seconds of delay — not in an abstract epsilon.
+The result is a cost curve: how much padding and delay the attacker must spend
+to push each target below its threshold.
 
-Three properties of this setup drive the metric choices:
-
-*Matched FPR, not a raw threshold.* The meta-learner early-stopped at
-``best_epoch: 1``. Comparing targets at a fixed 0.5 would credit the stack for
-being undertrained: a model that rarely says "adversarial" trivially resists an
-attack that tries to make it say "benign". :func:`matched_fpr_thresholds` scores
-unperturbed **benign** flows through each target and picks each one's threshold
-at a common false-positive rate, so all three are compared at the same operating
-point they would actually be deployed at.
-
-*The marginal baseline varies wildly.* Cost here is measured *on top of* TANTGen,
-whose own budget is not uniform: measured per-packet, ``mirai_adv_size`` perturbs
-81% of packets by +23.6 B and ``portscan_adv_size`` 63% by +63 B, but
-``dns_ddos_adv_size`` only 0.3% by +0.09 B. A marginal number alone would
-mislead, so :func:`tantgen_budget` reports TANTGen's own spend beside it.
-
-*Reliance shift is the falsifiable part.* The design claim behind DEPT is that
-when the TCN is degraded, the meta-learner leans on the RF. That is testable, not
-rhetorical: :func:`reliance_shift` ablates the meta's two base-learner token
-slots and reports which one is carrying the verdict as the budget grows.
+* Targets are compared at a matched false-positive rate on benign flows, not
+  at 0.5 (:func:`matched_fpr_thresholds`).
+* TANTGen's own spend varies a lot between sources, so it is reported next to
+  the marginal cost (:func:`tantgen_budget`).
+* :func:`reliance_shift` tests whether the meta-learner relies more on the RF
+  as the TCN is attacked.
 """
 from __future__ import annotations
 
@@ -51,10 +34,8 @@ def matched_fpr_thresholds(
 ) -> dict[str, dict[str, float]]:
     """Per-target thresholds at matched false-positive rates on benign flows.
 
-    ``benign_scores[target]`` is the flow verdict P(adversarial) over unperturbed
-    benign flows. The threshold at FPR ``f`` is the ``(1-f)`` quantile of that
-    distribution, so every target is compared at the same operating point rather
-    than at a shared-but-arbitrary 0.5.
+    The threshold at FPR ``f`` is the ``(1-f)`` quantile of the target's
+    unperturbed benign verdicts.
     """
     out: dict[str, dict[str, float]] = {}
     for target, s in benign_scores.items():
@@ -73,22 +54,12 @@ def matched_fpr_thresholds(
 # ──────────────────────────────────────────────────────────────────────────────
 
 def synthesize_best(records: list[dict], select_on: str = "tcn") -> list[dict]:
-    """Add a ``best`` variant: the strongest attack the attacker could mount.
+    """Add a ``best`` variant: the better of PGD and random search per flow.
 
-    A robustness evaluation must report the best attack available, not a
-    favourite one — and here neither PGD nor random search dominates. Measured on
-    ``brute_force_adv_size`` at a matched threshold, PGD reaches 35.4% at 128 B
-    while query-matched random search reaches 33.3%, and at 512 B random wins
-    58.3% to 12.5%. Gradient direction carries little information on this surface
-    because the 16-bit total-length encoding makes the loss jagged in packet
-    size, so exploration beats descent. An attacker would simply run both.
-
-    **Selection is on the attacker's own target, never per-scored-target.** The
-    variant is chosen by whichever minimises ``select_on`` (the TCN — the only
-    model the attacker can differentiate), and *that* variant's perturbation is
-    then read off against RF and the stack. Picking the best variant separately
-    per target would silently grant the attacker a different perturbation for
-    each, which is not the threat model and would overstate every ASR.
+    Neither search dominates on this surface (the 16-bit length encoding makes
+    the loss jagged), so an attacker would run both. The variant is chosen on the
+    TCN, the attacker's own target, and that same perturbation is then scored on
+    the RF and the stack.
     """
     groups: dict[tuple, list[dict]] = {}
     for r in records:
@@ -112,31 +83,12 @@ def asr_curves(
     thresholds: dict[str, dict[str, float]],
     budget_order: list[str],
 ) -> dict:
-    """ASR per (variant, target, threshold-policy, budget), overall and per source.
+    """ASR per (variant, target, threshold policy, budget), overall and per source.
 
-    Two conventions are baked in here, and both are load-bearing.
-
-    **The denominator is the flows the target detects unperturbed.** This is the
-    standard robust-accuracy convention (attack success is measured on initially
-    correct inputs), and here it is the difference between a number and an
-    artifact: the TCN's reported ROC-AUC is 0.494 on ``mirai_adv_size`` and 0.232
-    on ``mirai_adv_iat`` — at chance or below. An unconditional ASR would start
-    near 75% before the attack did anything and would mostly be reporting flows
-    the detector never caught. ``detection_rate_clean`` rides along because it is
-    what makes ``asr`` readable: a target that detects nothing cannot be evaded,
-    and an ASR over three flows is noise.
-
-    **The curve is the monotone envelope.** A flow counts as evaded at budget *b*
-    if it evaded at *any* budget <= *b*. This is not smoothing — it follows from
-    the feasible sets being nested: an attacker allowed 1460 bytes may simply
-    choose to spend 128, so a rational attacker's success cannot fall as its
-    budget grows. Measured per-budget PGD does not inherit that, because the step
-    size scales with the budget and the loss surface over packet size is
-    genuinely jagged (the 16-bit total-length encoding flips nine bits between
-    255 and 256, so neighbouring byte counts are far apart in the TCN's input).
-    Without the envelope the numbers oscillate — ``ssdp_flood_adv_size`` measured
-    87.5% at 128 B, 4.2% at 512 B and 97.9% at 1460 B — which would read as the
-    defense strengthening when it only means the attack got sloppier.
+    * The denominator is the flows the target detects without perturbation;
+      ``detection_rate_clean`` is reported next to it.
+    * The curve is the monotone envelope: a flow counts as evaded at budget *b*
+      if it evaded at any budget <= *b*, since the feasible sets are nested.
     """
     sources = sorted({r["source"] for r in records})
     variants = sorted({r.get("variant", "pgd") for r in records})
@@ -226,13 +178,10 @@ def min_budget_per_flow(
     policy: str = "fpr_0.05",
     variant: str = "pgd",
 ) -> dict:
-    """Smallest grid budget at which each flow evades — the cost, per target.
+    """Smallest grid budget at which each flow evades, per target.
 
-    Restricted to flows the target detects unperturbed (see :func:`asr_at`), and
-    reported as the median over those that ever evade plus the fraction that
-    never do. Flows that never evade are excluded from the median rather than
-    imputed at the grid cap: a censored observation is not a large one, and
-    imputing would flatter whichever target resists most.
+    Over flows detected without perturbation: the median over flows that evade,
+    plus the fraction that never evade.
     """
     rows = [r for r in records if r.get("variant", "pgd") == variant]
     targets = sorted({t for r in rows for t in r["verdicts"]})
@@ -275,11 +224,7 @@ def spend_summary(
     budget_order: list[str],
     variant: str = "pgd",
 ) -> dict:
-    """What the attacker actually spent, per budget — bytes padded, seconds delayed.
-
-    The grid is a *cap*; PGD need not exhaust it. These are the realised costs,
-    and they are the x-axis the ASR curves should be read against.
-    """
+    """Bytes padded and seconds delayed per budget (the budget is only a cap)."""
     rows_all = [r for r in records if r.get("variant", "pgd") == variant]
     budgets = [b for b in budget_order
                if any(r["budget_id"] == b for r in rows_all)]
@@ -304,7 +249,7 @@ def spend_summary(
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Reliance shift — the falsifiable design claim
+# Reliance shift
 # ──────────────────────────────────────────────────────────────────────────────
 
 def reliance_shift(
@@ -312,24 +257,15 @@ def reliance_shift(
     budget_order: list[str],
     variant: str = "pgd",
 ) -> dict:
-    """Does the meta-learner lean on the RF as the attack degrades the TCN?
+    """Does the meta-learner rely more on the RF as the TCN is attacked?
 
-    For each budget, compares the stack's verdict against two ablations replayed
-    through the same meta-learner:
+    For each budget the stack's verdict is compared with two ablations:
 
-    * ``stack_rf_clean``  — attacked TCN logit, **unperturbed** RF logit
-    * ``stack_tcn_clean`` — **unperturbed** TCN logit, attacked RF logit
+    * ``stack_rf_clean``  — attacked TCN logit, unperturbed RF logit
+    * ``stack_tcn_clean`` — unperturbed TCN logit, attacked RF logit
 
-    Let ``d_x`` be how far the stack's verdict moves when slot ``x`` is handed
-    back its clean value. A large ``d_tcn`` means the *attacked TCN logit* was
-    the thing dragging the verdict down — i.e. the stack was still listening to
-    the TCN. So reliance on the RF is the complementary share:
-
-        ``rf_reliance = d_rf / (d_rf + d_tcn)``
-
-    If the design claim holds, this **rises** with the budget: the meta-learner
-    discounts the base learner the attacker has captured and leans on the one it
-    cannot reach.
+    With ``d_x`` the change in the verdict when slot ``x`` is reset,
+    ``rf_reliance = d_rf / (d_rf + d_tcn)``.
     """
     budgets = [b for b in budget_order
                if any(r["budget_id"] == b for r in records)]
@@ -346,18 +282,13 @@ def reliance_shift(
         rf_clean = np.asarray([r["ablations"]["stack_rf_clean"] for r in rows])
         tcn_clean = np.asarray([r["ablations"]["stack_tcn_clean"] for r in rows])
 
-        # How far the verdict recovers when each slot is handed back its clean
-        # value. Large d_tcn => the attacked TCN logit was carrying the verdict,
-        # i.e. the stack was still listening to the TCN; RF reliance is the
-        # complementary share.
+        # Change in the verdict when each slot is reset to its clean value.
         d_rf = np.abs(stack - rf_clean)
         d_tcn = np.abs(stack - tcn_clean)
         denom = d_rf + d_tcn
         share = np.divide(d_rf, denom, out=np.full_like(denom, np.nan),
                           where=denom > 1e-12)
-        # At delta=0 both ablations equal the stack, so every share is 0/0.
-        # That is the correct answer (nothing moved, so nothing is carrying the
-        # verdict), not a number to average — report it as undefined.
+        # At delta=0 the share is 0/0: report it as undefined.
         finite = share[np.isfinite(share)]
         out[b] = {
             "n_flows": int(len(rows)),
@@ -382,12 +313,9 @@ def tantgen_budget(
     max_flows: int = 400,
     ipat_std: float = 208.21998059319273,
 ) -> dict:
-    """TANTGen's own per-packet spend on ``source``, paired to its clean base.
+    """TANTGen's own per-packet spend on ``source``, against its clean base.
 
-    Context for the marginal cost: the gradient attacker's budget is measured
-    *on top of* this, and this varies by two orders of magnitude across sources.
-    Flows are paired by canonical 5-tuple, which is why only same-length pairs
-    are compared.
+    Flows are paired by 5-tuple and only same-length pairs are compared.
     """
     from ..common.attack_scope import base_attack
     from .attack import IDX_IPAT, IDX_IPV4_TL
@@ -433,8 +361,7 @@ def tantgen_budget(
 
     d_tl = np.concatenate(d_tl)
     d_iat = np.concatenate(d_iat)
-    # Deltas at or below one float32 ULP of the z-scored IPAT channel are
-    # round-off, not perturbation — see attack.IPAT_ULP_SECONDS.
+    # Deltas up to one float32 ULP are round-off (attack.IPAT_ULP_SECONDS).
     from .attack import IPAT_ULP_SECONDS
     real = np.abs(d_iat) > IPAT_ULP_SECONDS
     return {
@@ -465,12 +392,7 @@ def plot_asr_curves(
     variant: str = "best",
     title: str = "Evasion cost — gradient attack crafted on the TCN",
 ) -> None:
-    """ASR vs realised attacker spend, one line per target.
-
-    Plots a **single** variant. ``spend`` is per-variant (each search pays a
-    different price for the same budget cap), so overlaying pgd/random/best on
-    one x-axis would place two of the three lines at costs they never paid.
-    """
+    """ASR vs spend, one line per target, for a single variant."""
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
@@ -519,9 +441,7 @@ def _get_sidecar(
 ):
     """Load the cached sidecar for ``source``, building it if absent.
 
-    The build is the one I/O-heavy step in the study (a streaming scapy pass over
-    the source PCAP), so it is cached and keyed by the selected flow set — a
-    different ``flows_per_source`` or seed invalidates it.
+    The cache is keyed by the selected flow set.
     """
     from .features import build_sidecar, load_sidecar, save_sidecar, verify_sidecar
 
@@ -699,10 +619,7 @@ def evaluate(config: dict, output_dir: Path, attack: str | None = None) -> dict:
             "pgd": {"steps": pgd_cfg.steps, "alpha_ratio": pgd_cfg.alpha_ratio,
                     "random_init": pgd_cfg.random_init},
             "asr_denominator": (
-                "flows the target detects unperturbed at the reported threshold "
-                "(robust-accuracy convention); an unconditional ASR would mostly "
-                "report flows the detector never caught — the TCN's own ROC-AUC "
-                "is 0.494 on mirai_adv_size and 0.232 on mirai_adv_iat"),
+                "flows the target detects unperturbed at the reported threshold"),
         },
         "benign_reference": {
             t: {"n_flows": int(len(v)),

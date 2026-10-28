@@ -1,15 +1,8 @@
-"""Train the TCN base learner for DEPT (streaming-native edition).
+"""Train the TCN base learner.
 
-Trains the per-timestep TCN classifier on variable-length per-flow
-sequences. Loss is per-packet cross-entropy averaged inside each flow
-(so long flows don't dominate), with a padding mask zeroing out the
-right-side padding emitted by ``collate_padded``.
-
-For best-epoch tracking the validation metric is flow-level macro F1
-based on the TCN's logit at the **last valid timestep** of each flow —
-i.e. the prediction after seeing the entire flow. The richer streaming
-metrics (AUROC@t, EDP) are computed in
-``src/models/common/streaming_eval.py``.
+The loss is per-packet cross-entropy, averaged inside each flow (so long
+flows don't dominate) and masked over padding. Model selection uses the
+flow-level macro F1 of the prediction at each flow's last packet.
 """
 from __future__ import annotations
 
@@ -76,10 +69,6 @@ def _masked_per_packet_loss(
         labels: [B] flow-level labels (propagated to every timestep).
         mask: [B, T_max] bool — True at valid timesteps.
         class_weights: [C] per-class weights.
-
-    The within-flow average prevents long flows from contributing more
-    gradient signal than short ones, which would otherwise concentrate
-    learning on the longest sources (e.g. ssdp_flood).
     """
     B, T_max, C = logits.shape
     target = labels.unsqueeze(1).expand(B, T_max)

@@ -1,21 +1,41 @@
-presentation/*
-dissertation/*
-!Chapters/
-!Images/
-!*.tex
-!*.pdf
-!Bibliography.bib
-
+# Python
 venv/
-.vscode/
-cache/
 __pycache__/
-.svgcache/
+cache/
+.vscode/
 
+# Data and model checkpoints (too large to track; selected files are force-added)
 *.pcap
-!packet_example/*
+!packet_example/*.pcap
 *.csv
 *.npy
 *.npz
 *.joblib
 *.pt
+
+# Dissertation: sources, figures and the final PDF only
+presentation/
+dissertation/*
+!dissertation/Chapters/
+!dissertation/Images/
+!dissertation/*.tex
+!dissertation/*.pdf
+!dissertation/Bibliography.bib
+!dissertation/istulthesis.cls
+!dissertation/cover-titlepage.sty
+!dissertation/mcode.sty
+!dissertation/IEEEtran.bst
+.svgcache/
+
+# Extended abstract: LaTeX build files
+resumo/*.aux
+resumo/*.bbl
+resumo/*.blg
+resumo/*.fdb_latexmk
+resumo/*.fls
+resumo/*.log
+resumo/*.out
+resumo/*.synctex.gz
+resumo/*.cut
+resumo/acmtog.*
+resumo/README.txt

@@ -3,48 +3,30 @@
 DEPT — TANTGen Adversarial Generation Driver
 =============================================
 
-Self-contained driver that operates the TANTGen repository (sibling to DEPT)
-to produce adversarial versions of attack traffic for the 10 attacks DEPT
-targets, across three perturbation modes (both, iat-only, size-only).
+Runs the TANTGen repository (next to DEPT) to produce adversarial versions of
+the 10 attacks in three perturbation modes (both, iat-only, size-only):
 
-Covers all three TANTGen families in one script:
   - kitsune     : Mirai, SSDP_Flood
   - cic-ids2017 : DDoS, PortScan, BruteForce
   - cic-ddos2019: NTP_DDoS, DNS_DDoS, SSDP_DDoS, SYN_DDoS, LDAP_DDoS
 
-What this script does, end-to-end, with no manual pre-steps:
-  0. Global transformer PRETRAIN (one-time, shared across all attacks):
-     builds data/preprocessed/adversarial_train/pretrain/benign.csv from a
-     benign split, then trains the TANTGen base. Runs automatically if the
-     pretrain checkpoint is missing (the stock TANTGen scripts skip this and
-     silently train from scratch — see scripts/run_attack.py). Loud on failure.
+Steps:
+  0. One-time TANTGen pretrain (only if the checkpoint is missing).
   For each attack × mode:
   1. divide benign/malicious   2. subset split   3. feature extraction
-  4. surrogate NIDS training   5. per-attack evasion MARGIN templating
-  6. TANTGen finetune          7. apply to the full malicious PCAP
+  4. surrogate NIDS training   5. per-attack evasion margin
+  6. TANTGen finetune          7. apply to the malicious PCAP
 
-Design notes
-------------
-- DEPT and TANTGen are sibling directories. INPUT data is read from the
-  TANTGen tree (data/original/...) — that is the single source of truth and
-  the only place the CIC-DDoS-2019 captures live. OUTPUT adversarial PCAPs are
-  written to DEPT/data/adversarial/<key>/<key>_adversarial_<mode>.pcap, the
-  layout discovered by scripts/packet_to_tensor/process_all_attacks.py.
-- TANTGen scripts hard-code relative paths (config-folders.yaml,
-  src/TANTGen/configs/*.yaml, src/TANTGen/*_logs/). They are invoked with
-  cwd=TANTGEN_ROOT so those relative paths resolve. Intermediate artifacts
-  (per-attack splits, feature CSVs, checkpoints) stay inside the TANTGen tree.
-- The per-attack evasion margin is templated into
-  src/TANTGen/configs/config-TANTGen-finetune.yaml (CIC = -4.0, Kitsune = 0.0),
-  mirroring scripts/run_attack.py's template_finetune_margin().
+Input data is read from the TANTGen tree (data/original/...). The adversarial
+PCAPs are written to DEPT/data/adversarial/<key>/<key>_adversarial_<mode>.pcap.
+TANTGen scripts use relative paths, so they run with cwd=TANTGEN_ROOT and their
+intermediate files stay in the TANTGen tree. The evasion margin is written into
+src/TANTGen/configs/config-TANTGen-finetune.yaml (CIC = -4.0, Kitsune = 0.0).
 
 Usage
 -----
-There are no command-line options: the DEPT core pipeline has one fixed
-configuration. Running the script always does the whole job — the one-time
-global pretrain (built only if its checkpoint is missing), then all 10 attacks
-× 3 perturbation modes — and always re-runs finetune + apply, overwriting the
-final adversarial PCAPs under data/adversarial/<key>/.
+No options: the script runs the pretrain if needed and then all 10 attacks × 3
+modes, overwriting the PCAPs under data/adversarial/<key>/.
 
     python scripts/adversarial_generation/generate_adversarials.py
 """
@@ -93,10 +75,8 @@ OUT_ROOT = DEPT_ROOT / "data" / "adversarial"
 
 MODES = ("both", "iat", "size")
 
-# Cap each attack's malicious PCAP to the first N packets before applying
-# TANTGen. Keeps the huge CIC-DDoS floods tractable (apply rewrites every packet
-# with scapy) and DEPT's adversarial pool balanced; captures under ~400 MB (all
-# the Kitsune / CIC-IDS sets) pass through unchanged.
+# Cap each malicious PCAP to its first N packets before applying TANTGen
+# (only the large CIC-DDoS captures are affected).
 MAX_MALICIOUS_PACKETS = 1_000_000
 
 
@@ -196,10 +176,7 @@ def run(cmd, cwd=None, check=True):
 def template_finetune_margin(margin: float) -> None:
     """Rewrite the `margin:` line in config-TANTGen-finetune.yaml in place.
 
-    TANTGen.py re-reads this config on its next invocation, so the next
-    finetune cycle picks up the per-attack margin. Ported from
-    scripts/run_attack.py:template_finetune_margin so this driver no longer
-    depends on the stock per-attack runner.
+    Same as TANTGen's scripts/run_attack.py:template_finetune_margin.
     """
     if margin is None:
         return
@@ -332,12 +309,8 @@ def divide_bm(attack: Attack, input_pcap: Path):
         kitsune_divide_bm_native(input_pcap, labels, malicious, benign)
         return benign, malicious, None
 
-    # CIC: CIC_IDS_divide_BM.py writes the per-packet labels CSV LAST, so its
-    # absence means an earlier divide was interrupted and the malicious/benign
-    # PCAPs are likely partial. Require all THREE before skipping; otherwise
-    # re-divide (the script opens the PCAPs with append=False and overwrites
-    # them cleanly) — checking only the two PCAPs would skip a needed re-divide
-    # and leave split_subsets() with no labels CSV.
+    # CIC_IDS_divide_BM.py writes the labels CSV last; if it is missing, the
+    # previous divide was interrupted, so divide again.
     out_labels = TG_ORIG_KITSUNE_LAB / f"{attack.tg_name}_labels.csv"
     if malicious.exists() and benign.exists() and out_labels.exists():
         print(f"  {dim('Benign/malicious split + labels already present; skipping divide_BM.')}")
@@ -433,16 +406,11 @@ def apply_tantgen(malicious_pcap: Path, out_pcap: Path):
 def cap_malicious(malicious: Path) -> Path:
     """Return a malicious PCAP capped to the first MAX_MALICIOUS_PACKETS packets.
 
-    apply_TANTGen_to_pcap re-reads and rewrites every packet with scapy, so the
-    huge CIC-DDoS captures (e.g. NTP's malicious split is ~75M packets) take many
-    hours and yield far more adversarial traffic than DEPT needs (it would also
-    choke phase-2 tensorisation). Truncating to the first N packets — timestamps
-    preserved, via tcpdump/editcap — keeps apply to minutes and DEPT's
-    adversarial pool balanced. Captures below a size threshold (all the Kitsune /
-    CIC-IDS sets) pass through unchanged.
+    apply_TANTGen_to_pcap rewrites every packet with scapy, which takes hours on
+    the CIC-DDoS captures (NTP's malicious split is ~75M packets). Smaller
+    captures (Kitsune, CIC-IDS) are returned unchanged.
     """
-    # Only bother for captures large enough to plausibly exceed the cap; this
-    # skips a no-op copy for the small Kitsune / CIC-IDS malicious sets.
+    # Small captures cannot exceed the cap.
     SIZE_THRESHOLD = 400 * 1024 * 1024  # 400 MB
     if malicious.stat().st_size < SIZE_THRESHOLD:
         return malicious
@@ -491,13 +459,11 @@ def build_pretrain_benign_csv() -> Path:
 
 
 def ensure_pretrain() -> None:
-    """Guarantee a TANTGen pretrain checkpoint exists before per-attack work.
+    """Make sure a TANTGen pretrain checkpoint exists before the per-attack work.
 
-    The stock TANTGen pipeline never builds benign.csv and ignores the
-    pretrain subprocess's exit code, so finetuning silently falls back to
-    random init. Here we (a) make sure a benign split exists (dividing the
-    first Kitsune attack if necessary), (b) build benign.csv, (c) run the
-    pretrain with check=True so any failure is loud.
+    TANTGen's own pipeline never builds benign.csv and ignores the pretrain exit
+    code, so finetuning would silently start from random weights. This builds a
+    benign split and benign.csv if needed and runs the pretrain with check=True.
     """
     print("=" * 79)
     print(bold(" Global TANTGen pretrain (one-time, shared across all attacks)"))
@@ -563,9 +529,7 @@ def process_attack(attack: Attack):
     # 6. per-attack evasion margin (persists across this attack's mode loop)
     template_finetune_margin(attack.margin)
 
-    # Cap the malicious set fed to apply: CIC-DDoS floods have tens of millions
-    # of packets and apply rewrites every one with scapy (hours). Capping keeps
-    # apply to minutes and DEPT's adversarial pool balanced.
+    # Cap the malicious set fed to apply (see cap_malicious).
     apply_src = cap_malicious(malicious)
 
     # 7. per mode: finetune TANTGen, then apply to the (capped) malicious PCAP.

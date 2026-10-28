@@ -1,18 +1,9 @@
 """Per-flow verdicts from DEPT's detector (the meta-learner) over a chosen flow set.
 
-The baseline's DEPT-defended regime gates purification on the detector's verdict:
-adversarial-flagged flows are purified, the rest pass through unchanged. "The detector"
-is the **meta-learner** — DEPT's actual classifier, fusing the RF + TCN streams — not a
-single base learner. This module runs it over an arbitrary set of adversarial sources
-(all of a source's flows, not just the 15% test split the meta-learner eval uses) and
-returns the per-flow last-timestep ``P(adversarial)`` keyed by ``(source, flow_id)``.
-
-It reuses the meta-learner's own token pipeline verbatim
-(:func:`~src.models.metalearner.dataset.prepare_split_caches` →
-:func:`~src.models.metalearner.base_inference.join_streams` → the trained
-``MetaLearner``), scoping the RF/TCN sample indices to the requested sources so the cost
-is proportional to what the baseline evaluates. The token cache is written under the
-baseline output dir (not the meta-learner's) so the two never clobber each other.
+Runs the meta-learner over all flows of the given adversarial sources (not
+only the test split) and returns the last-packet ``P(adversarial)`` per
+``(source, flow_id)``. It reuses the meta-learner's token pipeline; the token
+cache is written under the baseline output dir.
 """
 from __future__ import annotations
 

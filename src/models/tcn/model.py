@@ -1,21 +1,11 @@
-"""Temporal Convolutional Network for DEPT (streaming-native edition).
+"""Temporal Convolutional Network (Bai et al., 2018).
 
-Architecture follows Bai et al. 2018 ("An Empirical Evaluation of Generic
-Convolutional and Recurrent Networks for Sequence Modeling"): stacked
-dilated 1-D convolutions with weight normalisation, causal padding via
-right-side chomp, and residual connections per block.
+Stacked dilated causal 1-D convolutions with weight normalisation and
+residual connections. The model emits one logit pair per packet, and the
+output at packet ``t`` depends only on packets ``<= t``.
 
-Under the streaming-native ensemble, the TCN emits **per-packet** logits
-over a variable-length input sequence rather than a single logit per
-fixed-size window. Causality is enforced at the convolution level (Bai-
-style chomp), so the output at timestep ``t`` depends only on input
-packets ``≤ t`` — making the forward pass valid for online inference
-where packets arrive one at a time.
-
-Input convention: DataLoader emits tensors with shape ``[B, T, F]`` where
-``T`` is the (per-batch padded) flow length and ``F`` = 1088 nPrint bits
-+ IPAT (z-score) + Direction. The forward pass permutes to ``[B, F, T]``
-for ``Conv1d`` and returns ``[B, T, num_classes]`` per-packet logits.
+Input ``[B, T, F]`` (F = 1088 nPrint bits + IPAT + Direction), output
+``[B, T, num_classes]``.
 """
 from __future__ import annotations
 
@@ -32,9 +22,8 @@ except ImportError:
 class Chomp1d(nn.Module):
     """Strip ``chomp`` time-steps from the right of a ``[B, C, T]`` tensor.
 
-    Combined with left-and-right padding of ``(k-1) * d``, this enforces
-    causality (Bai et al. 2018 §3.1) — output at step t depends only on
-    inputs at steps ≤ t.
+    Together with a padding of ``(k-1) * d`` this makes the convolution
+    causal.
     """
 
     def __init__(self, chomp: int) -> None:
@@ -99,12 +88,8 @@ class TemporalBlock(nn.Module):
 class TCN(nn.Module):
     """Stack of ``TemporalBlock`` layers with a per-timestep classification head.
 
-    The head is applied independently at every timestep, so ``forward``
-    returns logits of shape ``[B, T, num_classes]`` — one prediction per
-    packet position. Combined with causal padding in ``TemporalBlock``,
-    this is the streaming-native form of the classifier: the logits at
-    position ``t`` represent the model's verdict after seeing the first
-    ``t + 1`` packets of the flow.
+    The logits at position ``t`` are the verdict after the first ``t + 1``
+    packets of the flow.
 
     Args:
         num_features: per-packet feature count ``F`` (1090 for DEPT).
@@ -143,8 +128,7 @@ class TCN(nn.Module):
             in_ch = int(out_ch)
         self.tcn = nn.Sequential(*blocks)
 
-        # Per-timestep head — applied as a 1x1 conv on the channel axis so
-        # it broadcasts across T without an explicit Python loop.
+        # Per-timestep head as a 1x1 conv.
         self.head = nn.Conv1d(in_ch, self.num_classes, kernel_size=1)
         nn.init.kaiming_normal_(self.head.weight, nonlinearity="linear")
         if self.head.bias is not None:

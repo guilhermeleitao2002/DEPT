@@ -1,23 +1,13 @@
 """Thin adapter over TANTGen's Kitsune (KitNET autoencoder + AfterImage extractor).
 
-Kitsune lives in the sibling TANTGen repo. We add its two source dirs to ``sys.path``
-and call ``KitNET`` / ``FEKitsune`` directly, deliberately *skipping* TANTGen's
-``KitNET/model.py`` CLI (it reads ``config-folders.yaml`` at import time). The compiled
-``AfterImage*.so`` is required; DEPT's venv is CPython 3.10, matching the committed
-build (``AfterImage.cpython-310-x86_64-linux-gnu.so``).
+Kitsune lives in the TANTGen repo. Its two source dirs are added to ``sys.path``
+and ``KitNET`` / ``FEKitsune`` are called directly (TANTGen's ``KitNET/model.py``
+CLI reads ``config-folders.yaml`` at import time). The compiled
+``AfterImage*.so`` is required (built for CPython 3.10). If anything is missing,
+:class:`KitsuneUnavailable` is raised.
 
-Everything here is best-effort: if the TANTGen tree, the ``.so`` or a model is missing,
-we raise :class:`KitsuneUnavailable` so the reconstructor eval can skip-with-reason
-(mirroring the tshark pattern), never crash.
-
-Kitsune model pickle = four sequential objects ``[feature_map, ensembleLayer,
-outputLayer, AD_threshold]`` (TANTGen's ``model.py -M train`` convention). Execute-mode
-(``AD_grace_period=-1``) loads the first three; the threshold is read separately.
-
-Semantics — detection **restoration**: Kitsune flags a flow when reconstruction
-``RMSE > threshold φ``. The attack *evades* by suppressing RMSE below φ; purification
-recovers the original attack's fingerprint, so RMSE rises back toward the clean-original
-and detection recovers. (Opposite direction to the TCN's ``P(adv)`` gain.)
+A model pickle holds four objects ``[feature_map, ensembleLayer, outputLayer,
+AD_threshold]`` (TANTGen's ``model.py -M train`` format).
 """
 from __future__ import annotations
 
@@ -29,8 +19,7 @@ import numpy as np
 
 log = logging.getLogger(__name__)
 
-# AfterImage vector length in TANTGen's (modified) Kitsune. Confirmed against the
-# committed benign feature caches (``*_benign.npy`` are exact multiples of 100×float64).
+# AfterImage vector length in TANTGen's (modified) Kitsune.
 FEATURE_DIM = 100
 
 # TANTGen Kitsune source dirs, relative to ``tantgen_root``.

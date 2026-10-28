@@ -1,9 +1,8 @@
 """
 Build the dual-output tensors for DEPT's *streaming-native* ensemble.
 
-Each source folder under ``data/tensors/<source>/`` now stores **ragged
-per-flow** data instead of fixed N-packet windows. Two memory-mapped views
-support the new ensemble:
+Each source folder under ``data/tensors/<source>/`` stores ragged
+per-flow data in four memory-mapped arrays:
 
     1. flow_packets.npy             [P_total, F=1090] float32
        Per-packet nPrint bits + IPAT (z-score) + Direction, concatenated
@@ -14,33 +13,17 @@ support the new ensemble:
        Aggregated statistics over the **growing prefix** of each flow,
        emitted at an optional ``rf_first_checkpoint`` packet index (default
        2, set to 0 to disable) and then every ``rf_checkpoint_stride``
-       packets (default 10). With the defaults a flow of length L gets
-       checkpoints at packets {2, 10, 20, …} — i.e. one early one for
-       short-flow coverage (PortScan) plus the regular cadence after.
+       packets (default 10), i.e. at packets {2, 10, 20, …}.
     4. rf_checkpoint_offsets.npy    [N_flows, 2]      int64
        (start_idx, n_checkpoints) into ``rf_checkpoints.npy``.
 
-The streaming-native architecture means **TCN reads full per-flow sequences**
-(variable length) and emits a per-packet prediction stream, while **RF reads
-multi-scale prefix checkpoints** and emits one prediction per checkpoint.
-The meta-learner combines both streams.
+The TCN reads the full per-flow sequences and emits one prediction per
+packet; the RF reads the prefix checkpoints and emits one per checkpoint.
 
-Implementation notes
---------------------
-- The batch build is fully vectorised: ``flow_packets.npy`` is assembled with
-  a single permutation gather (time order → flow-major order), and the RF
-  prefix statistics use per-flow cumulative sums / running extrema evaluated
-  at the checkpoint positions. This assumes the whole capture's features fit
-  in RAM (int8 nPrint bits ≈ 1.1 GB per million packets) — the earlier
-  per-flow streaming loop that kept peak RAM bounded on small machines was
-  replaced when the build host grew to 160 GB.
-- :class:`StreamingStats` (Welford, O(1) memory per flow) remains as the
-  reference implementation of the checkpoint semantics — it is what a
-  deployed, truly streaming DEPT ingress would run per live flow. The
-  vectorised path reproduces it to float32 round-off.
-- Output tensors are still written through memory-mapped ``.npy`` files:
-  the OS page cache absorbs the writes, and RAM stays bounded by the int8
-  inputs rather than the ~4× larger float32 output.
+The batch build is vectorised and assumes the capture's int8 nPrint bits fit
+in RAM (~1.1 GB per million packets). :class:`StreamingStats` is the
+per-flow (Welford) reference of the checkpoint statistics, i.e. what a live
+deployment would run; the vectorised path matches it to float32 round-off.
 """
 
 import json
@@ -99,9 +82,7 @@ def _load_or_compute_stats(
 # Aggregations supported in the emitted RF checkpoint vector, in emit order.
 _SUPPORTED_AGGS = ("mean", "std", "min", "max")
 
-# Output kinds that can be selectively built. "tcn" governs the per-packet
-# ``flow_packets.npy``/``flow_offsets.npy`` pair (Transformer + TCN input);
-# "rf" governs ``rf_checkpoints.npy``/``rf_checkpoint_offsets.npy``.
+# "tcn" builds flow_packets/flow_offsets, "rf" builds rf_checkpoints/offsets.
 _SUPPORTED_OUTPUTS = ("rf", "tcn")
 
 
@@ -155,10 +136,8 @@ class StreamingStats:
     feat0_max, feat1_mean, …]`` vector that the RF base learner consumes,
     matching the configured ``rf_base_features × rf_agg_functions`` order.
 
-    This is the *reference* (and deployment-time, per-live-flow) form of the
-    checkpoint semantics. The batch build in :func:`build_tensors` uses the
-    vectorised :func:`_flow_checkpoint_stats` instead, which reproduces these
-    values to float32 round-off.
+    Reference form of the checkpoint statistics; the batch build uses the
+    vectorised :func:`_flow_checkpoint_stats`.
     """
 
     __slots__ = ("n", "mean", "_M2", "min", "max", "_n_feat")
@@ -235,11 +214,8 @@ def _flow_checkpoint_stats(
     running :class:`StreamingStats` packet-by-packet and emitting at each
     position, but computed with cumulative sums over the whole flow at once.
 
-    The sums accumulate ``x - x[0]`` in float64: shifting by the first packet
-    keeps the E[x²] − E[x]² variance form well-conditioned (constant-valued
-    features — e.g. fixed-size flood packets — come out with exactly zero
-    variance instead of catastrophic-cancellation noise). ``std`` matches the
-    reference ddof=0 population form.
+    The sums accumulate ``x - x[0]`` in float64 so that constant features
+    get exactly zero variance (no cancellation error). ``std`` uses ddof=0.
     """
     idx = pos - 1
     x64 = x.astype(np.float64)
@@ -447,9 +423,7 @@ def build_tensors(
         output_dir, "rf_checkpoint_offsets.npy",
     )
 
-    # Memory-mapped output: scattered per-flow writes are fine — each flow's
-    # packets occupy a contiguous slice of flow_packets.npy. Only allocate
-    # the views the selected outputs need.
+    # Memory-mapped outputs, only for the selected groups.
     if build_tcn:
         pkt_mmap = np.lib.format.open_memmap(
             flow_packets_path, mode="w+", dtype=np.float32,
@@ -470,11 +444,7 @@ def build_tensors(
 
     # --- Step 3: Vectorised tensor assembly ---------------------------------
     if build_tcn:
-        # Each flow's packets occupy one contiguous slice of the output, so
-        # the flow-major layout is a single permutation of the time-sorted
-        # rows: one gather + three whole-array assignments. The int8 →
-        # float32 cast into the memmap is buffered by numpy, so only the
-        # int8 gather (~1.1 GB per million packets) is materialised in RAM.
+        # Flow-major layout = one permutation of the time-sorted rows.
         print("      Writing flow_packets (vectorised gather)…")
         perm = np.concatenate([flow_indices[fk] for fk in flow_keys])
         pkt_mmap[:, :1088] = nprint_bits[perm]

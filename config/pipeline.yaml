@@ -1,46 +1,32 @@
 # ===================================
-# DEPT — Packet-to-Tensor Pipeline (streaming-native)
+# DEPT — Packet-to-Tensor Pipeline
 # ===================================
-# Emits ragged per-flow tensors consumed by the streaming RF/TCN ensemble:
-#   flow_packets.npy             [P_total, F=1090] float32  — per-packet nPrint
-#                                                              bits + IPAT (z-score)
-#                                                              + Direction, all flows
-#                                                              concatenated.
-#   flow_offsets.npy             [N_flows, 2]      int64    — (start, length)
-#   rf_checkpoints.npy           [C_total, S=24]   float32  — multi-scale RF stats
-#                                                              at every K-packet prefix
-#   rf_checkpoint_offsets.npy    [N_flows, 2]      int64    — (start, n_checkpoints)
+# Writes ragged per-flow tensors:
+#   flow_packets.npy           [P_total, 1090] float32  nPrint bits + IPAT (z-score) + Direction
+#   flow_offsets.npy           [N_flows, 2]    int64    (start, length)
+#   rf_checkpoints.npy         [C_total, 24]   float32  RF prefix statistics
+#   rf_checkpoint_offsets.npy  [N_flows, 2]    int64    (start, n_checkpoints)
 #
-# Uses nPrint bit-level encoding (Holland et al., CCS 2021) for rich per-packet
-# header representation, inspired by FlowPaint (SIGCOMM'26).
+# Packet headers use the nPrint bit-level encoding (Holland et al., CCS 2021).
 
 # --------------------------
 # RF checkpoint cadence
 # --------------------------
-# Two knobs control when an RF checkpoint row is emitted per flow:
+#   rf_first_checkpoint  — packet index of an extra early checkpoint, so that
+#                          short flows (PortScan has ~2 packets) also get an RF
+#                          prediction (0 disables it).
+#   rf_checkpoint_stride — one checkpoint every K packets.
 #
-#   rf_first_checkpoint  — the absolute packet index of an additional,
-#                           one-off early checkpoint (set to 0 to disable).
-#                           Covers short flows (PortScan averages ~2 packets)
-#                           that would otherwise never produce any RF
-#                           prediction. If this value is also a multiple of
-#                           rf_checkpoint_stride it is automatically merged
-#                           with the first regular checkpoint (no duplicate).
-#   rf_checkpoint_stride — emit a row every K packets per flow after that.
-#
-# Default {first=2, stride=10} produces checkpoints at packets {2, 10, 20,
-# 30, …}. Each checkpoint aggregates statistics over the growing prefix
-# (packets [0:n_packets_seen]), matching how the RF will be queried at
-# inference time.
+# {first=2, stride=10} gives checkpoints at packets {2, 10, 20, 30, …}, each
+# over the flow's prefix up to that packet.
 rf_first_checkpoint: 2
 rf_checkpoint_stride: 10
 
 # --------------------------
 # nPrint identity masking
 # --------------------------
-# Following FlowPaint §3.3.2: zero out high-entropy identity fields to
-# prevent overfitting to flow identity (IPs, ports, IP ID). These column
-# prefixes are masked in the nPrint bit matrix.
+# Identity fields set to zero in the nPrint bits (as in FlowPaint), so the
+# models cannot learn hosts and ports.
 mask_prefixes:
   - ipv4_src
   - ipv4_dst
@@ -53,10 +39,8 @@ mask_prefixes:
 # --------------------------
 # Aggregated statistics (for Random Forest)
 # --------------------------
-# Computed incrementally (Welford + running min/max) per flow over its
-# growing prefix. Each base feature generates len(rf_agg_functions) stats.
-# This preserves ensemble diversity: TCN sees the raw per-packet sequence,
-# RF sees prefix-aggregated summaries.
+# Each base feature gives len(rf_agg_functions) statistics over the flow's
+# prefix. The TCN sees the per-packet sequence; the RF sees these summaries.
 rf_agg_functions:
   - mean
   - std
@@ -74,8 +58,7 @@ rf_base_features:
 # --------------------------
 # Standardization
 # --------------------------
-# Only IPAT needs z-score normalization for the TCN sequence tensor.
-# nPrint bits are already bounded {-1, 0, 1}; Direction is binary.
+# Only IPAT is z-scored; nPrint bits are {-1, 0, 1} and Direction is binary.
 mean_std_filename: mean_std.json
 
 standardize_columns:

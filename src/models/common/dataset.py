@@ -1,22 +1,9 @@
-"""Model-agnostic dataset primitives for DEPT's streaming base learners.
+"""Model-agnostic dataset code for the base learners.
 
-This module owns the parts of the data pipeline that don't care which
-tensor view a model consumes:
-
-  * source discovery (benign + auto-discovered adversarial folders)
-  * label normalisation under the benign-vs-adversarial convention
-  * source-stratified train/val/test splitting (one row = one flow)
-  * benign capping at a configurable ratio of adversarial flows
-
-Under the streaming-native schema, each *row* of the assembled index
-represents one **flow**, not one window. The flow's underlying tensor
-data is the variable-length slice
-``flow_packets.npy[start_p:start_p + length]`` (for TCN) or the
-multi-scale prefix rows
-``rf_checkpoints.npy[start_c:start_c + n_checkpoints]`` (for RF), keyed
-off ``flow_offsets.npy`` / ``rf_checkpoint_offsets.npy`` respectively.
-Both base learners reuse ``assemble_index`` to land on the **same**
-flow-level split.
+Source discovery, label normalisation, benign capping and the
+source-stratified flow-level train/val/test split. Each row of the
+assembled index is one flow; its tensors are found through
+``flow_offsets.npy`` (TCN) or ``rf_checkpoint_offsets.npy`` (RF).
 """
 from __future__ import annotations
 
@@ -134,10 +121,8 @@ def cap_benign(
 ) -> np.ndarray:
     """Globally cap benign flows at ratio × adversarial flows.
 
-    Under the per-flow schema every row is already a unique flow, so this
-    function selects a random subset of benign flows. ``scoped_flow_ids``
-    is expected to encode the source (e.g. ``"mirai|1.2.3.4|..."``) so
-    benign flows from different folders don't collide.
+    ``scoped_flow_ids`` must include the source (e.g. ``"mirai|1.2.3.4|..."``)
+    so that flows from different folders don't collide.
     """
     n_pos = int((y == 1).sum())
     if n_pos == 0:

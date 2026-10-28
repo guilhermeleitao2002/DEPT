@@ -6,17 +6,9 @@ combining:
   * the TCN's dense per-packet logit
   * the RF's sparse per-checkpoint logit (carry-forward in the dataset)
 
-Both base learners were trained only on the seed=42 ``train_idx``, so
-their predictions on the ``val`` and ``test`` splits are out-of-fold by
-construction. This module loads the trained models and produces the
-joined per-flow records the dataset module turns into tokens.
-
-Flow identity is the canonical ``(source, flow_id_str)`` tuple — the
-same tuple ``predict_streams()`` returns from both base evaluators. RF
-``predict_streams`` skips flows that produce zero checkpoints (e.g.
-single-packet flows under default cadence); those flows still appear in
-the joined output with empty RF arrays so the meta-learner can fall
-back to TCN-only fusion via the learnable ``rf_unknown_logit`` token.
+Flows are joined on ``(source, flow_id_str)``. Flows with no RF
+checkpoint (e.g. single-packet flows) keep empty RF arrays, and the model
+uses its learnable ``rf_unknown_logit`` for them.
 """
 from __future__ import annotations
 

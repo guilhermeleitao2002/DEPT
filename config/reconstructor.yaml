@@ -1,25 +1,18 @@
 # =====================================================================
 # DEPT — Reconstructor (Purification) Transformer
 # =====================================================================
-# A small causal (decoder-only) residual denoiser. When the ensemble flags
-# a flow as adversarial, the reconstructor maps it back onto the clean-traffic
-# manifold, undoing TANTGen's timing (IPAT) and size (IPv4 length) perturbations.
-#
-# Trained on matched (adversarial → clean) flow pairs, paired by 5-tuple over
-# the same data the other models use. Uses the seed=42 flow-level split so the
-# test pairs are held out.
+# A small causal residual denoiser that undoes TANTGen's timing (IPAT) and size
+# (IPv4 length) changes. Trained on (adversarial, clean) flow pairs matched by
+# 5-tuple, with a flow-level split (seed 42).
 
 tensors_dir: data/tensors
 adversarial_dir: data/tensors/adversarial   # auto-discovered: every subdir with metadata.json
 output_dir: data/models/reconstructor
 
-# Source the trained TCN from here — used as the "protected NIDS" for the
-# purification-gain metric (P(adv) on adversarial vs reconstructed vs clean).
+# TCN used for the purification-gain sanity check.
 tcn_model_dir: data/models/tcn
 
-# Adversarial sources with no clean base folder are skipped automatically.
-# List any further sources to exclude here; this mirrors the carry-over
-# excludes in tcn.yaml / rf.yaml.
+# Sources without a clean base folder are skipped; same excludes as rf.yaml.
 adversarial_exclude:
   - dos_slow_adv_both
   - dos_slow_adv_iat
@@ -37,12 +30,10 @@ adversarial_exclude:
   - portscan_kitsune_adv_iat
   - portscan_kitsune_adv_size
 
-# Drop matched pairs shorter than this many packets (one IPAT interval is the
-# minimum signal a timing perturbation can carry).
+# Drop pairs shorter than this (a timing change needs at least one interval).
 min_len: 2
 
-# Flow-atomic split, stratified by adversarial source. Same seed as the other
-# models so the held-out test pairs never leak into any base learner's train set.
+# Flow-level split, stratified by adversarial source.
 split:
   train_frac: 0.70
   val_frac: 0.15
@@ -50,9 +41,7 @@ split:
   seed: 42
 
 # ---- Reconstructor architecture ----
-# Small by design (fast, real-time denoising): causal Transformer encoder with a
-# residual head, so the identity map is the easy default (Δ≈0) and capacity goes
-# to the localized timing/length correction. Causal ⇒ KV-cacheable for streaming.
+# Causal transformer encoder with a residual head (identity by default).
 model:
   num_features: 1090       # 1088 nPrint bits + IPAT (z-score) + Direction
   d_model: 128
@@ -63,8 +52,7 @@ model:
   max_seq_len: 200
 
 # ---- Training ----
-# Per-element smooth-L1 between reconstruction and the clean target, averaged
-# within each flow (long flows don't dominate) and masked over padding.
+# Smooth-L1 to the clean flow, averaged within each flow, masked over padding.
 training:
   device: auto             # auto | cuda | cuda:0 | cuda:1 | cpu
   epochs: 20
@@ -79,33 +67,18 @@ training:
   seed: 42
 
 # ---- Traffic-space realization + protocol compliance ----
-# Maps the purified length/timing back onto the original adversarial PCAP packets
-# and validates them with tshark. Best-effort: if the PCAPs or tshark are absent,
-# realization (and thus the protocol-compliance check) is skipped.
+# Writes the purified length/timing onto the original adversarial packets and
+# checks them with tshark (skipped if the PCAPs or tshark are missing).
 realize:
   adversarial_pcap_dir: data/adversarial   # original TANTGen PCAPs (phase 1 output)
 
-# ---- Independent-NIDS efficacy (the headline purification metric) ----
-# Realize adv / purified / clean packets (same flows & identity; only size+timing
-# differ) and score each through the real NIDS each attack was built to evade — NOT
-# DEPT's own TCN (that is circular). This is the shared `nids` registry, also used by
-# the deployment baseline (scripts/baseline). Two NIDS families:
-#   * Kitsune (KitNET + AfterImage) for the Kitsune-native attacks (mirai, ssdp_flood),
-#     evaded by the `iat` vector. TANTGen's calibrated pickles are reused verbatim.
-#   * ML-NIDS (TANTGen's CICFlowMeter flow classifiers) for the 8 CIC attacks, evaded
-#     by the `size` vector. TANTGen's trained <Attack>_<MODEL>.joblib are reused.
-#
-# Semantics: the NIDS flags a flow when its anomaly signal is high (Kitsune RMSE > φ, or
-# ML-NIDS P(malicious) > 0.5). The attack evades by suppressing it; purification recovers
-# the original fingerprint, so the signal rises from the (evaded) adversarial floor
-# toward the clean-original oracle. Primary per-source metric = score_restoration_ratio
-# (fraction of the adv→clean gap recovered; robust to each NIDS's absolute scale). The
-# cross-family overall uses detection_restoration_ratio (rate-based; see the README).
-#
-# Kitsune needs the sibling TANTGen repo's built AfterImage .so (+ Cython/pyximport in
-# the DEPT venv); ML-NIDS needs `cicflowmeter` on PATH (pip install cicflowmeter). A
-# source whose NIDS/deps are missing is skipped-with-reason so the other metric groups
-# still report.
+# ---- Independent NIDS ----
+# The adv / purified / clean packets are scored by the NIDS each attack was built
+# to evade (shared with the deployment baseline):
+#   * Kitsune (KitNET + AfterImage) for mirai and ssdp_flood, with TANTGen's models;
+#   * TANTGen's ML-NIDS (CICFlowMeter flow classifiers) for the 8 CIC attacks.
+# Kitsune needs TANTGen's compiled AfterImage .so and Cython; ML-NIDS needs
+# TANTGen's vendored cicflowmeter. A source whose NIDS is missing is skipped.
 nids:
   enabled: true
   tantgen_root: ../Transformer-based_Adversarial_Network_Traffic_Generator

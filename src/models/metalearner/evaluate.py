@@ -1,10 +1,8 @@
 """Evaluate the trained Mini-Transformer meta-learner on the test split.
 
-Loads the model + cached test tokens, runs forward inference, and
-emits the standard streaming-eval artefacts (``metrics.json``,
-``streaming_metrics.json``, ``earliness_vs_accuracy.png``) plus a
-three-way ``earliness_vs_accuracy_comparison.png`` overlaying RF, TCN,
-and meta-learner curves so the README plot is one file.
+Writes ``metrics.json``, ``streaming_metrics.json``, the plots, and
+``earliness_vs_accuracy_comparison.png`` with the RF, TCN and meta-learner
+curves.
 """
 from __future__ import annotations
 

@@ -1,22 +1,14 @@
-"""The three targets a single perturbation is scored against: RF, TCN, stack.
+"""The three targets a perturbation is scored against: RF, TCN and stack.
 
-The comparison RQ1 asks for only means something if all three see the *same*
-perturbation. So the attacker produces one ``(k bytes, d seconds)`` per packet —
-crafted against the TCN alone — and this module replays it through each target's
-own featurisation:
+The attacker produces one ``(k bytes, d seconds)`` per packet against the TCN,
+and the same perturbation is replayed through each target:
 
-* **TCN**   — reads the perturbed ``[L, 1090]`` tensor directly.
-* **RF**    — reads 24 prefix statistics recomputed from perturbed per-packet
-  values (via the sidecar), because its features are not in the tensor.
-* **Stack** — reads per-packet 13-dim tokens fusing both base learners' logits.
+* TCN   — the perturbed ``[L, 1090]`` tensor.
+* RF    — the 24 prefix statistics recomputed from the sidecar.
+* Stack — the meta-learner tokens built from both base learners.
 
-Nothing here is differentiable, and nothing needs to be: the attacker's gradient
-path ends at the TCN. That asymmetry is the experiment.
-
-Flow verdicts follow the convention the trained models already report: the
-prediction after seeing the whole flow — ``probs[b, L-1]`` for the TCN and the
-meta-learner (see ``tcn/evaluate.py``, ``metalearner/evaluate.py``), and the last
-checkpoint for the RF.
+The flow verdict is the prediction after the whole flow: ``probs[b, L-1]`` for
+the TCN and the meta-learner, the last checkpoint for the RF.
 """
 from __future__ import annotations
 
@@ -116,10 +108,9 @@ def load_models(
 def rf_predict_features(clf, X: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     """``X [n, 24] -> (probs, logits)`` for P(adversarial).
 
-    ``rf/evaluate.predict_streams`` cannot serve here: it reads *precomputed*
-    rows out of ``dataset.npz`` (``X = data["X"][sample_indices]``), so it can
-    only score flows exactly as they were tensorised. Perturbed features have no
-    row to look up. The logit clipping mirrors it so the two agree at delta=0.
+    ``rf/evaluate.predict_streams`` only reads precomputed rows, so it cannot
+    score perturbed features. The logit clipping is the same, so both agree at
+    delta=0.
     """
     if len(X) == 0:
         return np.zeros(0, dtype=np.float64), np.zeros(0, dtype=np.float64)
@@ -175,19 +166,12 @@ def score_stack(
     pkt_len_norm: float = DEFAULT_PKT_LEN_NORM,
     seq_np: np.ndarray | None = None,
 ) -> list[np.ndarray]:
-    """Per-flow P(adversarial) streams from the fused stack.
+    """Per-flow P(adversarial) streams from the stack.
 
-    Tokens are built with ``metalearner.dataset.build_flow_tokens`` **verbatim**
-    — the same code the meta-learner was trained through, fed the perturbed
-    tensor instead of the on-disk one. ``join_streams`` is deliberately not used:
-    it reads base-learner predictions off disk, which by construction are the
-    unperturbed ones.
-
-    ``seq_np`` lets a caller supply the host-side copy of ``seq``. The token
-    builder is numpy, so scoring needs one; the ablations in
-    :mod:`~.pipeline` score the *same* perturbed tensor three times, and without
-    this each call would re-download an identical ``[B, T, 1090]`` block
-    (~56 MB at the default batch) across the PCIe bus.
+    Tokens are built with ``metalearner.dataset.build_flow_tokens`` from the
+    perturbed tensor (``join_streams`` would read the unperturbed predictions
+    from disk). ``seq_np`` is an optional host copy of ``seq``, to avoid copying
+    the same tensor from the GPU three times.
     """
     device = seq.device
     if seq_np is None:
@@ -198,8 +182,7 @@ def score_stack(
         L = int(lengths[b].item())
         rf_pkt = np.asarray(rf_packet_idx[b], dtype=np.int64)
         rf_log = np.asarray(rf_logits[b], dtype=np.float64)
-        # Drop checkpoints past the (possibly truncated) flow horizon, exactly as
-        # join_streams does — tokens past L have no packet to attach to.
+        # Drop checkpoints past the (possibly truncated) flow, as join_streams does.
         if rf_pkt.size and rf_pkt[-1] > L:
             keep = rf_pkt <= L
             rf_pkt, rf_log = rf_pkt[keep], rf_log[keep]
@@ -240,23 +223,14 @@ def score_stack(
 # ──────────────────────────────────────────────────────────────────────────────
 
 def flow_verdict(stream: np.ndarray) -> float:
-    """The model's P(adversarial) after seeing the whole flow.
-
-    The convention every trained target already reports: the TCN and meta-learner
-    take ``probs[b, L-1]``; RF's stream ends at its last checkpoint.
-    """
+    """The model's P(adversarial) after the whole flow."""
     if len(stream) == 0:
         return float("nan")
     return float(stream[-1])
 
 
 def never_fires(stream: np.ndarray, threshold: float) -> bool:
-    """True if the flow never crossed the threshold at any emission.
-
-    The stricter, streaming-honest notion of evasion: a detector that fired at
-    packet 5 and relaxed by packet 200 has still detected the flow. Reported
-    alongside :func:`flow_verdict` rather than instead of it.
-    """
+    """True if the flow never crossed the threshold at any emission."""
     if len(stream) == 0:
         return True
     return bool(np.nanmax(stream) < threshold)

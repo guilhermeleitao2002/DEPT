@@ -1,44 +1,17 @@
-"""Flow selection and the per-packet **sidecar** the RF branch needs.
+"""Flow selection and the per-packet sidecar needed to score the RF.
 
-Why a sidecar exists at all
----------------------------
-Scoring the RF on a *perturbed* flow means recomputing its 24 prefix statistics
-from perturbed per-packet values. Those per-packet values are not on disk. The
-tensorizer computes them (``tensor_builder.py`` builds ``rf_meta_values``), feeds
-them straight to :func:`~src.feature_extraction.tensor_builder._flow_checkpoint_stats`,
-and persists **only the aggregate** — ``rf_checkpoints.npy`` holds prefix
-mean/std/min/max at packets {2, 12, 22, …}, roughly a 10:1 reduction. The
-aggregate cannot be inverted: four numbers per ten packets, and prefix min/max
-are non-invertible in principle.
+To score the RF on a perturbed flow, its 24 prefix statistics must be
+recomputed from perturbed per-packet values. Those values are not saved: only
+the aggregates in ``rf_checkpoints.npy`` are, and ``flow_packets.npy`` has no
+payload (``Payload_Length`` and ``Payload_Entropy`` are missing). So one scapy
+pass per source re-derives the per-packet RF features and caches them.
 
-The sequence tensor does not rescue us either. ``flow_packets.npy`` is
-``NPRINT_COLUMNS`` (1088 header bits) + IPAT + Direction; nPrint covers headers
-only, so ``Payload_Length`` and ``Payload_Entropy`` — together **45.7% of the
-trained RF's decision mass** — are absent at any price.
+The sidecar stores the 256-bin byte histogram of each payload, so the entropy
+after padding is exact for both zero and random padding bytes. The TCN sees no
+payload, so the attacker cannot choose between the two; both are reported.
 
-So one scapy pass per source re-derives the per-packet RF base features and
-caches them. It is the only I/O-heavy step in this experiment, and it is
-cached, so it runs once.
-
-Byte histograms
----------------
-We store the full 256-bin histogram of each packet's IP payload rather than a
-compact ``(len, zeros, entropy)`` triple. The triple gives a closed form for
-zero-padding only; the histogram makes **both** zero- and random-byte padding
-exact for the same ~0.5 KB/packet.
-
-This matters more than it looks. The attacker in this experiment differentiates
-the TCN, and the TCN's input contains no payload bytes — so the attacker is
-*blind* to what its padding does to ``Payload_Entropy``, the RF's single largest
-feature group. The padding-content choice is therefore not something a
-TCN-guided gradient can optimise, and we report both bounds instead of silently
-picking one. See :func:`entropy_after_pad`.
-
-Exactness check
----------------
-:func:`verify_sidecar` recomputes the checkpoint stats at δ=0 and compares them
-against the on-disk ``rf_checkpoints.npy``. If the sidecar is faithful they
-agree to float32 round-off; if they don't, every RF number downstream is wrong.
+:func:`verify_sidecar` checks that the sidecar reproduces the on-disk
+checkpoints at delta=0.
 """
 from __future__ import annotations
 
@@ -62,9 +35,7 @@ log = logging.getLogger(__name__)
 # Layout — must mirror tensor_builder's defaults exactly.
 # ──────────────────────────────────────────────────────────────────────────────
 
-# Order matters: it fixes the column order of the emitted 24-dim RF vector, and
-# must match `rf_base_features` in tensor_builder.build_tensors (and therefore
-# `rf_stat_names` in each source's metadata.json).
+# Must match `rf_base_features` in tensor_builder.build_tensors.
 RF_BASE_FEATURES: tuple[str, ...] = (
     "IPAT", "Packet_Size", "Payload_Length",
     "Payload_Entropy", "TCP_Flags", "Direction",
@@ -87,8 +58,7 @@ SIDECAR_SCHEMA = "gradient-ablation-sidecar-v1"
 class Sidecar:
     """Per-packet RF base features for one source's selected flows.
 
-    Ragged, mirroring the repo's ``ragged-per-flow-v1`` schema: ``feats`` is
-    flow-major and ``offsets[i] = (start, length)`` slices flow ``i`` out of it.
+    ``feats`` is flow-major and ``offsets[i] = (start, length)`` selects flow ``i``.
     """
     source: str
     flow_ids: np.ndarray            # [N] object   canonical 5-tuple string
@@ -138,16 +108,11 @@ def entropy_after_pad(
     """Payload entropy after appending ``k[i]`` bytes to each packet's payload.
 
     ``hist`` is ``[L, 256]`` (byte histogram of the original IP payload), ``k``
-    is ``[L]`` non-negative integer pad counts. Exact for both modes:
+    is ``[L]`` non-negative integer pad counts.
 
-    * ``"zero"``   — ``realize.py``'s overlay pads with ``b"\\x00"``, so all *k*
-      bytes land in bin 0. Entropy **falls** toward 0.
-    * ``"random"`` — TANTGen's ``apply_TANTGen_to_pcap`` pads with random bytes,
-      spreading ``k/256`` per bin in expectation. Entropy **rises** toward 8.
-
-    The two bracket the achievable range, and the attacker cannot tell them
-    apart from the TCN's gradient (the TCN sees no payload bytes) — hence both
-    are reported rather than one assumed.
+    * ``"zero"``   — zero bytes, as in ``realize.py``: entropy goes down.
+    * ``"random"`` — random bytes, as in TANTGen's ``apply_TANTGen_to_pcap``
+      (``k/256`` per bin in expectation): entropy goes up.
     """
     h = np.asarray(hist, dtype=np.float64).copy()
     k = np.asarray(k, dtype=np.float64)
@@ -175,18 +140,13 @@ def rf_feats_for_delta(
 ) -> tuple[np.ndarray, np.ndarray]:
     """RF's ``[n_ckpt, 24]`` prefix stats for one flow under a perturbation.
 
-    ``delta_size`` is per-packet padding in **bytes** (≥ 0) and ``delta_iat``
-    per-packet added delay in **seconds** (≥ 0). Both are length ``L``.
-
-    Padding *k* bytes moves three of the six base features by exactly *k*
-    (``Packet_Size`` is the frame length, ``Payload_Length`` the bytes after the
-    IP header) and moves ``Payload_Entropy`` non-linearly; ``TCP_Flags`` and
-    ``Direction`` are invariant. Delay moves ``IPAT`` only.
+    ``delta_size`` is per-packet padding in bytes and ``delta_iat`` per-packet
+    added delay in seconds (both >= 0, length ``L``). Padding moves
+    ``Packet_Size``, ``Payload_Length`` and ``Payload_Entropy``; delay moves
+    ``IPAT`` only.
 
     Returns ``(stats[n_ckpt, 24], positions[n_ckpt])`` with 1-based positions.
-    Aggregation is delegated to the pipeline's own ``_flow_checkpoint_stats`` —
-    the same function, not a reimplementation — so δ=0 reproduces the on-disk
-    checkpoints bit-for-bit modulo float32 round-off.
+    Uses the pipeline's own ``_flow_checkpoint_stats``.
     """
     L = int(feats.shape[0])
     pos = checkpoint_positions(L, first_checkpoint, stride)
@@ -242,13 +202,8 @@ def select_flows(
 ) -> SelectedFlows:
     """Sample up to ``flows_per_source`` adversarial flows per source.
 
-    Restricted to flows the trained models held out (``test_flow_ids``, derived
-    from the seed=42 split the base learners share) so ASR is a generalization
-    number rather than a training-set artifact.
-
-    Per-source stratification is not cosmetic: source support spans three orders
-    of magnitude (``syn_ddos_adv_*`` ~935k train flows vs ``dns_ddos_adv_*``
-    ~4.7k), so a global sample would be almost entirely ``syn_ddos``.
+    Only flows in the base learners' test split are used. Sampling is done per
+    source because source sizes differ by orders of magnitude.
     """
     from ..common.dataset import discover_adversarial_sources
 
@@ -271,10 +226,7 @@ def select_flows(
         _y, flow_ids, _lstr, local_idx, _names = load_source_meta(folder, src)
         offsets = np.load(folder / "flow_offsets.npy")
 
-        # A source absent from the base learners' test index must be skipped, not
-        # silently unfiltered: falling back to "keep everything" would draw the
-        # sample from flows the models were TRAINED on and report the resulting
-        # ASR as a generalization number.
+        # Skip sources missing from the test split (never sample training flows).
         keep_ids = test_flow_ids.get(src)
         if keep_ids is None:
             log.warning("%s: not present in the base learners' test split — "
@@ -320,9 +272,7 @@ def test_flow_ids_from_split(
 ) -> dict[str, set[str]]:
     """``source -> {flow_id_str}`` for the TCN's held-out test split.
 
-    Read from ``data/models/tcn/dataset_index.npz`` so the selection lands on
-    exactly the flows RF/TCN/meta held out (all three share the seed=42
-    flow-level split from ``common.dataset.flow_level_split``).
+    Read from ``data/models/tcn/dataset_index.npz``.
     """
     from ..tcn.evaluate import _load_dataset_index, _reanchor_folder
 
@@ -346,12 +296,10 @@ def test_flow_ids_from_split(
 # ──────────────────────────────────────────────────────────────────────────────
 
 def _packet_row(pkt) -> tuple[float, int, int, int, np.ndarray, str, int]:
-    """Per-packet scan mirroring ``pcap_parser._scan_raw_packet`` exactly.
+    """Per-packet scan, same as ``pcap_parser._scan_raw_packet``.
 
     Returns ``(timestamp, framelen, payload_len, tcp_flags, hist, src_ip,
-    src_port)``. ``hist`` is the 256-bin byte histogram of the IP payload —
-    ``pcap_parser`` derives both ``Payload_Length`` and ``Payload_Entropy`` from
-    the very same ``bytes(ip_layer.payload)``, so this reproduces them.
+    src_port)``, where ``hist`` is the 256-bin byte histogram of the IP payload.
     """
     from scapy.all import ICMP, IP, TCP, UDP  # noqa: F401
 
@@ -386,17 +334,10 @@ def build_sidecar(
     flow_ids: list[str],
     max_length: int | None = 200,
 ) -> Sidecar:
-    """One streaming scapy pass over ``adv_pcap``, keeping only ``flow_ids``.
+    """One scapy pass over ``adv_pcap``, keeping only ``flow_ids``.
 
-    Reproduces the tensorizer's flow assembly exactly — canonical 5-tuple
-    grouping (:func:`~src.models.reconstructor.realize._canonical_key`) plus a
-    stable sort by timestamp — so sidecar row *i* of a flow is the same packet
-    as tensor row *i*. :func:`verify_sidecar` checks that claim rather than
-    trusting it.
-
-    Filter-on-read: only packets belonging to a selected flow are retained, so
-    resident memory scales with the selection (~9k flows), not with the
-    multi-GB capture.
+    Flows are grouped and sorted as in the tensorizer, so row *i* of a sidecar
+    flow is the same packet as tensor row *i* (checked by :func:`verify_sidecar`).
     """
     from scapy.all import PcapReader
 
@@ -473,12 +414,7 @@ def build_sidecar(
 
 
 def _canonical_key_str(pkt) -> str:
-    """Canonical 5-tuple string, matching ``flow_ids.npy``'s stringification.
-
-    ``realize._canonical_key`` joins with ``'|'`` and
-    ``common.dataset._flow_id_to_str`` joins the 5-tuple object array the same
-    way, so the two key spaces coincide.
-    """
+    """Canonical 5-tuple string, in the same format as ``flow_ids.npy``."""
     from ..reconstructor.realize import _canonical_key
 
     return _canonical_key(pkt)
@@ -526,17 +462,11 @@ def verify_sidecar(
     max_flows: int = 50,
     atol: float = 1e-2,
 ) -> dict:
-    """Compare δ=0 sidecar checkpoints against the source's ``rf_checkpoints.npy``.
+    """Compare delta=0 sidecar checkpoints with the source's ``rf_checkpoints.npy``.
 
-    This is the experiment's ground-truth gate. The sidecar re-derives, from
-    packets, values the pipeline derived independently; if the two agree the
-    scapy pass reproduced the tensorizer's flow assembly, per-packet features
-    and ordering. If they don't, every RF and stack number downstream is
-    measuring the sidecar's bugs rather than the attack.
-
-    Prefix stats at packet *p* depend only on packets 1..*p*, so truncating a
-    flow at ``max_length`` leaves the checkpoints at positions ≤ ``max_length``
-    unchanged — the comparison is exact on the positions both sides emit.
+    If they differ, the sidecar does not match the tensorizer and the RF and
+    stack results cannot be trusted. Truncating at ``max_length`` does not change
+    the checkpoints before it, so the comparison is exact.
     """
     folder = Path(folder)
     ckpts = np.load(folder / "rf_checkpoints.npy", mmap_mode="r")

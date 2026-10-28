@@ -1,15 +1,12 @@
 """Causal residual denoiser for DEPT's input purification.
 
-A small **decoder-only (causal) Transformer** that purifies an
-adversarially-perturbed per-packet sequence. It mirrors the meta-learner's
-encoder scaffold (sinusoidal PE, pre-norm encoder layer, strict causal mask)
-so the two transformers share architecture and state-dict conventions — the
-only differences are the I/O shapes and a **residual head**:
+A small decoder-only (causal) transformer with the same layers as the
+meta-learner, but with a residual head:
 
   Per-packet sequence  ``[B, T, 1090]``  (nPrint bits + IPAT + Direction)
     │
     ├─ Linear projection 1090 → d_model
-    ├─ Sinusoidal positional encoding (Vaswani-style; generalises past max_len)
+    ├─ Sinusoidal positional encoding
     │
     ├─ N × pre-LN Transformer encoder layer  (causal self-attention)
     │
@@ -17,11 +14,9 @@ only differences are the I/O shapes and a **residual head**:
                                           │
             reconstruction = input + Δ  ──┘
 
-The residual formulation makes the identity map the easy default (Δ≈0), so the
-model spends capacity only on the localized correction (timing + length), and
-the ~1050 untouched header bits are preserved for free. Causality keeps the
-model KV-cacheable for streaming deployment: position ``t`` is denoised from
-packets ``≤ t`` only.
+With the residual head the identity map is the default (Δ≈0), so the model
+only has to learn the timing and length correction. Position ``t`` is
+denoised from packets ``<= t`` only.
 """
 from __future__ import annotations
 
@@ -72,10 +67,8 @@ class _EncoderLayer(nn.Module):
 
     Functionally identical to ``nn.TransformerEncoderLayer(norm_first=True,
     batch_first=True)`` but does NOT inherit from it, so
-    ``nn.TransformerEncoder.forward()`` skips the isinstance check that would
-    invoke the fused C++ kernel (which emits mask-type warnings on some
-    PyTorch versions). Copied from ``metalearner/model.py`` to keep the two
-    transformers consistent.
+    ``nn.TransformerEncoder`` does not use the fused fast path (see
+    ``metalearner/model.py``).
     """
 
     def __init__(
@@ -163,9 +156,7 @@ class Reconstructor(nn.Module):
         )
         self.encoder = nn.TransformerEncoder(encoder_layer, num_layers=n_layers)
         self.head = nn.Linear(d_model, num_features)
-        # Start near the identity map: a zero-initialised residual head means
-        # the untrained model reconstructs its input verbatim (Δ≈0), the right
-        # prior for a denoiser of a sparse perturbation.
+        # Zero-initialised residual head: the untrained model is the identity.
         nn.init.zeros_(self.head.weight)
         nn.init.zeros_(self.head.bias)
 
@@ -192,9 +183,6 @@ class Reconstructor(nn.Module):
         x = self.pos_enc(x)
         T = x.size(1)
         causal = self._causal_mask(T, x.device)
-        # _EncoderLayer is not a subclass of nn.TransformerEncoderLayer, so
-        # TransformerEncoder.forward() takes the plain Python loop — no fused
-        # kernel, no mask-type warnings.
         x = self.encoder(x, mask=causal, src_key_padding_mask=key_padding_mask)
         delta = self.head(x)                     # [B, T, F]
         return seq + delta

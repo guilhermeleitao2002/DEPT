@@ -1,27 +1,16 @@
 """Traffic-space realization: map a purified nPrint flow back onto real packets.
 
-This is DEPT's "parallel pipeline". The reconstructor denoises in feature
-space (nPrint tensors); to honor the thesis's realizability claim (Table 1:
-scope = Ψ traffic-space) we map the purified length/timing back onto the
-**original adversarial PCAP packets** and validate the result with ``tshark``.
+nPrint has no payload and the identity fields are masked, so packets cannot
+be rebuilt from the tensor. Instead, the purified values are overlaid on the
+original adversarial packets:
 
-Why overlay onto the original packet rather than rebuild from nPrint? nPrint
-covers only headers (not payload content) and the pipeline zeroes identity
-fields (IPs/ports). Keeping the original packet and writing back only the two
-perturbed quantities sidesteps both gaps:
+  * size: the IPv4 total length sets how much payload to trim or pad;
+  * iat: the de-normalised IPAT sets the packet timestamp.
 
-  * **size**  → the reconstructed IPv4 total-length sets how much application
-    payload to trim/pad (TANTGen's size attack pads; purification un-pads);
-  * **iat**   → the reconstructed (de-normalised) IPAT sets the packet's
-    capture timestamp.
-
-Identity + payload content are preserved verbatim; scapy recomputes IP/L4
-checksums and lengths on rebuild.
-
-Alignment: the tensorizer groups by canonical 5-tuple and stable-sorts by
-timestamp (:mod:`src.feature_extraction.flow_grouper`). We reproduce exactly
-that here, giving a 1:1 ``tensor-row ↔ packet`` correspondence; a flow whose
-packet count doesn't match its tensor length is skipped (counted as a miss).
+Identity and payload are kept; scapy recomputes lengths and checksums.
+Packets are grouped and sorted as in :mod:`src.feature_extraction.flow_grouper`,
+so tensor rows and packets match 1:1. A flow whose packet count differs from
+its tensor length is skipped.
 """
 from __future__ import annotations
 
@@ -84,10 +73,9 @@ _L7_TEXT_PREFIXES = (b"M-SEARCH", b"NOTIFY ", b"HTTP/", b"GET ", b"POST ",
 def _is_l7_text(l4, app: bytes) -> bool:
     """True if the payload is an application-layer text protocol (SSDP/HTTP).
 
-    Such payloads (e.g. ``M-SEARCH * HTTP/1.1``) carry a parsed grammar; a raw
-    trim/zero-pad keeps IP/UDP lengths and checksums valid but makes tshark's
-    L7 dissector throw ``_ws.malformed`` — so a byte-overlay resize cannot
-    faithfully realize them. Detected by SSDP port or an HTTP-style start line.
+    Resizing these (e.g. ``M-SEARCH * HTTP/1.1``) breaks their grammar and
+    tshark reports them as malformed. Detected by SSDP port or an HTTP-style
+    start line.
     """
     try:
         ports = (int(getattr(l4, "dport", -1)), int(getattr(l4, "sport", -1)))
@@ -106,19 +94,9 @@ _ETH_MIN_FRAME = 60
 def _split_payload(pkt, l4) -> tuple[bytes, bytes]:
     """Split ``l4``'s payload into ``(application bytes, Ethernet trailer)``.
 
-    ``bytes(l4.payload)`` lumps the two together, and so does ``bytes(ip)`` — but
-    the trailer is Ethernet frame padding that exists only to reach the 60-byte
-    minimum. It is *not* part of the IP datagram and is not counted by
-    ``ip.len``. Conflating them makes ``len(bytes(ip)) - len(bytes(l4.payload))``
-    over-state the header by the trailer length, which then silently trims real
-    payload on a resize that should have been a no-op.
-
-    Measured on ``packet_example/flow_adversarial.pcap`` packet 0
-    (``Ether/IP/TCP/Raw/Padding``): ``ip.len`` is 73 while ``len(bytes(ip))`` is
-    75, so a no-op target of 73 resolved to ``target_app=29`` against an apparent
-    payload of 31 — a 2-byte trim, reported as a genuine edit. Since
-    ``Packet_Size`` and ``Payload_Length`` are RF features, that drift landed
-    squarely in the signal the models are scored on.
+    ``bytes(l4.payload)`` includes the Ethernet padding (up to the 60-byte
+    minimum frame), which is not part of the IP datagram. Counting it as
+    payload would trim real bytes on a resize that should be a no-op.
     """
     from scapy.all import Padding
 
@@ -138,13 +116,10 @@ def _apply_size(pkt, target_total: int):
 
     Returns ``(pkt, edited, unrealizable)``:
 
-    * ``edited``        — ``True`` only when the payload length actually changed
-      (so callers distinguish a real size edit from a no-op, e.g. ``iat`` flows).
-    * ``unrealizable``  — ``True`` when an edit was required but the payload is an
-      application-layer text protocol (:func:`_is_l7_text`); a raw byte resize
-      would corrupt its grammar, so the packet can't be faithfully realized and
-      should be excluded from the wire-validity pool rather than scored as a
-      purifier failure. (The rebuild is skipped — the packet will be dropped.)
+    * ``edited``        — the payload length actually changed.
+    * ``unrealizable``  — an edit was needed but the payload is an
+      application-layer text protocol (:func:`_is_l7_text`); the packet is
+      dropped instead of being counted as a purifier failure.
     """
     from scapy.all import IP, TCP, UDP, Padding, Raw
 
@@ -162,9 +137,7 @@ def _apply_size(pkt, target_total: int):
         return pkt, False, False
 
     app, _pad = _split_payload(pkt, l4)
-    # Account against the IP header's own length field, not len(bytes(ip)):
-    # the latter includes any Ethernet trailer and would misprice every packet
-    # that carries one.
+    # Use ip.len, not len(bytes(ip)), which includes the Ethernet trailer.
     header_total = int(ip.len) - len(app)
     target_app = target_total - header_total
     if target_app < 0 or target_app == len(app):
@@ -189,11 +162,7 @@ def _apply_size(pkt, target_total: int):
         except Exception:
             pass
     out = pkt.__class__(bytes(pkt))
-    # Re-pad to Ethernet's 60-byte minimum if the resize took the frame under it.
-    # Keyed on the *output* length, not on whether the input happened to carry a
-    # trailer: trimming an unpadded 70-byte frame to 50 needs padding just as much
-    # as shrinking a padded one. The trailer is framing, not datagram, so it is
-    # recomputed here rather than carried over.
+    # Re-pad to Ethernet's 60-byte minimum if the new frame is shorter.
     short = _ETH_MIN_FRAME - len(bytes(out))
     if short > 0:
         out = out / Padding(load=b"\x00" * short)
@@ -215,10 +184,8 @@ def realize_source(
     Returns ``(realized_packets, stats)``; packets are sorted by their
     (re-timed) timestamp, ready for ``wrpcap``.
 
-    The source PCAP is streamed in a single pass, retaining only packets whose
-    canonical 5-tuple belongs to a reconstructed flow — so resident memory
-    scales with the realized flows, not with the (potentially multi-GB) source
-    capture.
+    The PCAP is read in one pass, keeping only packets of reconstructed
+    flows.
     """
     from scapy.all import PcapReader
 
@@ -230,9 +197,6 @@ def realize_source(
         stats["error"] = f"pcap not found: {adv_pcap}"
         return [], stats
 
-    # Single streaming pass: scan the PCAP but keep only packets belonging to a
-    # reconstructed flow (filter-on-read), so memory is bounded by the realized
-    # flows rather than the whole capture.
     target_keys = set(flow_recon)
     rows: list[tuple[float, str, object]] = []
     n_scanned = 0
@@ -274,10 +238,7 @@ def realize_source(
             pkt = rows[pos][2]
             try:
                 pkt, edited, unrealizable = _apply_size(pkt, int(total_len[i]))
-                # A size edit on an application-layer text protocol (SSDP/HTTP)
-                # can't be faithfully realized by raw byte-overlay — drop it
-                # from the wire-validity pool and count it separately, rather
-                # than scoring it as a purifier failure. (iat no-ops: edited=False.)
+                # Size edit on SSDP/HTTP text: drop it and count it separately.
                 if edited and unrealizable:
                     stats["unrealizable_l7"] += 1
                     continue
@@ -303,14 +264,11 @@ def realize_triplet(
     ``"recon"`` and ``"clean"`` — each a tuple ``(total_len[L] int, ipat_z[L] float)``
     decoded from the adversarial / reconstructed / clean-target tensor of that flow.
 
-    All three overlays are applied to the **same** adversarial PCAP packets and share
-    **one keep-mask**: a packet is dropped from all three if resizing it under *any*
-    of the three size targets would corrupt an application-layer text grammar
-    (:func:`_is_l7_text`). So the only variable an external NIDS sees across the three
-    branches is size+timing — exactly what the Purifier touches. This makes the
-    adv→purified→clean comparison a controlled experiment (same flows, identity,
-    payloads and exclusions), and it sidesteps any stale on-disk clean PCAP because
-    the clean overlay is driven by the paired tensor, not a separate capture.
+    All three overlays are applied to the same adversarial packets and share one
+    keep-mask: a packet is dropped from all three if any of the three size
+    targets would break an application-layer text protocol
+    (:func:`_is_l7_text`). The three branches then differ only in size and
+    timing.
 
     Returns ``({branch: {"packets": [...], "keys": [...]}}, stats)`` — each branch's
     packets are sorted by their own re-timed timestamps and ``keys[i]`` is the canonical
@@ -327,8 +285,6 @@ def realize_triplet(
         stats["error"] = f"pcap not found: {adv_pcap}"
         return out, stats
 
-    # Single streaming pass, keeping only packets of a reconstructed flow (see
-    # realize_source for the rationale — memory scales with the realized flows).
     target_keys = set(flow_vectors)
     rows: list[tuple[float, str, object]] = []
     n_scanned = 0

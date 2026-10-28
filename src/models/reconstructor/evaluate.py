@@ -1,31 +1,16 @@
 """Evaluate the reconstructor on the held-out test pairs.
 
-Four metric groups (the first three match the thesis's §5.3), reported
-overall and per ``<base>_adv_<mode>`` source:
+Metric groups, overall and per ``<base>_adv_<mode>`` source:
 
-  1. **Reconstruction quality** — MSE on the perturbed dimensions, *before*
-     (adv vs clean) vs *after* (recon vs clean). A large ``before → after``
-     drop means the denoiser removed the perturbation.
-  1b. **Independent-NIDS efficacy** — *the headline metric*. Realize the
-     adversarial, purified and clean size/timing onto the *same* adversarial
-     packets and score each through the real NIDS each attack was built to evade:
-     **Kitsune** (KitNET + AfterImage) for the Kitsune-native attacks and
-     TANTGen's **ML-NIDS** (CICFlowMeter classifiers) for the CIC attacks. Neither
-     ever saw DEPT's models, so this breaks the TCN's circularity. Semantics =
-     *detection restoration*: the NIDS flags a flow when its anomaly signal
-     (Kitsune RMSE, or ML-NIDS ``P(malicious)``) is high; the attack evades by
-     suppressing it, and purification recovers the original attack's fingerprint,
-     so the signal / detection rise from the (evaded) adversarial floor back
-     toward the clean-original oracle. Shared with the deployment baseline via
-     :mod:`src.models.nids`.
-  2. **Purification gain through the TCN** — *secondary, internal sanity check*.
-     Feed the adversarial, reconstructed and clean sequences through DEPT's own
-     trained TCN and report the per-flow last-timestep ``P(adversarial)``. This is
-     **circular** (the TCN trained on this data) — kept only as an in-distribution
-     diagnostic; the independent-NIDS metric above is the credible one.
-  3. **Protocol-compliance rate** — a ``tshark`` check on the *realized*
-     purified packets (best-effort; needs the adversarial PCAPs and the
-     tshark binary).
+  1. Reconstruction quality: MSE on the perturbed dimensions, adv vs clean
+     and recon vs clean.
+  2. Independent-NIDS restoration: the adversarial, purified and clean
+     size/timing are realized on the same packets and scored by the NIDS
+     each attack was built to evade (Kitsune or TANTGen's ML-NIDS).
+  3. Purification gain through DEPT's own TCN (a sanity check only, since
+     the TCN was trained on this data).
+  4. Protocol compliance: ``tshark`` on the realized purified packets
+     (skipped if the PCAPs or tshark are missing).
 """
 from __future__ import annotations
 
@@ -175,10 +160,7 @@ def evaluate(config: dict, output_dir: Path) -> dict:
     device = _resolve_device(str(train_cfg.get("device", "auto")))
 
     model = _load_reconstructor(output_dir, device)
-    # Rebuild the (deterministic) pair table from config — its row order matches
-    # the one training split, so split.npz's test_idx aligns 1:1. This avoids
-    # persisting a multi-hundred-MB index, mirroring how the other DEPT models
-    # re-derive their flow index at eval time.
+    # Rebuild the pair table from config; split.npz indexes its rows.
     pairs = build_pair_index(
         tensors_dir=Path(config["tensors_dir"]),
         adversarial_dir=Path(config["adversarial_dir"]),
@@ -291,12 +273,8 @@ def evaluate(config: dict, output_dir: Path) -> dict:
     metrics["realization"] = _run_realization(
         config, realize_pool, output_dir, metrics)
 
-    # ---- Independent-NIDS efficacy (the headline metric) ---------------------
-    # Realize adv / purified / clean packets and score each through the real NIDS each
-    # attack was built to evade (Kitsune for the Kitsune-native attacks, ML-NIDS for
-    # the CIC attacks) — detectors DEPT never trained, so this breaks the TCN's
-    # circularity. Best-effort: a source is skipped-with-reason when its NIDS/deps are
-    # unavailable (so the reconstruction + TCN groups still report).
+    # ---- Independent-NIDS restoration ---------------------------------------
+    # A source is skipped (with a reason) when its NIDS or dependencies are missing.
     metrics["nids"] = _run_nids_eval(config, nids_pool, output_dir, metrics)
 
     (output_dir / "metrics.json").write_text(json.dumps(metrics, indent=2, default=str))
@@ -332,10 +310,7 @@ def _run_realization(config, realize_pool, output_dir, metrics):
         packets, rstats = rz.realize_source(
             adv_pcap, flow_recon, mean_std[0], mean_std[1])
         entry = {"realize": rstats}
-        # Size-edited application-layer text packets (SSDP/HTTP) are excluded
-        # from the realized PCAP (can't be faithfully resized by byte-overlay);
-        # record the count alongside the rate so it reads "N excluded", not
-        # "N failures".
+        # Size-edited SSDP/HTTP packets are excluded; record how many.
         n_l7 = int(rstats.get("unrealizable_l7", 0))
         summary["unrealizable_l7"] += n_l7
         if gname in metrics["per_source"]:
@@ -381,7 +356,7 @@ def _load_ipat_stats(tensors_dir: Path | str) -> tuple[float, float]:
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Independent-NIDS efficacy (the headline metric)
+# Independent-NIDS restoration
 # ──────────────────────────────────────────────────────────────────────────────
 
 _NIDS_BRANCHES = ("adv", "purified", "clean")

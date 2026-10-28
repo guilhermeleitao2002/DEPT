@@ -1,14 +1,8 @@
 """NIDS-agnostic detection-restoration metrics.
 
-Semantics — **detection restoration**. A NIDS flags a malicious flow; TANTGen *evades*
-by suppressing that flag (Kitsune RMSE below φ, or the ML-NIDS classifier flipping to
-benign); DEPT's purification recovers the original attack's fingerprint, so the NIDS
-signal should *rise* from the evaded adversarial floor back toward the clean-original
-oracle. These helpers quantify how much of that gap the purifier (or the full DEPT
-pipeline) recovers, from :class:`~src.models.nids.base.BranchScore` summaries.
-
-Moved here from ``reconstructor/evaluate.py`` so the reconstructor eval and the baseline
-share one definition (the numbers must be comparable across both).
+TANTGen evades a NIDS by lowering its signal; purification should raise it
+back towards the clean level. These helpers measure how much of the
+adversarial-to-clean gap is recovered.
 """
 from __future__ import annotations
 
@@ -27,11 +21,8 @@ def sub(a, b):
 def restoration_ratio(adv, pur, clean):
     """Fraction of the adv→clean signal gap the purifier recovers, in ~[0, 1].
 
-    ``0`` = no restoration (purified ≈ adversarial), ``1`` = full restoration
-    (purified ≈ clean original). Robust to a NIDS's absolute score scale (Kitsune's
-    RMSE magnitude, or the classifier's probability calibration), unlike the raw
-    detection rate. ``None`` when the gap is degenerate (clean ≈ adv — nothing to
-    restore, e.g. a pure-timing attack an ML-NIDS never keyed on).
+    ``0`` = purified ≈ adversarial, ``1`` = purified ≈ clean. ``None`` when
+    clean ≈ adversarial (nothing to restore).
     """
     if adv is None or pur is None or clean is None:
         return None

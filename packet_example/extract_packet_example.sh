@@ -2,32 +2,26 @@
 # =============================================================================
 # extract_packet_example.sh
 # -----------------------------------------------------------------------------
-# Extract the single real flow used in the Chapter 5 "before / after TANTGen /
-# after DEPT purification" packet figure (Fig. eval-purifpacket), straight from
-# the three on-disk captures, and print the manipulated quantity (the IPv4
-# total-length field) at each of the three stages plus a tshark validity check.
+# Extract the flow shown in the thesis packet figure (Fig. 5.4) from the clean,
+# adversarial and purified captures, and print its IPv4 total length at each
+# stage plus a tshark validity check.
 #
-# Chosen flow (a Mirai botnet SYN-flood micro-flow, size-attack variant):
+# Flow (Mirai, size-only variant, from the reconstructor's test split):
 #     192.168.2.108:35220  ->  52.25.66.250:8280   (TCP, 4 packets)
 #
-# It is drawn from the reconstructor's held-out TEST split, so no packet here
-# was seen during training. The size variant perturbs packet size only, so the
-# inter-arrival times are identical between the clean and adversarial captures
-# and the IPv4 total length is the only manipulated field.
-#
-# Sources (all already on disk):
-#   clean       original malicious capture, before TANTGen (TANTGen tree)
-#   adversarial TANTGen size-attack output      (DEPT data/adversarial/)
-#   purified    DEPT reconstructor realization  (DEPT data/models/reconstructor/)
+# Sources:
+#   clean       original malicious capture (TANTGen tree)
+#   adversarial TANTGen size-attack output      (data/adversarial/)
+#   purified    DEPT reconstructor realization  (data/models/reconstructor/)
 #
 # Requires: tshark, editcap (wireshark-common).
 # Usage:    ./extract_packet_example.sh
 # =============================================================================
 set -euo pipefail
 
-# --- Resolve repo roots (this script lives in DEPT/dissertation/Images) -------
+# --- Resolve repo roots (this script lives in DEPT/packet_example) ------------
 HERE="$(cd "$(dirname "$0")" && pwd)"
-DEPT_ROOT="$(cd "$HERE/../.." && pwd)"
+DEPT_ROOT="$(cd "$HERE/.." && pwd)"
 TANTGEN_ROOT="$(cd "$DEPT_ROOT/.." && pwd)/Transformer-based_Adversarial_Network_Traffic_Generator"
 
 CLEAN_PCAP="$TANTGEN_ROOT/data/original/Kitsune/Malicious/Mirai_malicious.pcap"
@@ -35,16 +29,13 @@ ADV_PCAP="$DEPT_ROOT/data/adversarial/mirai/mirai_adversarial_size.pcap"
 PUR_PCAP="$DEPT_ROOT/data/models/reconstructor/realized/mirai_adv_size.pcap"
 
 # --- The flow, as a tshark display filter -------------------------------------
-# Pin the top-level TCP flow by direction (bot -> server) and exclude icmp, so
-# ICMP error messages that merely EMBED a copy of this datagram (their inner IP
-# header also carries these addresses/ports) are not mistaken for flow packets.
+# Exclude ICMP errors that embed a copy of these packets.
 SRC="192.168.2.108"; SPORT="35220"
 DST="52.25.66.250";  DPORT="8280"
 FILTER="ip.src==${SRC} && ip.dst==${DST} && tcp.srcport==${SPORT} && tcp.dstport==${DPORT} && not icmp"
 
-# --- Output directory (small per-stage captures for the record) ---------------
-OUT_DIR="$HERE/packet_example"
-mkdir -p "$OUT_DIR"
+# --- Output directory (one small capture per stage) ----------------------------
+OUT_DIR="$HERE"
 
 for tool in tshark editcap; do
     command -v "$tool" >/dev/null 2>&1 || { echo "ERROR: '$tool' not found (install wireshark-common)."; exit 1; }

@@ -1,15 +1,7 @@
-"""Independent-NIDS evaluation core — shared by the baseline and the reconstructor eval.
+"""Independent NIDS used to evaluate DEPT (reconstructor eval and baseline).
 
-DEPT's efficacy is measured by scoring traffic through the *real* NIDS each TANTGen
-attack was built to evade — Kitsune (KitNET) for the Kitsune-native attacks, TANTGen's
-CICFlowMeter ML-NIDS for the CIC attacks — never DEPT's own detector (which would be
-circular). This package provides:
-
-  * :class:`NIDSModel` / :class:`BranchScore` — the scoring interface (``base``).
-  * :class:`KitsuneNIDS`, :class:`MLNIDS` — the two NIDS families.
-  * :class:`NIDSRegistry` — attack → NIDS, from the shared ``nids`` config block.
-  * detection-**restoration** metrics (``metrics``) — how much of the adv→clean signal
-    gap the purifier / the full DEPT pipeline recovers.
+Each attack is scored by the NIDS it was built to evade: Kitsune for the
+Kitsune attacks and TANTGen's CICFlowMeter ML-NIDS for the CIC attacks.
 """
 from .base import BranchScore, NIDSModel, NIDSUnavailable
 from .registry import NIDSRegistry

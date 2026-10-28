@@ -50,15 +50,10 @@ Per-attack mode:
   ./run_pipeline.sh --per-attack --from 5   # e.g. meta + reconstructor only
   ./run_pipeline.sh --attacks mirai,ddos    # subset (implies --per-attack)
 
-  Runs the model phases (3-6) once per attack, passing --attack <name> to
-  each stage script. Phases 1-2 are per-attack by construction (their
-  outputs are keyed by attack), so they are skipped here — run them via a
-  normal (global) invocation first. Phases 7-9 evaluate the GLOBAL models
-  (their configs read data/models/<stage>/), so they are also skipped in
-  per-attack mode — run them via a normal (global) invocation. Global
-  artifacts stay at data/models/<stage>/; per-attack artifacts land under
-  data/models/per_attack/<attack>/<stage>/. Logs go to
-  logs/pipeline_<timestamp>/<attack>/phase_<N>_<name>.log.
+  Runs phases 3-6 once per attack (--attack <name>). Phases 1-2 and 7-9 are
+  skipped: run them with a normal (global) invocation. Per-attack artifacts go
+  to data/models/per_attack/<attack>/<stage>/ and logs to
+  logs/pipeline_<timestamp>/<attack>/.
 
 Env overrides:
   PYTHON=python3   # interpreter to use (default: python3)
@@ -165,12 +160,10 @@ OVERALL_START=$(date +%s)
 if (( PER_ATTACK )); then
     if (( START_PHASE < 3 )); then
         printf 'Note: --per-attack only applies to phases 3-6; starting at phase 3.\n'
-        printf '      (Phases 1-2 are per-attack by construction — run them globally.)\n'
         START_PHASE=3
     fi
     if (( END_PHASE > 6 )); then
         printf 'Note: --per-attack only applies to phases 3-6; stopping after phase 6.\n'
-        printf '      (Phases 7-9 evaluate the global models — run them globally.)\n'
         END_PHASE=6
     fi
     printf 'Per-attack run over %d attack(s): %s\n' \

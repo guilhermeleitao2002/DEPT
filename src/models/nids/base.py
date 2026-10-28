@@ -1,22 +1,13 @@
-"""Common interface for the *independent* NIDS DEPT is evaluated against.
+"""Common interface for the independent NIDS.
 
-DEPT is a defense that sits in front of a protected NIDS. To measure its efficacy
-credibly we score traffic through the **actual** NIDS each TANTGen attack was built
-to evade — never DEPT's own detector (that would be circular). Two NIDS families are
-supported behind one interface:
+  * Kitsune (KitNET + AfterImage), for ``mirai`` and ``ssdp_flood``: per-packet
+    RMSE, flagged when ``RMSE > φ``.
+  * ML-NIDS (TANTGen's CICFlowMeter flow classifiers), for the CIC attacks:
+    per-flow ``P(malicious)``, flagged by the classifier's own decision.
 
-  * **Kitsune** (KitNET autoencoder + AfterImage) — the anomaly detector for the
-    Kitsune-native attacks (``mirai``, ``ssdp_flood``). Per-packet RMSE, flagged when
-    ``RMSE > threshold φ``; higher score = more anomalous = more malicious.
-  * **ML-NIDS** (TANTGen's CICFlowMeter-based flow classifiers) — the supervised
-    detector for the CIC-IDS/CIC-DDoS attacks. Per-flow ``P(malicious)``; flagged when
-    the classifier predicts the malicious class.
-
-Both consume a realized packet stream (scapy packets) and return a
-:class:`BranchScore` — the per-flow detection summary the metrics module turns into
-restoration ratios. A :class:`NIDSModel` is *stateless across calls* at the scoring
-level (any statefulness lives inside the feature extractor for a single call), so one
-loaded model can score the adversarial / purified / clean branches in turn.
+Both score a list of scapy packets into a :class:`BranchScore`. Models keep
+no state between calls, so one model scores the adversarial, purified and
+clean branches in turn.
 """
 from __future__ import annotations
 
@@ -26,9 +17,7 @@ from dataclasses import dataclass
 class NIDSUnavailable(RuntimeError):
     """A required NIDS dependency is missing (TANTGen tree, model file, or binary).
 
-    Raised as a hard error — the caller decides whether to abort (baseline: the NIDS
-    *is* the evaluation) or skip-with-reason (reconstructor: the NIDS group is one of
-    several metric groups and the run should still produce the others).
+    The baseline aborts on it; the reconstructor eval skips that source.
     """
 
 
@@ -36,11 +25,8 @@ class NIDSUnavailable(RuntimeError):
 class BranchScore:
     """Per-flow detection summary for one scored packet set (one "branch").
 
-    ``mean_score`` is the mean per-flow anomaly score — Kitsune RMSE or ML-NIDS
-    ``P(malicious)`` — used for the (scale-robust) restoration *ratio*.
-    ``detection_rate`` is the fraction of flows the NIDS flags malicious, used for the
-    (threshold-dependent) restoration *gain*. Higher of either = more detected =
-    the attack is *less* successful.
+    ``mean_score`` is the mean per-flow score (Kitsune RMSE or ML-NIDS
+    ``P(malicious)``); ``detection_rate`` is the fraction of flows flagged.
     """
     n_flows: int
     n_detected: int

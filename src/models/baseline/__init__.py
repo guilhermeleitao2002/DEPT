@@ -1,13 +1,6 @@
-"""DEPT deployment baseline — the protected-NIDS "before vs after DEPT" evaluation.
-
-Scores three realized full-volume streams — clean / TANTGen-perturbed / DEPT-defended —
-through the real NIDS each attack was built to evade, to show how DEPT, deployed in front
-of a NIDS, restores detection that TANTGen's perturbations suppressed. The DEPT-defended
-stream runs the actual gated pipeline (detector flags → purify only the flagged flows).
-
-  * :mod:`.detector_infer` — per-flow meta-learner (detector) verdicts.
-  * :mod:`.pipeline`       — purify + decode overlays + assemble the gated stream.
-  * :mod:`.evaluate`       — orchestrate + score through :mod:`src.models.nids` + report.
+"""Deployment baseline: the protected NIDS on clean, TANTGen and DEPT-defended
+traffic. In the defended stream only the flows flagged by the meta-learner
+are purified.
 """
 from .evaluate import evaluate
 

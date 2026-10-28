@@ -1,14 +1,9 @@
 """Traffic-space realization for any number of overlays, one branch at a time.
 
-Phase 8's :func:`~src.models.reconstructor.realize.realize_triplet` realizes three
-overlays (adv / purified / clean) onto the same adversarial packets with one shared
-keep-mask. Phase 9 needs more branches (adversarial, clean, DEPT, diffusion, and the
-two gated mixtures), and holding every realized copy of a large stream at once would
-multiply memory. :class:`BranchRealizer` keeps phase 8's semantics — the same packets,
-timestamps re-derived per branch from its IPAT, sizes overlaid by
-:func:`~src.models.reconstructor.realize._apply_size`, and one keep-mask shared by all
-branches — but computes the keep-mask up front and then builds each branch on demand,
-so only the original packets plus one realized branch are in memory at a time.
+Same behaviour as :func:`~src.models.reconstructor.realize.realize_triplet` (same
+packets, one shared keep-mask), but for more than three branches. The keep-mask
+is computed first and each branch is then built on demand, so only the original
+packets and one realized branch are in memory at a time.
 """
 from __future__ import annotations
 

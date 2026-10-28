@@ -1,18 +1,9 @@
 """Evaluate a trained RF on the held-out test split (per-checkpoint).
 
-Under the streaming-native schema each row of ``dataset.X`` is one
-*multi-scale prefix view* of a flow (a checkpoint emitted every K
-packets per flow). The metrics produced here are therefore per-checkpoint
-— a fair view of the RF's behaviour across the full inference-time
-distribution of prefix sizes. The richer per-flow streaming metrics
-(AUROC@t, EDP) are also produced here via
-``src/models/common/streaming_eval.py`` and written to
-``streaming_metrics.json``.
-
-Under DEPT's benign-vs-adversarial label convention, the positive class
-is "adversarial" (TANTGen-perturbed traffic) and the negative class is
-"benign" (all Kitsune + CIC-IDS2017 + CIC-DDoS-2019 checkpoints).
-Per-source metrics are reported only for adversarial sources.
+Each row of ``dataset.X`` is one prefix checkpoint of a flow, so the
+static metrics here are per checkpoint. The per-flow streaming metrics
+(AUROC@t, EDP) are written to ``streaming_metrics.json``. The positive
+class is "adversarial" (TANTGen traffic).
 """
 from __future__ import annotations
 
@@ -56,9 +47,8 @@ def predict_streams(
 ) -> dict:
     """Run the trained RF over ``sample_indices`` checkpoint rows.
 
-    Public helper used by the meta-learner. Loads the trained classifier
-    + persisted dataset, runs ``predict_proba`` on the requested rows, and
-    groups the per-checkpoint outputs into per-flow streams.
+    Used by the meta-learner: groups the per-checkpoint outputs into
+    per-flow streams.
 
     ``sample_indices`` is a 1D array of row indices into ``dataset.npz``
     (same index space as ``split.npz``'s ``train_idx``/``val_idx``/
@@ -188,19 +178,9 @@ def evaluate(output_dir: Path) -> dict:
 
     metrics: dict = {"overall": _classification_block(y_te, y_pred, y_prob)}
 
-    # Per adversarial source. For each TANTGen variant we report:
-    #   * vs_all_benign       — this variant's positives + every benign
-    #                           checkpoint. Realistic prevalence; precision is
-    #                           dominated by total benign FP count.
-    #   * vs_balanced_benign  — this variant's positives + K × n_adv benign
-    #                           (subsample, capped at total benign). Makes
-    #                           precision comparable across variants.
-    #   * vs_same_base_benign — positives + benign from the same base-attack
-    #                           capture (e.g. mirai_adv_both → benign from
-    #                           mirai/). Lets us see within-capture separability
-    #                           without cross-capture confounds.
-    # low_support flags variants with fewer than MIN_SUPPORT adversarial
-    # checkpoints.
+    # Per adversarial source, against: every benign checkpoint
+    # (vs_all_benign), K x n_adv sampled benign (vs_balanced_benign), and the
+    # benign flows of the same base capture (vs_same_base_benign).
     MIN_SUPPORT = 50
     BALANCE_K = 10
     rng = np.random.default_rng(42)
@@ -290,12 +270,7 @@ def evaluate(output_dir: Path) -> dict:
         plt.close(fig)
 
     # ---------- Streaming metrics ----------
-    # Group the per-checkpoint predictions by flow into a per-flow stream
-    # ordered by ascending checkpoint_idx. The absolute packet index of
-    # each checkpoint is captured during dataset assembly (cadence is per
-    # source in metadata.json) and stored in ``packet_idx``. For datasets
-    # built before that field existed we fall back to the legacy
-    # ``(ckpt_idx + 1) * stride`` formula with stride=10.
+    # Group the per-checkpoint predictions into one stream per flow.
     if "flow_ids" in data.files and "checkpoint_idx" in data.files:
         flow_ids_te = data["flow_ids"][test_idx]
         ckpt_idx_te = data["checkpoint_idx"][test_idx]
@@ -339,8 +314,6 @@ def evaluate(output_dir: Path) -> dict:
             title="RF — Earliness vs Accuracy (per-prefix)",
         )
         metrics["streaming"] = streaming["overall"]
-        # Re-persist so the on-disk metrics.json includes the streaming
-        # block (mirrors tcn/evaluate.py).
         (output_dir / "metrics.json").write_text(json.dumps(metrics, indent=2))
 
     importances = clf.feature_importances_

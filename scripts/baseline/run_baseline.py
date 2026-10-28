@@ -1,19 +1,16 @@
 #!/usr/bin/env python3
 """
-DEPT — Deployment baseline (protected-NIDS "before vs after DEPT")
+DEPT — Deployment baseline (protected NIDS before vs after DEPT)
 =================================================================
 
-Measures how the protected NIDS behaves across three realized full-volume streams — and
-therefore how DEPT performs when deployed in front of it:
+Scores three full streams with the NIDS each attack was built to evade
+(Kitsune for mirai/ssdp_flood, TANTGen's ML-NIDS for the CIC attacks):
 
-  * clean       — original-attack size/timing        (oracle ceiling: NIDS working)
-  * adversarial — TANTGen's perturbation              (evasion floor: detection collapses)
-  * defended    — the full DEPT gated pipeline        (detector flags → purify only flagged)
+  * clean       — the original attack
+  * adversarial — TANTGen's version
+  * defended    — the gated DEPT pipeline (only flagged flows are purified)
 
-Each attack is scored through the real NIDS it was built to evade (Kitsune for the
-Kitsune-native attacks, TANTGen's ML-NIDS for the CIC attacks). The headline is the ASR
-reduction (how much of TANTGen's attack success DEPT removes) and the detection
-restoration from the adversarial floor toward the clean ceiling.
+and reports the ASR reduction and the detection restoration.
 
 Usage
 -----
@@ -21,9 +18,9 @@ Usage
     python3 scripts/baseline/run_baseline.py --attacks mirai,ddos
 
 Reads config/baseline.yaml. Writes data/models/baseline/{baseline_metrics.json,
-baseline_detection.png}. Requires trained RF + TCN + meta-learner + reconstructor, the
-sibling TANTGen repo (Kitsune AfterImage .so + NIDS models), and — for the ML-NIDS
-attacks — `cicflowmeter` on PATH.
+baseline_detection.png}. Requires the trained RF, TCN, meta-learner and
+reconstructor, and the TANTGen repo (Kitsune AfterImage .so, NIDS models and
+its vendored cicflowmeter).
 """
 from __future__ import annotations
 

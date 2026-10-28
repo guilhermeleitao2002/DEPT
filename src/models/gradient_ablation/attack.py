@@ -1,50 +1,22 @@
-"""Projected gradient descent in **physical units** (bytes, seconds).
+"""Projected gradient descent in physical units (bytes and seconds).
 
-Why not an off-the-shelf epsilon-ball
--------------------------------------
-The obvious move — hand the 1090-dim tensor to ART's PGD with an L-inf ball — is
-physically meaningless here, and the reason is worth stating because it shapes
-the whole module. The IPAT channel is z-scored with **std = 208.2 seconds**
-(``data/tensors/mean_std.json``), while the 1088 nPrint channels are bits in
-``{-1, 0, 1}``. An ``eps = 0.01`` ball therefore buys the attacker **±2.08
-seconds** of delay and nothing at all in the bit channels. Any single epsilon
-prices the two channels more than two orders of magnitude apart.
+An L-inf ball on the raw tensor does not make sense here: the IPAT channel is
+z-scored with std = 208.2 s while the nPrint channels are bits, so
+``eps = 0.01`` would allow +/-2.08 s of delay and nothing in the bits. The
+attacker's variables are instead ``k`` bytes of padding and ``d`` seconds of
+delay per packet. The feasible set (increase-only, integer bytes, MTU cap, no
+change on non-IPv4 packets) is a projection that ART's binary ``mask`` cannot
+express, so the loop is written here; ART's AutoPGD is only used as a check
+on the relaxed problem (:func:`art_autopgd_relaxed`).
 
-So the optimisation variable here is the perturbation the attacker actually pays
-for: ``k`` bytes of padding and ``d`` seconds of delay, per packet. The budget is
-a real deployment cost, and the feasible set — increase-only, integer bytes,
-capped at the MTU, zero on non-IPv4 packets — is a projection operator, which is
-exactly what ART's ``mask`` kwarg (a binary include/exclude) cannot express.
-Hence a hand-rolled loop. :func:`art_autopgd_relaxed` keeps ART in the picture
-for the one job it does well: a parameter-free upper bound on the *relaxed*
-problem, as a check that this loop is not simply under-tuned.
+The attack is increase-only because the packets are already sent, and because
+DEPT's positive class is TANTGen traffic: removing the perturbation would
+evade DEPT trivially but would also stop evading the protected NIDS.
 
-Increase-only
--------------
-The attacker may pad and delay, never un-send: the packets are already on the
-wire. This is not a convenience — it is what stops the degenerate solution. DEPT's
-positive class *is* "TANTGen-perturbed", so an attacker allowed to *reduce* the
-perturbation would evade by simply not perturbing, at zero cost and at the price
-of losing the evasion of the protected NIDS that motivated the perturbation. The
-constraint is also empirically what TANTGen itself does: every negative delta
-measured in its output was exactly one float32 ULP of the z-scored channel
-(-1.551e-06 s at this std), i.e. round-off.
-
-Gradients through a 16-bit integer
-----------------------------------
-The TCN reads packet size as the 16 IPv4 total-length bits at ``seq[:, :, 16:32]``,
-so a byte-valued perturbation has to cross a binary encoding that is piecewise
-constant — zero gradient almost everywhere. :class:`_EncodeTotalLength` bridges it
-with the **pseudoinverse of the decode map**: the decode is
-``tl = sum_j bits_j * 2^(15-j)``, so the minimum-norm Jacobian consistent with it
-is ``d bits_j / d tl = w_j / ||w||^2`` with ``w_j = 2^(15-j)``. Backward projects
-the bit-gradient onto the decode direction, which is precisely "how does the loss
-move if the *value* moves".
-
-This is deliberately not a straight-through estimator over the 16 bits
-independently: identity-backward would hand bit 0 (place value 32768) and bit 15
-(place value 1) the same gradient, and ``tl`` 255 -> 256 flips nine bits at once,
-so an L-inf step in bit space corresponds to no physical quantity whatsoever.
+Packet size reaches the TCN as the 16 IPv4 total-length bits, which have no
+useful gradient. :class:`_EncodeTotalLength` uses the pseudoinverse of the
+decode map in the backward pass, ``d bits_j / d tl = w_j / ||w||^2`` with
+``w_j = 2^(15-j)``, i.e. the gradient with respect to the length value.
 """
 from __future__ import annotations
 
@@ -62,14 +34,11 @@ IDX_IPV4_TL = (16, 32)
 IDX_IPAT = 1088
 TL_BITS = 16
 
-# float32 ULP of the z-scored IPAT channel near its observed range, in seconds:
-# 2**-27 at |z| = mean/std ~ 0.124 (a near-zero IAT) times std = 208.22 s, i.e.
-# 1.5514e-06 s, rounded up so a one-ULP delta still reads as round-off.
-# Delays below this are unrepresentable in the tensor: they quantise to zero.
+# One float32 ULP of the z-scored IPAT channel, in seconds (2**-27 * 208.22 s,
+# rounded up). Smaller delays round to zero in the tensor.
 IPAT_ULP_SECONDS = 1.552e-06
 
-# Ethernet MTU. A deployment choice, not a property of the data: Packet_Size_max
-# reaches 24874 in data/models/rf/dataset.npz (LRO/GRO-coalesced capture frames).
+# Ethernet MTU (captures contain larger, GRO-coalesced frames).
 DEFAULT_TL_CAP = 1500
 
 
@@ -130,9 +99,7 @@ class FlowBatch:
     def from_padded(cls, seq: torch.Tensor, mask: torch.Tensor,
                     lengths: torch.Tensor) -> "FlowBatch":
         tl_bits = seq[..., IDX_IPV4_TL[0]:IDX_IPV4_TL[1]]
-        # nPrint marks an absent layer with -1 across the field. A packet with no
-        # IPv4 header has no total length to pad, so it is outside the attacker's
-        # reach and must stay untouched.
+        # Packets without IPv4 (nPrint -1) cannot be padded.
         ip_mask = (tl_bits >= 0).all(dim=-1) & mask
         return cls(seq=seq, mask=mask, lengths=lengths,
                    orig_tl=decode_total_length(seq), ip_mask=ip_mask)
@@ -155,16 +122,15 @@ def project(
     budget: Budget,
     tl_cap: int = DEFAULT_TL_CAP,
 ) -> tuple[torch.Tensor, torch.Tensor]:
-    """Project ``(k, d)`` onto the feasible set. The operator ART cannot express.
+    """Project ``(k, d)`` onto the feasible set.
 
     * increase-only: ``k, d >= 0``
     * per-packet budget: ``k <= budget.bytes_``, ``d <= budget.seconds``
-    * MTU: ``orig_tl + k <= tl_cap`` (and never below ``orig_tl``)
-    * unreachable packets: ``k = d = 0`` at padding and on non-IPv4 packets
+    * MTU: ``orig_tl + k <= tl_cap``
+    * ``k = d = 0`` on padding and on non-IPv4 packets
 
-    ``k`` stays **continuous** here; rounding to whole bytes happens only in the
-    forward pass via ``_round_ste``. Rounding inside the projection would discard
-    the sub-byte accumulation that lets a small step size ever cross an integer.
+    ``k`` stays continuous and is only rounded in the forward pass, so small
+    steps can accumulate.
     """
     headroom = (tl_cap - batch.orig_tl).clamp(min=0.0)
     k = k.clamp(min=0.0).minimum(headroom.clamp(max=float(budget.bytes_)))
@@ -183,11 +149,9 @@ def apply_delta(
 ) -> torch.Tensor:
     """Write ``(k bytes, d seconds)`` into a copy of the base tensor.
 
-    Only two of the 1090 channels move, and they are the only two the realizer
-    can write back to the wire: the IPv4 total-length bits and the IPAT channel.
-
-    The IPAT channel is z-scored, so adding ``d`` seconds is a shift of
-    ``d / std`` — the mean cancels: ``(x + d - mu)/sigma = (x - mu)/sigma + d/sigma``.
+    Only the IPv4 total-length bits and the IPAT channel change, which are the
+    two values the realizer can write back. Adding ``d`` seconds shifts the
+    z-scored IPAT by ``d / std``.
     """
     base = batch.seq          # not cloned: torch.cat below allocates the output
 
@@ -199,9 +163,7 @@ def apply_delta(
                        base[..., IDX_IPV4_TL[0]:IDX_IPV4_TL[1]])
     ipat = base[..., IDX_IPAT] + d / float(ipat_std)
 
-    # One concatenation, not two: both edited fields are spliced in a single pass
-    # over the 1090 channels. This runs on every PGD forward, so a second pass
-    # would allocate another [B, T, 1090] for nothing.
+    # Splice both edited fields in a single concatenation.
     seq = torch.cat([
         base[..., :IDX_IPV4_TL[0]],
         bits,
@@ -283,22 +245,13 @@ def pgd(
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     """Minimise ``objective(seq_pert) -> [B]`` over the feasible ``(k, d)``.
 
-    ``objective`` returns one scalar per flow (lower = more evasive). It is the
-    attacker's view of the target, and for RQ1 it is always the **TCN**: the
-    forest is not differentiable and never enters this loop.
+    ``objective`` returns one value per flow (lower = more evasive) and is always
+    computed on the TCN; the RF is not differentiable.
 
-    **Restarts, and why the first one is always zero.** The feasible sets are
-    nested (a budget of 8 bytes is a subset of 1460), so a *perfect* attacker's
-    success can only rise with the budget. A single randomly-initialised run does
-    not inherit that: at a large budget the random start lands far out in a
-    region PGD cannot walk back from, and measured ASR falls as the budget grows
-    — which would read as "the defense got stronger" when it only means the
-    attack got sloppier. Starting one restart at delta=0 anchors every budget to
-    the same point and largely restores monotonicity; the rest explore.
-
-    The best iterate is tracked **per flow** across all restarts and steps, not
-    the last one: PGD's final step is not necessarily its best, and a real
-    attacker keeps whatever worked.
+    The first restart always starts at delta=0 and the others at random points.
+    With only random starts, a large budget can start far from anything PGD can
+    recover from, and the success rate then drops as the budget grows. The best
+    iterate is kept per flow over all restarts and steps.
     """
     device = batch.seq.device
     B, T = batch.mask.shape
@@ -332,15 +285,11 @@ def pgd(
 # ──────────────────────────────────────────────────────────────────────────────
 
 def tcn_margin_objective(model, batch: FlowBatch, reduction: str = "final"):
-    """Attacker's objective: the TCN's adversarial margin, lower = more evasive.
+    """Attacker's objective: the TCN margin ``logit_adv - logit_benign``.
 
-    Margin is ``logit_adversarial - logit_benign``; below 0 the flow reads benign.
-
-    * ``final`` — margin at the last valid timestep. This is the operating point
-      DEPT reports: both ``tcn/evaluate`` and ``metalearner/evaluate`` take the
-      flow verdict at ``probs[b, L-1]``, and RF's is its last checkpoint.
-    * ``max``   — worst margin over the stream, i.e. "never fires". Strictly
-      harder, and the honest goal against a *streaming* detector.
+    * ``final`` — margin at the last valid packet, the verdict DEPT reports.
+    * ``max``   — largest margin over the stream ("never fires").
+    * ``mean``  — mean margin over the stream.
     """
     idx = (batch.lengths - 1).clamp(min=0)
 
@@ -385,23 +334,16 @@ def art_autopgd_relaxed(
     tl_cap: int = DEFAULT_TL_CAP,
     max_flows: int = 32,
 ) -> np.ndarray | None:
-    """AutoPGD (Croce & Hein 2020) on the **relaxed** problem, via IBM ART.
+    """AutoPGD (Croce & Hein, 2020) on the relaxed problem, via IBM ART.
 
-    A parameter-free, third-party check that this module's own search is not
-    simply under-tuned — the standard answer to "did you just write a weak
-    attack?". It is an upper bound and deliberately never a headline: the
-    relaxation drops integrality and the physical budget, so its perturbation is
-    not realizable on the wire.
+    A check that the hand-written search is not under-tuned. It is an upper bound
+    only: the relaxation drops integrality and the physical budget, so its
+    perturbation cannot be realized.
 
-    Runs **one flow at a time**. ART chunks ``x`` internally by its own
-    ``batch_size``, but the base tensor here is frozen context that has to stay
-    row-aligned with the incoming perturbation; a batched wrapper would silently
-    pair flow *i*'s padding with flow *j*'s packets on any chunk ART chose to
-    split. One flow per estimator removes the ambiguity entirely, at a cost that
-    is irrelevant for a capped diagnostic.
+    Runs one flow at a time, so that ART's internal batching cannot pair one
+    flow's base tensor with another flow's perturbation.
 
-    Returns per-flow adversarial margins (lower = more evasive), or ``None`` if
-    ART is not installed.
+    Returns per-flow margins (lower = more evasive), or ``None`` without ART.
     """
     try:
         from art.attacks.evasion import AutoProjectedGradientDescent
@@ -414,9 +356,7 @@ def art_autopgd_relaxed(
     n = min(int(batch.seq.shape[0]), max_flows)
     margins: list[float] = []
 
-    # ART's PyTorchClassifier resolves "gpu" via torch.cuda.current_device() and
-    # then moves the model there. Without this it would drag a cuda:1 model onto
-    # cuda:0 and fail mid-forward.
+    # ART moves the model to torch.cuda.current_device(); keep it on our device.
     if device.type == "cuda" and device.index is not None:
         torch.cuda.set_device(device.index)
 

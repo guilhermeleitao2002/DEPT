@@ -3,35 +3,32 @@
 DEPT — Mini-Transformer Meta-Learner (train + eval)
 ====================================================
 
-Trains a small causal Transformer that fuses the per-packet TCN stream
-with the per-checkpoint RF stream of the same flow into a single fused
-per-packet ``P(adversarial)``. The meta-learner trains on the seed=42
-val split (out-of-fold for both base learners) and is evaluated on the
-test split.
+Trains a small causal transformer that fuses the per-packet TCN stream and the
+per-checkpoint RF stream into one per-packet ``P(adversarial)``. It is trained
+on the base learners' val split and evaluated on the test split.
 
 Usage
 -----
     python scripts/metalearner/run_metalearner.py
     python scripts/metalearner/run_metalearner.py --mode train
     python scripts/metalearner/run_metalearner.py --mode eval
-
-    # Per-attack model — stacks the per-attack RF + TCN from
-    # data/models/per_attack/<attack>/{rf,tcn} (train those first);
-    # artifacts land under data/models/per_attack/<attack>/metalearner:
     python scripts/metalearner/run_metalearner.py --attack mirai
+
+With --attack it stacks the per-attack RF and TCN (train those first) and
+writes to ``data/models/per_attack/<attack>/metalearner``.
 
 Outputs (under <output_dir> from metalearner.yaml)
 --------------------------------------------------
-    metalearner.pt                             — best PyTorch state_dict
-    metalearner_config.json                    — resolved model + training cfg
-    split.npz                                  — meta-train / meta-val flow indices
-    training_curves.json                       — per-epoch train_loss + meta-val AUROC@10
-    metrics.json                               — last-timestep + streaming overall
-    streaming_metrics.json                     — full AUROC@t / EDP / per-source
+    metalearner.pt                        — best state_dict
+    metalearner_config.json               — resolved model + training config
+    split.npz                             — meta-train / meta-val flow indices
+    training_curves.json                  — per-epoch train_loss + meta-val AUROC@10
+    metrics.json                          — last-packet + streaming overall
+    streaming_metrics.json                — AUROC@t / EDP / per source
     confusion_matrix.png / roc_curve.png / pr_curve.png
-    earliness_vs_accuracy.png                    — meta-learner only
-    earliness_vs_accuracy_comparison.png         — RF + TCN + Meta-Learner overlaid
-    cache/{val,test}/                          — memmapped token caches
+    earliness_vs_accuracy.png             — meta-learner only
+    earliness_vs_accuracy_comparison.png  — RF + TCN + meta-learner
+    cache/{val,test}/                     — memmapped token caches
 """
 from __future__ import annotations
 
@@ -44,10 +41,7 @@ from pathlib import Path
 
 import yaml
 
-# Cosmetic PyTorch hint: nested-tensor optimisation can't apply because
-# the encoder uses pre-LN (norm_first=True), which we keep for AMP
-# stability. Suppressed here only — affects this script's process, not
-# the user's interpreter.
+# PyTorch warns that the nested-tensor fast path is off with pre-LN layers.
 warnings.filterwarnings(
     "ignore",
     message=r".*enable_nested_tensor is True, but self\.use_nested_tensor is False.*",

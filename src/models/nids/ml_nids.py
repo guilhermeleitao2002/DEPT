@@ -1,26 +1,14 @@
 """TANTGen's ML-NIDS (CICFlowMeter flow classifiers) as a :class:`NIDSModel`.
 
-The ML-NIDS is the protected NIDS for the CIC-IDS-2017 / CIC-DDoS-2019 attacks
-(``ddos``, ``portscan``, ``brute_force``, ``dns_ddos``, ``ldap_ddos``, ``ntp_ddos``,
-``ssdp_ddos``, ``syn_ddos``); TANTGen calibrated a per-attack supervised classifier on
-CICFlowMeter flow features and evades it with the size (padding) vector. We reuse
-TANTGen's own trained ``<Attack>_<MODEL>.joblib`` + ``<Attack>_scaler.joblib`` verbatim.
+Used for the eight CIC-IDS-2017 / CIC-DDoS-2019 attacks, with TANTGen's trained
+``<Attack>_<MODEL>.joblib`` and ``<Attack>_scaler.joblib``. Scoring follows
+TANTGen's ``src/NIDS/model.py``: write a PCAP, extract flows with cicflowmeter,
+rename the columns (``cicflowmeter_mapping``), scale and predict. The flow score
+is ``P(malicious)`` (``decision_function`` for LinearSVC).
 
-Scoring reproduces TANTGen's ``src/NIDS/model.py`` ``exec`` path exactly: realize the
-packets to a PCAP → cicflowmeter flow extraction → rename columns to the CIC-IDS
-feature names (``cicflowmeter_mapping``) → ``scaler.transform`` → ``model.predict``.
-Per-flow score = ``P(malicious)`` (or ``decision_function`` for LinearSVC); detection =
-the classifier's own 0/1 verdict. The ``cicflowmeter`` package is a **hard,
-assumed-present dependency** — if no interpreter can import it (or a model artifact is
-missing) this raises :class:`NIDSUnavailable`.
-
-Extraction goes through :mod:`.cicflowmeter_runner`, which drives the cicflowmeter
-build TANTGen vendors under ``src/Feature_Extraction/cicflowmeter`` (v0.4.2) — the
-version its ML-NIDS features were calibrated on. The pip-distributed cicflowmeter
-(0.1.6) is not used: under scapy >= 2.6 its CLI writes an empty CSV for every PCAP,
-and its column set is missing ``cwr_flag_count`` (a mapping feature). The vendored
-package needs ``requests`` in addition to ``scapy``; :func:`_resolve_cicflowmeter_python`
-picks an interpreter that has both.
+Flows are extracted with the cicflowmeter build TANTGen vendors (v0.4.2,
+through :mod:`.cicflowmeter_runner`), not the pip package. It needs
+``requests`` and ``scapy``.
 """
 from __future__ import annotations
 
@@ -164,10 +152,8 @@ class MLNIDS(NIDSModel):
         """Per-flow variant of :meth:`score` (phase 9): one ``(flow_key, P(malicious),
         detected)`` per CICFlowMeter flow, in extraction order.
 
-        ``flow_key`` is the flow's canonical 5-tuple in the same format as ``keys``
-        (``None`` if the row's address columns cannot be read), so a caller can score a
-        stream once and restrict the metric to any subset of flows afterwards. Summing
-        the rows reproduces :meth:`score` exactly; :meth:`score` itself is unchanged.
+        ``flow_key`` uses the same format as ``keys`` (``None`` if it cannot be
+        read), so a stream can be scored once and filtered to any subset of flows.
         """
         if not packets:
             return []

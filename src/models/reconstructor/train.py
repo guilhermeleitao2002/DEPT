@@ -1,15 +1,9 @@
 """Train the reconstructor (purification) transformer for DEPT.
 
-Trains the causal residual denoiser on matched ``(adversarial → clean)`` flow
-pairs. The loss is a per-element **smooth-L1** between the reconstruction and
-the clean target, averaged within each flow (so long flows don't dominate) and
-masked over right-side padding — the same flow-balancing used by the TCN.
-
-The loss is **uniform** over all 1090 feature dimensions: the model is
-supervised only to "reconstruct the clean flow" and is never told which
-dimensions TANTGen perturbed.
-
-Best-epoch tracking uses the validation reconstruction loss (lower is better).
+The loss is a per-element smooth-L1 between the reconstruction and the
+clean flow, over all 1090 dimensions (the model is not told which ones
+TANTGen changed), averaged within each flow and masked over padding. The
+best epoch is the one with the lowest validation loss.
 """
 from __future__ import annotations
 
@@ -259,8 +253,7 @@ def train(
 
     # ---- 6. Persist artifacts ------------------------------------------------
     torch.save(best["state"], output_dir / "reconstructor.pt")
-    # split.npz indexes into the deterministic pair table; evaluate.py rebuilds
-    # the identical table from config (no need to persist the heavy index).
+    # split.npz indexes the pair table, which evaluate.py rebuilds from config.
     np.savez(
         output_dir / "split.npz",
         train_idx=split.train_idx,

@@ -1,26 +1,13 @@
 """Reproduce TANTGen's cicflowmeter flow extraction for a single PCAP.
 
-TANTGen calibrated its ML-NIDS on flow features from the cicflowmeter build it
-vendors under ``src/Feature_Extraction/cicflowmeter`` (v0.4.2), whose column set
-is what ``cicflowmeter_mapping`` renames. This runner drives that vendored
-package's own ``create_sniffer`` → ``flush_flows`` path — the exact code TANTGen
-used to build its training CSVs — so features stay train/inference-consistent.
+Runs the cicflowmeter build vendored by TANTGen
+(``src/Feature_Extraction/cicflowmeter``, v0.4.2), the one its ML-NIDS was
+trained on. Called as a subprocess by :mod:`.ml_nids`, with the package on
+``PYTHONPATH``. The pip ``cicflowmeter`` (0.1.6) is not used: with scapy >= 2.6
+it writes empty CSVs, and it lacks ``cwr_flag_count``.
 
-It is invoked as a subprocess by :mod:`.ml_nids` under an interpreter that can
-import the vendored package (which pulls in ``scapy``, ``requests`` and
-``numpy``); ml_nids prepends the package directory via ``PYTHONPATH``.
-
-The pip-distributed ``cicflowmeter`` (0.1.6) is deliberately *not* used: under
-scapy >= 2.6 its sniffer hooks are dead (it writes an empty CSV), and its column
-set is missing ``cwr_flag_count``, so it fails the mapping check anyway.
-
-The vendored ``FlowSession`` writes flows from two threads — the packet loop and
-a background periodic-GC thread — but its ``CSVWriter.write`` is unsynchronised.
-Two writers can both observe ``line == 0`` and each emit the header, leaving a
-duplicate header row that reads back as a data row of strings (crashing the
-downstream ``scaler.transform`` with ``could not convert string to float``). We
-serialise ``write`` with a lock so the header is emitted exactly once; flow
-semantics are otherwise unchanged.
+The vendored ``CSVWriter.write`` is called from two threads and could write
+the header twice, so it is wrapped in a lock.
 
 Usage:
     python cicflowmeter_runner.py <pcap> <out_csv>

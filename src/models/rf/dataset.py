@@ -1,26 +1,13 @@
-"""Random Forest dataset assembly — streaming-native edition.
+"""Random Forest dataset assembly.
 
-Under the new schema each source folder stores ``rf_checkpoints.npy``
-([C_total, 24]) holding *multi-scale prefix* features computed at the
-optional ``rf_first_checkpoint`` packet index (default 2, set to 0 to
-disable) plus every ``rf_checkpoint_stride`` packets per flow. The k-th
-checkpoint of a flow contains aggregated stats over packets
-``[0:packet_idx_k]`` where ``packet_idx_k`` is captured per checkpoint
-on the dataset (see ``RFDataset.packet_idx``).
+Each source folder stores ``rf_checkpoints.npy`` ([C_total, 24]): the
+statistics of each flow's growing prefix at packet 2 and then every 10
+packets. This module expands the per-flow index into one row per
+checkpoint, labelled with the flow's class, so the RF is trained on every
+prefix size it sees at inference time.
 
-This module expands the per-flow assembled index into a **per-checkpoint**
-training matrix: each row of ``RFDataset.X`` is one prefix view of one
-flow, labelled with the flow's class. Training the RF on this multi-scale
-pool ensures the model is calibrated for the full inference-time
-distribution of prefix sizes (not just N=10 windows).
-
-The split is computed in **per-flow** space first (using the shared
-``flow_level_split``) and then expanded to per-checkpoint rows so all
-prefix views of the same flow land in the same split — no leakage.
-
-Public API: ``RFDataset``, ``Split``, ``assemble``, ``flow_level_split``,
-``split_summary``, ``discover_adversarial_sources``, ``cap_benign``, plus
-the label string constants.
+The split is done per flow and then expanded to the checkpoint rows, so all
+prefixes of a flow land in the same split.
 """
 from __future__ import annotations
 
@@ -119,19 +106,13 @@ def _expand_source_checkpoints(
 ]:
     """Expand the selected flows of one source into per-checkpoint rows.
 
-    Reads ``rf_checkpoints.npy`` (small, eagerly loaded) and
-    ``rf_checkpoint_offsets.npy`` (small) and slices each flow's
-    contiguous checkpoint block. Flows whose length produces zero
-    checkpoints under the source's cadence are silently skipped.
-
-    The source's ``metadata.json`` is consulted to capture the actual
-    packet index of each checkpoint (cadence is per-source by
-    construction and stays constant within a source folder).
+    Flows too short to have a checkpoint are skipped. The checkpoint
+    cadence is read from the source's ``metadata.json``.
     """
     rf_ckpts = np.load(folder / "rf_checkpoints.npy").astype(np.float32, copy=False)
     rf_offsets = np.load(folder / "rf_checkpoint_offsets.npy")
 
-    # Per-source cadence from metadata.json (default: legacy stride-only).
+    # Per-source cadence from metadata.json.
     meta_path = folder / "metadata.json"
     try:
         meta = json.loads(meta_path.read_text())
@@ -295,12 +276,7 @@ def flow_level_split(
     test_frac: float,
     seed: int,
 ) -> Split:
-    """Flow-atomic split, expanded to per-checkpoint row indices.
-
-    The decision is made on the deduplicated per-flow view, then mapped
-    back to every checkpoint row of that flow, so a single flow's
-    prefixes never split across train/val/test.
-    """
+    """Flow-level split, expanded to per-checkpoint row indices."""
     if len(dataset.sources) == 0:
         return Split(
             train_idx=np.zeros(0, dtype=np.int64),

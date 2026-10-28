@@ -1,10 +1,8 @@
-"""Phase 9 — DEPT's purifier vs a published one (diffusion, Merzouk et al., DBSec 2025).
+"""Phase 9: DEPT's purifier vs the diffusion purifier of Merzouk et al. (DBSec 2025).
 
-Answers the question "which state-of-the-art defense does DEPT outperform?" with a
-controlled comparison: the diffusion-based adversarial purifier of Merzouk et al.
-(github.com/mamerzouk/adversarial-purification) takes the place of DEPT's reconstructor
-inside the phase-8 harness — same flows, same realization back into packets, same
-independent NIDS — so the only thing that changes is the purifier.
+The diffusion purifier (github.com/mamerzouk/adversarial-purification) replaces
+DEPT's reconstructor in the phase-8 setup: same flows, same realization into
+packets and same independent NIDS.
 
   * :mod:`.config`   — phase-9 YAML + the settings shared with phases 6 and 8
   * :mod:`.data`     — the reconstructor's pairs/split, evaluation subsets, flow reads

@@ -1,18 +1,12 @@
-"""The DEPT gated deployment pipeline: detector → purify-if-flagged-else-pass.
+"""Gated DEPT pipeline: purify a flow if the detector flags it, else pass it.
 
-This is the runtime dataflow the README's block diagram promises but the codebase never
-actually wired (each stage was a standalone train+eval program). Here we assemble it for
-the baseline: for an attack's flows we
+For an attack's flows:
 
-  1. **purify** every flow with the trained reconstructor and decode its size/timing
-     overlay (plus the adversarial and clean-target overlays, for the 3-way realization);
-  2. get the **detector** (meta-learner) verdict per flow (:mod:`.detector_infer`);
-  3. build the **defended** packet stream = the *purified* overlay for flows the detector
-     flags adversarial, and the *adversarial* overlay (unchanged — "non-adversarial passes
-     through immediately") for the rest.
-
-The defended stream is then scored through the independent NIDS exactly like the clean and
-adversarial streams, so the three regimes are directly comparable.
+  1. purify every flow with the reconstructor and decode its size/timing
+     overlay (plus the adversarial and clean overlays);
+  2. get the meta-learner verdict per flow (:mod:`.detector_infer`);
+  3. the defended stream uses the purified overlay for flagged flows and the
+     adversarial one for the rest.
 """
 from __future__ import annotations
 

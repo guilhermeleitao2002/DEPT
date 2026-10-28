@@ -1,18 +1,15 @@
 # =====================================================================
 # DEPT — Deployment baseline (protected-NIDS "before vs after DEPT")
 # =====================================================================
-# Scores three realized full-volume streams — clean / TANTGen-perturbed / DEPT-defended
-# — through the real NIDS each attack was built to evade, to show how DEPT restores the
-# detection TANTGen's perturbations suppressed. The DEPT-defended stream runs the actual
-# gated pipeline: the meta-learner detector flags each flow, and only flagged flows are
-# purified by the reconstructor; the rest pass through unchanged.
+# Scores the clean, TANTGen and DEPT-defended streams with the NIDS each attack
+# was built to evade. In the defended stream only the flows flagged by the
+# meta-learner are purified.
 #
 #   python3 scripts/baseline/run_baseline.py                 # all attacks
 #   python3 scripts/baseline/run_baseline.py --attacks mirai,ddos
 #
-# Depends on trained RF + TCN + meta-learner + reconstructor under data/models/, and on
-# the sibling TANTGen repo (Kitsune AfterImage .so + NIDS model files; cicflowmeter on
-# PATH for the ML-NIDS attacks).
+# Needs the trained RF, TCN, meta-learner and reconstructor, and the TANTGen repo
+# (Kitsune AfterImage .so, NIDS models, vendored cicflowmeter).
 
 # ---- Data ----
 tensors_dir: data/tensors
@@ -20,10 +17,10 @@ adversarial_dir: data/tensors/adversarial     # tensorized adversarial sources
 adversarial_pcap_dir: data/adversarial        # original TANTGen PCAPs (phase 1 output)
 min_len: 2
 
-# ---- Trained DEPT models (the deployed system) ----
+# ---- Trained DEPT models ----
 rf_model_dir: data/models/rf
 tcn_model_dir: data/models/tcn
-metalearner_model_dir: data/models/metalearner   # the DETECTOR that gates purification
+metalearner_model_dir: data/models/metalearner   # the detector that gates purification
 reconstructor_model_dir: data/models/reconstructor
 
 output_dir: data/models/baseline
@@ -31,7 +28,7 @@ output_dir: data/models/baseline
 # ---- Gated pipeline ----
 detector_threshold: 0.5      # flow is "adversarial" (→ purified) when P(adv) >= this
 score_purified_all: true     # also score the all-flows-purified stream (perfect-detector upper bound)
-score_test_subset: true      # also report the DEPT-defended stream on held-out test flows (generalization-valid)
+score_test_subset: true      # also report the DEPT-defended stream on held-out test flows
 
 # ---- Meta-learner token config (must match how the meta-learner was trained) ----
 token:
@@ -44,7 +41,7 @@ batch_size: 32
 num_workers: auto
 max_length: 200              # truncate flows at 200 packets (matches the other models)
 
-# ---- Excludes (mirror reconstructor.yaml — defensive carry-overs with no clean base) ----
+# ---- Excludes (same as reconstructor.yaml) ----
 adversarial_exclude:
   - dos_slow_adv_both
   - dos_slow_adv_iat
@@ -62,9 +59,7 @@ adversarial_exclude:
   - portscan_kitsune_adv_iat
   - portscan_kitsune_adv_size
 
-# ---- Independent-NIDS registry (mirrors config/reconstructor.yaml `nids:`) ----
-# Each attack is scored through the NIDS it was built to evade. Keep this in sync with
-# reconstructor.yaml so the baseline and the reconstructor eval use the same NIDS.
+# ---- Independent NIDS (keep in sync with reconstructor.yaml) ----
 nids:
   enabled: true
   tantgen_root: ../Transformer-based_Adversarial_Network_Traffic_Generator

@@ -1,15 +1,8 @@
 """Evaluate a trained TCN on the held-out test split (flow-level).
 
-Under the streaming-native schema the TCN emits per-packet logits, so the
-flow-level test verdict here is taken at each flow's **final valid
-timestep** — i.e., the model's prediction after seeing the whole flow.
-This produces the same per-flow ``metrics.json`` schema as RF
-(``overall``, ``per_adversarial_source`` with ``vs_*`` slicings,
-``per_label_str``), so shared summary tooling works across both.
-
-The richer streaming metrics (AUROC@t, EDP) are computed here too via
-``src/models/common/streaming_eval.py`` and written to
-``streaming_metrics.json``.
+The flow-level verdict is the prediction at each flow's last packet, and
+``metrics.json`` has the same layout as the RF's. The streaming metrics
+(AUROC@t, EDP) are written to ``streaming_metrics.json``.
 """
 from __future__ import annotations
 
@@ -120,11 +113,9 @@ def _load_dataset_index(path: Path) -> dict:
 def _reanchor_folder(folder, repo_root: Path) -> Path:
     """Repair a source folder whose stored absolute path is stale.
 
-    ``dataset_index.npz`` persists absolute source-folder paths at build time. If the
-    repository is later moved or renamed (e.g. the ADEPT -> DEPT rename), those paths no
-    longer resolve. When a stored path is missing, re-anchor it under the current repo
-    root by its ``.../data/...`` suffix; this is a no-op whenever the stored path still
-    exists, so it never changes behaviour for an in-place repo.
+    ``dataset_index.npz`` stores absolute paths; if one no longer exists (the
+    repository was moved), re-anchor it under the current repo root by its
+    ``.../data/...`` suffix.
     """
     p = Path(folder)
     if p.exists():
@@ -211,9 +202,7 @@ def predict_streams(
 ) -> dict:
     """Run the trained TCN forward over ``sample_indices`` flows.
 
-    Public helper used by the meta-learner. Loads the model + dataset
-    index, runs inference (no metric computation), and returns per-flow
-    streaming predictions ready to feed a downstream stacker.
+    Used by the meta-learner (inference only, no metrics).
 
     ``sample_indices`` is a 1D array of row indices into the rows of
     ``dataset_index.npz`` (i.e. the same index space ``used_test_idx``

@@ -1,55 +1,37 @@
 #!/usr/bin/env python3
 """
-DEPT — Packet-to-Tensor batch build (DEPT core, no flags)
-===========================================================
+DEPT — Packet-to-Tensor batch build
+====================================
 
-Single entry point that materialises every tensor source DEPT trains on.
-There are no command-line options: the core pipeline has one fixed
-configuration, so running the script always does the whole job and always
-overwrites its outputs.
+Builds every tensor source DEPT uses. No options; outputs are overwritten.
 
     python3 scripts/packet_to_tensor/process_all_attacks.py
 
-What it builds
---------------
-The ten TANTGen-paired benign sources and their adversarial counterparts:
-
+Sources
+-------
   Kitsune:        mirai, ssdp_flood
-  CIC-IDS2017:    ddos, portscan, brute_force        (time-filtered windows)
-  CIC-DDoS-2019:  ntp_ddos, dns_ddos, ssdp_ddos,     (first 1,000,000 packets;
-                  syn_ddos, ldap_ddos                  these floods have no clean
-                                                       time window)
+  CIC-IDS2017:    ddos, portscan, brute_force        (time-filtered)
+  CIC-DDoS-2019:  ntp_ddos, dns_ddos, ssdp_ddos,     (first 1,000,000 packets,
+                  syn_ddos, ldap_ddos                  no clean time window)
 
-For every source above, the matching TANTGen adversarial PCAPs under
-``data/adversarial/<key>/<key>_adversarial_<mode>.pcap`` (modes: both / iat /
-size) are also tensorised. Output layout:
-``data/tensors/<key>/`` for benign, ``data/tensors/adversarial/<key>_adv_<mode>/``
-for adversarial.
+plus the TANTGen PCAPs ``data/adversarial/<key>/<key>_adversarial_<mode>.pcap``
+(modes both / iat / size). Output: ``data/tensors/<key>/`` and
+``data/tensors/adversarial/<key>_adv_<mode>/``.
 
-Labels follow DEPT's dataset-driven convention: every Kitsune/CIC window is
-"benign" and every adversarial window is "adversarial" — the upstream NIDS is
-expected to catch the raw-dataset attacks, so the only novel threat DEPT
-learns to flag is the TANTGen-generated perturbation.
+Raw-dataset traffic is labelled "benign" and TANTGen traffic "adversarial":
+the protected NIDS already handles the original attacks.
 
-Pipeline
---------
-1. Slice the CIC sources (editcap time-filter for CIC-IDS2017; tcpdump/editcap
-   packet-cap for CIC-DDoS-2019) into ``data/tensors/.filtered/``.
-2. Force-fit one shared IPAT standardizer ``data/tensors/mean_std.json`` over
-   all sliced/benign/adversarial PCAPs (so benign and adversarial z-scores are
-   comparable and the fit reflects exactly the data being tensorised). Every
-   PCAP parsed here is kept in RAM (``parsed_cache``) for step 3.
-3. Rebuild every source into ragged per-flow tensors (via the in-process
-   ``run_packet_to_tensor`` engine) from its cached parse — no second Scapy
-   pass — overwriting any previous output, and write ``flow_labels.csv``.
-   Each cache entry is released right after its source is built.
+Steps
+-----
+1. Slice the CIC sources (editcap time filter for CIC-IDS2017, packet cap for
+   CIC-DDoS-2019) into ``data/tensors/.filtered/``.
+2. Fit one shared IPAT standardizer ``data/tensors/mean_std.json`` over all
+   PCAPs, keeping each parse in RAM.
+3. Build each source's tensors from its cached parse and write
+   ``flow_labels.csv``.
 4. Remove the sliced PCAPs.
 
-Memory note: the cache holds all sources between steps 2 and 3 at ≈ 1.1 GB
-per million packets (~30 GB for the full corpus). This deliberately trades
-RAM for halving the Scapy time, sized for the 160 GB build host; on a small
-machine, call ``fit_mean_std``/``run`` without a cache to get the old
-parse-twice behaviour.
+The parse cache needs about 1.1 GB per million packets (~30 GB in total).
 """
 
 import json
@@ -463,12 +445,8 @@ def main():
         # Runnable = sources whose (sliced or full) PCAP exists.
         runnable = [a for a in selected if a.key in proc_pcap]
 
-        # ── Step 2: force-fit the shared IPAT standardizer ──────────────────
-        # Fit over exactly the PCAPs being tensorised (sliced for CIC, full
-        # otherwise), in processing order, so benign and adversarial z-scores
-        # are comparable and the standardizer reflects the tensorised data.
-        # Every parse is cached in RAM and reused by step 3 (see the module
-        # docstring's memory note).
+        # ── Step 2: fit the shared IPAT standardizer ────────────────────────
+        # Over exactly the PCAPs being tensorised; parses are cached for step 3.
         fit_inputs: list = []
         seen: set = set()
         for a in runnable:
@@ -496,8 +474,7 @@ def main():
             print(f"{dim('─' * 72)}")
             t0 = time.time()
             try:
-                # pop → the cached parse is freed as soon as this source is
-                # built, so cache memory only ever shrinks during step 3.
+                # pop frees the cached parse once the source is built.
                 run(str(proc_pcap[attack.key]), str(attack.output_dir),
                     str(SHARED_MEAN_STD), cfg,
                     parsed=parsed_cache.pop(str(proc_pcap[attack.key]), None))

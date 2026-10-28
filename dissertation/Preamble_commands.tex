@@ -81,34 +81,14 @@
 % -----------------------------------------------------------------------------
 % DIRECT SVG FIGURES (\includesvg):
 % -----------------------------------------------------------------------------
-% The ./Images/*.svg files are the single source of truth for every figure.
-% pdflatex cannot embed SVG, so the 'svg' package drives Inkscape to convert
-% each referenced figure at compile time. Conversion output is cached in
-% ./Images/.svgcache/ and only redone when the .svg is newer, so editing an SVG
-% is reflected on the next build with no manual "svg -> pdf" step.
+% The figures are the ./Images/*.svg files, converted by Inkscape at compile
+% time (cached in ./Images/.svgcache/). This needs -shell-escape:
+%     latexmk -pdf -shell-escape main
+% inkscapelatex=false makes Inkscape render the figure text itself, so labels
+% keep the size they have in the SVG.
 %
-% REQUIRES pdflatex to be run with -shell-escape, e.g.:
-%     pdflatex -shell-escape main
-% (already configured in ../.vscode/settings.json for the VSCode build button)
-%
-% Text handling: inkscapelatex=false is REQUIRED here. With the package default
-% (inkscapelatex=true) Inkscape strips the text out of the SVG and LaTeX
-% typesets it from a .pdf_tex overlay -- but that overlay only records each
-% label's *position*, never its font-size, so every label comes out at the
-% surrounding document size no matter what the SVG asked for and no matter how
-% far the figure is scaled down. Labels then overflow their boxes and collide
-% (worst on the \subfigure grids included at ~0.31\textwidth). With
-% inkscapelatex=false Inkscape renders the text into the PDF itself, so a figure
-% prints exactly as it looks when the .svg is opened directly. The figure font
-% is then the SVG's (Helvetica/Arial, substituted by the metric-compatible
-% Nimbus Sans/Arimo) rather than the thesis font, which is the intended
-% trade-off.
-%
-% Usage -- give the name WITHOUT the .svg extension:
+% Usage (name without the .svg extension):
 %     \includesvg[width=0.8\textwidth]{./Images/figure}
-%
-% Overleaf, and any other build that cannot run Inkscape, takes the fallback
-% below instead -- see "NO-INKSCAPE FALLBACK".
 \newif\ifsvginkscape
 \ifdefined\pdfshellescape
   \ifnum\pdfshellescape=1 \svginkscapetrue\fi
@@ -117,21 +97,9 @@
 % -----------------------------------------------------------------------------
 % NO-INKSCAPE FALLBACK (Overleaf):
 % -----------------------------------------------------------------------------
-% Overleaf ships no Inkscape and only grants *restricted* shell escape, so the
-% conversion above cannot happen there: every figure then fails with
-%     Package pdftex.def Error: File `./Images/.svgcache/<name>.pdf' not found
-% (and ./Images/.svgcache/ would not even survive the upload -- Overleaf drops
-% paths beginning with a dot).
-%
-% So when Inkscape is unavailable we do not load the 'svg' package at all and
-% redefine \includesvg to pull in a pre-exported ./Images/<name>.pdf. Those PDFs
-% are committed next to their .svg sources and regenerated with
-%     ./Images/export-svg-to-pdf.sh
-% which calls Inkscape exactly the way svg.sty does, so both paths embed
-% identical artwork. Re-run it (and re-upload) after editing any figure.
-%
-% \pdfshellescape: 1 = unrestricted (local, Inkscape can run), 2 = restricted
-% (Overleaf), 0 = disabled. Only 1 keeps the live-conversion path.
+% Without unrestricted shell escape (e.g. Overleaf) Inkscape cannot run, so
+% \includesvg uses the pre-exported ./Images/<name>.pdf instead. Regenerate
+% those with ./Images/export-svg-to-pdf.sh after editing an SVG.
 \ifsvginkscape
   \usepackage{svg}
   \svgsetup{inkscapepath=./Images/.svgcache, inkscapelatex=false}
@@ -142,15 +110,7 @@
 *** Refresh them with ./Images/export-svg-to-pdf.sh after editing an SVG.^^J}
 \fi
 %
-% The two blocks below only bite while inkscapelatex=true, i.e. while pdflatex
-% is the one setting the figure labels. They are kept because the same
-% characters can appear in ordinary body text, and because they are what makes
-% inkscapelatex=true survivable if a figure ever needs to go back to it.
-%
-%  1. Maths symbols typed literally in the SVG. T1 has no text glyph for these,
-%     so map each to its maths equivalent. Extend this list if a new figure
-%     introduces another symbol (the error reads "Unicode character ... not set
-%     up for use with LaTeX").
+% Unicode maths symbols that can appear in text or in SVG labels.
 \usepackage{newunicodechar}
 \newunicodechar{′}{\ensuremath{{}^{\prime}}}
 \newunicodechar{Δ}{\ensuremath{\Delta}}
@@ -161,14 +121,8 @@
 \newunicodechar{≡}{\ensuremath{\equiv}}
 \newunicodechar{⋯}{\ensuremath{\cdots}}
 %
-%  2. Underscores in feature/metric names (rf_age, fpr_0.05). In text mode "_"
-%     means subscript and errors with "Missing $ inserted". 'pretex' runs just
-%     before each figure is read, so making "_" an ordinary character there
-%     prints it literally -- and only inside figures, leaving the rest of the
-%     document's maths untouched.
-%     (wrapped in a macro: a bare \catcode`\_=12 does not survive svgsetup's
-%     key=value parsing -- the backtick is mangled and every \includesvg then
-%     fails with "Missing number, treated as zero".)
+% Print "_" literally inside figures (e.g. rf_age), only needed with
+% inkscapelatex=true.
 \newcommand{\svgliteralunderscore}{\catcode`\_=12\relax}
 \ifsvginkscape
   \svgsetup{pretex=\svgliteralunderscore}

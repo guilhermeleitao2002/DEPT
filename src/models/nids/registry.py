@@ -1,14 +1,8 @@
 """Resolve which independent NIDS scores each attack, from the shared ``nids`` config.
 
-One ``nids:`` block (in ``config/baseline.yaml`` and ``config/reconstructor.yaml``) maps
-every base attack to the NIDS it was actually built to evade:
-
-  * Kitsune-native attacks (``mirai``, ``ssdp_flood``) → :class:`KitsuneNIDS`.
-  * CIC-IDS / CIC-DDoS attacks → :class:`MLNIDS`.
-
-so a caller just asks ``registry.get("<base>")`` and gets the right, lazily-loaded model.
-Loaded models are cached per base attack (loading a KitNET pickle or a scaler+classifier
-is not free, and the same model scores the adv / purified / clean branches in turn).
+The ``nids:`` block (in ``config/baseline.yaml`` and ``config/reconstructor.yaml``)
+maps each base attack to the NIDS it was built to evade. Models are loaded lazily
+and cached per attack.
 """
 from __future__ import annotations
 
@@ -39,8 +33,7 @@ class NIDSRegistry:
         """Return the (cached) :class:`NIDSModel` for base attack ``base``.
 
         Raises :class:`NIDSUnavailable` if the attack is unmapped or its NIDS/deps are
-        missing — the caller decides whether that aborts the run (baseline) or skips
-        one source with a reason (reconstructor).
+        missing.
         """
         if base in self._cache:
             return self._cache[base]

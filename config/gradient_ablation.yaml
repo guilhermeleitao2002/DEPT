@@ -1,20 +1,15 @@
 # =====================================================================
-# DEPT — Gradient ablation (RQ1)
+# DEPT — Gradient-guided evasion (RQ1)
 # =====================================================================
-# TANTGen, the adversary DEPT is trained on, is black-box and gradient-free.
-# This study adds the complementary attacker RQ1 asks about: one that
-# differentiates the TCN directly, whose perturbation is then scored — unchanged
-# — against RF, TCN and the RF+TCN+meta stack. If the stack costs the attacker
-# more budget than the TCN alone, heterogeneous stacking has measurably raised
-# the price of evasion.
+# A white-box attack on the TCN whose perturbation is scored, unchanged, on the
+# RF, the TCN and the RF+TCN+meta-learner stack.
 #
 #   python3 scripts/gradient_ablation/run_gradient_ablation.py                  # all sources
 #   python3 scripts/gradient_ablation/run_gradient_ablation.py --attack mirai   # one attack
 #
-# Phase 7 of run_pipeline.sh (global mode only). Depends on trained RF + TCN +
-# meta-learner under data/models/, and on the TANTGen PCAPs under
-# data/adversarial/ (the sidecar re-derives per-packet payload features from
-# them — see src/models/gradient_ablation/features.py for why that is unavoidable).
+# Phase 7 of run_pipeline.sh (global mode only). Needs the trained RF, TCN and
+# meta-learner and the TANTGen PCAPs under data/adversarial/ (used to recompute
+# the per-packet RF features, see src/models/gradient_ablation/features.py).
 
 # ---- Data ----
 tensors_dir: data/tensors
@@ -29,11 +24,9 @@ tcn_model_dir: data/models/tcn
 metalearner_model_dir: data/models/metalearner
 
 # ---- Benign reference (matched-FPR thresholds) ----
-# Unperturbed benign flows, scored once through each target to fix a common
-# operating point. This is not optional bookkeeping: the meta-learner
-# early-stopped at best_epoch=1, so comparing targets at a raw 0.5 threshold
-# would reward it for rarely saying "adversarial" — which is undertraining, not
-# robustness. Mirrors rf.yaml's benign pool.
+# Unperturbed benign flows, scored by each target to set thresholds at the same
+# false-positive rate (the targets are calibrated very differently, so a fixed
+# 0.5 would not compare them fairly). Same benign pool as rf.yaml.
 benign_sources:
   - brute_force
   - ddos
@@ -50,26 +43,17 @@ fpr_grid: [0.01, 0.05, 0.10]
 report_policy: fpr_0.05        # threshold policy used for the headline curves/plot
 
 # ---- Flow selection ----
-# Per-source, restricted to the seed=42 test split the base learners held out.
-# Stratification is load-bearing: source support spans three orders of magnitude
-# (syn_ddos_adv_* ~935k train flows vs dns_ddos_adv_* ~4.7k), so a global sample
-# would be almost entirely syn_ddos. At n=300 the per-source ASR 95% CI is
-# +/-5.7pp at p=0.5 — enough to separate targets when the effect exceeds ~10pp.
+# Sampled per source from the base learners' test split (source sizes differ by
+# orders of magnitude). With n=300 the per-source ASR 95% CI is about +/-5.7 points.
 flows_per_source: 300
 seed: 42
 
 # ---- Attacker budget grid ----
-# In physical units, because an L-inf ball on the raw tensor is meaningless here:
-# the IPAT channel is z-scored with std=208.2 s, so eps=0.01 would buy +/-2.08
-# SECONDS of delay while the nPrint bit channels are {-1,0,1}. See
-# src/models/gradient_ablation/attack.py.
-#
-# `bytes`   — max padding per packet (increase-only; capped at the MTU)
-# `seconds` — max added delay per packet (increase-only)
-#
-# b0 is the delta=0 control and must reproduce the unperturbed verdicts.
-# Delays below ~3.07e-06 s are unrepresentable (one float32 ULP of the z-scored
-# IPAT channel), so the smallest timing budget is set above it deliberately.
+# In physical units (see src/models/gradient_ablation/attack.py):
+#   `bytes`   — max padding per packet (increase-only, capped at the MTU)
+#   `seconds` — max added delay per packet (increase-only)
+# b0 is the delta=0 control. The smallest delay is above one float32 ULP of the
+# z-scored IPAT channel, below which delays round to zero.
 budgets:
   - {id: b0,    bytes: 0,    seconds: 0}
   - {id: b8,    bytes: 8,    seconds: 0.00001}
@@ -83,45 +67,15 @@ attack:
   steps: 40
   alpha_ratio: 2.5           # step = alpha_ratio * budget / steps (Madry et al.)
   random_init: true
-  restarts: 8                # restart 0 always starts at delta=0, the rest are
-                             # random. The zero anchor matters: the step size
-                             # scales with the budget and the loss surface over
-                             # packet size is jagged (the 16-bit total-length
-                             # encoding flips 9 bits between 255 and 256), so a
-                             # lone random start at a large budget lands
-                             # somewhere PGD cannot walk back from. 8 rather
-                             # than 2 because exploration measurably dominates
-                             # descent here (35% -> 60% ASR at 128 B).
-  variants: [pgd, random]    # `random` is the control that makes
-                             # "gradient-guided" a claim rather than a label:
-                             # same feasible set, same budget, query-matched
-                             # restarts, no gradient. It is NOT a formality —
-                             # random search matches or beats PGD on this
-                             # surface, which is itself a finding about nPrint's
-                             # bit-encoded packet size. The reported headline is
-                             # the `best` variant (PGD ∪ random), because a
-                             # robustness evaluation must report the strongest
-                             # attack available, not a favourite one.
+  restarts: 8                # restart 0 starts at delta=0, the others at random
+  variants: [pgd, random]    # random search with the same budget and number of
+                             # queries; results use `best` (the better of the two)
   objective: final           # final | max | mean
-                             # `final`: the flow verdict every target reports
-                             #   (probs[b, L-1] for TCN/meta, last checkpoint for
-                             #   RF) — i.e. DEPT's own operating point.
-                             # `max`: never-fires, the stricter streaming goal.
-  tl_cap: 1500               # MTU. A DEPLOYMENT choice, not a property of the
-                             # data: Packet_Size_max reaches 24874 in
-                             # data/models/rf/dataset.npz (GRO-coalesced frames).
-  pad_byte_mode: random      # random | zero — what the padding bytes contain.
-                             # The attacker cannot tell these apart from the
-                             # TCN's gradient (the TCN sees no payload bytes),
-                             # yet they move Payload_Entropy — the RF's largest
-                             # feature group — in OPPOSITE directions. `random`
-                             # matches TANTGen's apply_TANTGen_to_pcap; `zero`
-                             # matches realize.py's overlay. Report both.
-  autopgd_check: true        # ART AutoPGD on the RELAXED problem, as a
-                             # parameter-free check that PGD is not under-tuned.
-                             # An upper bound only — the relaxation drops
-                             # integrality and the physical budget, so its
-                             # perturbation is not realizable.
+                             # final: verdict after the whole flow; max: never fires
+  tl_cap: 1500               # MTU
+  pad_byte_mode: random      # random | zero padding bytes (TANTGen pads with random
+                             # bytes, realize.py with zeros); changes Payload_Entropy
+  autopgd_check: true        # ART AutoPGD on the relaxed problem (upper bound only)
 
 # ---- Runtime ----
 device: auto                 # auto | cuda | cuda:0 | cuda:1 | cpu
@@ -130,8 +84,6 @@ max_length: 200              # truncate flows at 200 packets (matches the TCN)
 threshold: 0.5               # used only for the never-fires (streaming) metric
 
 # ---- Excludes ----
-# Adversarial sources with no clean base on disk. Mirrors reconstructor.yaml /
-# baseline.yaml.
 adversarial_exclude:
   - brute_force_kitsune_adv_both
   - brute_force_kitsune_adv_iat

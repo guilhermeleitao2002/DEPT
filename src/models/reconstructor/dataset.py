@@ -1,22 +1,9 @@
 """Paired (adversarial → clean) per-flow dataset for the reconstructor.
 
-The reconstructor learns to map an adversarially-perturbed flow back onto its
-clean counterpart. Training examples are therefore **pairs** of flows — the
-``<base>_adv_<mode>`` flow and the matching ``<base>`` clean flow — aligned
-**by 5-tuple** (never by row position, since TANTGen can split/merge/drop
-flows so the two folders are not row-aligned).
-
-For each adversarial source we:
-  1. resolve its clean base folder (strip ``_adv_<mode>``; any source whose
-     clean base folder is absent is skipped automatically);
-  2. match flows by their stringified canonical 5-tuple (``flow_ids.npy``);
-  3. keep matched pairs, truncating both to ``min(len_adv, len_clean)`` packets
-     (the rare ~0.2% of pairs whose packet counts diverge) and dropping pairs
-     shorter than ``min_len``.
-
-Both sides are read lazily from the per-source memmaps via the TCN's
-``FlowMemmapCache``. Batching right-pads both sequences to the batch max and
-returns a shared validity mask, mirroring ``tcn/dataset.collate_padded``.
+Each example is a ``<base>_adv_<mode>`` flow and the ``<base>`` flow with
+the same 5-tuple (not the same row, since TANTGen can split, merge or drop
+flows). Sources without a clean base folder are skipped. Both flows are cut
+to the shorter length, and pairs shorter than ``min_len`` are dropped.
 """
 from __future__ import annotations
 

@@ -1,26 +1,18 @@
 """Deployment baseline: how the protected NIDS behaves clean / perturbed / DEPT-defended.
 
-This is DEPT's headline end-to-end result — the "before vs after DEPT" the dissertation's
-§5.7 asks for. For every attack (× perturbation mode) we score three realized full-volume
-streams through the NIDS the attack was built to evade (Kitsune / ML-NIDS, via
-:class:`~src.models.nids.NIDSRegistry`):
+For every attack and mode, three full streams are scored by the NIDS the
+attack was built to evade:
 
-  * **clean**       — the original-attack size/timing (oracle ceiling: the NIDS working).
-  * **adversarial** — TANTGen's perturbation (evasion floor: detection collapses).
-  * **defended**    — the full DEPT pipeline (:mod:`.pipeline`): the detector flags each
-    flow and only flagged flows are purified; the rest pass through unchanged. Detection
-    should climb back from the adversarial floor toward the clean ceiling.
+  * clean       — the original attack;
+  * adversarial — TANTGen's version;
+  * defended    — the gated DEPT pipeline (:mod:`.pipeline`).
 
-A fourth **purified_all** stream (every flow purified, i.e. a perfect detector) is scored
-as an upper bound. Because the defended / purified streams run DEPT models over flows some
-of which were in training, the DEPT-defended numbers are also reported restricted to the
-**held-out test flows** (``*_test_subset``) — the generalization-valid view — alongside the
-full-stream deployment view the user asked for.
+A fourth stream, ``purified_all`` (every flow purified), is the perfect-detector
+upper bound. Since some of these flows were used in training, the defended
+results are also reported on the held-out test flows only (``*_test_subset``).
 
-Metric = per-flow **detection rate** and **ASR** (``1 − detection_rate``) per regime; the
-headline is ``asr_reduction`` (how much of TANTGen's attack success DEPT removes) and the
-rate-based ``restoration_ratio_detection`` (fraction of the adv→clean detection gap
-recovered).
+Metrics per stream: detection rate and ASR (``1 - detection_rate``), plus
+``asr_reduction`` and ``restoration_ratio_detection``.
 """
 from __future__ import annotations
 
@@ -82,7 +74,7 @@ def _source_metrics(scored: dict, scored_test, gate_stats: dict, model, mode: st
         "detection_rate": dr,
         "asr": asr,
         "mean_score": ms,
-        # Headline: fraction of TANTGen's attack success DEPT removes.
+        # Fraction of TANTGen's attack success DEPT removes.
         "asr_reduction": nids_metrics.sub(asr.get("adversarial"), asr.get("defended")),
         # Fraction of the adv→clean detection gap the pipeline recovers (rate-based).
         "restoration_ratio_detection": nids_metrics.restoration_ratio(

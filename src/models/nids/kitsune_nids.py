@@ -1,14 +1,9 @@
 """Kitsune (KitNET + AfterImage) as a :class:`NIDSModel`.
 
-Thin wrapper over the existing ``src/models/kitsune/runner.py`` adapter. Kitsune is the
-protected NIDS for the two Kitsune-native attacks (``mirai``, ``ssdp_flood``); TANTGen
-calibrated a KitNET against each and evades it with the timing (``iat``) vector. We
-reuse TANTGen's own model pickles verbatim (the gold-standard "attacker's own target"
-case), falling back to calibrating a fresh one on the benign split only if a pickle is
-absent.
-
-Score = per-packet reconstruction RMSE, aggregated per flow (``max`` by default) and
-compared to the calibrated threshold φ. Higher RMSE = more anomalous = more malicious.
+Wrapper over ``src/models/kitsune/runner.py`` for ``mirai`` and ``ssdp_flood``.
+TANTGen's own KitNET pickles are reused; a new model is calibrated on benign
+traffic only if a pickle is missing. The score is the per-packet RMSE,
+aggregated per flow (``max`` by default) and compared to the threshold φ.
 """
 from __future__ import annotations
 
