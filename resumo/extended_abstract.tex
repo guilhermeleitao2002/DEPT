@@ -47,13 +47,12 @@
 \subtitle{Extended Abstract of the MSc Thesis in Computer Science and Engineering}
 
 \author{Guilherme Silvério de Carvalho Romeiro Leitão}
-\author{Fernando Manuel Valente Ramos}
 \affiliation{%
   \institution{Instituto Superior Técnico, Universidade de Lisboa}
   \city{Lisbon}
   \country{Portugal}}
 
-\renewcommand{\shortauthors}{G. Leitão and F. Ramos}
+\renewcommand{\shortauthors}{G. Leitão}
 %% No e-mail is printed, so the acmtog "Authors' Contact Information" footnote
 %% would only repeat the author block.
 \authorsaddresses{}
@@ -713,8 +712,8 @@ separately.
 
 \Cref{tab:config} summarizes the learned components; the sequence models are
 trained with AdamW for at most $20$ epochs, with early stopping on the
-selection criterion of the table. DEPT is written in Python, with PyTorch for the three sequence models,
-scikit-learn for the forest, and a Python reimplementation of the nPrint
+selection criterion of the table. DEPT is written in Python, with PyTorch~\cite{paszke2019pytorch} for the three sequence models,
+scikit-learn~\cite{pedregosa2011scikit} for the forest, and a Python reimplementation of the nPrint
 encoding on top of scapy, which also performs realization; \texttt{tshark},
 \texttt{editcap} and \texttt{tcpdump} handle dissection, time filtering and
 packet capping. All experiments ran on one server with two Intel Xeon Gold 5320
