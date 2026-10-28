@@ -129,8 +129,7 @@ DEPT/
 ├── data/
 │   ├── tensors/            # per-source metadata (tensors not tracked)
 │   └── models/             # metrics, plots and weights per phase, incl. per_attack/
-├── dissertation/           # thesis LaTeX sources, figures and PDF
-├── resumo/                 # extended abstract (LaTeX + PDF)
+├── documents/              # thesis, extended abstract and PIC2 report (PDF)
 ├── logs/                   # pipeline logs of the reported runs
 ├── packet_example/         # one flow: clean, adversarial and purified PCAPs
 ├── scripts/                # one runner + README per phase
