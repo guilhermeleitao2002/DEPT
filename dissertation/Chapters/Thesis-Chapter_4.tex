@@ -569,7 +569,8 @@ detector TANTGen calibrated that attack's evasion against
 % #############################################################################
 \section{Implementation and Tools}\label{sec:sol-tools}
 DEPT is implemented in Python. The three sequence models (\ac{TCN}, meta-learner,
-reconstructor) are built in PyTorch and the \ac{RF} in scikit-learn. The nPrint
+reconstructor) are built in PyTorch~\cite{paszke2019pytorch} and the \ac{RF} in
+scikit-learn~\cite{pedregosa2011scikit}. The nPrint
 encoding is reimplemented in Python on top of scapy, following the bit layout of the
 original tool~\cite{holland2021nprint}; writing the encoding into the pipeline avoids an
 external binary, lets identity masking happen inline, and keeps tensorization a
