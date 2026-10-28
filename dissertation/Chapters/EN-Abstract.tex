@@ -11,7 +11,7 @@ This thesis proposes DEPT, a streaming defense that detects and purifies manipul
 
 DEPT represents traffic as masked packet-level bits and flow statistics at two temporal granularities.
 For each packet, an attention-based meta-learner combines a Random Forest and a Temporal Convolutional Network to identify manipulated flows.
-Flagged flows are corrected in feature space using a causal purification Transformer, with the corrected features mapped back to packet sizes and timings. .
+Flagged flows are corrected in feature space using a causal purification Transformer, with the corrected features mapped back to packet sizes and timings.
 Training and evaluation rely on TANTGen~\cite{pissarra2026tantgen}, a black-box adversarial traffic generator, covering ten traffic sources from three public datasets and three perturbation modes.
 
 Experimental results show that DEPT achieves an end-of-flow AUROC of $0.933$ in detecting adversarial manipulations.
